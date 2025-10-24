@@ -43,19 +43,24 @@ public:
             // Create detailed prompt for logo generation
             std::string prompt = createLogoPrompt(description, format);
             
-            // Generate logo description and specifications
+            // Generate SVG logo code directly from LLM
             auto result = engine_->analyze(prompt, nlohmann::json{}, "logo_generation");
-            std::string logo_spec = result[1];
+            std::string svg_content = result[1];
             
-            std::cout << "📋 Generated logo specifications:" << std::endl;
-            std::cout << logo_spec << std::endl;
+            // Clean up the SVG content (remove any markdown formatting or extra text)
+            svg_content = cleanSVGContent(svg_content);
+            
+            std::cout << "📋 Generated SVG logo code:" << std::endl;
+            std::cout << svg_content << std::endl;
+            
+            // Validate SVG content
+            if (!isValidSVG(svg_content)) {
+                std::cerr << "⚠️  Warning: Generated SVG content may not be valid" << std::endl;
+            }
             
             // Generate filename if not provided
             std::string output_filename = filename.empty() ? generateFilename(description, format) : filename;
             std::string output_path = output_dir_ + "/" + output_filename;
-            
-            // Create SVG content (we'll generate SVG and then convert to PNG/JPEG)
-            std::string svg_content = generateSVGContent(logo_spec, description);
             
             // Save SVG file
             std::string svg_path = output_path.substr(0, output_path.find_last_of('.')) + ".svg";
@@ -123,71 +128,114 @@ public:
 private:
     std::string createLogoPrompt(const std::string& description, const std::string& format) {
         std::stringstream prompt;
-        prompt << "Create a detailed logo design specification for: \"" << description << "\"\n\n";
-        prompt << "Please provide:\n";
-        prompt << "1. Logo concept and style (minimalist, modern, vintage, etc.)\n";
-        prompt << "2. Color scheme (primary and secondary colors)\n";
-        prompt << "3. Typography suggestions (font style, size hierarchy)\n";
-        prompt << "4. Layout and composition details\n";
-        prompt << "5. Icon/symbol suggestions\n";
-        prompt << "6. Overall visual theme and mood\n\n";
-        prompt << "Format the response as a structured specification that can be used to create an SVG logo.\n";
-        prompt << "Be specific about dimensions, colors (use hex codes), and design elements.\n";
-        prompt << "Make it professional and suitable for business use.";
+        prompt << "Create a complete SVG logo for: \"" << description << "\"\n\n";
+        prompt << "Please generate a complete, valid SVG code that includes:\n";
+        prompt << "1. Proper SVG header with appropriate width and height dimensions\n";
+        prompt << "2. Professional design elements (shapes, text, gradients, etc.)\n";
+        prompt << "3. Appropriate colors using hex codes\n";
+        prompt << "4. Clean, modern styling suitable for business use\n";
+        prompt << "5. Text elements if needed (use appropriate fonts)\n\n";
+        prompt << "Return ONLY the complete SVG code, starting with <?xml version=\"1.0\" encoding=\"UTF-8\"?> and ending with </svg>\n";
+        prompt << "Do not include any explanations or additional text - just the SVG code.\n";
+        prompt << "Make it professional, scalable, and visually appealing.";
         
         return prompt.str();
     }
     
     std::string generateFilename(const std::string& description, const std::string& format) {
-        // Clean description for filename
-        std::string clean_desc = description;
+        // Extract key words from description
+        std::stringstream ss(description);
+        std::string word;
+        std::vector<std::string> words;
+        
+        // Split into words and filter out common words
+        while (ss >> word) {
+            // Convert to lowercase for comparison
+            std::string lower_word = word;
+            std::transform(lower_word.begin(), lower_word.end(), lower_word.begin(), ::tolower);
+            
+            // Skip common words that don't add meaning
+            if (lower_word != "a" && lower_word != "an" && lower_word != "the" && 
+                lower_word != "and" && lower_word != "or" && lower_word != "but" &&
+                lower_word != "with" && lower_word != "for" && lower_word != "of" &&
+                lower_word != "in" && lower_word != "on" && lower_word != "at" &&
+                lower_word != "to" && lower_word != "from" && lower_word != "by" &&
+                lower_word != "logo" && lower_word != "design") {
+                words.push_back(word);
+            }
+        }
+        
+        // Take first 2-3 meaningful words
+        std::string clean_desc;
+        int word_count = std::min(3, static_cast<int>(words.size()));
+        for (int i = 0; i < word_count; ++i) {
+            if (i > 0) clean_desc += "_";
+            clean_desc += words[i];
+        }
+        
+        // If no meaningful words found, use first word
+        if (clean_desc.empty() && !words.empty()) {
+            clean_desc = words[0];
+        }
+        
+        // If still empty, use "logo"
+        if (clean_desc.empty()) {
+            clean_desc = "logo";
+        }
+        
+        // Clean up special characters
         std::replace(clean_desc.begin(), clean_desc.end(), ' ', '_');
         std::replace(clean_desc.begin(), clean_desc.end(), '.', '_');
         std::replace(clean_desc.begin(), clean_desc.end(), ',', '_');
         std::replace(clean_desc.begin(), clean_desc.end(), '!', '_');
         std::replace(clean_desc.begin(), clean_desc.end(), '?', '_');
-        
-        // Limit length
-        if (clean_desc.length() > 30) {
-            clean_desc = clean_desc.substr(0, 30);
-        }
+        std::replace(clean_desc.begin(), clean_desc.end(), '-', '_');
         
         // Add timestamp
         auto now = std::time(nullptr);
         auto tm = *std::localtime(&now);
-        std::stringstream ss;
-        ss << clean_desc << "_" << std::put_time(&tm, "%Y%m%d_%H%M%S") << "." << format;
+        std::stringstream filename_ss;
+        filename_ss << clean_desc << "_" << std::put_time(&tm, "%Y%m%d_%H%M%S") << "." << format;
         
-        return ss.str();
+        return filename_ss.str();
     }
     
-    std::string generateSVGContent(const std::string& spec, const std::string& description) {
-        // This is a simplified SVG generator - in a real implementation,
-        // you would parse the AI-generated spec and create more sophisticated SVG
+    std::string cleanSVGContent(const std::string& content) {
+        std::string cleaned = content;
         
-        std::stringstream svg;
-        svg << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-        svg << "<svg width=\"400\" height=\"200\" xmlns=\"http://www.w3.org/2000/svg\">\n";
-        svg << "  <defs>\n";
-        svg << "    <linearGradient id=\"grad1\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">\n";
-        svg << "      <stop offset=\"0%\" style=\"stop-color:#4A90E2;stop-opacity:1\" />\n";
-        svg << "      <stop offset=\"100%\" style=\"stop-color:#7B68EE;stop-opacity:1\" />\n";
-        svg << "    </linearGradient>\n";
-        svg << "  </defs>\n";
-        svg << "  <!-- Background -->\n";
-        svg << "  <rect width=\"400\" height=\"200\" fill=\"#ffffff\" stroke=\"#e0e0e0\" stroke-width=\"1\"/>\n";
-        svg << "  <!-- Main shape -->\n";
-        svg << "  <circle cx=\"100\" cy=\"100\" r=\"60\" fill=\"url(#grad1)\" opacity=\"0.8\"/>\n";
-        svg << "  <!-- Text -->\n";
-        svg << "  <text x=\"200\" y=\"120\" font-family=\"Arial, sans-serif\" font-size=\"24\" font-weight=\"bold\" fill=\"#333333\">\n";
-        svg << "    " << (description.length() > 20 ? description.substr(0, 20) + "..." : description) << "\n";
-        svg << "  </text>\n";
-        svg << "  <!-- Decorative elements -->\n";
-        svg << "  <rect x=\"180\" y=\"80\" width=\"120\" height=\"4\" fill=\"#4A90E2\" opacity=\"0.6\"/>\n";
-        svg << "  <rect x=\"180\" y=\"140\" width=\"80\" height=\"2\" fill=\"#7B68EE\" opacity=\"0.6\"/>\n";
-        svg << "</svg>\n";
+        // Remove markdown code blocks if present
+        size_t start = cleaned.find("```");
+        if (start != std::string::npos) {
+            cleaned = cleaned.substr(start + 3);
+            size_t end = cleaned.find("```");
+            if (end != std::string::npos) {
+                cleaned = cleaned.substr(0, end);
+            }
+        }
         
-        return svg.str();
+        // Fix common SVG namespace issues
+        size_t ns_pos = cleaned.find("xmlns=\"http://www.w3.org/");
+        if (ns_pos != std::string::npos) {
+            size_t end_pos = cleaned.find("\"", ns_pos + 25);
+            if (end_pos != std::string::npos) {
+                std::string before = cleaned.substr(0, ns_pos + 25);
+                std::string after = cleaned.substr(end_pos);
+                cleaned = before + "2000/svg" + after;
+            }
+        }
+        
+        // Remove any leading/trailing whitespace
+        cleaned.erase(0, cleaned.find_first_not_of(" \t\n\r"));
+        cleaned.erase(cleaned.find_last_not_of(" \t\n\r") + 1);
+        
+        return cleaned;
+    }
+    
+    bool isValidSVG(const std::string& content) {
+        // Basic SVG validation
+        return content.find("<?xml") != std::string::npos &&
+               content.find("<svg") != std::string::npos &&
+               content.find("</svg>") != std::string::npos;
     }
     
     void convertToRaster(const std::string& svg_path, const std::string& output_path, 

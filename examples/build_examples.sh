@@ -26,6 +26,11 @@ echo "📁 Creating build directory..."
 mkdir -p build_examples
 cd build_examples
 
+# Copy config file for examples that need it
+echo "📋 Copying config file..."
+mkdir -p config
+cp ../../config/api_config.json config/
+
 # Configure with CMake
 echo "⚙️  Configuring with CMake..."
 cmake ..
