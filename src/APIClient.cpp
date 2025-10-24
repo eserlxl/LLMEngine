@@ -297,21 +297,93 @@ APIResponse OllamaClient::sendRequest(const std::string& prompt,
             request_params[key] = value;
         }
         
-        // Prepare request payload
-        nlohmann::json payload = {
-            {"model", model_},
-            {"prompt", prompt},
-            {"input", input}
-        };
-        
-        // Add parameters
-        for (auto& [key, value] : request_params.items()) {
-            payload[key] = value;
+        // Check if we should use generate mode instead of chat mode
+        bool use_generate = false;
+        if (params.contains("mode") && params["mode"] == "generate") {
+            use_generate = true;
         }
         
-        // Send request
+        if (use_generate) {
+            // Use generate API for text completion
+            nlohmann::json payload = {
+                {"model", model_},
+                {"prompt", prompt},
+                {"stream", false}
+            };
+            
+            // Add parameters (filter out Ollama-specific ones)
+            for (auto& [key, value] : request_params.items()) {
+                if (key != "context_window") {  // Skip context_window as it's not a valid Ollama parameter
+                    payload[key] = value;
+                }
+            }
+            
+            // Send request to generate endpoint
+            auto cpr_response = cpr::Post(
+                cpr::Url{base_url_ + "/api/generate"},
+                cpr::Header{{"Content-Type", "application/json"}},
+                cpr::Body{payload.dump()},
+                cpr::Timeout{30000}
+            );
+            
+            response.status_code = cpr_response.status_code;
+            
+            if (cpr_response.status_code == 200) {
+                if (cpr_response.text.empty()) {
+                    response.error_message = "Empty response from server";
+                } else {
+                    try {
+                        response.raw_response = nlohmann::json::parse(cpr_response.text);
+                        
+                        if (response.raw_response.contains("response")) {
+                            response.content = response.raw_response["response"].get<std::string>();
+                            response.success = true;
+                        } else {
+                            response.error_message = "No response content in generate API response";
+                        }
+                    } catch (const nlohmann::json::parse_error& e) {
+                        response.error_message = "JSON parse error: " + std::string(e.what()) + " - Response: " + cpr_response.text;
+                    }
+                }
+            } else {
+                response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
+            }
+        } else {
+            // Use chat API for conversational mode (default)
+            // Prepare messages array for chat API
+        nlohmann::json messages = nlohmann::json::array();
+        
+        // Add system message if input contains system prompt
+        if (input.contains("system_prompt")) {
+            messages.push_back({
+                {"role", "system"},
+                {"content", input["system_prompt"].get<std::string>()}
+            });
+        }
+        
+        // Add user message
+        messages.push_back({
+            {"role", "user"},
+            {"content", prompt}
+        });
+        
+        // Prepare request payload for chat API
+        nlohmann::json payload = {
+            {"model", model_},
+            {"messages", messages},
+            {"stream", false}
+        };
+        
+        // Add parameters (filter out Ollama-specific ones)
+        for (auto& [key, value] : request_params.items()) {
+            if (key != "context_window") {  // Skip context_window as it's not a valid Ollama parameter
+                payload[key] = value;
+            }
+        }
+        
+        // Send request to chat endpoint
         auto cpr_response = cpr::Post(
-            cpr::Url{base_url_ + "/api/generate"},
+            cpr::Url{base_url_ + "/api/chat"},
             cpr::Header{{"Content-Type", "application/json"}},
             cpr::Body{payload.dump()},
             cpr::Timeout{30000}
@@ -320,24 +392,27 @@ APIResponse OllamaClient::sendRequest(const std::string& prompt,
         response.status_code = cpr_response.status_code;
         
         if (cpr_response.status_code == 200) {
-            // Parse NDJSON response
-            std::istringstream resp_stream(cpr_response.text);
-            std::string line, full_response;
-            while (std::getline(resp_stream, line)) {
+            if (cpr_response.text.empty()) {
+                response.error_message = "Empty response from server";
+            } else {
                 try {
-                    auto line_json = nlohmann::json::parse(line);
-                    if (line_json.contains("response")) {
-                        full_response += line_json["response"].get<std::string>();
+                    response.raw_response = nlohmann::json::parse(cpr_response.text);
+                    
+                    if (response.raw_response.contains("message") && 
+                        response.raw_response["message"].contains("content")) {
+                        response.content = response.raw_response["message"]["content"].get<std::string>();
+                        response.success = true;
+                    } else {
+                        response.error_message = "No content in response";
                     }
-                } catch (const std::exception& e) {
-                    std::cerr << "[ERROR] Failed to parse NDJSON line: " << e.what() << std::endl;
+                } catch (const nlohmann::json::parse_error& e) {
+                    response.error_message = "JSON parse error: " + std::string(e.what()) + " - Response: " + cpr_response.text;
                 }
             }
-            response.content = full_response;
-            response.success = true;
         } else {
             response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
         }
+        } // End of else block for chat mode
         
     } catch (const std::exception& e) {
         response.error_message = "Exception: " + std::string(e.what());

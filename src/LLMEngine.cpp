@@ -80,6 +80,11 @@ LLMEngine::LLMEngine(const std::string& provider_name,
     // Set provider type
     provider_type_ = ::LLMEngineAPI::APIClientFactory::stringToProviderType(provider_name);
     
+    // Set Ollama URL if using Ollama
+    if (provider_type_ == ::LLMEngineAPI::ProviderType::OLLAMA) {
+        ollama_url_ = provider_config.value("base_url", "http://localhost:11434");
+    }
+    
     initializeAPIClient();
 }
 
@@ -129,7 +134,8 @@ void LLMEngine::cleanupResponseFiles() const {
 std::vector<std::string> LLMEngine::analyze(const std::string& prompt, 
                                            const nlohmann::json& input, 
                                            const std::string& analysis_type, 
-                                           int max_tokens) const {
+                                           int max_tokens,
+                                           const std::string& mode) const {
     // Clean up existing response files
     cleanupResponseFiles();
     
@@ -147,6 +153,9 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
         nlohmann::json api_params = model_params_;
         if (max_tokens > 0) {
             api_params["max_tokens"] = max_tokens;
+        }
+        if (!mode.empty()) {
+            api_params["mode"] = mode;
         }
         
         auto api_response = api_client_->sendRequest(full_prompt, input, api_params);
