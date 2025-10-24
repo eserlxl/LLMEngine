@@ -61,12 +61,18 @@ APIResponse QwenClient::sendRequest(const std::string& prompt,
             {"presence_penalty", request_params["presence_penalty"]}
         };
         
+        // Get timeout from params or use default (5 minutes)
+        int timeout_seconds = 300; // Default 5 minutes
+        if (params.contains("timeout_seconds")) {
+            timeout_seconds = params["timeout_seconds"].get<int>();
+        }
+        
         // Send request
         auto cpr_response = cpr::Post(
             cpr::Url{base_url_ + "/chat/completions"},
             cpr::Header{{"Content-Type", "application/json"}, {"Authorization", "Bearer " + api_key_}},
             cpr::Body{payload.dump()},
-            cpr::Timeout{30000}
+            cpr::Timeout{timeout_seconds * 1000}
         );
         
         response.status_code = cpr_response.status_code;
@@ -152,12 +158,18 @@ APIResponse OpenAIClient::sendRequest(const std::string& prompt,
             {"presence_penalty", request_params["presence_penalty"]}
         };
         
+        // Get timeout from params or use default (5 minutes)
+        int timeout_seconds = 300; // Default 5 minutes
+        if (params.contains("timeout_seconds")) {
+            timeout_seconds = params["timeout_seconds"].get<int>();
+        }
+        
         // Send request
         auto cpr_response = cpr::Post(
             cpr::Url{base_url_ + "/chat/completions"},
             cpr::Header{{"Content-Type", "application/json"}, {"Authorization", "Bearer " + api_key_}},
             cpr::Body{payload.dump()},
-            cpr::Timeout{30000}
+            cpr::Timeout{timeout_seconds * 1000}
         );
         
         response.status_code = cpr_response.status_code;
@@ -234,12 +246,18 @@ APIResponse AnthropicClient::sendRequest(const std::string& prompt,
             payload["system"] = input["system_prompt"].get<std::string>();
         }
         
+        // Get timeout from params or use default (5 minutes)
+        int timeout_seconds = 300; // Default 5 minutes
+        if (params.contains("timeout_seconds")) {
+            timeout_seconds = params["timeout_seconds"].get<int>();
+        }
+        
         // Send request
         auto cpr_response = cpr::Post(
             cpr::Url{base_url_ + "/messages"},
             cpr::Header{{"Content-Type", "application/json"}, {"x-api-key", api_key_}, {"anthropic-version", "2023-06-01"}},
             cpr::Body{payload.dump()},
-            cpr::Timeout{30000}
+            cpr::Timeout{timeout_seconds * 1000}
         );
         
         response.status_code = cpr_response.status_code;
@@ -318,12 +336,18 @@ APIResponse OllamaClient::sendRequest(const std::string& prompt,
                 }
             }
             
+            // Get timeout from params or use default (5 minutes)
+            int timeout_seconds = 300; // Default 5 minutes
+            if (params.contains("timeout_seconds")) {
+                timeout_seconds = params["timeout_seconds"].get<int>();
+            }
+            
             // Send request to generate endpoint
             auto cpr_response = cpr::Post(
                 cpr::Url{base_url_ + "/api/generate"},
                 cpr::Header{{"Content-Type", "application/json"}},
                 cpr::Body{payload.dump()},
-                cpr::Timeout{30000}
+                cpr::Timeout{timeout_seconds * 1000}
             );
             
             response.status_code = cpr_response.status_code;
@@ -381,12 +405,18 @@ APIResponse OllamaClient::sendRequest(const std::string& prompt,
             }
         }
         
+        // Get timeout from params or use default (5 minutes)
+        int timeout_seconds = 300; // Default 5 minutes
+        if (params.contains("timeout_seconds")) {
+            timeout_seconds = params["timeout_seconds"].get<int>();
+        }
+        
         // Send request to chat endpoint
         auto cpr_response = cpr::Post(
             cpr::Url{base_url_ + "/api/chat"},
             cpr::Header{{"Content-Type", "application/json"}},
             cpr::Body{payload.dump()},
-            cpr::Timeout{30000}
+            cpr::Timeout{timeout_seconds * 1000}
         );
         
         response.status_code = cpr_response.status_code;
