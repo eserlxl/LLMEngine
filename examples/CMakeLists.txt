@@ -44,3 +44,7 @@ target_link_libraries(file_analyzer LLMEngine ${CPR_LIBRARY} ${NLOHMANN_JSON_LIB
 # Add executable for translation tool
 add_executable(translator translator.cpp)
 target_link_libraries(translator LLMEngine ${CPR_LIBRARY} ${NLOHMANN_JSON_LIBRARIES} ssl crypto pthread curl)
+
+# Add executable for logo generator
+add_executable(logo_generator logo_generator.cpp)
+target_link_libraries(logo_generator LLMEngine ${CPR_LIBRARY} ${NLOHMANN_JSON_LIBRARIES} ssl crypto pthread curl)

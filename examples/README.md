@@ -30,10 +30,12 @@ This folder contains practical applications that demonstrate the capabilities of
 4. **Run examples**:
    ```bash
    cd build_examples
-   ./chatbot
+   ./chatbot                    # Interactive chatbot
+   ./logo_generator -i          # Interactive logo generator
+   ./code_analyzer main.cpp     # Analyze code
    ```
 
-## 📋 Available Examples
+## 📋 Available Examples (6 total)
 
 ### 1. 🤖 Chatbot (`chatbot.cpp`)
 Interactive conversational AI application with multiple features.
@@ -166,6 +168,43 @@ Multi-language translation tool with advanced features.
 - `-d, --detect` - Detect language
 - `-i, --interactive` - Interactive mode
 - `-l, --languages` - Show supported languages
+
+### 6. 🎨 Logo Generator (`logo_generator.cpp`)
+AI-powered logo generation tool that creates professional logos from text descriptions.
+
+**Features:**
+- Generate logos from natural language descriptions
+- Support for PNG and JPEG output formats
+- Interactive mode for iterative design
+- Batch logo generation
+- SVG generation with automatic raster conversion
+- Professional design specifications
+
+**Usage:**
+```bash
+./logo_generator "Modern tech startup logo" png    # Generate single logo
+./logo_generator -i                                 # Interactive mode
+./logo_generator -m "desc1" "desc2" "desc3"        # Multiple logos
+./logo_generator ollama llama2                     # Use local Ollama
+```
+
+**Examples:**
+```bash
+./logo_generator "Minimalist coffee shop logo with warm colors" png
+./logo_generator "Tech company logo with geometric shapes and blue gradient" jpeg
+./logo_generator "Vintage restaurant logo with elegant typography" png
+```
+
+**Interactive Commands:**
+- `help` - Show available commands
+- `list` - List all generated logos
+- `clear` - Clear output directory
+- `quit/exit/bye` - End session
+
+**Output:**
+- Logos saved to `generated_logos/` directory
+- SVG files for vector graphics
+- PNG/JPEG files for raster graphics (requires ImageMagick)
 
 ## 🔧 Building Examples
 
