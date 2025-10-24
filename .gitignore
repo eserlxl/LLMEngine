@@ -145,6 +145,7 @@ build/
 build-*/
 cmake-build-*/
 build-test/
+build_examples/
 out/
 dist/
 target/
