@@ -52,3 +52,7 @@ target_link_libraries(logo_generator LLMEngine ${CPR_LIBRARY} ${NLOHMANN_JSON_LI
 # Add executable for image generator
 add_executable(image_generator image_generator.cpp)
 target_link_libraries(image_generator LLMEngine ${CPR_LIBRARY} ${NLOHMANN_JSON_LIBRARIES} ssl crypto pthread curl)
+
+# Add executable for readme chatbot
+add_executable(readme_chatbot readme_chatbot.cpp)
+target_link_libraries(readme_chatbot LLMEngine ${CPR_LIBRARY} ${NLOHMANN_JSON_LIBRARIES} ssl crypto pthread curl)

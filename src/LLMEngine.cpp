@@ -134,7 +134,6 @@ void LLMEngine::cleanupResponseFiles() const {
 std::vector<std::string> LLMEngine::analyze(const std::string& prompt, 
                                            const nlohmann::json& input, 
                                            const std::string& analysis_type, 
-                                           int max_tokens,
                                            const std::string& mode) const {
     // Clean up existing response files
     cleanupResponseFiles();
@@ -151,9 +150,15 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
     if (use_api_client_ && api_client_) {
         // Use API client
         nlohmann::json api_params = model_params_;
-        if (max_tokens > 0) {
-            api_params["max_tokens"] = max_tokens;
+        
+        // Get max_tokens from input payload if provided
+        if (input.contains("max_tokens") && input["max_tokens"].is_number_integer()) {
+            int max_tokens = input["max_tokens"].get<int>();
+            if (max_tokens > 0) {
+                api_params["max_tokens"] = max_tokens;
+            }
         }
+        
         if (!mode.empty()) {
             api_params["mode"] = mode;
         }
@@ -188,8 +193,13 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
         for (auto& [key, value] : model_params_.items()) {
             payload[key] = value;
         }
-        if (max_tokens > 0) {
-            payload["max_tokens"] = max_tokens;
+        
+        // Get max_tokens from input payload if provided
+        if (input.contains("max_tokens") && input["max_tokens"].is_number_integer()) {
+            int max_tokens = input["max_tokens"].get<int>();
+            if (max_tokens > 0) {
+                payload["max_tokens"] = max_tokens;
+            }
         }
         
         auto response = cpr::Post(cpr::Url{ollama_url_ + "/api/generate"},

@@ -20,8 +20,17 @@ public:
                   const std::string& model = "", bool debug = false, const std::string& mode = "chat") 
         : debug_mode_(debug), mode_(mode) {
         try {
+            // Configure parameters optimized for text processing
+            nlohmann::json text_params = {
+                {"temperature", 0.5},        // Balanced for text processing tasks
+                {"max_tokens", 3000},         // Good length for summaries and analysis
+                {"top_p", 0.9},              // Good balance for text tasks
+                {"frequency_penalty", 0.1},   // Slight penalty to avoid repetition
+                {"presence_penalty", 0.0}     // No penalty for introducing concepts
+            };
+            
             engine_ = std::make_unique<LLMEngine>(provider_name, api_key, model, 
-                                                 nlohmann::json{}, 24, debug);
+                                                 text_params, 24, debug);
             std::cout << "✓ TextProcessor initialized with " << engine_->getProviderName() 
                       << " (" << (engine_->isOnlineProvider() ? "Online" : "Local") << ")" 
                       << " in " << mode_ << " mode" << std::endl;
@@ -44,7 +53,7 @@ public:
             std::string prompt = "Please provide a comprehensive summary of the following text. Include the main points, key insights, and important details. Make it clear and well-structured.";
             nlohmann::json input = {{"text", text}};
             
-            auto result = engine_->analyze(prompt, input, "summarization", 0, mode_);
+            auto result = engine_->analyze(prompt, input, "summarization", mode_);
             std::string summary = result[1];
             
             std::cout << "📋 Summary:" << std::endl;
@@ -93,7 +102,7 @@ public:
                                "Return them as a numbered list with brief explanations of why each keyword is important.";
             nlohmann::json input = {{"text", text}};
             
-            auto result = engine_->analyze(prompt, input, "keyword_extraction", 0, mode_);
+            auto result = engine_->analyze(prompt, input, "keyword_extraction", mode_);
             std::string keywords = result[1];
             
             std::cout << "🔑 Keywords:" << std::endl;
@@ -119,7 +128,7 @@ public:
                                "If the text is already in " + target_language + ", provide a polished version.";
             nlohmann::json input = {{"text", text}};
             
-            auto result = engine_->analyze(prompt, input, "translation", 0, mode_);
+            auto result = engine_->analyze(prompt, input, "translation", mode_);
             std::string translation = result[1];
             
             std::cout << "🌍 Translation:" << std::endl;
@@ -147,7 +156,7 @@ public:
                                "4. Brief explanation of your analysis";
             nlohmann::json input = {{"text", text}};
             
-            auto result = engine_->analyze(prompt, input, "sentiment_analysis", 0, mode_);
+            auto result = engine_->analyze(prompt, input, "sentiment_analysis", mode_);
             std::string sentiment = result[1];
             
             std::cout << "😊 Sentiment Analysis:" << std::endl;
@@ -174,7 +183,7 @@ public:
                                "Make them specific and relevant to the content.";
             nlohmann::json input = {{"text", text}};
             
-            auto result = engine_->analyze(prompt, input, "question_generation", 0, mode_);
+            auto result = engine_->analyze(prompt, input, "question_generation", mode_);
             std::string questions = result[1];
             
             std::cout << "❓ Questions:" << std::endl;

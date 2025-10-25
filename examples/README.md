@@ -35,7 +35,7 @@ This folder contains practical applications that demonstrate the capabilities of
    ./code_analyzer main.cpp     # Analyze code
    ```
 
-## 📋 Available Examples (6 total)
+## 📋 Available Examples (7 total)
 
 ### 1. 🤖 Chatbot (`chatbot.cpp`)
 Interactive conversational AI application with multiple features.
@@ -205,6 +205,46 @@ AI-powered logo generation tool that creates professional logos from text descri
 - Logos saved to `generated_logos/` directory
 - SVG files for vector graphics
 - PNG/JPEG files for raster graphics (requires ImageMagick)
+
+### 7. 📖 README ChatBot (`readme_chatbot.cpp`)
+AI-powered chatbot that reads GitHub project README files and answers project-related questions.
+
+**Features:**
+- Automatic GitHub URL processing (adds README.md automatically)
+- Local README file support
+- Markdown content cleaning and processing
+- Context-aware responses based on README content
+- Multi-provider support (Qwen, OpenAI, Anthropic, Ollama)
+- Interactive conversation with project-specific knowledge
+
+**Usage:**
+```bash
+./readme_chatbot https://github.com/user/repo              # GitHub project
+./readme_chatbot README.md ollama                         # Local file with Ollama
+./readme_chatbot https://github.com/user/repo qwen        # GitHub with Qwen
+./readme_chatbot README.md qwen qwen-flash                # Local file with specific model
+```
+
+**Examples:**
+```bash
+./readme_chatbot https://github.com/microsoft/vscode
+./readme_chatbot https://github.com/torvalds/linux ollama llama2
+./readme_chatbot ./project/README.md
+```
+
+**Interactive Commands:**
+- `help` - Show available commands
+- `summary` - Generate project overview from README
+- `status` - Show bot status and project info
+- `reload` - Reload README from URL
+- `quit/exit/bye` - End conversation
+
+**Sample Questions:**
+- "What is this project about?"
+- "How do I install this?"
+- "What are the main features?"
+- "How do I contribute?"
+- "What are the dependencies?"
 
 ## 🔧 Building Examples
 

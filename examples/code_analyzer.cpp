@@ -18,10 +18,19 @@ public:
                  const std::string& model = "", bool debug = false, const std::string& mode = "chat") 
         : debug_mode_(debug), mode_(mode) {
         try {
+            // Configure parameters optimized for code analysis
+            nlohmann::json analysis_params = {
+                {"temperature", 0.3},        // Lower temperature for more focused analysis
+                {"max_tokens", 4000},         // More tokens for detailed code analysis
+                {"top_p", 0.8},              // Focused sampling for technical content
+                {"frequency_penalty", 0.0},   // No penalty for technical terms
+                {"presence_penalty", 0.0}     // No penalty for introducing concepts
+            };
+            
             // Use a more capable model for code analysis
             std::string analysis_model = model.empty() ? "qwen-max" : model;
             engine_ = std::make_unique<LLMEngine>(provider_name, api_key, analysis_model, 
-                                                 nlohmann::json{}, 24, debug);
+                                                 analysis_params, 24, debug);
             std::cout << "✓ CodeAnalyzer initialized with " << engine_->getProviderName() 
                       << " (" << (engine_->isOnlineProvider() ? "Online" : "Local") << ")" 
                       << " in " << mode_ << " mode" << std::endl;
@@ -55,7 +64,7 @@ public:
                 {"filepath", filepath}
             };
             
-            auto result = engine_->analyze(prompt, input, "code_analysis", 0, mode_);
+            auto result = engine_->analyze(prompt, input, "code_analysis", mode_);
             std::string analysis = result[1];
             
             std::cout << analysis << std::endl;
@@ -117,7 +126,7 @@ public:
                 {"file2", file2}
             };
             
-            auto result = engine_->analyze(prompt, input, "code_comparison", 0, mode_);
+            auto result = engine_->analyze(prompt, input, "code_comparison", mode_);
             std::string comparison = result[1];
             
             std::cout << comparison << std::endl;

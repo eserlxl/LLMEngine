@@ -63,7 +63,8 @@ void testQwenClient() {
         // Test simple request
         std::string prompt = "What is 2+2? Answer with just the number.";
         nlohmann::json input = {{"system_prompt", "You are a helpful math assistant."}};
-        nlohmann::json params = {{"max_tokens", 50}, {"temperature", 0.1}};
+        input["max_tokens"] = 50;  // Add max_tokens to input payload
+        nlohmann::json params = {{"temperature", 0.1}};
         
         std::cout << "Sending test request..." << std::endl;
         auto response = client.sendRequest(prompt, input, params);
@@ -95,8 +96,7 @@ void testLLMEngineWithQwen() {
         std::cout << "\n1. Testing with ProviderType constructor..." << std::endl;
         
         nlohmann::json model_params = {
-            {"temperature", 0.7},
-            {"max_tokens", 100}
+            {"temperature", 0.7}
         };
         
         LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash", model_params, 24, true);
@@ -107,9 +107,10 @@ void testLLMEngineWithQwen() {
         // Test analysis
         std::string prompt = "Explain what machine learning is in one sentence:";
         nlohmann::json input = {{"context", "educational"}};
+        input["max_tokens"] = 100;  // Add max_tokens to input payload
         
         std::cout << "Running analysis..." << std::endl;
-        auto result = engine.analyze(prompt, input, "qwen_test", 100);
+        auto result = engine.analyze(prompt, input, "qwen_test");
         
         if (result.size() >= 2) {
             std::cout << "✓ Analysis completed" << std::endl;

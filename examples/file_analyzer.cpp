@@ -21,8 +21,17 @@ public:
                  const std::string& model = "", bool debug = false, const std::string& mode = "chat") 
         : debug_mode_(debug), mode_(mode) {
         try {
+            // Configure parameters optimized for file analysis
+            nlohmann::json file_params = {
+                {"temperature", 0.4},        // Balanced for file analysis
+                {"max_tokens", 3500},         // Good length for file analysis
+                {"top_p", 0.85},             // Focused sampling for analysis
+                {"frequency_penalty", 0.0},   // No penalty for technical terms
+                {"presence_penalty", 0.0}     // No penalty for introducing concepts
+            };
+            
             engine_ = std::make_unique<LLMEngine>(provider_name, api_key, model, 
-                                                 nlohmann::json{}, 24, debug);
+                                                 file_params, 24, debug);
             std::cout << "✓ FileAnalyzer initialized with " << engine_->getProviderName() 
                       << " (" << (engine_->isOnlineProvider() ? "Online" : "Local") << ")" 
                       << " in " << mode_ << " mode" << std::endl;
@@ -362,7 +371,7 @@ private:
                 {"filepath", filepath}
             };
             
-            auto result = engine_->analyze(prompt, input, "file_analysis", 0, mode_);
+            auto result = engine_->analyze(prompt, input, "file_analysis", mode_);
             std::string analysis = result[1];
             
             std::cout << "\n📋 Content Analysis:" << std::endl;

@@ -324,7 +324,8 @@ APIConfigManager (Singleton)
 
 2. **Limit tokens for faster responses**
    ```cpp
-   auto result = engine.analyze(prompt, input, "test", 500); // max 500 tokens
+   nlohmann::json input = {{"max_tokens", 500}}; // max 500 tokens
+   auto result = engine.analyze(prompt, input, "test");
    ```
 
 3. **Adjust temperature for deterministic results**

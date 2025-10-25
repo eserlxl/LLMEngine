@@ -19,8 +19,17 @@ public:
             const std::string& model = "", bool debug = false, const std::string& mode = "chat") 
         : debug_mode_(debug), mode_(mode) {
         try {
+            // Configure parameters optimized for chat interactions
+            nlohmann::json chat_params = {
+                {"temperature", 0.7},        // Balanced creativity
+                {"max_tokens", 2000},         // Reasonable response length
+                {"top_p", 0.9},              // Good balance of creativity and coherence
+                {"frequency_penalty", 0.1},   // Slight penalty to avoid repetition
+                {"presence_penalty", 0.0}     // No penalty for introducing new concepts
+            };
+            
             engine_ = std::make_unique<LLMEngine>(provider_name, api_key, model, 
-                                                 nlohmann::json{}, 24, debug);
+                                                 chat_params, 24, debug);
             std::cout << "✓ ChatBot initialized with " << engine_->getProviderName() 
                       << " (" << (engine_->isOnlineProvider() ? "Online" : "Local") << ")" 
                       << " in " << mode_ << " mode" << std::endl;
@@ -58,7 +67,7 @@ public:
             
             try {
                 // Get response from LLM
-                auto result = engine_->analyze(user_input, nlohmann::json{}, "chat", 0, mode_);
+                auto result = engine_->analyze(user_input, nlohmann::json{}, "chat", mode_);
                 std::string response = result[1];
                 
                 // Display response

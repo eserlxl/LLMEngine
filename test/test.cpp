@@ -65,9 +65,11 @@ int main() {
             {"return_type", "int"}
         };
         std::string analysis_type = "test_analysis";
-        int max_tokens = 100;  // Limit tokens for testing
         
-        std::vector<std::string> result = engine.analyze(prompt, input_data, analysis_type, max_tokens);
+        // Add max_tokens to input payload for testing
+        input_data["max_tokens"] = 100;  // Limit tokens for testing
+        
+        std::vector<std::string> result = engine.analyze(prompt, input_data, analysis_type);
         
         if (result.size() >= 2) {
             std::cout << "✓ Analysis completed successfully" << std::endl;

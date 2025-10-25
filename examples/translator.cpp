@@ -24,8 +24,17 @@ public:
                const std::string& model = "", bool debug = false, const std::string& mode = "chat") 
         : debug_mode_(debug), mode_(mode) {
         try {
+            // Configure parameters optimized for translation
+            nlohmann::json translation_params = {
+                {"temperature", 0.2},        // Low temperature for accurate translation
+                {"max_tokens", 2500},         // Good length for translations
+                {"top_p", 0.8},              // Focused sampling for translation accuracy
+                {"frequency_penalty", 0.0},   // No penalty for repeated words
+                {"presence_penalty", 0.0}     // No penalty for introducing concepts
+            };
+            
             engine_ = std::make_unique<LLMEngine>(provider_name, api_key, model, 
-                                                 nlohmann::json{}, 24, debug);
+                                                 translation_params, 24, debug);
             std::cout << "✓ Translator initialized with " << engine_->getProviderName() 
                       << " (" << (engine_->isOnlineProvider() ? "Online" : "Local") << ")" 
                       << " in " << mode_ << " mode" << std::endl;
@@ -53,7 +62,7 @@ public:
             std::string prompt = buildTranslationPrompt(source_language, target_language);
             nlohmann::json input = {{"text", text}};
             
-            auto result = engine_->analyze(prompt, input, "translation", 0, mode_);
+            auto result = engine_->analyze(prompt, input, "translation", mode_);
             std::string translation = result[1];
             
             std::cout << "🌍 Translation:" << std::endl;
@@ -137,7 +146,7 @@ public:
                                "3. Brief explanation of your detection";
             nlohmann::json input = {{"text", text}};
             
-            auto result = engine_->analyze(prompt, input, "language_detection", 0, mode_);
+            auto result = engine_->analyze(prompt, input, "language_detection", mode_);
             std::string detection = result[1];
             
             std::cout << "🔍 Language Detection:" << std::endl;
