@@ -71,19 +71,21 @@ private:
     std::string createPrompt(const std::string& topic, const std::string& other_bot_message) {
         std::stringstream prompt;
         
-        prompt << "You are " << name_ << ", a chatbot with the following personality: " << personality_ << "\n\n";
+        prompt << "You are " << name_ << " with this thinking style: " << personality_ << "\n\n";
         
         if (!other_bot_message.empty()) {
-            prompt << "Another bot just said: \"" << other_bot_message << "\"\n\n";
-            prompt << "Respond to their message while staying in character. ";
+            prompt << "Another person shared their thoughts about " << topic << ": \"" << other_bot_message << "\"\n\n";
+            prompt << "Think about their perspective on " << topic << " and respond with your own thoughts about the subject. ";
+            prompt << "Build upon, challenge, or expand on their ideas about " << topic << ". ";
         } else {
-            prompt << "Start a conversation about: " << topic << " ";
+            prompt << "Share your thoughts about " << topic << ". ";
+            prompt << "What are your insights, questions, or perspectives on this subject? ";
         }
         
-        prompt << "Keep your response conversational, engaging, and true to your personality. ";
-        prompt << "Make it sound natural and human-like. ";
+        prompt << "Focus entirely on " << topic << " and related concepts. ";
+        prompt << "Keep your response conversational but stay focused on the subject matter. ";
         prompt << "Keep responses concise (1-3 sentences) to maintain good conversation flow. ";
-        prompt << "Don't repeat what was already said unless adding new insights.";
+        prompt << "Don't ask about personalities or meta-conversation - only discuss " << topic << ".";
         
         return prompt.str();
     }
@@ -107,12 +109,12 @@ public:
     
     void initializeBots(const std::string& provider1, const std::string& api_key1, const std::string& model1,
                        const std::string& provider2, const std::string& api_key2, const std::string& model2) {
-        // Create bots with different personalities
+        // Create bots with different thinking styles
         std::vector<std::pair<std::string, std::string>> personalities = {
-            {"Alice", "You are curious, analytical, and tend to ask thoughtful questions. You like to explore different perspectives and challenge ideas constructively."},
-            {"Bob", "You are enthusiastic, creative, and tend to think outside the box. You enjoy brainstorming and coming up with innovative solutions."},
-            {"Charlie", "You are practical, detail-oriented, and focus on real-world applications. You prefer concrete examples and actionable insights."},
-            {"Diana", "You are philosophical, reflective, and enjoy exploring deeper meanings. You tend to connect ideas to broader concepts and principles."}
+            {"Alice", "You think analytically and ask probing questions. You examine different angles and challenge assumptions to deepen understanding."},
+            {"Bob", "You think creatively and innovatively. You explore unconventional ideas and brainstorm novel approaches to problems."},
+            {"Charlie", "You think practically and focus on real-world applications. You prefer concrete examples and actionable solutions."},
+            {"Diana", "You think philosophically and reflectively. You explore deeper meanings and connect ideas to broader principles."}
         };
         
         // Randomly assign personalities
