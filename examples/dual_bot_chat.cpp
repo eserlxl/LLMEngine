@@ -279,23 +279,27 @@ private:
             comparison_prompt << "You are an expert mediator analyzing two responses about problem-solving completion.\n\n";
             comparison_prompt << "Expert 1 says: \"" << decision1 << "\"\n\n";
             comparison_prompt << "Expert 2 says: \"" << decision2 << "\"\n\n";
-            comparison_prompt << "Both experts seem to be saying 'NO' or 'need more discussion', but analyze if they are actually ";
-            comparison_prompt << "saying similar things about the solution. Look for:\n";
-            comparison_prompt << "1. Do they mention the same key concepts or solutions?\n";
-            comparison_prompt << "2. Are they both satisfied with the technical approach?\n";
-            comparison_prompt << "3. Are they just being cautious rather than disagreeing?\n\n";
-            comparison_prompt << "Respond with exactly 'SIMILAR' if they are essentially saying the same thing about the solution, ";
-            comparison_prompt << "or 'DIFFERENT' if they have fundamentally different approaches or missing elements.";
+            comparison_prompt << "CRITICAL: Respond with 'SIMILAR' ONLY if BOTH experts explicitly say the solution is complete ";
+            comparison_prompt << "(using phrases like 'SOLUTION COMPLETE', 'solution is complete', 'we have a complete solution').\n\n";
+            comparison_prompt << "Respond with 'DIFFERENT' if:\n";
+            comparison_prompt << "- Either expert says 'NEED MORE DISCUSSION' or 'need more discussion'\n";
+            comparison_prompt << "- Either expert mentions missing elements, incomplete solutions, or gaps\n";
+            comparison_prompt << "- The experts have different opinions about completeness\n\n";
+            comparison_prompt << "Be very strict: only 'SIMILAR' if BOTH experts agree the solution is complete.";
             
             // Use the first bot's engine to make the comparison
             auto result = bot1_->getEngine()->analyze(comparison_prompt.str(), nlohmann::json{}, "chat", "chat");
             std::string comparison_result = result[1];
             
+            std::cout << "\n🤖 LLM Comparison Result: " << comparison_result << std::endl;
+            
             // Check if the LLM determined they are similar
             bool is_similar = comparison_result.find("SIMILAR") != std::string::npos;
             
             if (is_similar) {
-                std::cout << "\n🤖 LLM Analysis: Both experts are saying similar things about the solution!" << std::endl;
+                std::cout << "\n✅ LLM Analysis: Both experts are saying similar things about the solution!" << std::endl;
+            } else {
+                std::cout << "\n❌ LLM Analysis: Experts have different perspectives or need more discussion." << std::endl;
             }
             
             return is_similar;
