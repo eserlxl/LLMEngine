@@ -46,9 +46,9 @@ public:
         }
     }
     
-    std::string generateResponse(const std::string& topic, const std::string& other_bot_message = "") {
+    std::string generateResponse(const std::string& problem, const std::string& other_bot_message = "", bool is_final_check = false) {
         try {
-            std::string prompt = createPrompt(topic, other_bot_message);
+            std::string prompt = createPrompt(problem, other_bot_message, is_final_check);
             
             auto result = engine_->analyze(prompt, nlohmann::json{}, "chat", "chat");
             std::string response = result[1];
@@ -70,10 +70,18 @@ public:
     LLMEngine* getEngine() const { return engine_.get(); }
     
 private:
-    std::string createPrompt(const std::string& problem, const std::string& other_bot_message) {
+    std::string createPrompt(const std::string& problem, const std::string& other_bot_message, bool is_final_check = false) {
         std::stringstream prompt;
         
         prompt << "You are " << name_ << ". " << personality_ << "\n\n";
+        
+        if (is_final_check) {
+            prompt << "After reviewing our collaboration on: " << problem << "\n\n";
+            prompt << "Do you think we have developed a comprehensive solution? ";
+            prompt << "Respond with either 'YES, we have a complete solution' or 'NO, we need more discussion' ";
+            prompt << "followed by a brief explanation of your reasoning.";
+            return prompt.str();
+        }
         
         if (!other_bot_message.empty()) {
             prompt << "Your colleague just shared their analysis: \"" << other_bot_message << "\"\n\n";
@@ -195,6 +203,14 @@ public:
             last_analysis = response;
             bot1_turn = !bot1_turn;
             
+            // Check for completion after every 2 turns (both experts have spoken)
+            if (turn > 0 && turn % 2 == 1) {
+                if (checkForCompletion()) {
+                    std::cout << "\n✅ Both experts agree the solution is complete!" << std::endl;
+                    break;
+                }
+            }
+            
             // Add a small delay for better readability
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
@@ -218,6 +234,38 @@ public:
     }
     
 private:
+    bool checkForCompletion() {
+        std::cout << "\n🤔 Checking if solution is complete..." << std::endl;
+        
+        try {
+            // Ask both experts if they think the solution is complete
+            std::string bot1_decision = bot1_->generateResponse(problem_, "", true);
+            std::string bot2_decision = bot2_->generateResponse(problem_, "", true);
+            
+            std::cout << "\n🔬 " << bot1_->getName() << " decision: " << bot1_decision << std::endl;
+            std::cout << "⚙️ " << bot2_->getName() << " decision: " << bot2_decision << std::endl;
+            
+            // Check if both experts agree (look for "YES" in their responses)
+            bool bot1_agrees = bot1_decision.find("YES") != std::string::npos || 
+                              bot1_decision.find("yes") != std::string::npos ||
+                              bot1_decision.find("Yes") != std::string::npos;
+            bool bot2_agrees = bot2_decision.find("YES") != std::string::npos || 
+                              bot2_decision.find("yes") != std::string::npos ||
+                              bot2_decision.find("Yes") != std::string::npos;
+            
+            // Add decisions to log
+            full_solution_log_ += "\n--- COMPLETION CHECK ---\n";
+            full_solution_log_ += bot1_->getName() + " decision: " + bot1_decision + "\n";
+            full_solution_log_ += bot2_->getName() + " decision: " + bot2_decision + "\n";
+            
+            return bot1_agrees && bot2_agrees;
+            
+        } catch (const std::exception& e) {
+            std::cerr << "❌ Error checking completion: " << e.what() << std::endl;
+            return false;
+        }
+    }
+    
     void generateFinalSolution() {
         std::cout << "\n🧠 SYNTHESIZING FINAL SOLUTION" << std::endl;
         std::cout << std::string(50, '=') << std::endl;
@@ -326,7 +374,7 @@ int main(int argc, char* argv[]) {
             model1 = argc > 3 ? argv[3] : "llama2";
             model2 = argc > 4 ? argv[4] : "llama2";
             
-            DualBotProblemSolver solver(problem, 6, false);
+            DualBotProblemSolver solver(problem, 25, false);
             solver.initializeBots("ollama", "", model1, "ollama", "", model2);
             solver.startProblemSolving();
             return 0;
@@ -366,7 +414,7 @@ int main(int argc, char* argv[]) {
     if (argc > 5) model2 = argv[5];
     
     try {
-        DualBotProblemSolver solver(problem, 6, false);
+        DualBotProblemSolver solver(problem, 25, false);
         solver.initializeBots(provider1, api_key1, model1, provider2, api_key2, model2);
         solver.startProblemSolving();
         
