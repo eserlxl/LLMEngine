@@ -279,13 +279,16 @@ private:
             comparison_prompt << "You are an expert mediator analyzing two responses about problem-solving completion.\n\n";
             comparison_prompt << "Expert 1 says: \"" << decision1 << "\"\n\n";
             comparison_prompt << "Expert 2 says: \"" << decision2 << "\"\n\n";
-            comparison_prompt << "CRITICAL: Respond with 'SIMILAR' ONLY if BOTH experts explicitly say the solution is complete ";
-            comparison_prompt << "(using phrases like 'SOLUTION COMPLETE', 'solution is complete', 'we have a complete solution').\n\n";
+            comparison_prompt << "Analyze if the experts are saying similar things about the solution, even if both say 'NEED MORE DISCUSSION'.\n\n";
+            comparison_prompt << "Respond with 'SIMILAR' if:\n";
+            comparison_prompt << "- BOTH experts explicitly say the solution is complete (e.g., 'SOLUTION COMPLETE')\n";
+            comparison_prompt << "- BOTH experts say 'NEED MORE DISCUSSION' but mention the SAME key concepts/solutions\n";
+            comparison_prompt << "- Both experts are essentially agreeing on the core solution but being cautious\n\n";
             comparison_prompt << "Respond with 'DIFFERENT' if:\n";
-            comparison_prompt << "- Either expert says 'NEED MORE DISCUSSION' or 'need more discussion'\n";
-            comparison_prompt << "- Either expert mentions missing elements, incomplete solutions, or gaps\n";
-            comparison_prompt << "- The experts have different opinions about completeness\n\n";
-            comparison_prompt << "Be very strict: only 'SIMILAR' if BOTH experts agree the solution is complete.";
+            comparison_prompt << "- The experts have fundamentally different approaches to the problem\n";
+            comparison_prompt << "- One expert says solution is complete while the other says it's incomplete\n";
+            comparison_prompt << "- They mention completely different missing elements or gaps\n\n";
+            comparison_prompt << "Key question: Are they both talking about the same core solution concepts, even if both want more discussion?";
             
             // Use the first bot's engine to make the comparison
             auto result = bot1_->getEngine()->analyze(comparison_prompt.str(), nlohmann::json{}, "chat", "chat");
