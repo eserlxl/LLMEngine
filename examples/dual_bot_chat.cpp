@@ -374,7 +374,7 @@ int main(int argc, char* argv[]) {
             model1 = argc > 3 ? argv[3] : "llama2";
             model2 = argc > 4 ? argv[4] : "llama2";
             
-            DualBotProblemSolver solver(problem, 25, false);
+            DualBotProblemSolver solver(problem, 50, false);
             solver.initializeBots("ollama", "", model1, "ollama", "", model2);
             solver.startProblemSolving();
             return 0;
@@ -414,7 +414,7 @@ int main(int argc, char* argv[]) {
     if (argc > 5) model2 = argv[5];
     
     try {
-        DualBotProblemSolver solver(problem, 25, false);
+        DualBotProblemSolver solver(problem, 50, false);
         solver.initializeBots(provider1, api_key1, model1, provider2, api_key2, model2);
         solver.startProblemSolving();
         
