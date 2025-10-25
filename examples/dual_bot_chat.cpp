@@ -10,6 +10,7 @@
 #include <chrono>
 #include <random>
 #include <algorithm>
+#include <cctype>
 
 class Bot {
 private:
@@ -77,9 +78,10 @@ private:
         
         if (is_final_check) {
             prompt << "After reviewing our collaboration on: " << problem << "\n\n";
-            prompt << "Do you think we have developed a comprehensive solution? ";
-            prompt << "Respond with either 'YES, we have a complete solution' or 'NO, we need more discussion' ";
-            prompt << "followed by a brief explanation of your reasoning.";
+            prompt << "Based on our discussion, do you think we have provided a sufficient and practical solution? ";
+            prompt << "Consider if we have covered the main aspects, provided actionable steps, and addressed the core problem. ";
+            prompt << "If yes, respond with 'SOLUTION COMPLETE' followed by a brief summary. ";
+            prompt << "If no, respond with 'NEED MORE DISCUSSION' and explain what's missing.";
             return prompt.str();
         }
         
@@ -245,23 +247,61 @@ private:
             std::cout << "\n🔬 " << bot1_->getName() << " decision: " << bot1_decision << std::endl;
             std::cout << "⚙️ " << bot2_->getName() << " decision: " << bot2_decision << std::endl;
             
-            // Check if both experts agree (look for "YES" in their responses)
-            bool bot1_agrees = bot1_decision.find("YES") != std::string::npos || 
-                              bot1_decision.find("yes") != std::string::npos ||
-                              bot1_decision.find("Yes") != std::string::npos;
-            bool bot2_agrees = bot2_decision.find("YES") != std::string::npos || 
-                              bot2_decision.find("yes") != std::string::npos ||
-                              bot2_decision.find("Yes") != std::string::npos;
+            // Check if both experts agree (look for "SOLUTION COMPLETE" in their responses)
+            bool bot1_agrees = bot1_decision.find("SOLUTION COMPLETE") != std::string::npos || 
+                              bot1_decision.find("solution complete") != std::string::npos ||
+                              bot1_decision.find("Solution Complete") != std::string::npos;
+            bool bot2_agrees = bot2_decision.find("SOLUTION COMPLETE") != std::string::npos || 
+                              bot2_decision.find("solution complete") != std::string::npos ||
+                              bot2_decision.find("Solution Complete") != std::string::npos;
+            
+            // Additional check: if both are saying similar things (even if they say "NO"), 
+            // use LLM to determine if they're essentially agreeing
+            bool both_saying_similar = checkIfSimilarSolutionsWithLLM(bot1_decision, bot2_decision);
             
             // Add decisions to log
             full_solution_log_ += "\n--- COMPLETION CHECK ---\n";
             full_solution_log_ += bot1_->getName() + " decision: " + bot1_decision + "\n";
             full_solution_log_ += bot2_->getName() + " decision: " + bot2_decision + "\n";
             
-            return bot1_agrees && bot2_agrees;
+            return bot1_agrees && bot2_agrees || both_saying_similar;
             
         } catch (const std::exception& e) {
             std::cerr << "❌ Error checking completion: " << e.what() << std::endl;
+            return false;
+        }
+    }
+    
+    bool checkIfSimilarSolutionsWithLLM(const std::string& decision1, const std::string& decision2) {
+        try {
+            // Create a comparison prompt
+            std::stringstream comparison_prompt;
+            comparison_prompt << "You are an expert mediator analyzing two responses about problem-solving completion.\n\n";
+            comparison_prompt << "Expert 1 says: \"" << decision1 << "\"\n\n";
+            comparison_prompt << "Expert 2 says: \"" << decision2 << "\"\n\n";
+            comparison_prompt << "Both experts seem to be saying 'NO' or 'need more discussion', but analyze if they are actually ";
+            comparison_prompt << "saying similar things about the solution. Look for:\n";
+            comparison_prompt << "1. Do they mention the same key concepts or solutions?\n";
+            comparison_prompt << "2. Are they both satisfied with the technical approach?\n";
+            comparison_prompt << "3. Are they just being cautious rather than disagreeing?\n\n";
+            comparison_prompt << "Respond with exactly 'SIMILAR' if they are essentially saying the same thing about the solution, ";
+            comparison_prompt << "or 'DIFFERENT' if they have fundamentally different approaches or missing elements.";
+            
+            // Use the first bot's engine to make the comparison
+            auto result = bot1_->getEngine()->analyze(comparison_prompt.str(), nlohmann::json{}, "chat", "chat");
+            std::string comparison_result = result[1];
+            
+            // Check if the LLM determined they are similar
+            bool is_similar = comparison_result.find("SIMILAR") != std::string::npos;
+            
+            if (is_similar) {
+                std::cout << "\n🤖 LLM Analysis: Both experts are saying similar things about the solution!" << std::endl;
+            }
+            
+            return is_similar;
+            
+        } catch (const std::exception& e) {
+            std::cerr << "❌ Error in LLM comparison: " << e.what() << std::endl;
             return false;
         }
     }
