@@ -21,8 +21,17 @@ public:
                   const std::string& model = "", bool debug = false) 
         : debug_mode_(debug) {
         try {
+            // Configure parameters optimized for creative logo generation
+            nlohmann::json logo_params = {
+                {"temperature", 0.8},        // Higher creativity for logo design
+                {"max_tokens", 32768},        // More tokens for detailed SVG code
+                {"top_p", 0.9},              // Good balance of creativity and coherence
+                {"frequency_penalty", 0.1},   // Slight penalty to avoid repetition
+                {"presence_penalty", 0.0}    // No penalty for introducing new concepts
+            };
+            
             engine_ = std::make_unique<LLMEngine>(provider_name, api_key, model, 
-                                                 nlohmann::json{}, 24, debug);
+                                                 logo_params, 24, debug);
             output_dir_ = "generated_logos";
             std::filesystem::create_directories(output_dir_);
             
