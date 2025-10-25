@@ -279,16 +279,16 @@ private:
             comparison_prompt << "You are an expert mediator analyzing two responses about problem-solving completion.\n\n";
             comparison_prompt << "Expert 1 says: \"" << decision1 << "\"\n\n";
             comparison_prompt << "Expert 2 says: \"" << decision2 << "\"\n\n";
-            comparison_prompt << "Analyze if the experts are saying similar things about the solution, even if both say 'NEED MORE DISCUSSION'.\n\n";
-            comparison_prompt << "Respond with 'SIMILAR' if:\n";
-            comparison_prompt << "- BOTH experts explicitly say the solution is complete (e.g., 'SOLUTION COMPLETE')\n";
-            comparison_prompt << "- BOTH experts say 'NEED MORE DISCUSSION' but mention the SAME key concepts/solutions\n";
-            comparison_prompt << "- Both experts are essentially agreeing on the core solution but being cautious\n\n";
+            comparison_prompt << "CRITICAL ANALYSIS: Look at the exact decision each expert made about solution completeness.\n\n";
+            comparison_prompt << "Respond with 'SIMILAR' ONLY if:\n";
+            comparison_prompt << "- BOTH experts explicitly say 'SOLUTION COMPLETE' or similar completion phrases\n";
+            comparison_prompt << "- BOTH experts say 'NEED MORE DISCUSSION' AND mention the EXACT SAME missing elements\n\n";
             comparison_prompt << "Respond with 'DIFFERENT' if:\n";
-            comparison_prompt << "- The experts have fundamentally different approaches to the problem\n";
-            comparison_prompt << "- One expert says solution is complete while the other says it's incomplete\n";
-            comparison_prompt << "- They mention completely different missing elements or gaps\n\n";
-            comparison_prompt << "Key question: Are they both talking about the same core solution concepts, even if both want more discussion?";
+            comparison_prompt << "- One expert says 'SOLUTION COMPLETE' while the other says 'NEED MORE DISCUSSION'\n";
+            comparison_prompt << "- The experts have different opinions about whether the solution is complete\n";
+            comparison_prompt << "- One expert is satisfied while the other identifies specific gaps\n\n";
+            comparison_prompt << "IMPORTANT: If one expert says the solution is complete and the other says it needs more discussion, ";
+            comparison_prompt << "this is a fundamental disagreement about completeness - respond 'DIFFERENT'.";
             
             // Use the first bot's engine to make the comparison
             auto result = bot1_->getEngine()->analyze(comparison_prompt.str(), nlohmann::json{}, "chat", "chat");
