@@ -114,6 +114,22 @@ private:
     int max_turns_;
     bool debug_mode_;
     
+    std::string formatExpertName(const Bot* bot) const {
+        std::string name = bot->getName();
+        std::string model1 = bot1_->getEngine()->getModelName();
+        std::string model2 = bot2_->getEngine()->getModelName();
+        
+        // Only show model name if the models are different
+        if (model1 != model2) {
+            std::string model = bot->getEngine()->getModelName();
+            if (!model.empty()) {
+                name += " (" + model + ")";
+            }
+        }
+        
+        return name;
+    }
+    
 public:
     DualBotProblemSolver(const std::string& problem, int max_turns = 10, bool debug = false) 
         : problem_(problem), max_turns_(max_turns), debug_mode_(debug) {
@@ -142,8 +158,8 @@ public:
                                      provider2, api_key2, model2, debug_mode_);
         
         std::cout << "\n🤖 Problem-Solving Team Setup Complete!" << std::endl;
-        std::cout << "Expert 1: " << bot1_->getName() << " (" << bot1_->getPersonality().substr(0, 50) << "...)" << std::endl;
-        std::cout << "Expert 2: " << bot2_->getName() << " (" << bot2_->getPersonality().substr(0, 50) << "...)" << std::endl;
+        std::cout << "Expert 1: " << formatExpertName(bot1_.get()) << " (" << bot1_->getPersonality().substr(0, 50) << "...)" << std::endl;
+        std::cout << "Expert 2: " << formatExpertName(bot2_.get()) << " (" << bot2_->getPersonality().substr(0, 50) << "...)" << std::endl;
         std::cout << "Problem: " << problem_ << std::endl;
         std::cout << "Max Collaboration Rounds: " << max_turns_ << std::endl;
         std::cout << std::string(60, '=') << std::endl;
@@ -156,7 +172,7 @@ public:
         }
         
         std::cout << "\n🎯 Starting collaborative problem-solving session" << std::endl;
-        std::cout << "Experts: " << bot1_->getName() << " and " << bot2_->getName() << std::endl;
+        std::cout << "Experts: " << formatExpertName(bot1_.get()) << " and " << formatExpertName(bot2_.get()) << std::endl;
         std::cout << "Problem: " << problem_ << std::endl;
         std::cout << "The team will work together to solve this problem. Press Enter to start..." << std::endl;
         
@@ -178,7 +194,7 @@ public:
             
             if (bot1_turn) {
                 // Expert 1's turn
-                std::cout << "\n🔬 " << bot1_->getName() << ": ";
+                std::cout << "\n🔬 " << formatExpertName(bot1_.get()) << ": ";
                 std::cout.flush();
                 
                 if (turn == 0) {
@@ -194,7 +210,7 @@ public:
                 
             } else {
                 // Expert 2's turn
-                std::cout << "\n⚙️ " << bot2_->getName() << ": ";
+                std::cout << "\n⚙️ " << formatExpertName(bot2_.get()) << ": ";
                 std::cout.flush();
                 
                 response = bot2_->generateResponse(problem_, last_analysis);
@@ -244,8 +260,8 @@ private:
             std::string bot1_decision = bot1_->generateResponse(problem_, "", true);
             std::string bot2_decision = bot2_->generateResponse(problem_, "", true);
             
-            std::cout << "\n🔬 " << bot1_->getName() << " decision: " << bot1_decision << std::endl;
-            std::cout << "⚙️ " << bot2_->getName() << " decision: " << bot2_decision << std::endl;
+            std::cout << "\n🔬 " << formatExpertName(bot1_.get()) << " decision: " << bot1_decision << std::endl;
+            std::cout << "⚙️ " << formatExpertName(bot2_.get()) << " decision: " << bot2_decision << std::endl;
             
             // Check if both experts agree (look for "SOLUTION COMPLETE" in their responses)
             bool bot1_agrees = bot1_decision.find("SOLUTION COMPLETE") != std::string::npos || 
@@ -324,7 +340,7 @@ private:
             synthesis_prompt << "Problem: " << problem_ << "\n\n";
             synthesis_prompt << "Collaboration History:\n";
             synthesis_prompt << full_solution_log_ << "\n\n";
-            synthesis_prompt << "Based on the above collaboration between " << bot1_->getName() << " and " << bot2_->getName() << ", ";
+            synthesis_prompt << "Based on the above collaboration between " << formatExpertName(bot1_.get()) << " and " << formatExpertName(bot2_.get()) << ", ";
             synthesis_prompt << "provide a single, comprehensive, actionable solution that:\n";
             synthesis_prompt << "1. Integrates the best ideas from both experts\n";
             synthesis_prompt << "2. Provides a clear step-by-step implementation plan\n";
@@ -365,8 +381,8 @@ private:
         if (file.is_open()) {
             file << "Collaborative Problem-Solving Session\n";
             file << "Problem: " << problem_ << "\n";
-            file << "Expert 1: " << bot1_->getName() << " (" << bot1_->getPersonality() << ")\n";
-            file << "Expert 2: " << bot2_->getName() << " (" << bot2_->getPersonality() << ")\n";
+            file << "Expert 1: " << formatExpertName(bot1_.get()) << " (" << bot1_->getPersonality() << ")\n";
+            file << "Expert 2: " << formatExpertName(bot2_.get()) << " (" << bot2_->getPersonality() << ")\n";
             file << "Saved: " << std::put_time(&tm, "%Y-%m-%d %H:%M:%S") << "\n";
             file << std::string(50, '=') << "\n\n";
             file << full_solution_log_;

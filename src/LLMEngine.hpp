@@ -20,6 +20,7 @@ public:
     
     // Utility methods
     std::string getProviderName() const;
+    std::string getModelName() const;
     ::LLMEngineAPI::ProviderType getProviderType() const;
     bool isOnlineProvider() const;
     

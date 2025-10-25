@@ -299,6 +299,10 @@ std::string LLMEngine::getProviderName() const {
     return "Ollama (Legacy)";
 }
 
+std::string LLMEngine::getModelName() const {
+    return model_;
+}
+
 ::LLMEngineAPI::ProviderType LLMEngine::getProviderType() const {
     return provider_type_;
 }
