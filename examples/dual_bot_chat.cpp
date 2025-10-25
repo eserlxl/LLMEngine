@@ -67,6 +67,7 @@ public:
     std::string getName() const { return name_; }
     std::string getPersonality() const { return personality_; }
     std::string getConversationHistory() const { return conversation_history_; }
+    LLMEngine* getEngine() const { return engine_.get(); }
     
 private:
     std::string createPrompt(const std::string& problem, const std::string& other_bot_message) {
@@ -202,6 +203,9 @@ public:
         std::cout << "PROBLEM-SOLVING SESSION COMPLETED" << std::endl;
         std::cout << std::string(60, '=') << std::endl;
         
+        // Generate final synthesized solution
+        generateFinalSolution();
+        
         // Offer to save the solution
         std::cout << "\n💾 Would you like to save this solution? (y/n): ";
         std::cout.flush();
@@ -214,6 +218,47 @@ public:
     }
     
 private:
+    void generateFinalSolution() {
+        std::cout << "\n🧠 SYNTHESIZING FINAL SOLUTION" << std::endl;
+        std::cout << std::string(50, '=') << std::endl;
+        
+        try {
+            // Create a synthesis prompt using the first bot's engine
+            std::stringstream synthesis_prompt;
+            synthesis_prompt << "You are a senior technical consultant tasked with synthesizing a comprehensive solution.\n\n";
+            synthesis_prompt << "Problem: " << problem_ << "\n\n";
+            synthesis_prompt << "Collaboration History:\n";
+            synthesis_prompt << full_solution_log_ << "\n\n";
+            synthesis_prompt << "Based on the above collaboration between " << bot1_->getName() << " and " << bot2_->getName() << ", ";
+            synthesis_prompt << "provide a single, comprehensive, actionable solution that:\n";
+            synthesis_prompt << "1. Integrates the best ideas from both experts\n";
+            synthesis_prompt << "2. Provides a clear step-by-step implementation plan\n";
+            synthesis_prompt << "3. Addresses potential challenges and considerations\n";
+            synthesis_prompt << "4. Includes specific tools, technologies, and methodologies\n";
+            synthesis_prompt << "5. Prioritizes the most impactful solutions\n\n";
+            synthesis_prompt << "Format your response as a structured solution with clear sections and actionable steps.";
+            
+            // Use the first bot's engine to generate the synthesis
+            auto result = bot1_->getEngine()->analyze(synthesis_prompt.str(), nlohmann::json{}, "chat", "chat");
+            std::string final_solution = result[1];
+            
+            std::cout << "\n📋 COMPREHENSIVE SOLUTION:" << std::endl;
+            std::cout << std::string(50, '-') << std::endl;
+            std::cout << final_solution << std::endl;
+            std::cout << std::string(50, '-') << std::endl;
+            
+            // Add the final solution to the log
+            full_solution_log_ += "\n" + std::string(50, '=') + "\n";
+            full_solution_log_ += "FINAL SYNTHESIZED SOLUTION\n";
+            full_solution_log_ += std::string(50, '=') + "\n";
+            full_solution_log_ += final_solution + "\n";
+            
+        } catch (const std::exception& e) {
+            std::cerr << "❌ Error generating final solution: " << e.what() << std::endl;
+            std::cout << "📋 Unable to synthesize final solution, but the collaboration history above contains all the insights." << std::endl;
+        }
+    }
+    
     void saveSolution() {
         // Generate filename with timestamp
         auto now = std::time(nullptr);
@@ -281,7 +326,7 @@ int main(int argc, char* argv[]) {
             model1 = argc > 3 ? argv[3] : "llama2";
             model2 = argc > 4 ? argv[4] : "llama2";
             
-            DualBotProblemSolver solver(problem, 10, false);
+            DualBotProblemSolver solver(problem, 6, false);
             solver.initializeBots("ollama", "", model1, "ollama", "", model2);
             solver.startProblemSolving();
             return 0;
@@ -321,7 +366,7 @@ int main(int argc, char* argv[]) {
     if (argc > 5) model2 = argv[5];
     
     try {
-        DualBotProblemSolver solver(problem, 10, false);
+        DualBotProblemSolver solver(problem, 6, false);
         solver.initializeBots(provider1, api_key1, model1, provider2, api_key2, model2);
         solver.startProblemSolving();
         
