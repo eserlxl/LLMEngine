@@ -27,10 +27,11 @@ public:
             // Configure parameters optimized for chat interactions
             nlohmann::json chat_params = {
                 {"temperature", 0.7},        // Balanced creativity
-                {"max_tokens", 2000},         // Reasonable response length
+                {"max_tokens", 32768},         // Reasonable response length
                 {"top_p", 0.9},              // Good balance of creativity and coherence
                 {"frequency_penalty", 0.1},   // Slight penalty to avoid repetition
-                {"presence_penalty", 0.0}     // No penalty for introducing new concepts
+                {"presence_penalty", 0.0},    // No penalty for introducing new concepts
+                {"think", true}              // Enable chain of thought reasoning
             };
             
             engine_ = std::make_unique<LLMEngine>(provider_name, api_key, model, 
