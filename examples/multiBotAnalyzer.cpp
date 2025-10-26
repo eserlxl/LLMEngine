@@ -109,6 +109,19 @@ private:
     }
 };
 
+// Personality definitions available for the multi-bot system
+namespace {
+    const std::vector<std::pair<std::string, std::string>> PERSONALITIES = {
+        {"Scientist", "You are a quantitative market analyst. You think analytically using statistical methods and data science. You examine market data, charts, indicators, and patterns to identify trends and opportunities. You challenge assumptions and dig deep into the underlying market dynamics."},
+        {"Engineer", "You are a trading systems engineer. You think about building robust trading infrastructure, execution systems, and automation. You explore algorithmic approaches and technical solutions to implement trading strategies efficiently and reliably."},
+        {"Optimizer", "You are a risk manager. You think practically about risk-reward ratios, position sizing, drawdowns, and portfolio management. You focus on concrete risk metrics, capital preservation strategies, and optimal trade allocation to maximize long-term returns."},
+        {"Programmer", "You are an algorithmic trading developer. You think logically about implementing trading strategies through code and backtesting. You are detail-oriented in execution, order management, and system reliability to ensure consistent performance in live markets."},
+        {"Trader", "You are a financial trader. You think strategically about risk and reward. You analyze market trends, identify opportunities, and make data-driven decisions. You focus on practical trading strategies, risk management, and maximizing returns while minimizing downside."}
+    };
+    
+    const int MAX_BOTS = static_cast<int>(PERSONALITIES.size());
+}
+
 class MultiBotProblemSolver {
 private:
     std::vector<std::unique_ptr<Bot>> bots_;
@@ -151,18 +164,12 @@ public:
     }
     
     void initializeBots(const std::vector<std::tuple<std::string, std::string, std::string>>& bot_configs) {
-        if (bot_configs.empty() || bot_configs.size() > 4) {
-            throw std::invalid_argument("Must provide 1-4 bot configurations");
+        if (bot_configs.empty() || bot_configs.size() > MAX_BOTS) {
+            throw std::invalid_argument("Must provide 1-" + std::to_string(MAX_BOTS) + " bot configurations");
         }
         
         // Create bots with different thinking styles
-        std::vector<std::pair<std::string, std::string>> personalities = {
-            {"Scientist", "You are a quantitative market analyst. You think analytically using statistical methods and data science. You examine market data, charts, indicators, and patterns to identify trends and opportunities. You challenge assumptions and dig deep into the underlying market dynamics."},
-            {"Engineer", "You are a trading systems engineer. You think about building robust trading infrastructure, execution systems, and automation. You explore algorithmic approaches and technical solutions to implement trading strategies efficiently and reliably."},
-            {"Optimizer", "You are a risk manager. You think practically about risk-reward ratios, position sizing, drawdowns, and portfolio management. You focus on concrete risk metrics, capital preservation strategies, and optimal trade allocation to maximize long-term returns."},
-            {"Programmer", "You are an algorithmic trading developer. You think logically about implementing trading strategies through code and backtesting. You are detail-oriented in execution, order management, and system reliability to ensure consistent performance in live markets."},
-            {"Trader", "You are a financial trader. You think strategically about risk and reward. You analyze market trends, identify opportunities, and make data-driven decisions. You focus on practical trading strategies, risk management, and maximizing returns while minimizing downside."}
-        };
+        std::vector<std::pair<std::string, std::string>> personalities = PERSONALITIES;
         
         // Randomly assign personalities
         std::random_device rd;
@@ -413,7 +420,7 @@ private:
 void printWelcome() {
     std::cout << "🤖 LLMEngine Multi-Bot Problem Analyzer" << std::endl;
     std::cout << "=====================================" << std::endl;
-    std::cout << "This example creates 1-4 AI experts that collaborate to solve problems." << std::endl;
+    std::cout << "This example creates 1-" << MAX_BOTS << " AI experts that collaborate to solve problems." << std::endl;
     std::cout << "Each expert has specialized knowledge and approaches problems differently." << std::endl;
     std::cout << "🗳️ Uses democratic voting: Solutions are accepted when 66%+ experts vote 'SOLUTION COMPLETE'." << std::endl;
     std::cout << "Supports multiple AI providers: Qwen, OpenAI, Anthropic, Ollama" << std::endl;
@@ -451,12 +458,12 @@ int main(int argc, char* argv[]) {
         num_bots = std::stoi(argv[2]);
     } catch (const std::exception& e) {
         std::cerr << "❌ Invalid number of bots: " << argv[2] << std::endl;
-        std::cerr << "Number of bots must be a valid integer between 1 and 4." << std::endl;
+        std::cerr << "Number of bots must be a valid integer between 1 and " << MAX_BOTS << "." << std::endl;
         return 1;
     }
     
-    if (num_bots < 1 || num_bots > 4) {
-        std::cerr << "❌ Number of bots must be between 1 and 4!" << std::endl;
+    if (num_bots < 1 || num_bots > MAX_BOTS) {
+        std::cerr << "❌ Number of bots must be between 1 and " << MAX_BOTS << "!" << std::endl;
         return 1;
     }
     
