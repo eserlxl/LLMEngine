@@ -28,7 +28,7 @@ public:
         try {
             // Configure parameters optimized for conversational interactions
             nlohmann::json chat_params = {
-                {"temperature", 0.8},        // Higher creativity for diverse responses
+                {"temperature", 0.},        // Higher creativity for diverse responses
                 {"max_tokens", 32768},       // Reasonable response length
                 {"top_p", 0.9},              // Good balance of creativity and coherence
                 {"frequency_penalty", 0.2},   // Moderate penalty to avoid repetition
@@ -163,7 +163,7 @@ public:
         full_solution_log_ += std::string(50, '=') + "\n\n";
     }
     
-    void initializeBots(const std::vector<std::tuple<std::string, std::string, std::string>>& bot_configs) {
+    void initializeBots(const std::vector<std::tuple<std::string, std::string, std::string>>& bot_configs, bool randomize = false) {
         if (bot_configs.empty() || bot_configs.size() > MAX_BOTS) {
             throw std::invalid_argument("Must provide 1-" + std::to_string(MAX_BOTS) + " bot configurations");
         }
@@ -171,10 +171,12 @@ public:
         // Create bots with different thinking styles
         std::vector<std::pair<std::string, std::string>> personalities = PERSONALITIES;
         
-        // Randomly assign personalities
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::shuffle(personalities.begin(), personalities.end(), gen);
+        // Randomly assign personalities if requested
+        if (randomize) {
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::shuffle(personalities.begin(), personalities.end(), gen);
+        }
         
         bots_.clear();
         for (size_t i = 0; i < bot_configs.size(); ++i) {
@@ -434,12 +436,14 @@ void printWelcome() {
     std::cout << "  -s, --server <server>        Server/provider (ollama, qwen, openai, anthropic)" << std::endl;
     std::cout << "  -p, --prompt <text>          Problem description/prompt text" << std::endl;
     std::cout << "  -i, --input <file>           Read prompt from file" << std::endl;
+    std::cout << "  --use-random-experts         Randomize expert selection (experts are selected in order by default)" << std::endl;
     std::cout << std::endl;
     std::cout << "Examples:" << std::endl;
     std::cout << "  ./multi_bot_analyzer -n 2 -s ollama -m qwen3:4b -p \"Optimize database\"" << std::endl;
     std::cout << "  ./multi_bot_analyzer -n 2 -i problem.txt -s ollama -m qwen3:1.7b" << std::endl;
     std::cout << "  ./multi_bot_analyzer -n 3 -s qwen -m qwen-flash,qwen-max,qwen-plus -p \"Design architecture\"" << std::endl;
     std::cout << "  ./multi_bot_analyzer -n 4 -s ollama -m qwen3:4b -i requirements.txt" << std::endl;
+    std::cout << "  ./multi_bot_analyzer -n 3 -s ollama -m qwen3:4b -p \"Test\" --use-random-experts" << std::endl;
     std::cout << std::endl;
     std::cout << "The experts will collaborate automatically with a 1-second delay between contributions." << std::endl;
     std::cout << "You can save the complete solution at the end if desired." << std::endl;
@@ -472,6 +476,7 @@ struct ProgramOptions {
     std::string server;
     std::string prompt;
     std::string input_file;
+    bool use_random_experts = false;  // Default to sequential selection from array
     bool error = false;
 };
 
@@ -512,6 +517,10 @@ ProgramOptions parseOptions(int argc, char* argv[]) {
         else if (arg == "-i" || arg == "--input") {
             opts.input_file = getOptionValue(argc, argv, i, "-i", "--input");
             if (opts.input_file.empty()) { opts.error = true; return opts; }
+        }
+        // Handle --use-random-experts flag
+        else if (arg == "--use-random-experts") {
+            opts.use_random_experts = true;
         }
         // Handle --option=value format
         else if (arg.substr(0, 2) == "--") {
@@ -712,7 +721,7 @@ int main(int argc, char* argv[]) {
     
     try {
         MultiBotProblemSolver solver(problem, 50, false);
-        solver.initializeBots(bot_configs);
+        solver.initializeBots(bot_configs, opts.use_random_experts);
         solver.startProblemSolving();
         
     } catch (const std::exception& e) {
