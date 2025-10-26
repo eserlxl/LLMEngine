@@ -426,98 +426,288 @@ void printWelcome() {
     std::cout << "Supports multiple AI providers: Qwen, OpenAI, Anthropic, Ollama" << std::endl;
     std::cout << std::endl;
     std::cout << "Usage:" << std::endl;
-    std::cout << "  ./multi_bot_analyzer \"<problem description>\" [num_bots] [provider1] [model1] [provider2] [model2] ..." << std::endl;
-    std::cout << "  ./multi_bot_analyzer \"<problem description>\" [num_bots] ollama [model1] [model2] ..." << std::endl;
-    std::cout << "  ./multi_bot_analyzer \"<problem description>\" [num_bots] ollama [single_model]  # Uses same model for all bots" << std::endl;
+    std::cout << "  ./multi_bot_analyzer [OPTIONS]" << std::endl;
+    std::cout << std::endl;
+    std::cout << "Options:" << std::endl;
+    std::cout << "  -n, --number <num>          Number of bots (1-" << MAX_BOTS << ")" << std::endl;
+    std::cout << "  -m, --model <models>         Comma-separated list of models (e.g., qwen3:4b,qwen3:1.7b)" << std::endl;
+    std::cout << "  -s, --server <server>        Server/provider (ollama, qwen, openai, anthropic)" << std::endl;
+    std::cout << "  -p, --prompt <text>          Problem description/prompt text" << std::endl;
+    std::cout << "  -i, --input <file>           Read prompt from file" << std::endl;
     std::cout << std::endl;
     std::cout << "Examples:" << std::endl;
-    std::cout << "  ./multi_bot_analyzer \"How to optimize database performance\" 2 ollama qwen3:1.7b" << std::endl;
-    std::cout << "  ./multi_bot_analyzer \"Design a scalable architecture\" 3 qwen qwen-flash qwen qwen-max qwen qwen-plus" << std::endl;
-    std::cout << "  ./multi_bot_analyzer \"Reduce energy consumption\" 4 ollama qwen3:4b  # All 4 bots use qwen3:4b" << std::endl;
-    std::cout << "  ./multi_bot_analyzer \"Solve complex algorithm problem\" 1 ollama qwen3:4b" << std::endl;
+    std::cout << "  ./multi_bot_analyzer -n 2 -s ollama -m qwen3:4b -p \"Optimize database\"" << std::endl;
+    std::cout << "  ./multi_bot_analyzer -n 2 -i problem.txt -s ollama -m qwen3:1.7b" << std::endl;
+    std::cout << "  ./multi_bot_analyzer -n 3 -s qwen -m qwen-flash,qwen-max,qwen-plus -p \"Design architecture\"" << std::endl;
+    std::cout << "  ./multi_bot_analyzer -n 4 -s ollama -m qwen3:4b -i requirements.txt" << std::endl;
     std::cout << std::endl;
     std::cout << "The experts will collaborate automatically with a 1-second delay between contributions." << std::endl;
     std::cout << "You can save the complete solution at the end if desired." << std::endl;
     std::cout << std::endl;
 }
 
+// Helper function to find option value
+std::string getOptionValue(int argc, char* argv[], int& i, const std::string& shortOpt, const std::string& longOpt) {
+    std::string arg = argv[i];
+    
+    // Check for --option=value format
+    size_t equals_pos = arg.find('=');
+    if (equals_pos != std::string::npos) {
+        return arg.substr(equals_pos + 1);
+    }
+    
+    // Check if next argument is the value
+    if (i + 1 < argc && argv[i + 1][0] != '-') {
+        return argv[++i];
+    }
+    
+    std::cerr << "❌ Option " << arg << " requires a value" << std::endl;
+    return "";
+}
+
+// Parse command line options
+struct ProgramOptions {
+    int num_bots = 0;
+    std::string models;
+    std::string server;
+    std::string prompt;
+    std::string input_file;
+    bool error = false;
+};
+
+ProgramOptions parseOptions(int argc, char* argv[]) {
+    ProgramOptions opts;
+    
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        
+        // Handle --number or -n
+        if (arg == "-n" || arg == "--number") {
+            std::string value = getOptionValue(argc, argv, i, "-n", "--number");
+            if (value.empty()) { opts.error = true; return opts; }
+            try {
+                opts.num_bots = std::stoi(value);
+            } catch (const std::exception& e) {
+                std::cerr << "❌ Invalid number: " << value << std::endl;
+                opts.error = true;
+                return opts;
+            }
+        }
+        // Handle --model or -m
+        else if (arg == "-m" || arg == "--model") {
+            opts.models = getOptionValue(argc, argv, i, "-m", "--model");
+            if (opts.models.empty()) { opts.error = true; return opts; }
+        }
+        // Handle --server or -s
+        else if (arg == "-s" || arg == "--server") {
+            opts.server = getOptionValue(argc, argv, i, "-s", "--server");
+            if (opts.server.empty()) { opts.error = true; return opts; }
+        }
+        // Handle --prompt or -p
+        else if (arg == "-p" || arg == "--prompt") {
+            opts.prompt = getOptionValue(argc, argv, i, "-p", "--prompt");
+            if (opts.prompt.empty()) { opts.error = true; return opts; }
+        }
+        // Handle --input or -i
+        else if (arg == "-i" || arg == "--input") {
+            opts.input_file = getOptionValue(argc, argv, i, "-i", "--input");
+            if (opts.input_file.empty()) { opts.error = true; return opts; }
+        }
+        // Handle --option=value format
+        else if (arg.substr(0, 2) == "--") {
+            size_t equals_pos = arg.find('=');
+            if (equals_pos != std::string::npos) {
+                std::string option = arg.substr(2, equals_pos - 2);
+                std::string value = arg.substr(equals_pos + 1);
+                
+                if (option == "number") {
+                    try {
+                        opts.num_bots = std::stoi(value);
+                    } catch (const std::exception& e) {
+                        std::cerr << "❌ Invalid number: " << value << std::endl;
+                        opts.error = true;
+                        return opts;
+                    }
+                } else if (option == "model") {
+                    opts.models = value;
+                } else if (option == "server") {
+                    opts.server = value;
+                } else if (option == "prompt") {
+                    opts.prompt = value;
+                } else if (option == "input") {
+                    opts.input_file = value;
+                }
+            } else {
+                std::cerr << "❌ Unknown option: " << arg << std::endl;
+                opts.error = true;
+                return opts;
+            }
+        }
+        else {
+            std::cerr << "❌ Unknown argument: " << arg << std::endl;
+            opts.error = true;
+            return opts;
+        }
+    }
+    
+    return opts;
+}
+
+// Helper function to split comma-separated string
+std::vector<std::string> splitString(const std::string& s, char delimiter) {
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(s);
+    while (std::getline(tokenStream, token, delimiter)) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
+// Read problem from input file
+std::string readProblemFromFile(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "❌ Failed to open input file: " << filename << std::endl;
+        return "";
+    }
+    
+    std::string problem;
+    std::string line;
+    while (std::getline(file, line)) {
+        problem += line;
+        if (!file.eof()) {
+            problem += "\n";
+        }
+    }
+    file.close();
+    
+    if (problem.empty()) {
+        std::cerr << "❌ Input file is empty: " << filename << std::endl;
+        return "";
+    }
+    
+    return problem;
+}
+
 int main(int argc, char* argv[]) {
     printWelcome();
     
-    if (argc < 3) {
-        std::cerr << "❌ Please provide a problem to analyze and number of bots!" << std::endl;
-        std::cerr << "Usage: " << argv[0] << " \"<problem description>\" [num_bots] [provider1] [model1] [provider2] [model2] ..." << std::endl;
-        std::cerr << "       " << argv[0] << " \"<problem description>\" [num_bots] ollama [model1] [model2] ..." << std::endl;
+    // Parse command line options
+    ProgramOptions opts = parseOptions(argc, argv);
+    
+    if (opts.error) {
         return 1;
     }
     
-    std::string problem = argv[1];
-    
-    int num_bots;
-    try {
-        num_bots = std::stoi(argv[2]);
-    } catch (const std::exception& e) {
-        std::cerr << "❌ Invalid number of bots: " << argv[2] << std::endl;
-        std::cerr << "Number of bots must be a valid integer between 1 and " << MAX_BOTS << "." << std::endl;
+    // Validate required options
+    if (opts.num_bots == 0) {
+        std::cerr << "❌ Number of bots (--number) is required!" << std::endl;
         return 1;
     }
     
-    if (num_bots < 1 || num_bots > MAX_BOTS) {
+    if (opts.num_bots < 1 || opts.num_bots > MAX_BOTS) {
         std::cerr << "❌ Number of bots must be between 1 and " << MAX_BOTS << "!" << std::endl;
         return 1;
     }
     
-    // Check if using Ollama
-    if (argc > 3 && std::string(argv[3]) == "ollama") {
-        try {
-            std::vector<std::tuple<std::string, std::string, std::string>> bot_configs;
-            
-            // If only one model is provided, use it for all bots
-            std::string model = argc > 4 ? argv[4] : "llama2";
-            for (int i = 0; i < num_bots; ++i) {
-                bot_configs.push_back(std::make_tuple("ollama", "", model));
-            }
-            
-            MultiBotProblemSolver solver(problem, 50, false);
-            solver.initializeBots(bot_configs);
-            solver.startProblemSolving();
-            return 0;
-            
-        } catch (const std::exception& e) {
-            std::cerr << "❌ Error: " << e.what() << std::endl;
+    // Get problem text
+    std::string problem;
+    if (!opts.input_file.empty()) {
+        problem = readProblemFromFile(opts.input_file);
+        if (problem.empty()) {
             return 1;
         }
-    }
-    
-    // Get API key from environment for online providers
-    const char* env_api_key = std::getenv("QWEN_API_KEY");
-    if (!env_api_key) {
-        env_api_key = std::getenv("OPENAI_API_KEY");
-    }
-    if (!env_api_key) {
-        env_api_key = std::getenv("ANTHROPIC_API_KEY");
-    }
-    
-    if (!env_api_key) {
-        std::cerr << "❌ No API key found! Please set one of:" << std::endl;
-        std::cerr << "   export QWEN_API_KEY=\"your-key\"" << std::endl;
-        std::cerr << "   export OPENAI_API_KEY=\"your-key\"" << std::endl;
-        std::cerr << "   export ANTHROPIC_API_KEY=\"your-key\"" << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "Or use Ollama (local) by running:" << std::endl;
-        std::cerr << "   " << argv[0] << " \"" << problem << "\" " << num_bots << " ollama" << std::endl;
+        std::cout << "📄 Reading problem from file: " << opts.input_file << std::endl;
+    } else if (!opts.prompt.empty()) {
+        problem = opts.prompt;
+    } else {
+        std::cerr << "❌ Either --prompt or --input must be provided!" << std::endl;
         return 1;
     }
     
-    std::string api_key = env_api_key;
-    
-    // Parse command line arguments for online providers
+    // Prepare bot configurations
     std::vector<std::tuple<std::string, std::string, std::string>> bot_configs;
     
-    for (int i = 0; i < num_bots; ++i) {
-        std::string provider = argc > (3 + i * 2) ? argv[3 + i * 2] : "qwen";
-        std::string model = argc > (4 + i * 2) ? argv[4 + i * 2] : "qwen-flash";
-        bot_configs.push_back(std::make_tuple(provider, api_key, model));
+    // Get server/provider
+    std::string server = opts.server;
+    
+    if (server == "ollama" || server.empty()) {
+        // Use Ollama or try to detect from API keys
+        if (server.empty()) {
+            // Try to detect from environment variables
+            if (std::getenv("QWEN_API_KEY")) {
+                server = "qwen";
+            } else if (std::getenv("OPENAI_API_KEY")) {
+                server = "openai";
+            } else if (std::getenv("ANTHROPIC_API_KEY")) {
+                server = "anthropic";
+            } else {
+                server = "ollama";  // Default to ollama
+            }
+        }
+        
+        if (server == "ollama") {
+            // Parse models list
+            std::vector<std::string> model_list;
+            if (opts.models.empty()) {
+                model_list.push_back("llama2");
+            } else {
+                model_list = splitString(opts.models, ',');
+            }
+            
+            // If only one model provided, use it for all bots
+            for (int i = 0; i < opts.num_bots; ++i) {
+                std::string model = i < model_list.size() ? model_list[i] : model_list[0];
+                bot_configs.push_back(std::make_tuple("ollama", "", model));
+            }
+        }
+    }
+    
+    // If no bot configs yet and using online providers
+    if (bot_configs.empty() && server != "ollama") {
+        // Get API key
+        const char* env_api_key = std::getenv("QWEN_API_KEY");
+        if (!env_api_key) {
+            env_api_key = std::getenv("OPENAI_API_KEY");
+        }
+        if (!env_api_key) {
+            env_api_key = std::getenv("ANTHROPIC_API_KEY");
+        }
+        
+        if (!env_api_key) {
+            std::cerr << "❌ No API key found! Please set one of:" << std::endl;
+            std::cerr << "   export QWEN_API_KEY=\"your-key\"" << std::endl;
+            std::cerr << "   export OPENAI_API_KEY=\"your-key\"" << std::endl;
+            std::cerr << "   export ANTHROPIC_API_KEY=\"your-key\"" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "Or use Ollama (local) with --server ollama" << std::endl;
+            return 1;
+        }
+        
+        std::string api_key = env_api_key;
+        
+        // Parse models list
+        std::vector<std::string> model_list;
+        if (opts.models.empty()) {
+            if (server == "qwen") {
+                model_list.push_back("qwen-flash");
+            } else if (server == "openai") {
+                model_list.push_back("gpt-4");
+            } else if (server == "anthropic") {
+                model_list.push_back("claude-3-5-sonnet-20241022");
+            } else {
+                model_list.push_back("qwen-flash");
+            }
+        } else {
+            model_list = splitString(opts.models, ',');
+        }
+        
+        // Configure bots
+        for (int i = 0; i < opts.num_bots; ++i) {
+            std::string model = i < model_list.size() ? model_list[i] : model_list[0];
+            bot_configs.push_back(std::make_tuple(server, api_key, model));
+        }
     }
     
     try {
