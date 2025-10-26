@@ -157,10 +157,11 @@ public:
         
         // Create bots with different thinking styles
         std::vector<std::pair<std::string, std::string>> personalities = {
-            {"Scientist", "You are a scientist. You think analytically and ask probing questions. You examine different angles and challenge assumptions to deepen understanding."},
-            {"Engineer", "You are an engineer. You think creatively and innovatively. You explore unconventional ideas and brainstorm novel approaches to problems."},
-            {"Optimizer", "You are an optimizer. You think practically and focus on real-world applications. You prefer concrete examples and actionable solutions."},
-            {"Programmer", "You are a programmer. You think logically and focus on the practical implementation of ideas. You are a detail-oriented thinker and you are good at problem-solving."}
+            {"Scientist", "You are a quantitative market analyst. You think analytically using statistical methods and data science. You examine market data, charts, indicators, and patterns to identify trends and opportunities. You challenge assumptions and dig deep into the underlying market dynamics."},
+            {"Engineer", "You are a trading systems engineer. You think about building robust trading infrastructure, execution systems, and automation. You explore algorithmic approaches and technical solutions to implement trading strategies efficiently and reliably."},
+            {"Optimizer", "You are a risk manager. You think practically about risk-reward ratios, position sizing, drawdowns, and portfolio management. You focus on concrete risk metrics, capital preservation strategies, and optimal trade allocation to maximize long-term returns."},
+            {"Programmer", "You are an algorithmic trading developer. You think logically about implementing trading strategies through code and backtesting. You are detail-oriented in execution, order management, and system reliability to ensure consistent performance in live markets."},
+            {"Trader", "You are a financial trader. You think strategically about risk and reward. You analyze market trends, identify opportunities, and make data-driven decisions. You focus on practical trading strategies, risk management, and maximizing returns while minimizing downside."}
         };
         
         // Randomly assign personalities
@@ -230,10 +231,11 @@ public:
             // Choose appropriate emoji based on bot personality
             std::string emoji = "🤖";
             std::string bot_name = current_bot->getName();
-            if (bot_name == "Scientist") emoji = "🔬";
-            else if (bot_name == "Engineer") emoji = "⚙️";
-            else if (bot_name == "Optimizer") emoji = "📊";
-            else if (bot_name == "Programmer") emoji = "💻";
+            if (bot_name == "Scientist") emoji = "📉";  // Market analyst
+            else if (bot_name == "Engineer") emoji = "⚙️";  // Trading systems
+            else if (bot_name == "Optimizer") emoji = "⚖️";  // Risk manager
+            else if (bot_name == "Programmer") emoji = "💻";  // Algorithmic trading
+            else if (bot_name == "Trader") emoji = "📈";  // Trader
             
             std::cout << "\n" << emoji << " " << formatExpertName(current_bot) << ": ";
             std::cout.flush();
