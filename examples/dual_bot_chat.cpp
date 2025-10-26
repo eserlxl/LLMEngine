@@ -47,9 +47,9 @@ public:
         }
     }
     
-    std::string generateResponse(const std::string& problem, const std::string& other_bot_message = "", bool is_final_check = false) {
+    std::string generateResponse(const std::string& problem, const std::vector<std::string>& previous_messages = {}, bool is_final_check = false) {
         try {
-            std::string prompt = createPrompt(problem, other_bot_message, is_final_check);
+            std::string prompt = createPrompt(problem, previous_messages, is_final_check);
             
             auto result = engine_->analyze(prompt, nlohmann::json{}, "chat", "chat");
             std::string response = result[1];
@@ -71,24 +71,28 @@ public:
     LLMEngine* getEngine() const { return engine_.get(); }
     
 private:
-    std::string createPrompt(const std::string& problem, const std::string& other_bot_message, bool is_final_check = false) {
+    std::string createPrompt(const std::string& problem, const std::vector<std::string>& previous_messages, bool is_final_check = false) {
         std::stringstream prompt;
         
         prompt << "You are " << name_ << ". " << personality_ << "\n\n";
         
         if (is_final_check) {
             prompt << "After reviewing our collaboration on: " << problem << "\n\n";
-            prompt << "Based on our discussion, do you think we have provided a sufficient and practical solution? ";
+            prompt << "DEMOCRATIC VOTING: Based on our discussion, do you think we have provided a sufficient and practical solution? ";
             prompt << "Consider if we have covered the main aspects, provided actionable steps, and addressed the core problem. ";
+            prompt << "Your vote will be counted democratically - if 66% or more experts vote 'SOLUTION COMPLETE', the solution will be accepted. ";
             prompt << "If yes, respond with 'SOLUTION COMPLETE' followed by a brief summary. ";
             prompt << "If no, respond with 'NEED MORE DISCUSSION' and explain what's missing.";
             return prompt.str();
         }
         
-        if (!other_bot_message.empty()) {
-            prompt << "Your colleague just shared their analysis: \"" << other_bot_message << "\"\n\n";
-            prompt << "Building on their work, contribute your expertise to solve this problem: " << problem << "\n\n";
-            prompt << "Analyze their approach and add your perspective. ";
+        if (!previous_messages.empty()) {
+            prompt << "Your colleagues have shared their analyses:\n";
+            for (size_t i = 0; i < previous_messages.size(); ++i) {
+                prompt << "Colleague " << (i + 1) << ": \"" << previous_messages[i] << "\"\n";
+            }
+            prompt << "\nBuilding on their work, contribute your expertise to solve this problem: " << problem << "\n\n";
+            prompt << "Analyze their approaches and add your perspective. ";
             prompt << "What additional insights, solutions, or improvements can you provide? ";
         } else {
             prompt << "You need to solve this problem: " << problem << "\n\n";
@@ -105,10 +109,9 @@ private:
     }
 };
 
-class DualBotProblemSolver {
+class MultiBotProblemSolver {
 private:
-    std::unique_ptr<Bot> bot1_;
-    std::unique_ptr<Bot> bot2_;
+    std::vector<std::unique_ptr<Bot>> bots_;
     std::string problem_;
     std::string full_solution_log_;
     int max_turns_;
@@ -116,11 +119,21 @@ private:
     
     std::string formatExpertName(const Bot* bot) const {
         std::string name = bot->getName();
-        std::string model1 = bot1_->getEngine()->getModelName();
-        std::string model2 = bot2_->getEngine()->getModelName();
+        
+        // Check if all bots use the same model
+        bool all_same_model = true;
+        if (!bots_.empty()) {
+            std::string first_model = bots_[0]->getEngine()->getModelName();
+            for (const auto& bot : bots_) {
+                if (bot->getEngine()->getModelName() != first_model) {
+                    all_same_model = false;
+                    break;
+                }
+            }
+        }
         
         // Only show model name if the models are different
-        if (model1 != model2) {
+        if (!all_same_model) {
             std::string model = bot->getEngine()->getModelName();
             if (!model.empty()) {
                 name += " (" + model + ")";
@@ -131,14 +144,17 @@ private:
     }
     
 public:
-    DualBotProblemSolver(const std::string& problem, int max_turns = 10, bool debug = false) 
+    MultiBotProblemSolver(const std::string& problem, int max_turns = 10, bool debug = false) 
         : problem_(problem), max_turns_(max_turns), debug_mode_(debug) {
         full_solution_log_ = "Problem to Solve: " + problem_ + "\n";
         full_solution_log_ += std::string(50, '=') + "\n\n";
     }
     
-    void initializeBots(const std::string& provider1, const std::string& api_key1, const std::string& model1,
-                       const std::string& provider2, const std::string& api_key2, const std::string& model2) {
+    void initializeBots(const std::vector<std::tuple<std::string, std::string, std::string>>& bot_configs) {
+        if (bot_configs.empty() || bot_configs.size() > 4) {
+            throw std::invalid_argument("Must provide 1-4 bot configurations");
+        }
+        
         // Create bots with different thinking styles
         std::vector<std::pair<std::string, std::string>> personalities = {
             {"Scientist", "You are a scientist. You think analytically and ask probing questions. You examine different angles and challenge assumptions to deepen understanding."},
@@ -152,27 +168,46 @@ public:
         std::mt19937 gen(rd());
         std::shuffle(personalities.begin(), personalities.end(), gen);
         
-        bot1_ = std::make_unique<Bot>(personalities[0].first, personalities[0].second, 
-                                     provider1, api_key1, model1, debug_mode_);
-        bot2_ = std::make_unique<Bot>(personalities[1].first, personalities[1].second, 
-                                     provider2, api_key2, model2, debug_mode_);
+        bots_.clear();
+        for (size_t i = 0; i < bot_configs.size(); ++i) {
+            const auto& config = bot_configs[i];
+            std::string provider = std::get<0>(config);
+            std::string api_key = std::get<1>(config);
+            std::string model = std::get<2>(config);
+            
+            bots_.push_back(std::make_unique<Bot>(
+                personalities[i].first, 
+                personalities[i].second, 
+                provider, 
+                api_key, 
+                model, 
+                debug_mode_
+            ));
+        }
         
         std::cout << "\n🤖 Problem-Solving Team Setup Complete!" << std::endl;
-        std::cout << "Expert 1: " << formatExpertName(bot1_.get()) << " (" << bot1_->getPersonality().substr(0, 50) << "...)" << std::endl;
-        std::cout << "Expert 2: " << formatExpertName(bot2_.get()) << " (" << bot2_->getPersonality().substr(0, 50) << "...)" << std::endl;
+        for (size_t i = 0; i < bots_.size(); ++i) {
+            std::cout << "Expert " << (i + 1) << ": " << formatExpertName(bots_[i].get()) 
+                      << " (" << bots_[i]->getPersonality().substr(0, 50) << "...)" << std::endl;
+        }
         std::cout << "Problem: " << problem_ << std::endl;
         std::cout << "Max Collaboration Rounds: " << max_turns_ << std::endl;
         std::cout << std::string(60, '=') << std::endl;
     }
     
     void startProblemSolving() {
-        if (!bot1_ || !bot2_) {
+        if (bots_.empty()) {
             std::cerr << "❌ Problem-solving team not initialized! Please initialize bots first." << std::endl;
             return;
         }
         
         std::cout << "\n🎯 Starting collaborative problem-solving session" << std::endl;
-        std::cout << "Experts: " << formatExpertName(bot1_.get()) << " and " << formatExpertName(bot2_.get()) << std::endl;
+        std::cout << "Experts: ";
+        for (size_t i = 0; i < bots_.size(); ++i) {
+            if (i > 0) std::cout << ", ";
+            std::cout << formatExpertName(bots_[i].get());
+        }
+        std::cout << std::endl;
         std::cout << "Problem: " << problem_ << std::endl;
         std::cout << "The team will work together to solve this problem. Press Enter to start..." << std::endl;
         
@@ -186,45 +221,33 @@ public:
         std::cout << "PROBLEM-SOLVING SESSION BEGINS" << std::endl;
         std::cout << std::string(60, '=') << std::endl;
         
-        std::string last_analysis = "";
-        bool bot1_turn = true;
+        std::vector<std::string> conversation_history;
         
         for (int turn = 0; turn < max_turns_; ++turn) {
-            std::string response;
+            int bot_index = turn % bots_.size();
+            Bot* current_bot = bots_[bot_index].get();
             
-            if (bot1_turn) {
-                // Expert 1's turn
-                std::cout << "\n🔬 " << formatExpertName(bot1_.get()) << ": ";
-                std::cout.flush();
-                
-                if (turn == 0) {
-                    // First turn - initial analysis
-                    response = bot1_->generateResponse(problem_);
-                } else {
-                    // Build on previous analysis
-                    response = bot1_->generateResponse(problem_, last_analysis);
-                }
-                
-                std::cout << response << std::endl;
-                full_solution_log_ += bot1_->getName() + ": " + response + "\n";
-                
-            } else {
-                // Expert 2's turn
-                std::cout << "\n⚙️ " << formatExpertName(bot2_.get()) << ": ";
-                std::cout.flush();
-                
-                response = bot2_->generateResponse(problem_, last_analysis);
-                std::cout << response << std::endl;
-                full_solution_log_ += bot2_->getName() + ": " + response + "\n";
-            }
+            // Choose appropriate emoji based on bot personality
+            std::string emoji = "🤖";
+            std::string bot_name = current_bot->getName();
+            if (bot_name == "Scientist") emoji = "🔬";
+            else if (bot_name == "Engineer") emoji = "⚙️";
+            else if (bot_name == "Optimizer") emoji = "📊";
+            else if (bot_name == "Programmer") emoji = "💻";
             
-            last_analysis = response;
-            bot1_turn = !bot1_turn;
+            std::cout << "\n" << emoji << " " << formatExpertName(current_bot) << ": ";
+            std::cout.flush();
             
-            // Check for completion after every 2 turns (both experts have spoken)
-            if (turn > 0 && turn % 2 == 1) {
+            std::string response = current_bot->generateResponse(problem_, conversation_history);
+            std::cout << response << std::endl;
+            
+            conversation_history.push_back(response);
+            full_solution_log_ += current_bot->getName() + ": " + response + "\n";
+            
+            // Check for completion after every full round (all bots have spoken)
+            if (turn > 0 && (turn + 1) % bots_.size() == 0) {
                 if (checkForCompletion()) {
-                    std::cout << "\n✅ Both experts agree the solution is complete!" << std::endl;
+                    std::cout << "\n✅ Democratic consensus reached! Solution accepted by majority vote!" << std::endl;
                     break;
                 }
             }
@@ -253,34 +276,59 @@ public:
     
 private:
     bool checkForCompletion() {
-        std::cout << "\n🤔 Checking if solution is complete..." << std::endl;
+        std::cout << "\n🗳️ Democratic voting: Checking if solution is complete..." << std::endl;
         
         try {
-            // Ask both experts if they think the solution is complete
-            std::string bot1_decision = bot1_->generateResponse(problem_, "", true);
-            std::string bot2_decision = bot2_->generateResponse(problem_, "", true);
+            // Ask all experts if they think the solution is complete
+            std::vector<std::string> decisions;
+            for (const auto& bot : bots_) {
+                std::string decision = bot->generateResponse(problem_, {}, true);
+                decisions.push_back(decision);
+                std::cout << "\n" << formatExpertName(bot.get()) << " decision: " << decision << std::endl;
+            }
             
-            std::cout << "\n🔬 " << formatExpertName(bot1_.get()) << " decision: " << bot1_decision << std::endl;
-            std::cout << "⚙️ " << formatExpertName(bot2_.get()) << " decision: " << bot2_decision << std::endl;
+            // Count votes for "SOLUTION COMPLETE"
+            int solution_complete_votes = 0;
+            int total_votes = bots_.size();
             
-            // Check if both experts agree (look for "SOLUTION COMPLETE" in their responses)
-            bool bot1_agrees = bot1_decision.find("SOLUTION COMPLETE") != std::string::npos || 
-                              bot1_decision.find("solution complete") != std::string::npos ||
-                              bot1_decision.find("Solution Complete") != std::string::npos;
-            bool bot2_agrees = bot2_decision.find("SOLUTION COMPLETE") != std::string::npos || 
-                              bot2_decision.find("solution complete") != std::string::npos ||
-                              bot2_decision.find("Solution Complete") != std::string::npos;
+            for (const auto& decision : decisions) {
+                bool votes_complete = decision.find("SOLUTION COMPLETE") != std::string::npos || 
+                                      decision.find("solution complete") != std::string::npos ||
+                                      decision.find("Solution Complete") != std::string::npos;
+                if (votes_complete) {
+                    solution_complete_votes++;
+                }
+            }
             
-            // Additional check: if both are saying similar things (even if they say "NO"), 
-            // use LLM to determine if they're essentially agreeing
-            bool both_saying_similar = checkIfSimilarSolutionsWithLLM(bot1_decision, bot2_decision);
+            // Calculate percentage
+            double completion_percentage = (double)solution_complete_votes / total_votes * 100.0;
+            
+            std::cout << "\n📊 Voting Results:" << std::endl;
+            std::cout << "   SOLUTION COMPLETE votes: " << solution_complete_votes << "/" << total_votes << std::endl;
+            std::cout << "   Completion percentage: " << std::fixed << std::setprecision(1) << completion_percentage << "%" << std::endl;
+            std::cout << "   Required threshold: 66.0%" << std::endl;
+            
+            // Check if we meet the 66% threshold
+            bool meets_threshold = completion_percentage >= 66.0;
+            
+            if (meets_threshold) {
+                std::cout << "✅ Democratic decision: Solution accepted! (" << completion_percentage << "% ≥ 66%)" << std::endl;
+            } else {
+                std::cout << "❌ Democratic decision: Solution needs more work (" << completion_percentage << "% < 66%)" << std::endl;
+            }
             
             // Add decisions to log
-            full_solution_log_ += "\n--- COMPLETION CHECK ---\n";
-            full_solution_log_ += bot1_->getName() + " decision: " + bot1_decision + "\n";
-            full_solution_log_ += bot2_->getName() + " decision: " + bot2_decision + "\n";
+            full_solution_log_ += "\n--- DEMOCRATIC VOTING RESULTS ---\n";
+            full_solution_log_ += "SOLUTION COMPLETE votes: " + std::to_string(solution_complete_votes) + "/" + std::to_string(total_votes) + "\n";
+            full_solution_log_ += "Completion percentage: " + std::to_string(completion_percentage) + "%\n";
+            full_solution_log_ += "Required threshold: 66.0%\n";
+            full_solution_log_ += "Decision: " + std::string(meets_threshold ? "ACCEPTED" : "NEEDS MORE WORK") + "\n\n";
             
-            return bot1_agrees && bot2_agrees || both_saying_similar;
+            for (size_t i = 0; i < bots_.size(); ++i) {
+                full_solution_log_ += bots_[i]->getName() + " vote: " + decisions[i] + "\n";
+            }
+            
+            return meets_threshold;
             
         } catch (const std::exception& e) {
             std::cerr << "❌ Error checking completion: " << e.what() << std::endl;
@@ -288,46 +336,6 @@ private:
         }
     }
     
-    bool checkIfSimilarSolutionsWithLLM(const std::string& decision1, const std::string& decision2) {
-        try {
-            // Create a comparison prompt
-            std::stringstream comparison_prompt;
-            comparison_prompt << "You are an expert mediator analyzing two responses about problem-solving completion.\n\n";
-            comparison_prompt << "Expert 1 says: \"" << decision1 << "\"\n\n";
-            comparison_prompt << "Expert 2 says: \"" << decision2 << "\"\n\n";
-            comparison_prompt << "CRITICAL ANALYSIS: Look at the exact decision each expert made about solution completeness.\n\n";
-            comparison_prompt << "Respond with 'SIMILAR' ONLY if:\n";
-            comparison_prompt << "- BOTH experts explicitly say 'SOLUTION COMPLETE' or similar completion phrases\n";
-            comparison_prompt << "- BOTH experts say 'NEED MORE DISCUSSION' AND mention the EXACT SAME missing elements\n\n";
-            comparison_prompt << "Respond with 'DIFFERENT' if:\n";
-            comparison_prompt << "- One expert says 'SOLUTION COMPLETE' while the other says 'NEED MORE DISCUSSION'\n";
-            comparison_prompt << "- The experts have different opinions about whether the solution is complete\n";
-            comparison_prompt << "- One expert is satisfied while the other identifies specific gaps\n\n";
-            comparison_prompt << "IMPORTANT: If one expert says the solution is complete and the other says it needs more discussion, ";
-            comparison_prompt << "this is a fundamental disagreement about completeness - respond 'DIFFERENT'.";
-            
-            // Use the first bot's engine to make the comparison
-            auto result = bot1_->getEngine()->analyze(comparison_prompt.str(), nlohmann::json{}, "chat", "chat");
-            std::string comparison_result = result[1];
-            
-            std::cout << "\n🤖 LLM Comparison Result: " << comparison_result << std::endl;
-            
-            // Check if the LLM determined they are similar
-            bool is_similar = comparison_result.find("SIMILAR") != std::string::npos;
-            
-            if (is_similar) {
-                std::cout << "\n✅ LLM Analysis: Both experts are saying similar things about the solution!" << std::endl;
-            } else {
-                std::cout << "\n❌ LLM Analysis: Experts have different perspectives or need more discussion." << std::endl;
-            }
-            
-            return is_similar;
-            
-        } catch (const std::exception& e) {
-            std::cerr << "❌ Error in LLM comparison: " << e.what() << std::endl;
-            return false;
-        }
-    }
     
     void generateFinalSolution() {
         std::cout << "\n🧠 SYNTHESIZING FINAL SOLUTION" << std::endl;
@@ -340,9 +348,13 @@ private:
             synthesis_prompt << "Problem: " << problem_ << "\n\n";
             synthesis_prompt << "Collaboration History:\n";
             synthesis_prompt << full_solution_log_ << "\n\n";
-            synthesis_prompt << "Based on the above collaboration between " << formatExpertName(bot1_.get()) << " and " << formatExpertName(bot2_.get()) << ", ";
-            synthesis_prompt << "provide a single, comprehensive, actionable solution that:\n";
-            synthesis_prompt << "1. Integrates the best ideas from both experts\n";
+            synthesis_prompt << "Based on the above collaboration between ";
+            for (size_t i = 0; i < bots_.size(); ++i) {
+                if (i > 0) synthesis_prompt << ", ";
+                synthesis_prompt << formatExpertName(bots_[i].get());
+            }
+            synthesis_prompt << ", provide a single, comprehensive, actionable solution that:\n";
+            synthesis_prompt << "1. Integrates the best ideas from all experts\n";
             synthesis_prompt << "2. Provides a clear step-by-step implementation plan\n";
             synthesis_prompt << "3. Addresses potential challenges and considerations\n";
             synthesis_prompt << "4. Includes specific tools, technologies, and methodologies\n";
@@ -350,7 +362,7 @@ private:
             synthesis_prompt << "Format your response as a structured solution with clear sections and actionable steps.";
             
             // Use the first bot's engine to generate the synthesis
-            auto result = bot1_->getEngine()->analyze(synthesis_prompt.str(), nlohmann::json{}, "chat", "chat");
+            auto result = bots_[0]->getEngine()->analyze(synthesis_prompt.str(), nlohmann::json{}, "chat", "chat");
             std::string final_solution = result[1];
             
             std::cout << "\n📋 COMPREHENSIVE SOLUTION:" << std::endl;
@@ -381,8 +393,10 @@ private:
         if (file.is_open()) {
             file << "Collaborative Problem-Solving Session\n";
             file << "Problem: " << problem_ << "\n";
-            file << "Expert 1: " << formatExpertName(bot1_.get()) << " (" << bot1_->getPersonality() << ")\n";
-            file << "Expert 2: " << formatExpertName(bot2_.get()) << " (" << bot2_->getPersonality() << ")\n";
+            for (size_t i = 0; i < bots_.size(); ++i) {
+                file << "Expert " << (i + 1) << ": " << formatExpertName(bots_[i].get()) 
+                     << " (" << bots_[i]->getPersonality() << ")\n";
+            }
             file << "Saved: " << std::put_time(&tm, "%Y-%m-%d %H:%M:%S") << "\n";
             file << std::string(50, '=') << "\n\n";
             file << full_solution_log_;
@@ -395,20 +409,23 @@ private:
 };
 
 void printWelcome() {
-    std::cout << "🔬⚙️ LLMEngine Dual Bot Problem Solver" << std::endl;
+    std::cout << "🤖 LLMEngine Multi-Bot Problem Solver" << std::endl;
     std::cout << "=====================================" << std::endl;
-    std::cout << "This example creates two AI experts that collaborate to solve problems." << std::endl;
+    std::cout << "This example creates 1-4 AI experts that collaborate to solve problems." << std::endl;
     std::cout << "Each expert has specialized knowledge and approaches problems differently." << std::endl;
+    std::cout << "🗳️ Uses democratic voting: Solutions are accepted when 66%+ experts vote 'SOLUTION COMPLETE'." << std::endl;
     std::cout << "Supports multiple AI providers: Qwen, OpenAI, Anthropic, Ollama" << std::endl;
     std::cout << std::endl;
     std::cout << "Usage:" << std::endl;
-    std::cout << "  ./dual_bot_chat \"<problem description>\" [provider1] [model1] [provider2] [model2]" << std::endl;
-    std::cout << "  ./dual_bot_chat \"<problem description>\" ollama [model1] [model2]" << std::endl;
+    std::cout << "  ./dual_bot_chat \"<problem description>\" [num_bots] [provider1] [model1] [provider2] [model2] ..." << std::endl;
+    std::cout << "  ./dual_bot_chat \"<problem description>\" [num_bots] ollama [model1] [model2] ..." << std::endl;
+    std::cout << "  ./dual_bot_chat \"<problem description>\" [num_bots] ollama [single_model]  # Uses same model for all bots" << std::endl;
     std::cout << std::endl;
     std::cout << "Examples:" << std::endl;
-    std::cout << "  ./dual_bot_chat \"How to optimize database performance for a web app\" ollama qwen3:1.7b qwen3:1.7b" << std::endl;
-    std::cout << "  ./dual_bot_chat \"Design a scalable microservices architecture\" qwen qwen-flash qwen qwen-max" << std::endl;
-    std::cout << "  ./dual_bot_chat \"Reduce energy consumption in data centers\" ollama qwen3:4b qwen3:1.7b" << std::endl;
+    std::cout << "  ./dual_bot_chat \"How to optimize database performance\" 2 ollama qwen3:1.7b" << std::endl;
+    std::cout << "  ./dual_bot_chat \"Design a scalable architecture\" 3 qwen qwen-flash qwen qwen-max qwen qwen-plus" << std::endl;
+    std::cout << "  ./dual_bot_chat \"Reduce energy consumption\" 4 ollama qwen3:4b  # All 4 bots use qwen3:4b" << std::endl;
+    std::cout << "  ./dual_bot_chat \"Solve complex algorithm problem\" 1 ollama qwen3:4b" << std::endl;
     std::cout << std::endl;
     std::cout << "The experts will collaborate automatically with a 1-second delay between contributions." << std::endl;
     std::cout << "You can save the complete solution at the end if desired." << std::endl;
@@ -418,27 +435,41 @@ void printWelcome() {
 int main(int argc, char* argv[]) {
     printWelcome();
     
-    if (argc < 2) {
-        std::cerr << "❌ Please provide a problem to solve!" << std::endl;
-        std::cerr << "Usage: " << argv[0] << " \"<problem description>\" [provider1] [model1] [provider2] [model2]" << std::endl;
+    if (argc < 3) {
+        std::cerr << "❌ Please provide a problem to solve and number of bots!" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " \"<problem description>\" [num_bots] [provider1] [model1] [provider2] [model2] ..." << std::endl;
         return 1;
     }
     
     std::string problem = argv[1];
-    std::string provider1 = "qwen";
-    std::string model1 = "qwen-flash";
-    std::string provider2 = "qwen";
-    std::string model2 = "qwen-flash";
-    std::string api_key1, api_key2;
+    
+    int num_bots;
+    try {
+        num_bots = std::stoi(argv[2]);
+    } catch (const std::exception& e) {
+        std::cerr << "❌ Invalid number of bots: " << argv[2] << std::endl;
+        std::cerr << "Number of bots must be a valid integer between 1 and 4." << std::endl;
+        return 1;
+    }
+    
+    if (num_bots < 1 || num_bots > 4) {
+        std::cerr << "❌ Number of bots must be between 1 and 4!" << std::endl;
+        return 1;
+    }
     
     // Check if using Ollama
-    if (argc > 2 && std::string(argv[2]) == "ollama") {
+    if (argc > 3 && std::string(argv[3]) == "ollama") {
         try {
-            model1 = argc > 3 ? argv[3] : "llama2";
-            model2 = argc > 4 ? argv[4] : "llama2";
+            std::vector<std::tuple<std::string, std::string, std::string>> bot_configs;
             
-            DualBotProblemSolver solver(problem, 50, false);
-            solver.initializeBots("ollama", "", model1, "ollama", "", model2);
+            // If only one model is provided, use it for all bots
+            std::string model = argc > 4 ? argv[4] : "llama2";
+            for (int i = 0; i < num_bots; ++i) {
+                bot_configs.push_back(std::make_tuple("ollama", "", model));
+            }
+            
+            MultiBotProblemSolver solver(problem, 50, false);
+            solver.initializeBots(bot_configs);
             solver.startProblemSolving();
             return 0;
             
@@ -464,21 +495,24 @@ int main(int argc, char* argv[]) {
         std::cerr << "   export ANTHROPIC_API_KEY=\"your-key\"" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Or use Ollama (local) by running:" << std::endl;
-        std::cerr << "   " << argv[0] << " \"" << problem << "\" ollama" << std::endl;
+        std::cerr << "   " << argv[0] << " \"" << problem << "\" " << num_bots << " ollama" << std::endl;
         return 1;
     }
     
-    api_key1 = api_key2 = env_api_key;
+    std::string api_key = env_api_key;
     
     // Parse command line arguments for online providers
-    if (argc > 2) provider1 = argv[2];
-    if (argc > 3) model1 = argv[3];
-    if (argc > 4) provider2 = argv[4];
-    if (argc > 5) model2 = argv[5];
+    std::vector<std::tuple<std::string, std::string, std::string>> bot_configs;
+    
+    for (int i = 0; i < num_bots; ++i) {
+        std::string provider = argc > (3 + i * 2) ? argv[3 + i * 2] : "qwen";
+        std::string model = argc > (4 + i * 2) ? argv[4 + i * 2] : "qwen-flash";
+        bot_configs.push_back(std::make_tuple(provider, api_key, model));
+    }
     
     try {
-        DualBotProblemSolver solver(problem, 50, false);
-        solver.initializeBots(provider1, api_key1, model1, provider2, api_key2, model2);
+        MultiBotProblemSolver solver(problem, 50, false);
+        solver.initializeBots(bot_configs);
         solver.startProblemSolving();
         
     } catch (const std::exception& e) {
