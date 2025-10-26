@@ -57,6 +57,6 @@ target_link_libraries(image_generator LLMEngine ${CPR_LIBRARY} ${NLOHMANN_JSON_L
 add_executable(readme_chatbot readme_chatbot.cpp)
 target_link_libraries(readme_chatbot LLMEngine ${CPR_LIBRARY} ${NLOHMANN_JSON_LIBRARIES} ssl crypto pthread curl)
 
-# Add executable for dual bot chat
-add_executable(dual_bot_chat dual_bot_chat.cpp)
-target_link_libraries(dual_bot_chat LLMEngine ${CPR_LIBRARY} ${NLOHMANN_JSON_LIBRARIES} ssl crypto pthread curl)
+# Add executable for multi-bot problem solver
+add_executable(multi_bot_solver multiBotProblemSolver.cpp)
+target_link_libraries(multi_bot_solver LLMEngine ${CPR_LIBRARY} ${NLOHMANN_JSON_LIBRARIES} ssl crypto pthread curl)

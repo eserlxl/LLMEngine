@@ -417,15 +417,15 @@ void printWelcome() {
     std::cout << "Supports multiple AI providers: Qwen, OpenAI, Anthropic, Ollama" << std::endl;
     std::cout << std::endl;
     std::cout << "Usage:" << std::endl;
-    std::cout << "  ./dual_bot_chat \"<problem description>\" [num_bots] [provider1] [model1] [provider2] [model2] ..." << std::endl;
-    std::cout << "  ./dual_bot_chat \"<problem description>\" [num_bots] ollama [model1] [model2] ..." << std::endl;
-    std::cout << "  ./dual_bot_chat \"<problem description>\" [num_bots] ollama [single_model]  # Uses same model for all bots" << std::endl;
+    std::cout << "  ./multi_bot_solver \"<problem description>\" [num_bots] [provider1] [model1] [provider2] [model2] ..." << std::endl;
+    std::cout << "  ./multi_bot_solver \"<problem description>\" [num_bots] ollama [model1] [model2] ..." << std::endl;
+    std::cout << "  ./multi_bot_solver \"<problem description>\" [num_bots] ollama [single_model]  # Uses same model for all bots" << std::endl;
     std::cout << std::endl;
     std::cout << "Examples:" << std::endl;
-    std::cout << "  ./dual_bot_chat \"How to optimize database performance\" 2 ollama qwen3:1.7b" << std::endl;
-    std::cout << "  ./dual_bot_chat \"Design a scalable architecture\" 3 qwen qwen-flash qwen qwen-max qwen qwen-plus" << std::endl;
-    std::cout << "  ./dual_bot_chat \"Reduce energy consumption\" 4 ollama qwen3:4b  # All 4 bots use qwen3:4b" << std::endl;
-    std::cout << "  ./dual_bot_chat \"Solve complex algorithm problem\" 1 ollama qwen3:4b" << std::endl;
+    std::cout << "  ./multi_bot_solver \"How to optimize database performance\" 2 ollama qwen3:1.7b" << std::endl;
+    std::cout << "  ./multi_bot_solver \"Design a scalable architecture\" 3 qwen qwen-flash qwen qwen-max qwen qwen-plus" << std::endl;
+    std::cout << "  ./multi_bot_solver \"Reduce energy consumption\" 4 ollama qwen3:4b  # All 4 bots use qwen3:4b" << std::endl;
+    std::cout << "  ./multi_bot_solver \"Solve complex algorithm problem\" 1 ollama qwen3:4b" << std::endl;
     std::cout << std::endl;
     std::cout << "The experts will collaborate automatically with a 1-second delay between contributions." << std::endl;
     std::cout << "You can save the complete solution at the end if desired." << std::endl;
@@ -438,6 +438,7 @@ int main(int argc, char* argv[]) {
     if (argc < 3) {
         std::cerr << "❌ Please provide a problem to solve and number of bots!" << std::endl;
         std::cerr << "Usage: " << argv[0] << " \"<problem description>\" [num_bots] [provider1] [model1] [provider2] [model2] ..." << std::endl;
+        std::cerr << "       " << argv[0] << " \"<problem description>\" [num_bots] ollama [model1] [model2] ..." << std::endl;
         return 1;
     }
     
