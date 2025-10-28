@@ -82,7 +82,7 @@ APIResponse QwenClient::sendRequest(const std::string& prompt,
             cpr::Timeout{timeout_seconds * 1000}
         );
         
-        response.status_code = cpr_response.status_code;
+        response.status_code = static_cast<int>(cpr_response.status_code);
         response.raw_response = nlohmann::json::parse(cpr_response.text);
         
         if (cpr_response.status_code == 200) {
@@ -179,7 +179,7 @@ APIResponse OpenAIClient::sendRequest(const std::string& prompt,
             cpr::Timeout{timeout_seconds * 1000}
         );
         
-        response.status_code = cpr_response.status_code;
+        response.status_code = static_cast<int>(cpr_response.status_code);
         response.raw_response = nlohmann::json::parse(cpr_response.text);
         
         if (cpr_response.status_code == 200) {
@@ -267,7 +267,7 @@ APIResponse AnthropicClient::sendRequest(const std::string& prompt,
             cpr::Timeout{timeout_seconds * 1000}
         );
         
-        response.status_code = cpr_response.status_code;
+        response.status_code = static_cast<int>(cpr_response.status_code);
         response.raw_response = nlohmann::json::parse(cpr_response.text);
         
         if (cpr_response.status_code == 200) {
@@ -357,7 +357,7 @@ APIResponse OllamaClient::sendRequest(const std::string& prompt,
                 cpr::Timeout{timeout_seconds * 1000}
             );
             
-            response.status_code = cpr_response.status_code;
+            response.status_code = static_cast<int>(cpr_response.status_code);
             
             if (cpr_response.status_code == 200) {
                 if (cpr_response.text.empty()) {
@@ -426,7 +426,7 @@ APIResponse OllamaClient::sendRequest(const std::string& prompt,
             cpr::Timeout{timeout_seconds * 1000}
         );
         
-        response.status_code = cpr_response.status_code;
+        response.status_code = static_cast<int>(cpr_response.status_code);
         
         if (cpr_response.status_code == 200) {
             if (cpr_response.text.empty()) {
