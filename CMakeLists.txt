@@ -20,6 +20,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Build system quality-of-life
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Put built binaries under <build>/bin (and per-config subdirs for multi-config generators)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 foreach(cfg IN ITEMS Debug Release RelWithDebInfo MinSizeRel)
@@ -35,6 +39,7 @@ option(BUILD_TESTING              "Build tests and enable CTest"                
 option(ENABLE_EXAMPLES            "Build example programs"                          ON)
 option(ENABLE_NATIVE_OPTIMIZATION "Use -march=native/-mtune=native in performance" OFF)
 option(ENABLE_SANITIZERS          "Enable Address/Undefined sanitizers in debug"    OFF)
+option(ENABLE_CLANG_TIDY          "Run clang-tidy if available"                     OFF)
 
 # Mutually exclusive modes sanity check
 if(DEBUG_MODE AND PERFORMANCE_BUILD)
@@ -83,6 +88,19 @@ else()
     -Wnull-dereference
     -Wformat=2
     -Wimplicit-fallthrough)
+  # GCC-only extra warnings
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(project_warnings INTERFACE
+      -Wduplicated-cond
+      -Wlogical-op
+      -Wuseless-cast)
+  endif()
+  # Clang-only tweaks
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(project_warnings INTERFACE
+      -Wextra-semi
+      -Wno-c99-extensions)
+  endif()
 endif()
 
 # Optimization / Debug / Sanitizer flags
@@ -97,6 +115,8 @@ if (MSVC)
     target_compile_options(project_options INTERFACE /O2 /Z7)
   endif()
 else()
+  # Prefer hidden visibility by default for smaller/safer libraries
+  target_compile_options(project_options INTERFACE -fvisibility=hidden -fvisibility-inlines-hidden)
   if (DEBUG_MODE)
     target_compile_options(project_options INTERFACE -O0 -g -fno-omit-frame-pointer)
     target_compile_definitions(project_options INTERFACE DEBUG)
@@ -112,10 +132,26 @@ else()
     target_compile_definitions(project_options INTERFACE NDEBUG _FORTIFY_SOURCE=2)
   else()
     # Reasonable default when neither mode is explicitly chosen
-    target_compile_options(project_options INTERFACE -O2 -g)
+    target_compile_options(project_options INTERFACE -O2 -g -fno-omit-frame-pointer)
     target_compile_definitions(project_options INTERFACE _FORTIFY_SOURCE=2)
   endif()
 endif()
+
+# Optional clang-tidy
+if (ENABLE_CLANG_TIDY)
+  find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+  if (CLANG_TIDY_EXE)
+    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
+  endif()
+endif()
+
+# ---- Helper macro for reusable library alias pattern ------------------------
+# Creates a namespaced alias for a library target (e.g., mylib::mylib)
+# Usage: create_namespaced_alias(${PROJECT_NAME})
+macro(create_namespaced_alias target_name)
+  string(TOLOWER "${target_name}" namespace)
+  add_library(${namespace}::${namespace} ALIAS ${target_name})
+endmacro()
 
 # ---- Library ---------------------------------------------------------------
 add_library(${PROJECT_NAME} STATIC
@@ -161,6 +197,9 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC
 set(PROMPTS_INSTALL_PATH "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME_LOWER}/prompts")
 target_compile_definitions(${PROJECT_NAME} PUBLIC
   DEFAULT_PROMPTS_PATH="${PROMPTS_INSTALL_PATH}")
+
+# Provide a namespaced alias for consumers
+create_namespaced_alias(${PROJECT_NAME})
 
 # ---- IPO/LTO (only when meaningful) -----------------------------------------
 include(CheckIPOSupported)
