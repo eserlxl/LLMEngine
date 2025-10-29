@@ -43,6 +43,12 @@ find_package(OpenSSL REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(cpr REQUIRED)
 
+# ---- Install dirs and prefix --------------------------------------------------
+include(GNUInstallDirs)
+if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  set(CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "Install prefix" FORCE)
+endif()
+
 # ---- Helper interface targets ------------------------------------------------
 # project_options: optimization/sanitizer/defines that apply to all targets
 add_library(project_options INTERFACE)
@@ -126,7 +132,7 @@ target_compile_features(LLMEngine PUBLIC cxx_std_17)
 
 # ---- Install ------------------------------------------------------------------
 # Install library
-install(TARGETS LLMEngine DESTINATION lib)
+install(TARGETS LLMEngine DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # Install public headers
 install(FILES
@@ -134,25 +140,25 @@ install(FILES
     src/LLMOutputProcessor.hpp
     src/Utils.hpp
     src/APIClient.hpp
-    DESTINATION include/LLMEngine)
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/LLMEngine)
 
 # Install config and scripts (if these directories exist)
-install(DIRECTORY config/ DESTINATION share/llmEngine/config OPTIONAL)
-install(DIRECTORY scripts/ DESTINATION share/llmEngine/scripts OPTIONAL)
-install(DIRECTORY prompts/ DESTINATION share/llmEngine/prompts OPTIONAL)
-install(DIRECTORY reports/ DESTINATION share/llmEngine/reports OPTIONAL)
+install(DIRECTORY config/  DESTINATION ${CMAKE_INSTALL_DATADIR}/llmEngine/config OPTIONAL)
+install(DIRECTORY scripts/ DESTINATION ${CMAKE_INSTALL_DATADIR}/llmEngine/scripts OPTIONAL)
+install(DIRECTORY prompts/ DESTINATION ${CMAKE_INSTALL_DATADIR}/llmEngine/prompts OPTIONAL)
+install(DIRECTORY reports/ DESTINATION ${CMAKE_INSTALL_DATADIR}/llmEngine/reports OPTIONAL)
 
 # Define default config path as a compile-time constant
-set(CONFIG_INSTALL_PATH "/usr/share/llmEngine/config/settings.json")
+set(CONFIG_INSTALL_PATH "${CMAKE_INSTALL_FULL_DATADIR}/llmEngine/config/settings.json")
 target_compile_definitions(LLMEngine PUBLIC
   DEFAULT_CONFIG_PATH="${CONFIG_INSTALL_PATH}")
 
 # Define default reports and prompts path as compile-time constants
-set(REPORTS_INSTALL_PATH "/usr/share/llmEngine/reports")
+set(REPORTS_INSTALL_PATH "${CMAKE_INSTALL_FULL_DATADIR}/llmEngine/reports")
 target_compile_definitions(LLMEngine PUBLIC
   DEFAULT_REPORTS_PATH="${REPORTS_INSTALL_PATH}")
 
-set(PROMPTS_INSTALL_PATH "/usr/share/llmEngine/prompts")
+set(PROMPTS_INSTALL_PATH "${CMAKE_INSTALL_FULL_DATADIR}/llmEngine/prompts")
 target_compile_definitions(LLMEngine PUBLIC
   DEFAULT_PROMPTS_PATH="${PROMPTS_INSTALL_PATH}")
 
