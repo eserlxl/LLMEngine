@@ -9,6 +9,7 @@ cmake_minimum_required(VERSION 3.16)
 
 # ---- Project -----------------------------------------------------------------
 project(LLMEngine
+  VERSION 0.1.0
   DESCRIPTION "A C++ library for interacting with Large Language Models"
   LANGUAGES CXX)
 
@@ -39,6 +40,7 @@ option(BUILD_TESTING              "Build tests and enable CTest"                
 option(ENABLE_EXAMPLES            "Build example programs"                          ON)
 option(ENABLE_NATIVE_OPTIMIZATION "Use -march=native/-mtune=native in performance" OFF)
 option(ENABLE_SANITIZERS          "Enable Address/Undefined sanitizers in debug"    OFF)
+option(BUILD_SHARED_LIBS          "Build shared instead of static libraries"       OFF)
 option(ENABLE_CLANG_TIDY          "Run clang-tidy if available"                     OFF)
 
 # Mutually exclusive modes sanity check
@@ -47,6 +49,7 @@ if(DEBUG_MODE AND PERFORMANCE_BUILD)
 endif()
 
 # ---- Dependencies ------------------------------------------------------------
+# OpenSSL must be found for cpr's CMake config (cpr links it transitively)
 find_package(OpenSSL REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(cpr REQUIRED)
@@ -68,39 +71,47 @@ target_include_directories(project_options INTERFACE
 # project_warnings: warning levels per compiler
 add_library(project_warnings INTERFACE)
 
-# Detect compiler family
+# Only add warnings if WARNING_MODE is enabled
+if (WARNING_MODE)
+  # Detect compiler family
+  if (MSVC)
+    # /O flags handled via mode below; keep warnings modern
+    target_compile_options(project_warnings INTERFACE
+      /W4
+      /permissive-)
+  else()
+    # Reasonably strict but practical defaults
+    target_compile_options(project_warnings INTERFACE
+      -Wall
+      -Wextra
+      -Wpedantic
+      -Wconversion
+      -Wshadow
+      -Wnon-virtual-dtor
+      -Wold-style-cast
+      -Woverloaded-virtual
+      -Wnull-dereference
+      -Wformat=2
+      -Wimplicit-fallthrough)
+    # GCC-only extra warnings
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      target_compile_options(project_warnings INTERFACE
+        -Wduplicated-cond
+        -Wlogical-op
+        -Wuseless-cast)
+    endif()
+    # Clang-only tweaks
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      target_compile_options(project_warnings INTERFACE
+        -Wextra-semi
+        -Wno-c99-extensions)
+    endif()
+  endif()
+endif()
+
+# Pin MSVC runtime library deterministically
 if (MSVC)
-  # /O flags handled via mode below; keep warnings modern
-  target_compile_options(project_warnings INTERFACE
-    /W4
-    /permissive-)
-else()
-  # Reasonably strict but practical defaults
-  target_compile_options(project_warnings INTERFACE
-    -Wall
-    -Wextra
-    -Wpedantic
-    -Wconversion
-    -Wshadow
-    -Wnon-virtual-dtor
-    -Wold-style-cast
-    -Woverloaded-virtual
-    -Wnull-dereference
-    -Wformat=2
-    -Wimplicit-fallthrough)
-  # GCC-only extra warnings
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(project_warnings INTERFACE
-      -Wduplicated-cond
-      -Wlogical-op
-      -Wuseless-cast)
-  endif()
-  # Clang-only tweaks
-  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(project_warnings INTERFACE
-      -Wextra-semi
-      -Wno-c99-extensions)
-  endif()
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "MSVC runtime library")
 endif()
 
 # Optimization / Debug / Sanitizer flags
@@ -117,9 +128,18 @@ if (MSVC)
 else()
   # Prefer hidden visibility by default for smaller/safer libraries
   target_compile_options(project_options INTERFACE -fvisibility=hidden -fvisibility-inlines-hidden)
+  
+  # Hardening: stack protector (works with _FORTIFY_SOURCE=2)
+  target_compile_options(project_options INTERFACE -fstack-protector-strong)
+  target_link_options(project_options INTERFACE -Wl,-z,relro,-z,now)
+  
   if (DEBUG_MODE)
     target_compile_options(project_options INTERFACE -O0 -g -fno-omit-frame-pointer)
     target_compile_definitions(project_options INTERFACE DEBUG)
+    # Debug niceties: libstdc++ bounds checking
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      target_compile_definitions(project_options INTERFACE _GLIBCXX_ASSERTIONS)
+    endif()
     if (ENABLE_SANITIZERS)
       target_compile_options(project_options INTERFACE -fsanitize=address,undefined)
       target_link_options(project_options INTERFACE -fsanitize=address,undefined)
@@ -141,7 +161,10 @@ endif()
 if (ENABLE_CLANG_TIDY)
   find_program(CLANG_TIDY_EXE NAMES clang-tidy)
   if (CLANG_TIDY_EXE)
-    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
+    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-warnings-as-errors=*")
+    message(STATUS "clang-tidy enabled: ${CLANG_TIDY_EXE}")
+  else()
+    message(WARNING "ENABLE_CLANG_TIDY is ON but clang-tidy not found")
   endif()
 endif()
 
@@ -154,24 +177,36 @@ macro(create_namespaced_alias target_name)
 endmacro()
 
 # ---- Library ---------------------------------------------------------------
-add_library(${PROJECT_NAME} STATIC
+add_library(${PROJECT_NAME}
     src/LLMEngine.cpp
     src/LLMOutputProcessor.cpp
     src/Utils.cpp
     src/APIClient.cpp
 )
 
+# Versioning for shared libraries
+set_target_properties(${PROJECT_NAME} PROPERTIES
+  VERSION ${PROJECT_VERSION}
+  SOVERSION ${PROJECT_VERSION_MAJOR})
+
 target_link_libraries(${PROJECT_NAME} PUBLIC
   cpr::cpr
   nlohmann_json::nlohmann_json
-  project_options
-  project_warnings)
+  project_options)
+
+# Only link warnings if WARNING_MODE is enabled
+if (WARNING_MODE)
+  target_link_libraries(${PROJECT_NAME} PUBLIC project_warnings)
+endif()
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 # ---- Install ------------------------------------------------------------------
-# Install library
-install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR})
+# Install library (handles both static and shared)
+install(TARGETS ${PROJECT_NAME}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # Install public headers
 install(FILES
@@ -212,6 +247,20 @@ else()
   message(STATUS "IPO/LTO not enabled: ${_ipo_msg}")
 endif()
 
+# ---- Tests / Examples --------------------------------------------------------
+if (BUILD_TESTING)
+  enable_testing()
+  if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
+    add_subdirectory(test EXCLUDE_FROM_ALL)
+  endif()
+endif()
+
+if (ENABLE_EXAMPLES)
+  if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/examples/CMakeLists.txt")
+    add_subdirectory(examples EXCLUDE_FROM_ALL)
+  endif()
+endif()
+
 # ---- Summary -----------------------------------------------------------------
 message(STATUS "========== Build Configuration ==========")
 message(STATUS "CMAKE_CXX_COMPILER       : ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
@@ -219,10 +268,12 @@ message(STATUS "CMAKE_BUILD_TYPE         : ${CMAKE_BUILD_TYPE}")
 message(STATUS "DEBUG_MODE               : ${DEBUG_MODE}")
 message(STATUS "PERFORMANCE_BUILD        : ${PERFORMANCE_BUILD}")
 message(STATUS "WARNING_MODE             : ${WARNING_MODE}")
+message(STATUS "BUILD_SHARED_LIBS        : ${BUILD_SHARED_LIBS}")
 message(STATUS "BUILD_TESTING            : ${BUILD_TESTING}")
 message(STATUS "ENABLE_EXAMPLES          : ${ENABLE_EXAMPLES}")
 message(STATUS "ENABLE_NATIVE_OPTIMIZATION: ${ENABLE_NATIVE_OPTIMIZATION}")
 message(STATUS "ENABLE_SANITIZERS        : ${ENABLE_SANITIZERS}")
+message(STATUS "ENABLE_CLANG_TIDY        : ${ENABLE_CLANG_TIDY}")
 get_target_property(_ipo ${PROJECT_NAME} INTERPROCEDURAL_OPTIMIZATION)
 message(STATUS "IPO/LTO (${PROJECT_NAME})      : ${_ipo}")
 message(STATUS "Runtime output directory : ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
