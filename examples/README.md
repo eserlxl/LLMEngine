@@ -35,7 +35,7 @@ This folder contains practical applications that demonstrate the capabilities of
    ./code_analyzer main.cpp     # Analyze code
    ```
 
-## 📋 Available Examples (7 total)
+## 📋 Available Examples (6 total)
 
 ### 1. 🤖 Chatbot (`chatbot.cpp`)
 Interactive conversational AI application with multiple features.
