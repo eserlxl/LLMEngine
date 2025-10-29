@@ -61,14 +61,10 @@ if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif()
 
 # ---- Helper interface targets ------------------------------------------------
-# project_options: optimization/sanitizer/defines that apply to all targets
+# project_options: optimization/sanitizer/defines that apply to all targets (PRIVATE)
 add_library(project_options INTERFACE)
 
-target_include_directories(project_options INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
-    $<INSTALL_INTERFACE:include>)
-
-# project_warnings: warning levels per compiler
+# project_warnings: warning levels per compiler (PRIVATE)
 add_library(project_warnings INTERFACE)
 
 # Only add warnings if WARNING_MODE is enabled
@@ -126,8 +122,10 @@ if (MSVC)
     target_compile_options(project_options INTERFACE /O2 /Z7)
   endif()
 else()
-  # Prefer hidden visibility by default for smaller/safer libraries
-  target_compile_options(project_options INTERFACE -fvisibility=hidden -fvisibility-inlines-hidden)
+  # Prefer hidden visibility for shared builds only (to avoid empty exports)
+  if (BUILD_SHARED_LIBS)
+    target_compile_options(project_options INTERFACE -fvisibility=hidden -fvisibility-inlines-hidden)
+  endif()
   
   # Hardening: stack protector (works with _FORTIFY_SOURCE=2)
   target_compile_options(project_options INTERFACE -fstack-protector-strong)
@@ -141,7 +139,7 @@ else()
       target_compile_definitions(project_options INTERFACE _GLIBCXX_ASSERTIONS)
     endif()
     if (ENABLE_SANITIZERS)
-      target_compile_options(project_options INTERFACE -fsanitize=address,undefined)
+      target_compile_options(project_options INTERFACE -fsanitize=address,undefined -fno-omit-frame-pointer)
       target_link_options(project_options INTERFACE -fsanitize=address,undefined)
     endif()
   elseif (PERFORMANCE_BUILD)
@@ -168,12 +166,19 @@ if (ENABLE_CLANG_TIDY)
   endif()
 endif()
 
-# ---- Helper macro for reusable library alias pattern ------------------------
+# ---- Helper macros for reusable patterns ------------------------------------
 # Creates a namespaced alias for a library target (e.g., mylib::mylib)
 # Usage: create_namespaced_alias(${PROJECT_NAME})
 macro(create_namespaced_alias target_name)
   string(TOLOWER "${target_name}" namespace)
   add_library(${namespace}::${namespace} ALIAS ${target_name})
+endmacro()
+
+# Sets the exported imported target name to lowercase for consumers
+# Usage: set_lowercase_export_name(${PROJECT_NAME})
+macro(set_lowercase_export_name target_name)
+  string(TOLOWER "${target_name}" _lower)
+  set_target_properties(${target_name} PROPERTIES EXPORT_NAME ${_lower})
 endmacro()
 
 # ---- Library ---------------------------------------------------------------
@@ -189,21 +194,79 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   VERSION ${PROJECT_VERSION}
   SOVERSION ${PROJECT_VERSION_MAJOR})
 
+# Public dependencies (exported to consumers)
 target_link_libraries(${PROJECT_NAME} PUBLIC
   cpr::cpr
-  nlohmann_json::nlohmann_json
-  project_options)
+  nlohmann_json::nlohmann_json)
 
-# Only link warnings if WARNING_MODE is enabled
+# Include directories (needed by consumers)
+target_include_directories(${PROJECT_NAME} PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
+
+# Build-time configuration is applied directly to the target (avoid exporting helpers)
+if (MSVC)
+  if (DEBUG_MODE)
+    target_compile_options(${PROJECT_NAME} PRIVATE /Od /Z7)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG)
+  elseif (PERFORMANCE_BUILD)
+    target_compile_options(${PROJECT_NAME} PRIVATE /O2)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE NDEBUG)
+  else()
+    target_compile_options(${PROJECT_NAME} PRIVATE /O2 /Z7)
+  endif()
+else()
+  # Visibility only for shared builds
+  if (BUILD_SHARED_LIBS)
+    target_compile_options(${PROJECT_NAME} PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
+  endif()
+  # Hardening
+  target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong)
+  target_link_options(${PROJECT_NAME} PRIVATE -Wl,-z,relro,-z,now)
+  # Modes
+  if (DEBUG_MODE)
+    target_compile_options(${PROJECT_NAME} PRIVATE -O0 -g -fno-omit-frame-pointer)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      target_compile_definitions(${PROJECT_NAME} PRIVATE _GLIBCXX_ASSERTIONS)
+    endif()
+    if (ENABLE_SANITIZERS)
+      target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+      target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address,undefined)
+    endif()
+  elseif (PERFORMANCE_BUILD)
+    target_compile_options(${PROJECT_NAME} PRIVATE -O3)
+    if (ENABLE_NATIVE_OPTIMIZATION)
+      target_compile_options(${PROJECT_NAME} PRIVATE -march=native -mtune=native)
+    endif()
+    target_compile_definitions(${PROJECT_NAME} PRIVATE NDEBUG _FORTIFY_SOURCE=2)
+  else()
+    target_compile_options(${PROJECT_NAME} PRIVATE -O2 -g -fno-omit-frame-pointer)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _FORTIFY_SOURCE=2)
+  endif()
+endif()
+
+# Warnings configuration (build-time only)
 if (WARNING_MODE)
-  target_link_libraries(${PROJECT_NAME} PUBLIC project_warnings)
+  if (MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /permissive-)
+  else()
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -Wnull-dereference -Wformat=2 -Wimplicit-fallthrough)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      target_compile_options(${PROJECT_NAME} PRIVATE -Wduplicated-cond -Wlogical-op -Wuseless-cast)
+    endif()
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      target_compile_options(${PROJECT_NAME} PRIVATE -Wextra-semi -Wno-c99-extensions)
+    endif()
+  endif()
 endif()
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 # ---- Install ------------------------------------------------------------------
-# Install library (handles both static and shared)
+# Install library (handles both static and shared) and export targets
 install(TARGETS ${PROJECT_NAME}
+  EXPORT ${PROJECT_NAME}Targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
@@ -222,8 +285,6 @@ install(DIRECTORY scripts/ DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME_L
 install(DIRECTORY prompts/ DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME_LOWER}/prompts OPTIONAL)
 install(DIRECTORY reports/ DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME_LOWER}/reports OPTIONAL)
 
-# (Removed DEFAULT_CONFIG_PATH; the entire config directory is installed via install(DIRECTORY ...))
-
 # Define default reports and prompts path as compile-time constants
 set(REPORTS_INSTALL_PATH "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME_LOWER}/reports")
 target_compile_definitions(${PROJECT_NAME} PUBLIC
@@ -233,8 +294,34 @@ set(PROMPTS_INSTALL_PATH "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME_LOWER}/pr
 target_compile_definitions(${PROJECT_NAME} PUBLIC
   DEFAULT_PROMPTS_PATH="${PROMPTS_INSTALL_PATH}")
 
-# Provide a namespaced alias for consumers
+# Provide a namespaced alias and set exported imported name (lowercase)
 create_namespaced_alias(${PROJECT_NAME})
+set_lowercase_export_name(${PROJECT_NAME})
+
+# ---- Package config (find_package support) -----------------------------------
+include(CMakePackageConfigHelpers)
+
+# Generate version file
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion)
+
+# Generate config file from template
+configure_package_config_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+  INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+
+install(EXPORT ${PROJECT_NAME}Targets
+  NAMESPACE llmengine::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+
+# Install config files
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
 # ---- IPO/LTO (only when meaningful) -----------------------------------------
 include(CheckIPOSupported)
@@ -243,7 +330,7 @@ check_ipo_supported(RESULT _ipo_allowed OUTPUT _ipo_msg)
 if (PERFORMANCE_BUILD AND _ipo_allowed)
   set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
   message(STATUS "IPO/LTO enabled for ${PROJECT_NAME}")
-else()
+elseif(PERFORMANCE_BUILD)
   message(STATUS "IPO/LTO not enabled: ${_ipo_msg}")
 endif()
 
