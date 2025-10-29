@@ -148,10 +148,7 @@ install(DIRECTORY scripts/ DESTINATION ${CMAKE_INSTALL_DATADIR}/llmEngine/script
 install(DIRECTORY prompts/ DESTINATION ${CMAKE_INSTALL_DATADIR}/llmEngine/prompts OPTIONAL)
 install(DIRECTORY reports/ DESTINATION ${CMAKE_INSTALL_DATADIR}/llmEngine/reports OPTIONAL)
 
-# Define default config path as a compile-time constant
-set(CONFIG_INSTALL_PATH "${CMAKE_INSTALL_FULL_DATADIR}/llmEngine/config/settings.json")
-target_compile_definitions(LLMEngine PUBLIC
-  DEFAULT_CONFIG_PATH="${CONFIG_INSTALL_PATH}")
+# (Removed DEFAULT_CONFIG_PATH; the entire config directory is installed via install(DIRECTORY ...))
 
 # Define default reports and prompts path as compile-time constants
 set(REPORTS_INSTALL_PATH "${CMAKE_INSTALL_FULL_DATADIR}/llmEngine/reports")
