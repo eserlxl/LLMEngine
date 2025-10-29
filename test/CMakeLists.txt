@@ -12,10 +12,40 @@ project(LLMEngineTest
   DESCRIPTION "Test programs for LLMEngine"
   LANGUAGES CXX)
 
+# Build system quality-of-life
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # C++ standard (no compiler extensions)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# ---- Options (inherit from root if present; otherwise define defaults) ---------
+if (NOT DEFINED DEBUG_MODE)
+  option(DEBUG_MODE                 "Enable debug build flags"                       OFF)
+endif()
+if (NOT DEFINED PERFORMANCE_BUILD)
+  option(PERFORMANCE_BUILD          "Enable performance-optimized flags"             ON)
+endif()
+if (NOT DEFINED WARNING_MODE)
+  option(WARNING_MODE               "Enable extra warnings"                          ON)
+endif()
+if (NOT DEFINED ENABLE_NATIVE_OPTIMIZATION)
+  option(ENABLE_NATIVE_OPTIMIZATION "Use -march=native/-mtune=native in performance" OFF)
+endif()
+if (NOT DEFINED ENABLE_SANITIZERS)
+  option(ENABLE_SANITIZERS          "Enable Address/Undefined sanitizers in debug"    OFF)
+endif()
+if (NOT DEFINED ENABLE_CLANG_TIDY)
+  option(ENABLE_CLANG_TIDY          "Run clang-tidy if available"                     OFF)
+endif()
+
+# Put built binaries under <build>/bin (and per-config subdirs)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+foreach(cfg IN ITEMS Debug Release RelWithDebInfo MinSizeRel)
+  string(TOUPPER "${cfg}" CFG_UP)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CFG_UP} "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${cfg}")
+endforeach()
 
 # ---- Dependencies ------------------------------------------------------------
 find_package(OpenSSL REQUIRED)
@@ -47,6 +77,66 @@ endif()
 # ---- Include directories ------------------------------------------------------
 # Not needed: link to LLMEngine propagates includes
 
+# Optional clang-tidy
+if (ENABLE_CLANG_TIDY)
+  find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+  if (CLANG_TIDY_EXE)
+    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-warnings-as-errors=*")
+    message(STATUS "clang-tidy enabled: ${CLANG_TIDY_EXE}")
+  else()
+    message(WARNING "ENABLE_CLANG_TIDY is ON but clang-tidy not found")
+  endif()
+endif()
+
+# ---- Common build flags (mirror root CMake) -----------------------------------
+function(apply_common_build_flags target_name)
+  if (MSVC)
+    if (DEBUG_MODE)
+      target_compile_options(${target_name} PRIVATE /Od /Z7)
+      target_compile_definitions(${target_name} PRIVATE DEBUG)
+    elseif (PERFORMANCE_BUILD)
+      target_compile_options(${target_name} PRIVATE /O2)
+      target_compile_definitions(${target_name} PRIVATE NDEBUG)
+    else()
+      target_compile_options(${target_name} PRIVATE /O2 /Z7)
+    endif()
+  else()
+    target_compile_options(${target_name} PRIVATE -fstack-protector-strong)
+    target_link_options(${target_name} PRIVATE -Wl,-z,relro,-z,now)
+    if (DEBUG_MODE)
+      target_compile_options(${target_name} PRIVATE -O0 -g -fno-omit-frame-pointer)
+      target_compile_definitions(${target_name} PRIVATE DEBUG)
+      if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_definitions(${target_name} PRIVATE _GLIBCXX_ASSERTIONS)
+      endif()
+      if (ENABLE_SANITIZERS)
+        target_compile_options(${target_name} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+        target_link_options(${target_name} PRIVATE -fsanitize=address,undefined)
+      endif()
+    elseif (PERFORMANCE_BUILD)
+      target_compile_options(${target_name} PRIVATE -O3)
+      if (ENABLE_NATIVE_OPTIMIZATION)
+        target_compile_options(${target_name} PRIVATE -march=native -mtune=native)
+      endif()
+      target_compile_definitions(${target_name} PRIVATE NDEBUG _FORTIFY_SOURCE=2)
+    else()
+      target_compile_options(${target_name} PRIVATE -O2 -g -fno-omit-frame-pointer)
+      target_compile_definitions(${target_name} PRIVATE _FORTIFY_SOURCE=2)
+    endif()
+    if (WARNING_MODE)
+      target_compile_options(${target_name} PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wnon-virtual-dtor
+        -Wold-style-cast -Woverloaded-virtual -Wnull-dereference -Wformat=2 -Wimplicit-fallthrough)
+      if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(${target_name} PRIVATE -Wduplicated-cond -Wlogical-op -Wuseless-cast)
+      endif()
+      if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(${target_name} PRIVATE -Wextra-semi -Wno-c99-extensions)
+      endif()
+    endif()
+  endif()
+endfunction()
+
 # ---- Test executables ---------------------------------------------------------
 add_executable(test_llmengine test.cpp)
 target_link_libraries(test_llmengine
@@ -56,6 +146,7 @@ target_link_libraries(test_llmengine
     nlohmann_json::nlohmann_json
     OpenSSL::SSL
     OpenSSL::Crypto)
+apply_common_build_flags(test_llmengine)
 
 add_executable(test_api test_api.cpp)
 target_link_libraries(test_api
@@ -65,6 +156,7 @@ target_link_libraries(test_api
     nlohmann_json::nlohmann_json
     OpenSSL::SSL
     OpenSSL::Crypto)
+apply_common_build_flags(test_api)
 
 # ---- Target properties --------------------------------------------------------
 set_target_properties(test_llmengine PROPERTIES
@@ -74,4 +166,15 @@ set_target_properties(test_api PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build")
 
 # ---- Summary -----------------------------------------------------------------
+message(STATUS "========== Tests Build Configuration ==========")
+message(STATUS "CMAKE_CXX_COMPILER       : ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "CMAKE_BUILD_TYPE         : ${CMAKE_BUILD_TYPE}")
+message(STATUS "DEBUG_MODE               : ${DEBUG_MODE}")
+message(STATUS "PERFORMANCE_BUILD        : ${PERFORMANCE_BUILD}")
+message(STATUS "WARNING_MODE             : ${WARNING_MODE}")
+message(STATUS "ENABLE_NATIVE_OPTIMIZATION: ${ENABLE_NATIVE_OPTIMIZATION}")
+message(STATUS "ENABLE_SANITIZERS        : ${ENABLE_SANITIZERS}")
+message(STATUS "ENABLE_CLANG_TIDY        : ${ENABLE_CLANG_TIDY}")
+message(STATUS "Runtime output directory : ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+message(STATUS "========================================")
 message(STATUS "Test configuration complete")
