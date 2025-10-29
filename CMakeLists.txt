@@ -12,6 +12,9 @@ project(LLMEngine
   DESCRIPTION "A C++ library for interacting with Large Language Models"
   LANGUAGES CXX)
 
+# Lowercase project name for filesystem-friendly install directories
+string(TOLOWER "${PROJECT_NAME}" PROJECT_NAME_LOWER)
+
 # C++ standard (no compiler extensions)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -115,24 +118,24 @@ else()
 endif()
 
 # ---- Library ---------------------------------------------------------------
-add_library(LLMEngine STATIC
+add_library(${PROJECT_NAME} STATIC
     src/LLMEngine.cpp
     src/LLMOutputProcessor.cpp
     src/Utils.cpp
     src/APIClient.cpp
 )
 
-target_link_libraries(LLMEngine PUBLIC
+target_link_libraries(${PROJECT_NAME} PUBLIC
   cpr::cpr
   nlohmann_json::nlohmann_json
   project_options
   project_warnings)
 
-target_compile_features(LLMEngine PUBLIC cxx_std_17)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 # ---- Install ------------------------------------------------------------------
 # Install library
-install(TARGETS LLMEngine DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # Install public headers
 install(FILES
@@ -140,23 +143,23 @@ install(FILES
     src/LLMOutputProcessor.hpp
     src/Utils.hpp
     src/APIClient.hpp
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/LLMEngine)
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 
 # Install config and scripts (if these directories exist)
-install(DIRECTORY config/  DESTINATION ${CMAKE_INSTALL_DATADIR}/llmEngine/config OPTIONAL)
-install(DIRECTORY scripts/ DESTINATION ${CMAKE_INSTALL_DATADIR}/llmEngine/scripts OPTIONAL)
-install(DIRECTORY prompts/ DESTINATION ${CMAKE_INSTALL_DATADIR}/llmEngine/prompts OPTIONAL)
-install(DIRECTORY reports/ DESTINATION ${CMAKE_INSTALL_DATADIR}/llmEngine/reports OPTIONAL)
+install(DIRECTORY config/  DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME_LOWER}/config OPTIONAL)
+install(DIRECTORY scripts/ DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME_LOWER}/scripts OPTIONAL)
+install(DIRECTORY prompts/ DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME_LOWER}/prompts OPTIONAL)
+install(DIRECTORY reports/ DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME_LOWER}/reports OPTIONAL)
 
 # (Removed DEFAULT_CONFIG_PATH; the entire config directory is installed via install(DIRECTORY ...))
 
 # Define default reports and prompts path as compile-time constants
-set(REPORTS_INSTALL_PATH "${CMAKE_INSTALL_FULL_DATADIR}/llmEngine/reports")
-target_compile_definitions(LLMEngine PUBLIC
+set(REPORTS_INSTALL_PATH "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME_LOWER}/reports")
+target_compile_definitions(${PROJECT_NAME} PUBLIC
   DEFAULT_REPORTS_PATH="${REPORTS_INSTALL_PATH}")
 
-set(PROMPTS_INSTALL_PATH "${CMAKE_INSTALL_FULL_DATADIR}/llmEngine/prompts")
-target_compile_definitions(LLMEngine PUBLIC
+set(PROMPTS_INSTALL_PATH "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME_LOWER}/prompts")
+target_compile_definitions(${PROJECT_NAME} PUBLIC
   DEFAULT_PROMPTS_PATH="${PROMPTS_INSTALL_PATH}")
 
 # ---- IPO/LTO (only when meaningful) -----------------------------------------
@@ -164,8 +167,8 @@ include(CheckIPOSupported)
 set(_ipo_allowed OFF)
 check_ipo_supported(RESULT _ipo_allowed OUTPUT _ipo_msg)
 if (PERFORMANCE_BUILD AND _ipo_allowed)
-  set_property(TARGET LLMEngine PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-  message(STATUS "IPO/LTO enabled for LLMEngine")
+  set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+  message(STATUS "IPO/LTO enabled for ${PROJECT_NAME}")
 else()
   message(STATUS "IPO/LTO not enabled: ${_ipo_msg}")
 endif()
@@ -181,8 +184,8 @@ message(STATUS "BUILD_TESTING            : ${BUILD_TESTING}")
 message(STATUS "ENABLE_EXAMPLES          : ${ENABLE_EXAMPLES}")
 message(STATUS "ENABLE_NATIVE_OPTIMIZATION: ${ENABLE_NATIVE_OPTIMIZATION}")
 message(STATUS "ENABLE_SANITIZERS        : ${ENABLE_SANITIZERS}")
-get_target_property(_ipo LLMEngine INTERPROCEDURAL_OPTIMIZATION)
-message(STATUS "IPO/LTO (LLMEngine)      : ${_ipo}")
+get_target_property(_ipo ${PROJECT_NAME} INTERPROCEDURAL_OPTIMIZATION)
+message(STATUS "IPO/LTO (${PROJECT_NAME})      : ${_ipo}")
 message(STATUS "Runtime output directory : ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 message(STATUS "---------- Install Directories -----------")
 message(STATUS "CMAKE_INSTALL_PREFIX     : ${CMAKE_INSTALL_PREFIX}")
