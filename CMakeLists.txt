@@ -13,13 +13,16 @@ project(LLMEngine
   DESCRIPTION "A C++ library for interacting with Large Language Models"
   LANGUAGES CXX)
 
+# Default build type when not specified (for single-config generators and IDEs)
+if (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type")
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
+endif()
+
 # Lowercase project name for filesystem-friendly install directories
 string(TOLOWER "${PROJECT_NAME}" PROJECT_NAME_LOWER)
 
-# C++ standard (no compiler extensions)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+# C++ standard is ensured via target_compile_features on the library target
 
 # Build system quality-of-life
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -49,111 +52,23 @@ if(DEBUG_MODE AND PERFORMANCE_BUILD)
 endif()
 
 # ---- Dependencies ------------------------------------------------------------
-# OpenSSL must be found for cpr's CMake config (cpr links it transitively)
+# cpr's CMake config may reference OpenSSL targets; ensure they're available locally
 find_package(OpenSSL REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(cpr REQUIRED)
 
 # ---- Install dirs and prefix --------------------------------------------------
 include(GNUInstallDirs)
-if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "Install prefix" FORCE)
-endif()
 
 # ---- Helper interface targets ------------------------------------------------
-# project_options: optimization/sanitizer/defines that apply to all targets (PRIVATE)
-add_library(project_options INTERFACE)
-
-# project_warnings: warning levels per compiler (PRIVATE)
-add_library(project_warnings INTERFACE)
-
-# Only add warnings if WARNING_MODE is enabled
-if (WARNING_MODE)
-  # Detect compiler family
-  if (MSVC)
-    # /O flags handled via mode below; keep warnings modern
-    target_compile_options(project_warnings INTERFACE
-      /W4
-      /permissive-)
-  else()
-    # Reasonably strict but practical defaults
-    target_compile_options(project_warnings INTERFACE
-      -Wall
-      -Wextra
-      -Wpedantic
-      -Wconversion
-      -Wshadow
-      -Wnon-virtual-dtor
-      -Wold-style-cast
-      -Woverloaded-virtual
-      -Wnull-dereference
-      -Wformat=2
-      -Wimplicit-fallthrough)
-    # GCC-only extra warnings
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-      target_compile_options(project_warnings INTERFACE
-        -Wduplicated-cond
-        -Wlogical-op
-        -Wuseless-cast)
-    endif()
-    # Clang-only tweaks
-    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      target_compile_options(project_warnings INTERFACE
-        -Wextra-semi
-        -Wno-c99-extensions)
-    endif()
-  endif()
-endif()
+# (Removed unused helper targets; flags applied directly on main target)
 
 # Pin MSVC runtime library deterministically
 if (MSVC)
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "MSVC runtime library")
 endif()
 
-# Optimization / Debug / Sanitizer flags
-if (MSVC)
-  if (DEBUG_MODE)
-    target_compile_options(project_options INTERFACE /Od /Z7)
-    target_compile_definitions(project_options INTERFACE DEBUG)
-  elseif (PERFORMANCE_BUILD)
-    target_compile_options(project_options INTERFACE /O2)
-    target_compile_definitions(project_options INTERFACE NDEBUG)
-  else()
-    target_compile_options(project_options INTERFACE /O2 /Z7)
-  endif()
-else()
-  # Prefer hidden visibility for shared builds only (to avoid empty exports)
-  if (BUILD_SHARED_LIBS)
-    target_compile_options(project_options INTERFACE -fvisibility=hidden -fvisibility-inlines-hidden)
-  endif()
-  
-  # Hardening: stack protector (works with _FORTIFY_SOURCE=2)
-  target_compile_options(project_options INTERFACE -fstack-protector-strong)
-  target_link_options(project_options INTERFACE -Wl,-z,relro,-z,now)
-  
-  if (DEBUG_MODE)
-    target_compile_options(project_options INTERFACE -O0 -g -fno-omit-frame-pointer)
-    target_compile_definitions(project_options INTERFACE DEBUG)
-    # Debug niceties: libstdc++ bounds checking
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-      target_compile_definitions(project_options INTERFACE _GLIBCXX_ASSERTIONS)
-    endif()
-    if (ENABLE_SANITIZERS)
-      target_compile_options(project_options INTERFACE -fsanitize=address,undefined -fno-omit-frame-pointer)
-      target_link_options(project_options INTERFACE -fsanitize=address,undefined)
-    endif()
-  elseif (PERFORMANCE_BUILD)
-    target_compile_options(project_options INTERFACE -O3)
-    if (ENABLE_NATIVE_OPTIMIZATION)
-      target_compile_options(project_options INTERFACE -march=native -mtune=native)
-    endif()
-    target_compile_definitions(project_options INTERFACE NDEBUG _FORTIFY_SOURCE=2)
-  else()
-    # Reasonable default when neither mode is explicitly chosen
-    target_compile_options(project_options INTERFACE -O2 -g -fno-omit-frame-pointer)
-    target_compile_definitions(project_options INTERFACE _FORTIFY_SOURCE=2)
-  endif()
-endif()
+# (Removed unused helper target flag wiring; flags applied directly to main target below)
 
 # Optional clang-tidy
 if (ENABLE_CLANG_TIDY)
@@ -202,6 +117,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 # Include directories (needed by consumers)
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated_include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 
 # Build-time configuration is applied directly to the target (avoid exporting helpers)
@@ -216,10 +132,7 @@ if (MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /O2 /Z7)
   endif()
 else()
-  # Visibility only for shared builds
-  if (BUILD_SHARED_LIBS)
-    target_compile_options(${PROJECT_NAME} PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
-  endif()
+  # Visibility flags are disabled until an export header is introduced for shared builds
   # Hardening
   target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong)
   target_link_options(${PROJECT_NAME} PRIVATE -Wl,-z,relro,-z,now)
@@ -246,12 +159,21 @@ else()
   endif()
 endif()
 
+# Provide build-time "LLMEngine/" include prefix by copying headers into a generated include tree
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/LLMEngine.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMEngine.hpp" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/APIClient.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/APIClient.hpp" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/LLMOutputProcessor.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMOutputProcessor.hpp" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/Utils.hpp" COPYONLY)
+
 # Warnings configuration (build-time only)
 if (WARNING_MODE)
   if (MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4 /permissive-)
   else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -Wnull-dereference -Wformat=2 -Wimplicit-fallthrough)
+    target_compile_options(${PROJECT_NAME} PRIVATE
+      -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wnon-virtual-dtor
+      -Wold-style-cast -Woverloaded-virtual -Wnull-dereference -Wformat=2 -Wimplicit-fallthrough)
     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       target_compile_options(${PROJECT_NAME} PRIVATE -Wduplicated-cond -Wlogical-op -Wuseless-cast)
     endif()

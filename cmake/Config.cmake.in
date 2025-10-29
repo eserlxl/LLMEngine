@@ -14,7 +14,6 @@ include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
 include(CMakeFindDependencyMacro)
 find_dependency(cpr REQUIRED)
 find_dependency(nlohmann_json REQUIRED)
-find_dependency(OpenSSL REQUIRED)
 
 # Verify the imported target exists
 check_required_components(@PROJECT_NAME@)
