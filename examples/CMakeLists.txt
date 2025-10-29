@@ -95,12 +95,5 @@ target_link_libraries(readme_chatbot
   ${NLOHMANN_JSON_LIBRARIES} 
   ssl crypto pthread curl)
 
-add_executable(multi_bot_analyzer multiBotAnalyzer.cpp)
-target_link_libraries(multi_bot_analyzer 
-  LLMEngine 
-  ${CPR_LIBRARY} 
-  ${NLOHMANN_JSON_LIBRARIES} 
-  ssl crypto pthread curl)
-
 # ---- Summary -----------------------------------------------------------------
 message(STATUS "Examples configuration complete")
