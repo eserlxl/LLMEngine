@@ -59,7 +59,7 @@ jobs:
         run: |
           echo "Analyzing binary dependencies..."
           # Find a few ELF executables in build tree and inspect
-          EXECUTABLES=$(find build -type f -perm -111 | xargs file | grep -E ': ELF' | cut -d: -f1 | head -3)
+          EXECUTABLES=$(find build -type f -perm -111 -print0 | xargs -0 file | grep -E ': ELF' | cut -d: -f1 | head -3)
           if [ -z "$EXECUTABLES" ]; then
             echo "No executables found in build outputs; skipping detailed analysis."
           else

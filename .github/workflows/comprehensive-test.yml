@@ -77,15 +77,15 @@ jobs:
           CCACHE_DIR: ~/.ccache
         run: |
           if [ "${{ matrix.compiler }}" = "gcc" ]; then export CC=gcc; export CXX=g++; else export CC=clang; export CXX=clang++; fi
-          cmake -S . -B ${BUILD_DIR} -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake -S . -B "${BUILD_DIR}" -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" -DBUILD_TESTING=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Build (make -j20)
         run: |
-          cmake --build ${BUILD_DIR} -- -j20
+          cmake --build "${BUILD_DIR}" -- -j20
 
       - name: Run tests (ctest)
         run: |
-          cd ${BUILD_DIR}
+          cd "${BUILD_DIR}"
           ctest --output-on-failure
 
       - name: Upload build logs
