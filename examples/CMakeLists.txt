@@ -50,7 +50,11 @@ endforeach()
 # ---- Dependencies ------------------------------------------------------------
 find_package(OpenSSL REQUIRED)
 find_package(nlohmann_json REQUIRED)
-find_package(cpr REQUIRED)
+
+# Use existing cpr target if provided by the root; otherwise try to find it
+if (NOT TARGET cpr::cpr)
+  find_package(cpr REQUIRED)
+endif()
 
 # Try to consume LLMEngine target if available (when included from the root build)
 # Otherwise, provide a local imported target pointing to the sibling build output

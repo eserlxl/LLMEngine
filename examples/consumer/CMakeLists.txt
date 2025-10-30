@@ -7,7 +7,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(LLMEngine REQUIRED)
 find_package(nlohmann_json REQUIRED)
-find_package(cpr REQUIRED)
+if (NOT TARGET cpr::cpr)
+  find_package(cpr REQUIRED)
+endif()
 
 add_executable(consumer main.cpp)
 target_link_libraries(consumer PRIVATE llmengine::llmengine nlohmann_json::nlohmann_json cpr::cpr)

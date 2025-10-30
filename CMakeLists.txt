@@ -64,7 +64,24 @@ endif()
 # cpr's CMake config may reference OpenSSL targets; ensure they're available locally
 find_package(OpenSSL REQUIRED)
 find_package(nlohmann_json REQUIRED)
-find_package(cpr REQUIRED)
+# Prefer system cpr; fall back to FetchContent if not found
+find_package(cpr QUIET)
+if (NOT cpr_FOUND)
+  include(FetchContent)
+  message(STATUS "cpr not found via package config; fetching with FetchContent")
+  # Use a stable cpr release tag
+  FetchContent_Declare(
+    cpr
+    GIT_REPOSITORY https://github.com/libcpr/cpr.git
+    GIT_TAG 1.10.5
+    FIND_PACKAGE_ARGS NAMES cpr
+  )
+  set(CPR_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+  set(CPR_BUILD_TESTS_SSL OFF CACHE BOOL "" FORCE)
+  set(CPR_ENABLE_SSL ON CACHE BOOL "" FORCE)
+  set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(cpr)
+endif()
 
 # ---- Install dirs and prefix --------------------------------------------------
 include(GNUInstallDirs)
