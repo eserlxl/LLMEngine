@@ -23,7 +23,7 @@ namespace Utils {
 
     std::vector<std::string> readLines(std::string_view filepath, size_t max_lines) {
         std::vector<std::string> lines;
-        std::ifstream file(std::string(filepath));
+        std::ifstream file{std::string(filepath)};
         std::string line;
         while (std::getline(file, line) && lines.size() < max_lines) {
             lines.push_back(line);

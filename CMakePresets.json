@@ -1,82 +1,100 @@
 {
-  "version": 6,
-  "cmakeMinimumRequired": {
-    "major": 3,
-    "minor": 20,
-    "patch": 0
-  },
-  "configurePresets": [
-    {
-      "name": "base",
-      "hidden": true,
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
-        "BUILD_TESTING": true,
-        "ENABLE_EXAMPLES": true
-      }
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 20,
+        "patch": 0
     },
-    {
-      "name": "debug",
-      "displayName": "LLMEngine - Debug (+sanitizers)",
-      "inherits": ["base"],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "DEBUG_MODE": true,
-        "PERFORMANCE_BUILD": false,
-        "ENABLE_SANITIZERS": true,
-        "ENABLE_COVERAGE": false,
-        "WARNING_MODE": true
-      }
-    },
-    {
-      "name": "relwithdebinfo",
-      "displayName": "LLMEngine - RelWithDebInfo",
-      "inherits": ["base"],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "DEBUG_MODE": false,
-        "PERFORMANCE_BUILD": true,
-        "ENABLE_SANITIZERS": false,
-        "WARNING_MODE": true
-      }
-    },
-    {
-      "name": "release",
-      "displayName": "LLMEngine - Release (O3/LTO)",
-      "inherits": ["base"],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "DEBUG_MODE": false,
-        "PERFORMANCE_BUILD": true,
-        "ENABLE_SANITIZERS": false,
-        "WARNING_MODE": true
-      }
-    }
-  ],
-  "buildPresets": [
-    {
-      "name": "build-debug",
-      "configurePreset": "debug"
-    },
-    {
-      "name": "build-relwithdebinfo",
-      "configurePreset": "relwithdebinfo"
-    },
-    {
-      "name": "build-release",
-      "configurePreset": "release"
-    }
-  ],
-  "testPresets": [
-    {
-      "name": "ctest-debug",
-      "configurePreset": "debug",
-      "output": { "verbose": true }
-    }
-  ]
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+                "BUILD_TESTING": true,
+                "ENABLE_EXAMPLES": true
+            }
+        },
+        {
+            "name": "debug",
+            "displayName": "LLMEngine - Debug (+sanitizers)",
+            "inherits": [
+                "base"
+            ],
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "DEBUG_MODE": true,
+                "PERFORMANCE_BUILD": false,
+                "ENABLE_SANITIZERS": true,
+                "ENABLE_COVERAGE": false,
+                "WARNING_MODE": true
+            }
+        },
+        {
+            "name": "relwithdebinfo",
+            "displayName": "LLMEngine - RelWithDebInfo",
+            "inherits": [
+                "base"
+            ],
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "DEBUG_MODE": false,
+                "PERFORMANCE_BUILD": true,
+                "ENABLE_SANITIZERS": false,
+                "WARNING_MODE": true
+            }
+        },
+        {
+            "name": "release",
+            "displayName": "LLMEngine - Release (O3/LTO)",
+            "inherits": [
+                "base"
+            ],
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "DEBUG_MODE": false,
+                "PERFORMANCE_BUILD": true,
+                "ENABLE_SANITIZERS": false,
+                "WARNING_MODE": true
+            }
+        },
+        {
+            "name": "Configure preset using toolchain file",
+            "displayName": "Configure preset using toolchain file",
+            "description": "Sets Ninja generator, build and install directory",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_TOOLCHAIN_FILE": "",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "build-debug",
+            "configurePreset": "debug"
+        },
+        {
+            "name": "build-relwithdebinfo",
+            "configurePreset": "relwithdebinfo"
+        },
+        {
+            "name": "build-release",
+            "configurePreset": "release"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "ctest-debug",
+            "configurePreset": "debug",
+            "output": {
+                "verbosity": "verbose"
+            }
+        }
+    ]
 }
-
-

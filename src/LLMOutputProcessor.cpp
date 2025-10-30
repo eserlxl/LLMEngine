@@ -83,7 +83,7 @@ bool LLMOutputProcessor::hasErrors() const {
 void LLMOutputProcessor::parseJson(std::string_view jsonContent) {
     try {
         // Handle streaming JSON format from Ollama (multiple JSON objects, one per line)
-        std::stringstream ss(std::string(jsonContent));
+        std::stringstream ss{std::string(jsonContent)};
         std::string line;
         std::stringstream fullResponse;
         
