@@ -173,20 +173,24 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
         auto api_response = api_client_->sendRequest(full_prompt, input, api_params);
         
         if (debug_) {
-            std::ofstream resp_file("api_response.json");
+            std::error_code ec_dir;
+            std::filesystem::create_directories(Utils::TMP_DIR, ec_dir);
+            std::ofstream resp_file(Utils::TMP_DIR + "/api_response.json");
             resp_file << api_response.raw_response.dump(2);
             resp_file.close();
-            std::cout << "[DEBUG] API response saved to api_response.json" << std::endl;
+            std::cout << "[DEBUG] API response saved to " << (Utils::TMP_DIR + "/api_response.json") << std::endl;
         }
         
         if (api_response.success) {
             full_response = api_response.content;
         } else {
-            std::ofstream err_file("api_response_error.json");
+            std::error_code ec_dir2;
+            std::filesystem::create_directories(Utils::TMP_DIR, ec_dir2);
+            std::ofstream err_file(Utils::TMP_DIR + "/api_response_error.json");
             err_file << api_response.raw_response.dump(2);
             err_file.close();
             std::cerr << "[ERROR] API error: " << api_response.error_message << std::endl;
-            std::cerr << "[INFO] Error response saved to api_response_error.json" << std::endl;
+            std::cerr << "[INFO] Error response saved to " << (Utils::TMP_DIR + "/api_response_error.json") << std::endl;
             return {"[LLMEngine] Error: " + api_response.error_message, ""};
         }
     } else {
@@ -214,17 +218,21 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
                                   cpr::Body{payload.dump()});
         
         if (debug_) {
-            std::ofstream resp_file("ollama_response.json");
+            std::error_code ec_dir3;
+            std::filesystem::create_directories(Utils::TMP_DIR, ec_dir3);
+            std::ofstream resp_file(Utils::TMP_DIR + "/ollama_response.json");
             resp_file << response.text;
             resp_file.close();
-            std::cout << "[DEBUG] Ollama response saved to ollama_response.json" << std::endl;
+            std::cout << "[DEBUG] Ollama response saved to " << (Utils::TMP_DIR + "/ollama_response.json") << std::endl;
         }
         
         if (response.status_code != 200) {
-            std::ofstream err_file("ollama_response_error.json");
+            std::error_code ec_dir4;
+            std::filesystem::create_directories(Utils::TMP_DIR, ec_dir4);
+            std::ofstream err_file(Utils::TMP_DIR + "/ollama_response_error.json");
             err_file << response.text;
             err_file.close();
-            std::cerr << "[ERROR] Ollama error response saved to ollama_response_error.json" << std::endl;
+            std::cerr << "[ERROR] Ollama error response saved to " << (Utils::TMP_DIR + "/ollama_response_error.json") << std::endl;
             return {"[LLMEngine] Error: Failed to contact Ollama server.", ""};
         }
         
@@ -244,10 +252,12 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
     }
     
     if (debug_) {
-        std::ofstream full_file("response_full.txt");
+        std::error_code ec_dir5;
+        std::filesystem::create_directories(Utils::TMP_DIR, ec_dir5);
+        std::ofstream full_file(Utils::TMP_DIR + "/response_full.txt");
         full_file << full_response;
         full_file.close();
-        std::cout << "[DEBUG] Full response saved to response_full.txt" << std::endl;
+        std::cout << "[DEBUG] Full response saved to " << (Utils::TMP_DIR + "/response_full.txt") << std::endl;
     }
     
     // Extract THINK section

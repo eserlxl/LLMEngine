@@ -18,7 +18,7 @@
 #include <map>
 
 namespace Utils {
-    std::string TMP_DIR = "/var/log/lxl/llm";
+    std::string TMP_DIR = "/tmp/llmengine";
     namespace fs = std::filesystem;
 
     std::vector<std::string> readLines(const std::string& filepath, size_t max_lines) {

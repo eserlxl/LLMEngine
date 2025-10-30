@@ -68,10 +68,12 @@ APIResponse QwenClient::sendRequest(const std::string& prompt,
             {"presence_penalty", request_params["presence_penalty"]}
         };
         
-        // Get timeout from params or use default (5 minutes)
-        int timeout_seconds = 300; // Default 5 minutes
+        // Get timeout from params or use config default
+        int timeout_seconds = 0;
         if (params.contains("timeout_seconds")) {
             timeout_seconds = params["timeout_seconds"].get<int>();
+        } else {
+            timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
         }
         
         // Send request
@@ -165,10 +167,12 @@ APIResponse OpenAIClient::sendRequest(const std::string& prompt,
             {"presence_penalty", request_params["presence_penalty"]}
         };
         
-        // Get timeout from params or use default (5 minutes)
-        int timeout_seconds = 300; // Default 5 minutes
+        // Get timeout from params or use config default
+        int timeout_seconds = 0;
         if (params.contains("timeout_seconds")) {
             timeout_seconds = params["timeout_seconds"].get<int>();
+        } else {
+            timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
         }
         
         // Send request
@@ -253,10 +257,12 @@ APIResponse AnthropicClient::sendRequest(const std::string& prompt,
             payload["system"] = input["system_prompt"].get<std::string>();
         }
         
-        // Get timeout from params or use default (5 minutes)
-        int timeout_seconds = 300; // Default 5 minutes
+        // Get timeout from params or use config default
+        int timeout_seconds = 0;
         if (params.contains("timeout_seconds")) {
             timeout_seconds = params["timeout_seconds"].get<int>();
+        } else {
+            timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
         }
         
         // Send request
@@ -343,10 +349,12 @@ APIResponse OllamaClient::sendRequest(const std::string& prompt,
                 }
             }
             
-            // Get timeout from params or use default (5 minutes)
-            int timeout_seconds = 300; // Default 5 minutes
+            // Get timeout from params or use config default
+            int timeout_seconds = 0;
             if (params.contains("timeout_seconds")) {
                 timeout_seconds = params["timeout_seconds"].get<int>();
+            } else {
+                timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
             }
             
             // Send request to generate endpoint
@@ -412,10 +420,12 @@ APIResponse OllamaClient::sendRequest(const std::string& prompt,
             }
         }
         
-        // Get timeout from params or use default (5 minutes)
-        int timeout_seconds = 300; // Default 5 minutes
+        // Get timeout from params or use config default
+        int timeout_seconds = 0;
         if (params.contains("timeout_seconds")) {
             timeout_seconds = params["timeout_seconds"].get<int>();
+        } else {
+            timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
         }
         
         // Send request to chat endpoint
