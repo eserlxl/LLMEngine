@@ -220,7 +220,7 @@ auto result = engine.analyze(prompt, input, "test");
 - Quick start: `QUICKSTART.md`
 - Configuration: `docs/CONFIGURATION.md`
 - Providers: `docs/PROVIDERS.md`
-- API reference (headers): `docs/API_REFERENCE.md`
+- API reference: `docs/API_REFERENCE.md`
 - FAQ: `docs/FAQ.md`
 
 
