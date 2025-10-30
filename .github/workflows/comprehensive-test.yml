@@ -88,6 +88,25 @@ jobs:
           cd "${BUILD_DIR}"
           ctest --output-on-failure
 
+      - name: Debug analysis (informational)
+        run: |
+          echo "=== Debug analysis (informational) ==="
+          # Inspect a few binaries for debug symbols; do not fail the job
+          set +e
+          mapfile -t FILES < <(find "${BUILD_DIR}" -maxdepth 3 -type f -perm -111 | head -5)
+          for f in "${FILES[@]}"; do
+            if file "$f" | grep -q "ELF"; then
+              echo "Inspecting: $f"
+              file "$f"
+              if file "$f" | grep -q "not stripped"; then
+                echo "✓ $f has debug symbols (not stripped)"
+              else
+                echo "ℹ $f appears stripped"
+              fi
+            fi
+          done
+          set -e
+
       - name: Upload build logs
         if: always()
         uses: actions/upload-artifact@v5

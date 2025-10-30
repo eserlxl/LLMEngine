@@ -1,0 +1,112 @@
+# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Manual debug test workflow for CMake presets.
+
+name: Manual Debug Tests
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  debug-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      BUILD_DIR: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install toolchain and debug tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake g++ make ccache gdb binutils
+
+      - name: Configure Debug (CMake preset)
+        env:
+          CCACHE_DIR: ~/.ccache
+        run: |
+          cmake --preset debug -DBUILD_TESTING=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build (make -j20)
+        run: |
+          cmake --build "${BUILD_DIR}" -- -j20
+
+      - name: Run tests (ctest)
+        run: |
+          cd "${BUILD_DIR}"
+          ctest --output-on-failure
+
+      - name: Verify debug symbols and sections
+        run: |
+          echo "=== Debug Build Verification ==="
+          set -e
+          FOUND=0
+          # Find a few executable ELF files to inspect (limit to keep logs concise)
+          mapfile -t FILES < <(find "${BUILD_DIR}" -maxdepth 3 -type f -perm -111 | head -10)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "No executables found under ${BUILD_DIR}"
+            exit 1
+          fi
+          for f in "${FILES[@]}"; do
+            if file "$f" | grep -q "ELF"; then
+              FOUND=1
+              echo "Inspecting: $f"
+              file "$f"
+              if file "$f" | grep -q "not stripped"; then
+                echo "✓ $f has debug symbols (not stripped)"
+              else
+                echo "✗ $f appears stripped"
+                exit 1
+              fi
+              if readelf -S "$f" | grep -q "\.debug"; then
+                echo "✓ $f contains .debug* sections"
+              else
+                echo "✗ $f missing .debug* sections"
+                exit 1
+              fi
+            fi
+          done
+          if [ "$FOUND" -eq 0 ]; then
+            echo "No ELF executables found to inspect"
+            exit 1
+          fi
+
+      - name: GDB smoke (Linux only, if available)
+        run: |
+          echo "=== GDB Smoke Test ==="
+          if command -v gdb >/dev/null 2>&1; then
+            TARGET=$(find "${BUILD_DIR}" -maxdepth 3 -type f -perm -111 | xargs file | grep ELF | head -1 | cut -d: -f1 || true)
+            if [ -n "$TARGET" ]; then
+              echo "Testing GDB on: $TARGET"
+              gdb -batch -ex "file $TARGET" -ex "info functions" | head -20 || true
+              echo "✓ GDB loaded symbols"
+            else
+              echo "No ELF target found for GDB"
+            fi
+          else
+            echo "GDB not installed; skipping"
+          fi
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: build-logs-debug
+          path: |
+            build/CMakeFiles/CMakeOutput.log
+            build/CMakeFiles/CMakeError.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+
