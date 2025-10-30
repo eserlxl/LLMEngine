@@ -39,7 +39,7 @@ defaults:
 
 jobs:
   comprehensive-test:
-    name: Build / Test (${{ matrix.build_type }})
+    name: Build / Test (${{ matrix.compiler }} ${{ matrix.build_type }})
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
@@ -47,6 +47,7 @@ jobs:
       fail-fast: false
       matrix:
         build_type: [Release, Debug]
+        compiler: [gcc, clang]
 
     env:
       BUILD_DIR: build
@@ -68,11 +69,15 @@ jobs:
       - name: Install toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential cmake g++ make
+          sudo apt-get install -y --no-install-recommends build-essential cmake make ccache
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then sudo apt-get install -y g++; else sudo apt-get install -y clang; fi
 
       - name: Configure (${{ matrix.build_type }})
+        env:
+          CCACHE_DIR: ~/.ccache
         run: |
-          cmake -S . -B ${BUILD_DIR} -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then export CC=gcc; export CXX=g++; else export CC=clang; export CXX=clang++; fi
+          cmake -S . -B ${BUILD_DIR} -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Build (make -j20)
         run: |

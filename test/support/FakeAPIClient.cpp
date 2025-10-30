@@ -17,7 +17,7 @@ void FakeAPIClient::setNextResponse(const APIResponse& response) {
     has_custom_response_ = true;
 }
 
-APIResponse FakeAPIClient::sendRequest(const std::string& prompt,
+APIResponse FakeAPIClient::sendRequest(std::string_view prompt,
                                        const nlohmann::json& input,
                                        const nlohmann::json& params) const {
     if (has_custom_response_) {
@@ -28,12 +28,12 @@ APIResponse FakeAPIClient::sendRequest(const std::string& prompt,
     APIResponse r;
     r.success = true;
     // Produce a deterministic echo-style response for tests
-    r.content = "[FAKE] " + prompt;
+    r.content = std::string("[FAKE] ") + std::string(prompt);
     r.status_code = 200;
     r.raw_response = {
         {"fake", true},
         {"provider", provider_name_},
-        {"prompt_len", static_cast<int>(prompt.size())},
+        {"prompt_len", static_cast<int>(std::string(prompt).size())},
         {"has_system", input.contains("system_prompt")}
     };
     return r;

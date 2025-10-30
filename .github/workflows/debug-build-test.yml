@@ -33,11 +33,11 @@ jobs:
       - name: Install toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential cmake g++ make gdb
+          sudo apt-get install -y --no-install-recommends build-essential cmake g++ make gdb ccache
 
       - name: Configure Debug (CMake)
         run: |
-          cmake -S . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
+          cmake --preset debug -DBUILD_TESTING=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Build (make -j20)
         run: |

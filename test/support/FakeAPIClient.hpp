@@ -15,7 +15,7 @@ public:
     explicit FakeAPIClient(ProviderType type = ProviderType::OPENAI,
                            std::string providerName = "Fake");
 
-    APIResponse sendRequest(const std::string& prompt,
+    APIResponse sendRequest(std::string_view prompt,
                             const nlohmann::json& input,
                             const nlohmann::json& params) const override;
 

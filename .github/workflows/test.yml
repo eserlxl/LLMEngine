@@ -41,6 +41,7 @@ jobs:
     timeout-minutes: 30
     env:
       DEBIAN_FRONTEND: noninteractive
+      CCACHE_DIR: ~/.ccache
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -58,11 +59,19 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential cmake g++ make ninja-build
+          sudo apt-get install -y --no-install-recommends build-essential cmake g++ make ninja-build ccache
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-ccache-${{ hashFiles('**/CMakeLists.txt', 'src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-
 
       - name: Configure (CMake)
         run: |
-          cmake -S . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+          cmake --preset release -DBUILD_TESTING=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Build (make -j20)
         run: |
