@@ -1,0 +1,12 @@
+# Minimal Doxygen configuration for LLMEngine
+PROJECT_NAME           = "LLMEngine"
+OUTPUT_DIRECTORY       = docs/_build
+INPUT                  = src
+RECURSIVE              = YES
+EXTRACT_ALL            = YES
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = NO
+FILE_PATTERNS          = *.hpp *.cpp
+EXCLUDE_PATTERNS       = build/* examples/* test/*
