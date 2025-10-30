@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This script is part of the LLMEngine test suite (coverage tooling) and is
+# licensed under the GNU General Public License v3.0 or later.
+# See the LICENSE file in the project root for details.
 set -euo pipefail
 
 # Local coverage report into /tmp

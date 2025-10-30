@@ -1,5 +1,9 @@
 // Copyright © 2025 Eser KUBALI
 // SPDX-License-Identifier: GPL-3.0-or-later
+//
+// This file is part of the LLMEngine test suite (enum round-trip tests) and is
+// licensed under the GNU General Public License v3.0 or later.
+// See the LICENSE file in the project root for details.
 
 #include "APIClient.hpp"
 #include <cassert>
