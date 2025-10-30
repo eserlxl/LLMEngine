@@ -22,8 +22,7 @@ fi
 # Build the test if it doesn't exist
 if [ ! -f "build_test/test_api" ]; then
     echo "Building test_api executable..."
-    ./build_test.sh
-    if [ $? -ne 0 ]; then
+    if ! ./build_test.sh; then
         echo "Build failed!"
         exit 1
     fi
@@ -33,7 +32,7 @@ echo "Running API integration tests..."
 echo ""
 
 # Change to build directory and run tests
-cd build_test
+cd build_test || exit 1
 
 # Check for API key
 if [ -z "$QWEN_API_KEY" ]; then

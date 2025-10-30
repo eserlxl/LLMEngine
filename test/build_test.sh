@@ -14,7 +14,7 @@ echo "Building LLMEngine test..."
 
 # Create build directory for test
 mkdir -p build_test
-cd build_test
+cd build_test || exit 1
 
 # Clean the build directory
 make clean
@@ -23,9 +23,7 @@ make clean
 cmake ..
 
 # Build the test executable
-make -j20
-
-if [ $? -eq 0 ]; then
+if make -j20; then
     echo "Build successful!"
     echo "Test executables created:"
     echo "  - build_test/test_llmengine (legacy Ollama tests)"
