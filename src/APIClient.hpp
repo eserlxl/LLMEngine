@@ -14,6 +14,9 @@
 
 namespace LLMEngineAPI {
 
+/**
+ * @brief Supported LLM providers.
+ */
 enum class ProviderType {
     QWEN,
     OPENAI,
@@ -21,6 +24,9 @@ enum class ProviderType {
     OLLAMA
 };
 
+/**
+ * @brief Normalized API response returned by all providers.
+ */
 struct APIResponse {
     bool success;
     std::string content;
@@ -29,18 +35,37 @@ struct APIResponse {
     nlohmann::json raw_response;
 };
 
+/**
+ * @brief Abstract client interface implemented by all providers.
+ */
 class APIClient {
 public:
     virtual ~APIClient() = default;
+    /**
+     * @brief Send a text generation request.
+     * @param prompt User prompt or system instruction.
+     * @param input Additional structured inputs (tool/context).
+     * @param params Model parameters (temperature, max_tokens, etc.).
+     * @return Provider-agnostic APIResponse.
+     */
     virtual APIResponse sendRequest(const std::string& prompt, 
                                    const nlohmann::json& input,
                                    const nlohmann::json& params) const = 0;
+    /** @brief Human-readable provider name. */
     virtual std::string getProviderName() const = 0;
+    /** @brief Provider enumeration value. */
     virtual ProviderType getProviderType() const = 0;
 };
 
+/**
+ * @brief Qwen (DashScope) client.
+ */
 class QwenClient : public APIClient {
 public:
+    /**
+     * @param api_key Qwen API key (environment-retrieved recommended).
+     * @param model Default model, e.g. "qwen-flash".
+     */
     QwenClient(const std::string& api_key, const std::string& model = "qwen-flash");
     APIResponse sendRequest(const std::string& prompt, 
                            const nlohmann::json& input,
@@ -55,8 +80,15 @@ private:
     nlohmann::json default_params_;
 };
 
+/**
+ * @brief OpenAI client.
+ */
 class OpenAIClient : public APIClient {
 public:
+    /**
+     * @param api_key OpenAI API key.
+     * @param model Default model, e.g. "gpt-3.5-turbo".
+     */
     OpenAIClient(const std::string& api_key, const std::string& model = "gpt-3.5-turbo");
     APIResponse sendRequest(const std::string& prompt, 
                            const nlohmann::json& input,
@@ -71,8 +103,15 @@ private:
     nlohmann::json default_params_;
 };
 
+/**
+ * @brief Anthropic Claude client.
+ */
 class AnthropicClient : public APIClient {
 public:
+    /**
+     * @param api_key Anthropic API key.
+     * @param model Default model, e.g. "claude-3-sonnet".
+     */
     AnthropicClient(const std::string& api_key, const std::string& model = "claude-3-sonnet");
     APIResponse sendRequest(const std::string& prompt, 
                            const nlohmann::json& input,
@@ -87,8 +126,15 @@ private:
     nlohmann::json default_params_;
 };
 
+/**
+ * @brief Local Ollama client.
+ */
 class OllamaClient : public APIClient {
 public:
+    /**
+     * @param base_url Ollama server URL.
+     * @param model Default local model name.
+     */
     OllamaClient(const std::string& base_url = "http://localhost:11434", 
                  const std::string& model = "llama2");
     APIResponse sendRequest(const std::string& prompt, 
@@ -103,30 +149,58 @@ private:
     nlohmann::json default_params_;
 };
 
+/**
+ * @brief Factory for creating provider clients.
+ */
 class APIClientFactory {
 public:
+    /**
+     * @brief Create client by enum type.
+     */
     static std::unique_ptr<APIClient> createClient(ProviderType type, 
                                                    const std::string& api_key = "",
                                                    const std::string& model = "",
                                                    const std::string& base_url = "");
     
+    /**
+     * @brief Create client by provider name from JSON config.
+     */
     static std::unique_ptr<APIClient> createClientFromConfig(const std::string& provider_name,
                                                              const nlohmann::json& config);
     
+    /**
+     * @brief Convert provider string to enum.
+     */
     static ProviderType stringToProviderType(const std::string& provider_name);
+    /**
+     * @brief Convert enum to provider string.
+     */
     static std::string providerTypeToString(ProviderType type);
 };
 
+/**
+ * @brief Singleton managing `api_config.json` loading and access.
+ */
 class APIConfigManager {
 public:
     static APIConfigManager& getInstance();
     
+    /**
+     * @brief Load configuration from path or default search order.
+     * @return true if configuration loaded successfully.
+     */
     bool loadConfig(const std::string& config_path = "");
+    /** @brief Get provider-specific JSON config. */
     nlohmann::json getProviderConfig(const std::string& provider_name) const;
+    /** @brief List all available provider keys. */
     std::vector<std::string> getAvailableProviders() const;
+    /** @brief Default provider key. */
     std::string getDefaultProvider() const;
+    /** @brief Global timeout seconds. */
     int getTimeoutSeconds() const;
+    /** @brief Global retry attempts. */
     int getRetryAttempts() const;
+    /** @brief Delay in milliseconds between retries. */
     int getRetryDelayMs() const;
 
 private:
