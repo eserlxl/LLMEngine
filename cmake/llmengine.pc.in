@@ -1,0 +1,13 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/LLMEngine
+
+Name: LLMEngine
+Description: C++ library for interacting with Large Language Models
+Version: @PROJECT_VERSION@
+Requires: 
+Libs: -L${libdir} -lLLMEngine
+Cflags: -I${includedir}
+
+

@@ -284,6 +284,14 @@ install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
+# ---- pkg-config ---------------------------------------------------------------
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/llmengine.pc.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/llmengine.pc"
+  @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/llmengine.pc"
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
 # ---- IPO/LTO (only when meaningful) -----------------------------------------
 include(CheckIPOSupported)
 set(_ipo_allowed OFF)
