@@ -1,7 +1,7 @@
 # Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# This file is part of nextVersion and is licensed under
+# This file is part of LLMEngine and is licensed under
 # the GNU General Public License v3.0 or later.
 # See the LICENSE file in the project root for details.
 
@@ -14,12 +14,12 @@ on:
   push:
     paths:
       - 'CMakeLists.txt'
-      - 'build.sh'
+      - 'src/**'
       - '.github/workflows/dependency-check.yml'
   pull_request:
     paths:
       - 'CMakeLists.txt'
-      - 'build.sh'
+      - 'src/**'
       - '.github/workflows/dependency-check.yml'
   schedule:
     # Run weekly on Mondays at 3 AM UTC
@@ -31,13 +31,15 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       
-      - name: Setup C++ Environment
-        uses: ./.github/actions/setup-cpp
-      
-      - name: Build project
+      - name: Install toolchain
         run: |
-          ./build.sh clean
-          test -x build/bin/next-version
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake g++ make
+      
+      - name: Configure and build
+        run: |
+          cmake -S . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+          cmake --build build -- -j20
       
       - name: Check for known vulnerabilities in system packages
         run: |
@@ -53,25 +55,27 @@ jobs:
           # Check for outdated packages
           apt list --upgradable 2>/dev/null | grep -E "(gcc|g\+\+|cmake|make)" || echo "No relevant package updates available"
       
-      - name: Analyze binary dependencies
+      - name: Analyze built binaries (best-effort)
         run: |
           echo "Analyzing binary dependencies..."
-          
-          # Check what libraries the binary links against
-          ldd build/bin/next-version || echo "Binary is statically linked or ldd not available"
-          
-          # Check for any suspicious strings in the binary
-          strings build/bin/next-version | head -20 || echo "strings command not available"
-          
-          # Basic run to ensure the binary executes in this environment
-          build/bin/next-version --help > /dev/null
+          # Find a few ELF executables in build tree and inspect
+          EXECUTABLES=$(find build -type f -perm -111 | xargs file | grep -E ': ELF' | cut -d: -f1 | head -3)
+          if [ -z "$EXECUTABLES" ]; then
+            echo "No executables found in build outputs; skipping detailed analysis."
+          else
+            for exe in $EXECUTABLES; do
+              echo "Inspecting: $exe"
+              ldd "$exe" || echo "ldd not applicable"
+              strings "$exe" | head -20 || true
+            done
+          fi
       
       - name: Security summary
         run: |
           echo "=== Dependency Security Check Summary ==="
           echo "✓ Project built successfully"
           echo "✓ No obvious security issues detected in build process"
-          echo "✓ Binary analysis completed"
+          echo "✓ Binary analysis completed (best-effort)"
           echo ""
           echo "Note: This is a basic security check. For production use,"
           echo "consider implementing more comprehensive security scanning."

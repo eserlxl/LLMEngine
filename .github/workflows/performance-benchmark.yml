@@ -1,7 +1,7 @@
 # Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# This file is part of nextVersion and is licensed under
+# This file is part of LLMEngine and is licensed under
 # the GNU General Public License v3.0 or later.
 # See the LICENSE file in the project root for details.
 
@@ -15,14 +15,15 @@ on:
     branches: [ main ]
     paths:
       - 'src/**'
+      - 'test/**'
       - 'CMakeLists.txt'
       - '.github/workflows/performance-benchmark.yml'
   pull_request:
     paths:
       - 'src/**'
+      - 'test/**'
       - 'CMakeLists.txt'
       - '.github/workflows/performance-benchmark.yml'
-      - 'tests/**'
   schedule:
     # Run daily at 2 AM UTC
     - cron: '0 2 * * *'
@@ -33,9 +34,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       
-      - name: Setup C++ Environment
-        uses: ./.github/actions/setup-cpp
-      
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake g++ make time
       
       - name: Install GNU time
         run: |
@@ -44,68 +46,28 @@ jobs:
       
       
       
-      - name: Build performance version
+      - name: Configure Release
         run: |
-          ./build.sh performance clean
-          echo "Performance build completed"
-          ls -la build/
-          if [ ! -x "./build/bin/next-version" ]; then
-            echo "Error: Binary not found at ./build/bin/next-version"
-            if [ -d build/bin ]; then
-              ls -la build/bin/
-            else
-              echo "No bin directory found"
-            fi
-            exit 1
-          fi
+          cmake -S . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+
+      - name: Build (make -j20)
+        run: |
+          cmake --build build -- -j20
       
       
       
-      - name: Run performance benchmarks
+      - name: Run performance benchmarks (ctest timing)
         run: |
           echo "=== Performance Benchmark Results ==="
-          if [ ! -x "./build/bin/next-version" ]; then
-            echo "Error: Binary not found or not executable at ./build/bin/next-version"
-            exit 1
-          fi
-          run_bench() {
-            label="$1"
-            repo_root="$2"
-            set +e
-            /usr/bin/time -f "$label: %e s, %M KB" ./build/bin/next-version --repo-root "$repo_root" --verbose > /dev/null 2>&1
-            rc=$?
-            set -e
-            if [ "$rc" -eq 0 ]; then
-              return 0
-            fi
-            if [ "$rc" -eq 10 ] || [ "$rc" -eq 11 ] || [ "$rc" -eq 12 ] || [ "$rc" -eq 20 ]; then
-              echo "Notice: classification exit code $rc for '$label' (expected)."
-              return 0
-            fi
-            echo "Error: next-version failed for '$label' with exit code $rc"
-            return $rc
-          }
-          echo "Benchmark: small workload (basic analysis)"
-          OUT_SMALL=$(mktemp -d /tmp/nextVersion-bench-small-XXXXXX)
-          run_bench "small" "$OUT_SMALL"
-          rm -rf "$OUT_SMALL"
-          echo "Benchmark: medium workload (detailed analysis)"
-          OUT_MED=$(mktemp -d /tmp/nextVersion-bench-med-XXXXXX)
-          run_bench "medium" "$OUT_MED"
-          rm -rf "$OUT_MED"
-          echo "Benchmark: complex workload (extra files)"
-          OUT_COMPLEX=$(mktemp -d /tmp/nextVersion-bench-complex-XXXXXX)
-          run_bench "complex" "$OUT_COMPLEX"
-          rm -rf "$OUT_COMPLEX"
-          echo "Binary size: $(stat -c%s build/bin/next-version) bytes"
-          if file build/bin/next-version | grep -q "not stripped"; then
-            echo "Binary contains debug symbols"
-          else
-            echo "Binary is stripped"
+          cd build
+          /usr/bin/time -f "ctest: %e s, %M KB" ctest --output-on-failure || true
+          cd ..
+          if [ -f build/libLLMEngine.a ]; then
+            echo "Library size: $(stat -c%s build/libLLMEngine.a) bytes"
           fi
           echo "Build configuration verification:"
           if [ -f build/CMakeCache.txt ]; then
-            echo "- Performance optimizations: $(grep -c O3 build/CMakeCache.txt || echo 0)"
+            echo "- O3 occurrences: $(grep -c O3 build/CMakeCache.txt || echo 0)"
           else
             echo "- CMake cache not found"
           fi

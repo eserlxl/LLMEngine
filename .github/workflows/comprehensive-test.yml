@@ -1,7 +1,7 @@
 # Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# This file is part of nextVersion and is licensed under
+# This file is part of LLMEngine and is licensed under
 # the GNU General Public License v3.0 or later.
 # See the LICENSE file in the project root for details.
 
@@ -21,18 +21,16 @@ on:
     branches: [ main ]
     paths:
       - 'src/**'
-      - 'tests/**'
-      - 'include/**'
+      - 'test/**'
+      - 'examples/**'
       - 'CMakeLists.txt'
-      - 'build.sh'
       - '.github/workflows/comprehensive-test.yml'
   pull_request:
     paths:
       - 'src/**'
-      - 'tests/**'
-      - 'include/**'
+      - 'test/**'
+      - 'examples/**'
       - 'CMakeLists.txt'
-      - 'build.sh'
       - '.github/workflows/comprehensive-test.yml'
 
 defaults:
@@ -41,176 +39,55 @@ defaults:
 
 jobs:
   comprehensive-test:
-    name: Build / Test (${{ matrix.build_config.name }})
+    name: Build / Test (${{ matrix.build_type }})
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     strategy:
       fail-fast: false
       matrix:
-        build_config:
-          - name: "default"
-            args: ""
-            cache_key: "default"
-          - name: "performance"
-            args: "performance"
-            cache_key: "perf"
-          - name: "debug"
-            args: "debug"
-            cache_key: "debug"
-          - name: "warnings"
-            args: "warnings"
-            cache_key: "warn"
-          - name: "performance-warnings-tests"
-            args: "performance warnings tests"
-            cache_key: "perf-warn-test"
-          - name: "debug-warnings-tests"
-            args: "debug warnings tests"
-            cache_key: "debug-warn-test"
+        build_type: [Release, Debug]
 
     env:
       BUILD_DIR: build
-      BINARY_PATH: build/bin/next-version
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0  # Full history for better caching
+          fetch-depth: 0
 
       - name: Cache build artifacts
         uses: actions/cache@v4
         with:
-          path: |
-            build/
-            .ccache/
-          key: ${{ runner.os }}-${{ matrix.build_config.cache_key }}-${{ hashFiles('CMakeLists.txt', 'build.sh', 'src/**', 'include/**') }}
+          path: build/
+          key: ${{ runner.os }}-${{ matrix.build_type }}-${{ hashFiles('CMakeLists.txt', 'src/**') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.build_config.cache_key }}-
+            ${{ runner.os }}-${{ matrix.build_type }}-
 
-      - name: Setup C++ Environment
-        uses: ./.github/actions/setup-cpp
-
-      - name: Build with ${{ matrix.build_config.name }} configuration
-        id: build
+      - name: Install toolchain
         run: |
-          echo "=== Building with configuration: ${{ matrix.build_config.name }} ==="
-          echo "Arguments: '${{ matrix.build_config.args }}'"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake g++ make
 
-          # Ensure scripts are executable
-          chmod +x ./build.sh
-          chmod +x ./run_tests.sh
-
-          if [ -n "${{ matrix.build_config.args }}" ]; then
-            ./build.sh ${{ matrix.build_config.args }} clean
-          else
-            ./build.sh clean
-          fi
-
-          echo "✓ Build completed for ${{ matrix.build_config.name }}"
-
-      - name: Verify binary characteristics
+      - name: Configure (${{ matrix.build_type }})
         run: |
-          echo "=== Verifying ${{ matrix.build_config.name }} build ==="
+          cmake -S . -B ${BUILD_DIR} -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON
 
-          # Check binary exists and is executable
-          if [ ! -f "${BINARY_PATH}" ] || [ ! -x "${BINARY_PATH}" ]; then
-            echo "✗ Binary not found or not executable at ${BINARY_PATH}"
-            ls -la "${BUILD_DIR}/bin" || true
-            exit 1
-          fi
-
-          # Check binary size and characteristics
-          echo "Binary size: $(stat -c%s "${BINARY_PATH}") bytes"
-          echo "Binary type: $(file "${BINARY_PATH}")"
-          
-          # Verify binary can run and show version
-          if ! "${BINARY_PATH}" --version > /dev/null 2>&1; then
-            echo "✗ Binary failed to run --version"
-            exit 1
-          fi
-
-          echo "✓ Binary verification passed"
-
-      - name: Run smoke tests
+      - name: Build (make -j20)
         run: |
-          echo "=== Running smoke tests ==="
-          # Test CLI entry points
-          "${BINARY_PATH}" --help > /dev/null
-          "${BINARY_PATH}" --version > /dev/null
-          echo "✓ Smoke tests passed"
+          cmake --build ${BUILD_DIR} -- -j20
 
-      - name: Run C++ unit tests
-        if: contains(matrix.build_config.args, 'tests')
+      - name: Run tests (ctest)
         run: |
-          echo "=== Building and running C++ unit tests ==="
-          ./build.sh tests
-          echo "✓ C++ unit tests passed"
-
-      - name: Run workflow tests
-        if: contains(matrix.build_config.args, 'tests')
-        run: |
-          echo "=== Running workflow tests ==="
-          if [ -f ./test-workflows/run_workflow_tests.sh ]; then
-            ./test-workflows/run_workflow_tests.sh
-          else
-            echo "No workflow tests present; skipping."
-          fi
-          echo "✓ Workflow tests completed"
-
-      - name: Performance analysis (performance builds)
-        if: contains(matrix.build_config.name, 'performance')
-        run: |
-          echo "=== Performance analysis ==="
-          
-          # Check for optimization flags
-          if ! file "${BINARY_PATH}" | grep -q "not stripped"; then
-            echo "✓ Binary appears to be optimized (stripped)"
-          else
-            echo "⚠ Binary may not be fully optimized"
-          fi
-          
-          # Check binary size is reasonable
-          BINARY_SIZE=$(stat -c%s "${BINARY_PATH}")
-          if [ "$BINARY_SIZE" -gt 10485760 ]; then  # 10MB
-            echo "⚠ Binary size is large: ${BINARY_SIZE} bytes"
-          else
-            echo "✓ Binary size is reasonable: ${BINARY_SIZE} bytes"
-          fi
-
-      - name: Debug analysis (debug builds)
-        if: contains(matrix.build_config.name, 'debug')
-        run: |
-          echo "=== Debug analysis ==="
-          
-          # Check for debug symbols
-          if file "${BINARY_PATH}" | grep -q "not stripped"; then
-            echo "✓ Debug symbols present"
-          else
-            echo "⚠ Debug symbols not detected"
-          fi
-          
-          # Check for sanitizer support
-          if ldd "${BINARY_PATH}" | grep -q "libasan\|libubsan"; then
-            echo "✓ Sanitizer libraries linked"
-          else
-            echo "ℹ No sanitizer libraries detected"
-          fi
-
-      - name: Upload build artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: next-version-${{ matrix.build_config.name }}
-          path: ${{ env.BINARY_PATH }}
-          if-no-files-found: error
-          retention-days: 7
+          cd ${BUILD_DIR}
+          ctest --output-on-failure
 
       - name: Upload build logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-logs-${{ matrix.build_config.name }}
+          name: build-logs-${{ matrix.build_type }}
           path: |
             build/CMakeFiles/CMakeOutput.log
             build/CMakeFiles/CMakeError.log
