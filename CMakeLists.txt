@@ -46,6 +46,7 @@ option(ENABLE_SANITIZERS          "Enable Address/Undefined sanitizers in debug"
 option(BUILD_SHARED_LIBS          "Build shared instead of static libraries"       OFF)
 option(ENABLE_CLANG_TIDY          "Run clang-tidy if available"                     OFF)
 option(ENABLE_COVERAGE            "Enable coverage flags in Debug (GCC/Clang)"     OFF)
+option(ENABLE_DOXYGEN             "Enable Doxygen documentation target"            ON)
 
 # Fine-grained toggles (optional; override ENABLE_SANITIZERS when set)
 option(LLM_ENABLE_ASAN "Enable AddressSanitizer" OFF)
@@ -343,3 +344,17 @@ message(STATUS "DATA dir                 : ${CMAKE_INSTALL_DATADIR} (full: ${CMA
 message(STATUS "LIBEXEC dir              : ${CMAKE_INSTALL_LIBEXECDIR} (full: ${CMAKE_INSTALL_FULL_LIBEXECDIR})")
 message(STATUS "SYSCONF dir              : ${CMAKE_INSTALL_SYSCONFDIR} (full: ${CMAKE_INSTALL_FULL_SYSCONFDIR})")
 message(STATUS "========================================")
+
+# ---- Doxygen (optional) -------------------------------------------------------
+if (ENABLE_DOXYGEN)
+  find_package(Doxygen QUIET)
+  if (DOXYGEN_FOUND)
+    add_custom_target(docs
+      COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      COMMENT "Generating API documentation with Doxygen"
+      VERBATIM)
+  else()
+    message(STATUS "Doxygen not found; docs target disabled")
+  endif()
+endif()
