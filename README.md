@@ -11,6 +11,7 @@ LLMEngine is a modern C++17 library that provides a unified, type-safe interface
 - [Features](#features)
 - [Quick Start](#quick-start)
 - [Installation](#installation)
+- [Build Presets](#build-presets)
 - [Usage](#usage)
 - [Security](#security)
 - [Performance](#performance)
@@ -120,6 +121,26 @@ brew install cmake openssl nlohmann-json cpr
 ```
 
 [↑ Back to top](#llmengine)
+
+## Build Presets
+
+This repo ships `CMakePresets.json` with ready-to-use configurations:
+
+```bash
+cmake --preset debug          # Debug, sanitizers enabled by default
+cmake --preset relwithdebinfo # Optimized with debug info
+cmake --preset release        # Optimized, suitable for packaging
+```
+
+Granular toggles (examples):
+
+```bash
+cmake --preset debug -DLLM_ENABLE_ASAN=ON -DLLM_ENABLE_UBSAN=ON
+cmake --preset release -DLLM_ENABLE_LTO=ON
+cmake --preset debug -DENABLE_COVERAGE=ON
+```
+
+A consumer example using `find_package(LLMEngine)` exists in `examples/consumer`.
 
 ## Usage
 
