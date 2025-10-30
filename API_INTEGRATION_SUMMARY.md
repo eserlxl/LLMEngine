@@ -2,7 +2,7 @@
 
 ## Overview
 
-I have successfully added API support for online AI models (Qwen, OpenAI, Anthropic) to the LLMEngine library. The implementation includes:
+API support for online AI models (Qwen, OpenAI, Anthropic) has been added to the LLMEngine library. The implementation includes:
 
 ### Related Documentation
 

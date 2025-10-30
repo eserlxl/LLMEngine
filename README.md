@@ -228,7 +228,7 @@ auto result = engine.analyze(prompt, input, "test");
 
 ## Contributing
 
-We welcome contributions! Typical workflow:
+Contributions are welcome! Typical workflow:
 
 ```bash
 git checkout -b feature/name
