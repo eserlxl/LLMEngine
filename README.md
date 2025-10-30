@@ -217,10 +217,12 @@ auto result = engine.analyze(prompt, input, "test");
 
 ## Documentation
 
-- Configuration guide: `config/README.md`
 - Quick start: `QUICKSTART.md`
+- Configuration: `docs/CONFIGURATION.md`
+- Providers: `docs/PROVIDERS.md`
+- API reference (headers): `docs/API_REFERENCE.md`
+- FAQ: `docs/FAQ.md`
 - API integration details: `API_INTEGRATION_SUMMARY.md`
-- Examples: `examples/README.md`
 
 [↑ Back to top](#llmengine)
 
