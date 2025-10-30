@@ -45,6 +45,7 @@ option(ENABLE_NATIVE_OPTIMIZATION "Use -march=native/-mtune=native in performanc
 option(ENABLE_SANITIZERS          "Enable Address/Undefined sanitizers in debug"    OFF)
 option(BUILD_SHARED_LIBS          "Build shared instead of static libraries"       OFF)
 option(ENABLE_CLANG_TIDY          "Run clang-tidy if available"                     OFF)
+option(ENABLE_COVERAGE            "Enable coverage flags in Debug (GCC/Clang)"     OFF)
 
 # Mutually exclusive modes sanity check
 if(DEBUG_MODE AND PERFORMANCE_BUILD)
@@ -156,6 +157,22 @@ else()
   else()
     target_compile_options(${PROJECT_NAME} PRIVATE -O2 -g -fno-omit-frame-pointer)
     target_compile_definitions(${PROJECT_NAME} PRIVATE _FORTIFY_SOURCE=2)
+  endif()
+endif()
+
+# ---- Coverage (Debug only) ----------------------------------------------------
+if (ENABLE_COVERAGE AND NOT MSVC)
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+      if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        target_compile_options(${PROJECT_NAME} PRIVATE -fprofile-instr-generate -fcoverage-mapping)
+        target_link_options(${PROJECT_NAME} PRIVATE -fprofile-instr-generate -fcoverage-mapping)
+      else()
+        target_compile_options(${PROJECT_NAME} PRIVATE --coverage -O0 -g)
+        target_link_options(${PROJECT_NAME} PRIVATE --coverage)
+      endif()
+      message(STATUS "Coverage flags enabled for ${PROJECT_NAME}")
+    endif()
   endif()
 endif()
 

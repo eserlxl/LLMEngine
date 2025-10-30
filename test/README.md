@@ -50,6 +50,25 @@ make -j20
 
 ## Test Coverage
 
+You can enable coverage locally without CI.
+
+1. Configure a Debug build with coverage flags:
+   ```bash
+   cd ..
+   mkdir -p build
+   cd build
+   cmake -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ..
+   make -j20
+   ```
+
+2. Build tests and run them. Temporary files are written under `/tmp` only.
+
+3. Generate reports into `/tmp/llmengine-coverage`:
+   ```bash
+   cd ../test
+   ./coverage.sh
+   ```
+
 The test suite covers:
 
 1. **LLMEngine Initialization**: Tests basic constructor functionality
