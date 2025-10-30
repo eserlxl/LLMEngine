@@ -33,6 +33,9 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
                                     const nlohmann::json& params) const {
     APIResponse response;
     response.success = false;
+    response.error_code = APIResponse::APIError::Unknown;
+    response.error_code = APIResponse::APIError::Unknown;
+    response.error_code = APIResponse::APIError::Unknown;
     
     try {
         const int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
@@ -109,16 +112,22 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
                     response.success = true;
                 } else {
                     response.error_message = "No content in response";
+                    response.error_code = APIResponse::APIError::InvalidResponse;
                 }
             } else {
                 response.error_message = "Invalid response format";
+                response.error_code = APIResponse::APIError::InvalidResponse;
             }
         } else {
             response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
+            response.error_code = (cpr_response.status_code == 401 || cpr_response.status_code == 403)
+                ? APIResponse::APIError::Auth
+                : (cpr_response.status_code == 429 ? APIResponse::APIError::RateLimited : APIResponse::APIError::Server);
         }
         
     } catch (const std::exception& e) {
         response.error_message = "Exception: " + std::string(e.what());
+        response.error_code = APIResponse::APIError::Network;
     }
     
     return response;
@@ -217,16 +226,22 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
                     response.success = true;
                 } else {
                     response.error_message = "No content in response";
+                    response.error_code = APIResponse::APIError::InvalidResponse;
                 }
             } else {
                 response.error_message = "Invalid response format";
+                response.error_code = APIResponse::APIError::InvalidResponse;
             }
         } else {
             response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
+            response.error_code = (cpr_response.status_code == 401 || cpr_response.status_code == 403)
+                ? APIResponse::APIError::Auth
+                : (cpr_response.status_code == 429 ? APIResponse::APIError::RateLimited : APIResponse::APIError::Server);
         }
         
     } catch (const std::exception& e) {
         response.error_message = "Exception: " + std::string(e.what());
+        response.error_code = APIResponse::APIError::Network;
     }
     
     return response;
@@ -421,10 +436,14 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                         }
                     } catch (const nlohmann::json::parse_error& e) {
                         response.error_message = "JSON parse error: " + std::string(e.what()) + " - Response: " + cpr_response.text;
+                        response.error_code = APIResponse::APIError::InvalidResponse;
                     }
                 }
             } else {
                 response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
+                response.error_code = (cpr_response.status_code == 401 || cpr_response.status_code == 403)
+                    ? APIResponse::APIError::Auth
+                    : (cpr_response.status_code == 429 ? APIResponse::APIError::RateLimited : APIResponse::APIError::Server);
             }
         } else {
             // Use chat API for conversational mode (default)
@@ -509,6 +528,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
         
     } catch (const std::exception& e) {
         response.error_message = "Exception: " + std::string(e.what());
+        response.error_code = APIResponse::APIError::Network;
     }
     
     return response;

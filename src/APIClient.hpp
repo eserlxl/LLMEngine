@@ -34,6 +34,16 @@ struct APIResponse {
     std::string error_message;
     int status_code;
     nlohmann::json raw_response;
+    enum class APIError {
+        None,
+        Network,
+        Timeout,
+        InvalidResponse,
+        Auth,
+        RateLimited,
+        Server,
+        Unknown
+    } error_code = APIError::None;
 };
 
 /**
