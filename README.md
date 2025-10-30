@@ -9,7 +9,7 @@ Architecture overview:
 
 ```
 ┌─────────────┐     provider-agnostic API     ┌─────────────────────┐
-│  Your App   │ ─────────────────────────────▶ │     LLMEngine       │
+│  Your App   │ ───────────────────────────▶ │     LLMEngine       │
 └─────────────┘                               │  (factory, config)  │
                                               └─────────┬───────────┘
                                                         │
