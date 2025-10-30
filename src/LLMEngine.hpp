@@ -23,6 +23,12 @@ public:
     // Constructor using config file
     LLMEngine(const std::string& provider_name, const std::string& api_key = "", const std::string& model = "", const nlohmann::json& model_params = {}, int log_retention_hours = 24, bool debug = false);
     
+    // Dependency injection constructor for tests and advanced usage
+    LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
+              const nlohmann::json& model_params = {},
+              int log_retention_hours = 24,
+              bool debug = false);
+    
     std::vector<std::string> analyze(const std::string& prompt, const nlohmann::json& input, const std::string& analysis_type, const std::string& mode = "chat") const;
     
     // Utility methods

@@ -35,6 +35,22 @@ LLMEngine::LLMEngine(const std::string& ollama_url,
     // Legacy mode - use direct HTTP calls to Ollama
 }
 
+// Dependency injection constructor
+LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
+                     const nlohmann::json& model_params,
+                     int log_retention_hours,
+                     bool debug)
+    : model_params_(model_params),
+      log_retention_hours_(log_retention_hours),
+      debug_(debug),
+      api_client_(std::move(client)),
+      use_api_client_(true) {
+    if (!api_client_) {
+        throw std::runtime_error("API client must not be null");
+    }
+    provider_type_ = api_client_->getProviderType();
+}
+
 // New constructor for API-based providers
 LLMEngine::LLMEngine(::LLMEngineAPI::ProviderType provider_type,
                      const std::string& api_key,
