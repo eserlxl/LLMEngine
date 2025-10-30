@@ -1,0 +1,59 @@
+name: Pull Request
+description: Submit a pull request to improve LLMEngine
+title: "[PR]: "
+labels: []
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the changes and their motivation. Include relevant context.
+      placeholder: Provide a concise summary of your changes
+    validations:
+      required: true
+
+  - type: input
+    id: fixes
+    attributes:
+      label: Fixes issue
+      description: Link the related issue (e.g., Fixes #123)
+      placeholder: Fixes #
+
+  - type: checkboxes
+    id: change_type
+    attributes:
+      label: Type of change
+      options:
+        - label: Bug fix
+        - label: New feature
+        - label: Breaking change
+        - label: Documentation update
+        - label: Other (describe in Summary)
+
+  - type: textarea
+    id: testing
+    attributes:
+      label: Testing
+      description: Describe how you tested your changes.
+      placeholder: |
+        Build: cmake -S . -B build
+               cmake --build build --config Release -j20
+        Tests: ctest --test-dir build --output-on-failure
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: Code builds locally with -j20
+        - label: Tests pass locally
+        - label: My code follows the style guidelines of this project
+        - label: I performed a self-review of my code
+        - label: I commented code where non-obvious
+        - label: I updated documentation where needed
+        - label: My changes generate no new warnings
+        - label: I added tests proving the fix/feature works
+        - label: Dependent changes merged/published downstream
+        - label: No secrets added; environment variables used
+        - label: Follows GPLv3 licensing of repository
+

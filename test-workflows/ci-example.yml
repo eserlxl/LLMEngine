@@ -1,0 +1,33 @@
+# NOTE: This is an example CI workflow placed under test-workflows/ per user rule.
+# To enable on GitHub Actions, move this file to .github/workflows/ci.yml.
+
+name: ci-example
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential cmake libssl-dev nlohmann-json3-dev libcpr-dev
+
+      - name: Configure
+        run: cmake -S . -B build
+
+      - name: Build
+        run: cmake --build build --config Release -j20
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+

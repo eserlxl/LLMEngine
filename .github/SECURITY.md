@@ -1,11 +1,18 @@
-# Security Policy
+## Security Policy
 
-## Supported Versions
+### Supported Versions
+We provide security updates for the latest stable version of LLMEngine. Please update to the latest release to receive fixes.
 
-We release security updates for the latest stable version of nextVersion. Please update to the latest version to ensure you have the newest security fixes.
+### Reporting a Vulnerability
+- Do not open a public issue for sensitive reports.
+- Please email: lxldev.contact@gmail.com.
+- If private contact is unavailable for you, open an issue with limited details and request a maintainer to reach out.
 
-## Reporting a Vulnerability
+We will respond as quickly as possible and keep you informed of progress.
 
-If you discover a security vulnerability, please report it by emailing lxldev.contact@gmail.com. Do **not** create a public issue for security problems.
+### Do Not Commit Secrets
+- Never commit API keys or tokens.
+- Use environment variables as described in `README.md` and `QUICKSTART.md`.
 
-We will respond as quickly as possible and keep you informed of the progress. Thank you for helping keep nextVersion and its users safe! 
+### Handling
+We will investigate reports and provide guidance, fixes, and timelines as appropriate.
