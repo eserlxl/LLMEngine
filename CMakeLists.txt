@@ -78,6 +78,8 @@ if (NOT nlohmann_json_FOUND)
   FetchContent_MakeAvailable(nlohmann_json)
   # Ensure CMake registers the package as FOUND for summaries
   find_package(nlohmann_json CONFIG QUIET)
+  # Some projects do not provide a config when built as a subproject; set FOUND explicitly
+  set(nlohmann_json_FOUND TRUE CACHE INTERNAL "nlohmann_json available via FetchContent")
 endif()
 
 # Prefer system cpr; fall back to FetchContent if not found
@@ -99,6 +101,8 @@ if (NOT cpr_FOUND)
   FetchContent_MakeAvailable(cpr)
   # Ensure CMake registers the package as FOUND for summaries
   find_package(cpr CONFIG QUIET)
+  # cpr built as a subproject may not expose a config; set FOUND explicitly
+  set(cpr_FOUND TRUE CACHE INTERNAL "cpr available via FetchContent")
 endif()
 
 # ---- Install dirs and prefix --------------------------------------------------
