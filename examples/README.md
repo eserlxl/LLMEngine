@@ -9,7 +9,8 @@ This folder contains practical applications that demonstrate the capabilities of
 1. **Build the main library** (if not already done):
    ```bash
    cd ..
-   mkdir -p build && cd build
+   mkdir -p build
+   cd build
    cmake ..
    make -j20
    cd ../examples
@@ -368,7 +369,14 @@ int main(int argc, char* argv[]) {
    - Check if variable is set: `echo $QWEN_API_KEY`
 
 2. **"Main library not found"**
-   - Build main library first: `cd .. && mkdir -p build && cd build && cmake .. && make -j20`
+   - Build main library first:
+     ```bash
+     cd ..
+     mkdir -p build
+     cd build
+     cmake ..
+     make -j20
+     ```
 
 3. **"Network error"**
    - Check internet connection

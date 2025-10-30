@@ -106,3 +106,9 @@ The test will:
 - The test creates temporary files in the `/tmp` directory
 - Debug mode is enabled by default for detailed output
 - The test limits token usage to 100 for faster execution
+
+## See also
+
+- Root documentation: `../README.md`
+- Quick start: `../QUICKSTART.md`
+- Configuration guide: `../docs/CONFIGURATION.md`

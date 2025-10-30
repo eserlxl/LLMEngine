@@ -125,6 +125,19 @@ if (api_key) {
 
 ## Configuration Parameters
 
+### Top-level keys
+
+- `default_provider` (string): Provider key used when no provider is specified explicitly.
+- `timeout_seconds` (integer): Request timeout in seconds.
+- `retry_attempts` (integer): Number of retries on transient failures (e.g., 429/5xx).
+- `providers` (object): Map of provider key to configuration block.
+
+### Provider block
+
+- `base_url` (string): Base endpoint for the provider.
+- `default_model` (string): Model used when none is explicitly provided.
+- `default_params` (object): Default generation parameters merged with per-call params.
+
 ### Common Parameters
 
 - **temperature** (0.0-2.0): Controls randomness. Lower = more focused, Higher = more creative
@@ -254,4 +267,9 @@ This will save responses to:
 
 This configuration and documentation is part of the LLMEngine library.
 Licensed under the GNU General Public License version 3 (GPLv3).
+
+## See also
+
+- `docs/CONFIGURATION.md` — Full configuration guide and JSON examples
+- `docs/PROVIDERS.md` — Provider feature matrix and mapping
 

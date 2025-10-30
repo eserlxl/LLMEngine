@@ -1,24 +1,37 @@
-# API Reference (Overview)
+# API Reference
 
-This overview links to public headers with Doxygen-style comments.
+This page is the entry point to the generated Doxygen documentation for LLMEngine's public C++ API.
+
+## Generated HTML (Doxygen)
+
+If your build generates documentation, open the HTML output in your browser. Typical locations:
+
+- After configuring a docs target: `build/docs/html/index.html`
+- Or your build system's doc artifact directory
+
+## Generate Locally
+
+If a `docs` target is available in your CMake setup:
+
+```bash
+cmake -S . -B build
+cmake --build build --target docs
+```
+
+Then open:
+
+```bash
+xdg-open build/docs/html/index.html
+```
+
+If your environment does not define a `docs` target, you can run Doxygen manually using the provided `docs/Doxyfile`.
+
+## Public Headers (reference points)
 
 - `src/LLMEngine.hpp` — Main entry point; constructors, analyze method, provider info
 - `src/APIClient.hpp` — Interface and concrete clients for providers
-- `src/LLMOutputProcessor.hpp` — Helpers for parsing/normalizing outputs
+- `src/LLMOutputProcessor.hpp` — Output parsing/normalization helpers
 - `src/Utils.hpp` — Utility helpers used across the library
-
-## Key Types
-
-- `::LLMEngineAPI::ProviderType` — Provider enumeration (QWEN, OPENAI, ANTHROPIC, OLLAMA)
-
-## Typical Usage
-
-```cpp
-#include "LLMEngine.hpp"
-
-LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, apiKey, "qwen-flash");
-auto result = engine.analyze(prompt, {}, "tag");
-```
 
 For configuration details, see `docs/CONFIGURATION.md` and `config/api_config.json`.
 

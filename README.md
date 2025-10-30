@@ -3,7 +3,13 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/std/status)
 
-LLMEngine is a modern C++17 library that provides a unified, type-safe interface to multiple Large Language Model (LLM) providers. It supports both local and online providers (Ollama, Qwen/DashScope, OpenAI, Anthropic) with a configuration-driven design, factory-based clients, and a comprehensive test suite.
+LLMEngine is a C++17 library that provides a unified, type-safe interface to multiple Large Language Model (LLM) providers. It supports local and online providers (Ollama, Qwen/DashScope, OpenAI, Anthropic) with a configuration-driven design, factory-based clients, and a comprehensive test suite.
+
+Key benefits:
+- Consistent API across providers
+- Config-driven defaults via `config/api_config.json`
+- Simple model/provider switching
+- Examples and tests included
 
 ## Table of Contents
 
@@ -73,11 +79,19 @@ int main() {
 }
 ```
 
-### Build Your Program
+### Build and Test the Library (from source)
 
 ```bash
-g++ -std=c++17 your_program.cpp -o your_program
-pkg-config --cflags --libs libcpr nlohmann_json
+cmake -S . -B build
+cmake --build build --config Release -j20
+ctest --test-dir build --output-on-failure
+```
+
+Then build and run an example:
+
+```bash
+bash examples/build_examples.sh
+./examples/build_examples/chatbot
 ```
 
 [↑ Back to top](#llmengine)
@@ -89,11 +103,8 @@ pkg-config --cflags --libs libcpr nlohmann_json
 ```bash
 git clone <repository-url>
 cd LLMEngine
-mkdir build
-cd build
-cmake ..
-make -j20
-sudo make install
+cmake -S . -B build
+cmake --build build --config Release -j20
 ```
 
 ### Dependencies
@@ -127,9 +138,9 @@ brew install cmake openssl nlohmann-json cpr
 This repo ships `CMakePresets.json` with ready-to-use configurations:
 
 ```bash
-cmake --preset debug          # Debug, sanitizers enabled by default
-cmake --preset relwithdebinfo # Optimized with debug info
-cmake --preset release        # Optimized, suitable for packaging
+cmake --preset debug
+cmake --preset relwithdebinfo
+cmake --preset release
 ```
 
 Granular toggles (examples):
@@ -241,8 +252,24 @@ auto result = engine.analyze(prompt, input, "test");
 - Quick start: `QUICKSTART.md`
 - Configuration: `docs/CONFIGURATION.md`
 - Providers: `docs/PROVIDERS.md`
-- API reference: `docs/API_REFERENCE.md`
+- API reference: `docs/API_REFERENCE.md` (links to generated Doxygen)
 - FAQ: `docs/FAQ.md`
+- Examples: `examples/README.md`
+
+Architecture overview:
+
+```
+┌─────────────┐     provider-agnostic API     ┌─────────────────────┐
+│  Your App   │ ─────────────────────────────▶ │     LLMEngine       │
+└─────────────┘                               │  (factory, config)  │
+                                              └─────────┬───────────┘
+                                                        │
+                                     selects provider   │
+                                                        ▼
+                   ┌───────────┬───────────┬───────────┬───────────┐
+                   │   Qwen    │  OpenAI   │ Anthropic │  Ollama   │
+                   └───────────┴───────────┴───────────┴───────────┘
+```
 
 
 [↑ Back to top](#llmengine)
@@ -253,7 +280,6 @@ Contributions are welcome! Typical workflow:
 
 ```bash
 git checkout -b feature/name
-# make changes and add tests
 cd test
 ./run_api_tests.sh
 git add -A

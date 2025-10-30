@@ -1,18 +1,8 @@
-# LLMEngine API Integration - Quick Start Guide
+# LLMEngine Quick Start
 
-## 🎉 What's New
+This guide shows the minimal steps to build the library, configure a provider, and run a request. For details, see `docs/CONFIGURATION.md`, `docs/PROVIDERS.md`, and `docs/API_REFERENCE.md`.
 
-The LLMEngine library now supports **online AI model APIs** including:
-- ✅ **Qwen (DashScope)** - Alibaba's powerful language models
-- ✅ **OpenAI** - GPT models
-- ✅ **Anthropic Claude** - Claude models
-- ✅ **Ollama** - Local models (enhanced support)
-
-## 🚀 Quick Start
-
-See also: `docs/CONFIGURATION.md`, `docs/PROVIDERS.md`, and `docs/API_REFERENCE.md`.
-
-### 1. Using Qwen API (Recommended for Testing)
+## 1. Minimal Example (Qwen)
 
 ```cpp
 #include "LLMEngine.hpp"
@@ -38,7 +28,7 @@ int main() {
 }
 ```
 
-### 2. Get Your Qwen API Key
+## 2. Get Your Qwen API Key
 
 1. Visit: https://dashscope.console.aliyuncs.com/
 2. Sign up or log in
@@ -49,13 +39,11 @@ int main() {
    export QWEN_API_KEY="sk-your-api-key-here"
    ```
 
-### 3. Build and Run
+## 3. Build and Run
 
 ```bash
-# Rebuild the library
-cd build
-cmake ..
-make -j20
+cmake -S . -B build
+cmake --build build --config Release -j20
 
 # Create a test program
 cat > test_qwen.cpp << 'EOF'
@@ -89,17 +77,15 @@ int main() {
 EOF
 
 # Compile
-g++ -std=c++17 test_qwen.cpp -o test_qwen \
-    -I../src \
-    -L. -lLLMEngine \
-    $(pkg-config --cflags --libs libcpr nlohmann_json)
+g++ -std=c++17 test_qwen.cpp -o test_qwen
+pkg-config --cflags --libs libcpr nlohmann_json
 
 # Run
 export QWEN_API_KEY="your-key"
 ./test_qwen
 ```
 
-## 📖 Usage Examples
+## 4. Usage Examples
 
 ### Using Different Providers
 
@@ -151,7 +137,7 @@ std::cout << "Provider: " << engine.getProviderName() << std::endl;
 std::cout << "Is online: " << (engine.isOnlineProvider() ? "Yes" : "No") << std::endl;
 ```
 
-## 🔧 Configuration
+## 5. Configuration
 
 ### API Configuration File
 
@@ -181,7 +167,7 @@ Example:
 }
 ```
 
-## 🧪 Testing
+## 6. Testing
 
 ### Run the Test Suite
 
@@ -221,7 +207,7 @@ Available providers:
 ...
 ```
 
-## 🎯 Qwen Models
+## 7. Qwen Models
 
 | Model | Description | Best For |
 |-------|-------------|----------|
@@ -232,7 +218,7 @@ Available providers:
 | `qwen2.5-7b-instruct` | Smaller model | Low latency |
 | `qwen2.5-72b-instruct` | Largest open model | Maximum capability |
 
-## 🔒 Security Best Practices
+## 8. Security Best Practices
 
 1. **Never hardcode API keys**
    ```cpp
@@ -253,7 +239,7 @@ Available providers:
    echo "config/secrets.json" >> .gitignore
    ```
 
-## 🐛 Debugging
+## 9. Debugging
 
 Enable debug mode to see detailed logs:
 
@@ -273,7 +259,7 @@ Debug files created:
 - `response_full.txt` - Complete response text
 - `/tmp/llmengine/*.txt` - Analysis outputs
 
-## 📊 Performance Tips
+## 10. Performance Tips
 
 1. **Use qwen-flash for maximum speed**
    ```cpp
@@ -291,7 +277,7 @@ Debug files created:
    LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash", params);
    ```
 
-## ❓ Troubleshooting
+## 11. Troubleshooting
 
 ### "API key not found"
 ```bash
@@ -317,13 +303,13 @@ export QWEN_API_KEY="sk-your-key"
 - Consider upgrading your Qwen API plan
 - Implement exponential backoff in your code
 
-## 📚 More Information
+## 12. More Information
 
 - **Full Documentation**: `config/README.md`
 - **Test Examples**: `test/test_api.cpp`
 - **Qwen Documentation**: https://help.aliyun.com/zh/dashscope/
 
-## 🎓 Example Projects
+## 13. Example Projects
 
 ### Simple Chatbot
 
@@ -370,15 +356,15 @@ auto result = engine.analyze(prompt, input, "code_review");
 std::cout << "Analysis: " << result[1] << std::endl;
 ```
 
-## 🤝 Contributing
+## 14. Contributing
 
 Found a bug or have a feature request? Please check the project's main README for contribution guidelines.
 
-## 📄 License
+## 15. License
 
 This project is licensed under GPL v3. See LICENSE file for details.
 
 ---
 
-**Ready to get started?** Set your QWEN_API_KEY and start coding! 🚀
+Ready to get started? Set your `QWEN_API_KEY` and start coding.
 

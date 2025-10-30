@@ -9,6 +9,8 @@ Search order for `api_config.json`:
 2. `config/api_config.json` (project/local run)
 3. `/usr/share/llmEngine/config/api_config.json` (after install)
 
+Environment overrides: when both config and environment variables are present, the library uses API keys from environment variables and defaults (model/params) from the config file.
+
 ## Authentication
 
 Use environment variables. Do not hardcode keys.
@@ -23,6 +25,8 @@ In code:
 ```cpp
 const char* apiKey = std::getenv("QWEN_API_KEY");
 ```
+
+If an expected key is missing, ensure the environment variable is set before initializing the engine.
 
 ## Provider Endpoints (defaults)
 
@@ -48,6 +52,26 @@ Example:
 }
 ```
 
+Minimal `api_config.json` (schema skeleton):
+
+```json
+{
+  "default_provider": "qwen",
+  "timeout_seconds": 30,
+  "retry_attempts": 3,
+  "providers": {
+    "qwen": {
+      "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+      "default_model": "qwen-flash",
+      "default_params": {
+        "temperature": 0.7,
+        "max_tokens": 2000
+      }
+    }
+  }
+}
+```
+
 ## Provider Defaults
 
 Each provider can define `default_model` and `default_params`.
@@ -59,6 +83,51 @@ Each provider can define `default_model` and `default_params`.
       "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
       "default_model": "qwen-flash",
       "default_params": {"temperature": 0.7, "max_tokens": 2000}
+    }
+  }
+}
+```
+
+Expanded example with multiple providers:
+
+```json
+{
+  "default_provider": "qwen",
+  "timeout_seconds": 30,
+  "retry_attempts": 3,
+  "providers": {
+    "qwen": {
+      "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+      "default_model": "qwen-flash",
+      "default_params": {
+        "temperature": 0.7,
+        "max_tokens": 2000,
+        "top_p": 0.9
+      }
+    },
+    "openai": {
+      "base_url": "https://api.openai.com/v1",
+      "default_model": "gpt-3.5-turbo",
+      "default_params": {
+        "temperature": 0.7,
+        "max_tokens": 2000
+      }
+    },
+    "anthropic": {
+      "base_url": "https://api.anthropic.com/v1",
+      "default_model": "claude-3-sonnet",
+      "default_params": {
+        "temperature": 0.7,
+        "max_tokens": 2000
+      }
+    },
+    "ollama": {
+      "base_url": "http://localhost:11434",
+      "default_model": "llama2",
+      "default_params": {
+        "temperature": 0.7,
+        "max_tokens": 512
+      }
     }
   }
 }
