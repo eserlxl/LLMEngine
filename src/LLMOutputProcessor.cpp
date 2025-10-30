@@ -38,7 +38,7 @@ namespace Color {
 }
 }
 
-LLMOutputProcessor::LLMOutputProcessor(const std::string& jsonContent, bool debug)
+LLMOutputProcessor::LLMOutputProcessor(std::string_view jsonContent, bool debug)
     : debug_(debug) {
     colors_ = isatty(fileno(stdout));
     parseJson(jsonContent);
@@ -49,8 +49,8 @@ std::string LLMOutputProcessor::getRawAnalysis() const {
     return analysis;
 }
 
-std::string LLMOutputProcessor::getSection(const std::string& title) const {
-    auto it = sections_.find(lower(title));
+std::string LLMOutputProcessor::getSection(std::string_view title) const {
+    auto it = sections_.find(lower(std::string(title)));
     if (it != sections_.end()) {
         return trim(it->second);
     }
@@ -80,10 +80,10 @@ bool LLMOutputProcessor::hasErrors() const {
     return analysis.rfind("[ERROR]", 0) == 0;
 }
 
-void LLMOutputProcessor::parseJson(const std::string& jsonContent) {
+void LLMOutputProcessor::parseJson(std::string_view jsonContent) {
     try {
         // Handle streaming JSON format from Ollama (multiple JSON objects, one per line)
-        std::stringstream ss(jsonContent);
+        std::stringstream ss(std::string(jsonContent));
         std::string line;
         std::stringstream fullResponse;
         

@@ -20,13 +20,13 @@
 #include <cstdlib>
 
 // Legacy constructor for Ollama (backward compatibility)
-LLMEngine::LLMEngine(const std::string& ollama_url, 
-                     const std::string& model, 
+LLMEngine::LLMEngine(std::string_view ollama_url, 
+                     std::string_view model, 
                      const nlohmann::json& model_params, 
                      int log_retention_hours, 
                      bool debug)
-    : ollama_url_(ollama_url), 
-      model_(model), 
+    : ollama_url_(std::string(ollama_url)), 
+      model_(std::string(model)), 
       model_params_(model_params), 
       log_retention_hours_(log_retention_hours), 
       debug_(debug),
@@ -53,32 +53,32 @@ LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
 
 // New constructor for API-based providers
 LLMEngine::LLMEngine(::LLMEngineAPI::ProviderType provider_type,
-                     const std::string& api_key,
-                     const std::string& model,
+                     std::string_view api_key,
+                     std::string_view model,
                      const nlohmann::json& model_params,
                      int log_retention_hours,
                      bool debug)
-    : model_(model),
+    : model_(std::string(model)),
       model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
       provider_type_(provider_type),
-      api_key_(api_key),
+      api_key_(std::string(api_key)),
       use_api_client_(true) {
     initializeAPIClient();
 }
 
 // Constructor using config file
-LLMEngine::LLMEngine(const std::string& provider_name,
-                     const std::string& api_key,
-                     const std::string& model,
+LLMEngine::LLMEngine(std::string_view provider_name,
+                     std::string_view api_key,
+                     std::string_view model,
                      const nlohmann::json& model_params,
                      int log_retention_hours,
                      bool debug)
     : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
-      api_key_(api_key),
+      api_key_(std::string(api_key)),
       use_api_client_(true) {
     
     // Load config
@@ -88,7 +88,7 @@ LLMEngine::LLMEngine(const std::string& provider_name,
     }
     
     // Determine provider name (use default if empty)
-    std::string resolved_provider = provider_name;
+    std::string resolved_provider(provider_name);
     if (resolved_provider.empty()) {
         resolved_provider = config_mgr.getDefaultProvider();
         if (resolved_provider.empty()) {
@@ -104,10 +104,10 @@ LLMEngine::LLMEngine(const std::string& provider_name,
     }
     
     // Set model
-    if (model.empty()) {
+    if (std::string(model).empty()) {
         model_ = provider_config.value("default_model", "");
     } else {
-        model_ = model;
+        model_ = std::string(model);
     }
     
     // Set provider type
@@ -169,10 +169,10 @@ void LLMEngine::cleanupResponseFiles() const {
     }
 }
 
-std::vector<std::string> LLMEngine::analyze(const std::string& prompt, 
+std::vector<std::string> LLMEngine::analyze(std::string_view prompt, 
                                            const nlohmann::json& input, 
-                                           const std::string& analysis_type, 
-                                           const std::string& mode) const {
+                                           std::string_view analysis_type, 
+                                           std::string_view mode) const {
     // Clean up existing response files
     cleanupResponseFiles();
     
@@ -181,7 +181,7 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
         "Please respond directly to the previous message, engaging with its content. "
         "Try to be brief and concise and complete your response in one or two sentences, "
         "mostly one sentence.\n";
-    std::string full_prompt = system_instruction + prompt;
+    std::string full_prompt = system_instruction + std::string(prompt);
     
     std::string full_response;
     
@@ -199,8 +199,8 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
             }
         }
         
-        if (!mode.empty()) {
-            api_params["mode"] = mode;
+    if (!std::string(mode).empty()) {
+            api_params["mode"] = std::string(mode);
         }
         
         auto api_response = api_client_->sendRequest(full_prompt, input, api_params);
@@ -335,7 +335,7 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
         if (name.size() > 64) name.resize(64);
         return name;
     };
-    const std::string safe_analysis_name = sanitize_name(analysis_type);
+    const std::string safe_analysis_name = sanitize_name(std::string(analysis_type));
     try {
         std::ofstream tfile(Utils::TMP_DIR + "/" + safe_analysis_name + ".think.txt", std::ios::trunc);
         if (!tfile) throw std::runtime_error("open failed");

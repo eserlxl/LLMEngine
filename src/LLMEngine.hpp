@@ -7,6 +7,7 @@
 
 #pragma once
 #include <string>
+#include <string_view>
 #include <nlohmann/json.hpp>
 #include <vector>
 #include <memory>
@@ -26,7 +27,7 @@ public:
      * @param log_retention_hours Hours to keep debug artifacts.
      * @param debug Enable response artifact logging.
      */
-    LLMEngine(const std::string& ollama_url, const std::string& model, const nlohmann::json& model_params = {}, int log_retention_hours = 24, bool debug = false);
+    LLMEngine(std::string_view ollama_url, std::string_view model, const nlohmann::json& model_params = {}, int log_retention_hours = 24, bool debug = false);
     
     // New constructor for API-based providers
     /**
@@ -38,7 +39,7 @@ public:
      * @param log_retention_hours Hours to keep debug artifacts.
      * @param debug Enable response artifact logging.
      */
-    LLMEngine(::LLMEngineAPI::ProviderType provider_type, const std::string& api_key, const std::string& model, const nlohmann::json& model_params = {}, int log_retention_hours = 24, bool debug = false);
+    LLMEngine(::LLMEngineAPI::ProviderType provider_type, std::string_view api_key, std::string_view model, const nlohmann::json& model_params = {}, int log_retention_hours = 24, bool debug = false);
     
     // Constructor using config file
     /**
@@ -50,7 +51,7 @@ public:
      * @param log_retention_hours Hours to keep debug artifacts.
      * @param debug Enable response artifact logging.
      */
-    LLMEngine(const std::string& provider_name, const std::string& api_key = "", const std::string& model = "", const nlohmann::json& model_params = {}, int log_retention_hours = 24, bool debug = false);
+    LLMEngine(std::string_view provider_name, std::string_view api_key = "", std::string_view model = "", const nlohmann::json& model_params = {}, int log_retention_hours = 24, bool debug = false);
     
     // Dependency injection constructor for tests and advanced usage
     /**
@@ -69,17 +70,17 @@ public:
      * @param mode Provider-specific mode (default: "chat").
      * @return Vector of strings: [raw_json, primary_text, ...].
      */
-    std::vector<std::string> analyze(const std::string& prompt, const nlohmann::json& input, const std::string& analysis_type, const std::string& mode = "chat") const;
+    [[nodiscard]] std::vector<std::string> analyze(std::string_view prompt, const nlohmann::json& input, std::string_view analysis_type, std::string_view mode = "chat") const;
     
     // Utility methods
     /** @brief Provider display name. */
-    std::string getProviderName() const;
+    [[nodiscard]] std::string getProviderName() const;
     /** @brief Model name used by the engine. */
-    std::string getModelName() const;
+    [[nodiscard]] std::string getModelName() const;
     /** @brief Provider enumeration value. */
-    ::LLMEngineAPI::ProviderType getProviderType() const;
+    [[nodiscard]] ::LLMEngineAPI::ProviderType getProviderType() const;
     /** @brief True if using an online provider (not local Ollama). */
-    bool isOnlineProvider() const;
+    [[nodiscard]] bool isOnlineProvider() const;
     
 private:
     void cleanupResponseFiles() const;

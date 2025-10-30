@@ -28,7 +28,7 @@ QwenClient::QwenClient(const std::string& api_key, const std::string& model)
     };
 }
 
-APIResponse QwenClient::sendRequest(const std::string& prompt, 
+APIResponse QwenClient::sendRequest(std::string_view prompt, 
                                     const nlohmann::json& input,
                                     const nlohmann::json& params) const {
     APIResponse response;
@@ -136,7 +136,7 @@ OpenAIClient::OpenAIClient(const std::string& api_key, const std::string& model)
     };
 }
 
-APIResponse OpenAIClient::sendRequest(const std::string& prompt, 
+APIResponse OpenAIClient::sendRequest(std::string_view prompt, 
                                      const nlohmann::json& input,
                                      const nlohmann::json& params) const {
     APIResponse response;
@@ -242,7 +242,7 @@ AnthropicClient::AnthropicClient(const std::string& api_key, const std::string& 
     };
 }
 
-APIResponse AnthropicClient::sendRequest(const std::string& prompt, 
+APIResponse AnthropicClient::sendRequest(std::string_view prompt, 
                                         const nlohmann::json& input,
                                         const nlohmann::json& params) const {
     APIResponse response;
@@ -344,7 +344,7 @@ OllamaClient::OllamaClient(const std::string& base_url, const std::string& model
     };
 }
 
-APIResponse OllamaClient::sendRequest(const std::string& prompt, 
+APIResponse OllamaClient::sendRequest(std::string_view prompt, 
                                      const nlohmann::json& input,
                                      const nlohmann::json& params) const {
     APIResponse response;
@@ -516,24 +516,24 @@ APIResponse OllamaClient::sendRequest(const std::string& prompt,
 
 // APIClientFactory Implementation
 std::unique_ptr<APIClient> APIClientFactory::createClient(ProviderType type, 
-                                                         const std::string& api_key,
-                                                         const std::string& model,
-                                                         const std::string& base_url) {
+                                                         std::string_view api_key,
+                                                         std::string_view model,
+                                                         std::string_view base_url) {
     switch (type) {
         case ProviderType::QWEN:
-            return std::make_unique<QwenClient>(api_key, model);
+            return std::make_unique<QwenClient>(std::string(api_key), std::string(model));
         case ProviderType::OPENAI:
-            return std::make_unique<OpenAIClient>(api_key, model);
+            return std::make_unique<OpenAIClient>(std::string(api_key), std::string(model));
         case ProviderType::ANTHROPIC:
-            return std::make_unique<AnthropicClient>(api_key, model);
+            return std::make_unique<AnthropicClient>(std::string(api_key), std::string(model));
         case ProviderType::OLLAMA:
-            return std::make_unique<OllamaClient>(base_url, model);
+            return std::make_unique<OllamaClient>(std::string(base_url), std::string(model));
         default:
             return nullptr;
     }
 }
 
-std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(const std::string& provider_name,
+std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_view provider_name,
                                                                      const nlohmann::json& config) {
     ProviderType type = stringToProviderType(provider_name);
     if (type == ProviderType::OLLAMA) {
@@ -547,8 +547,8 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(const std::s
     }
 }
 
-ProviderType APIClientFactory::stringToProviderType(const std::string& provider_name) {
-    std::string name = provider_name;
+ProviderType APIClientFactory::stringToProviderType(std::string_view provider_name) {
+    std::string name(provider_name);
     std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
     if (name == "qwen") return ProviderType::QWEN;
     if (name == "openai") return ProviderType::OPENAI;
@@ -582,8 +582,8 @@ APIConfigManager& APIConfigManager::getInstance() {
     return instance;
 }
 
-bool APIConfigManager::loadConfig(const std::string& config_path) {
-    std::string path = config_path.empty() ? "config/api_config.json" : config_path;
+bool APIConfigManager::loadConfig(std::string_view config_path) {
+    std::string path = config_path.empty() ? std::string("config/api_config.json") : std::string(config_path);
     
     try {
         std::ifstream file(path);
@@ -601,13 +601,16 @@ bool APIConfigManager::loadConfig(const std::string& config_path) {
     }
 }
 
-nlohmann::json APIConfigManager::getProviderConfig(const std::string& provider_name) const {
+nlohmann::json APIConfigManager::getProviderConfig(std::string_view provider_name) const {
     if (!config_loaded_) {
         return nlohmann::json{};
     }
     
-    if (config_.contains("providers") && config_["providers"].contains(provider_name)) {
-        return config_["providers"][provider_name];
+    if (config_.contains("providers")) {
+        std::string key(provider_name);
+        if (config_["providers"].contains(key)) {
+            return config_["providers"][key];
+        }
     }
     
     return nlohmann::json{};

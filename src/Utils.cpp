@@ -21,9 +21,9 @@ namespace Utils {
     std::string TMP_DIR = "/tmp/llmengine";
     namespace fs = std::filesystem;
 
-    std::vector<std::string> readLines(const std::string& filepath, size_t max_lines) {
+    std::vector<std::string> readLines(std::string_view filepath, size_t max_lines) {
         std::vector<std::string> lines;
-        std::ifstream file(filepath);
+        std::ifstream file(std::string(filepath));
         std::string line;
         while (std::getline(file, line) && lines.size() < max_lines) {
             lines.push_back(line);
@@ -31,16 +31,16 @@ namespace Utils {
         return lines;
     }
 
-    std::vector<std::string> execCommand(const std::string& cmd) {
+    std::vector<std::string> execCommand(std::string_view cmd) {
         std::vector<std::string> output;
         std::array<char, 256> buffer;
 
         // Redirect stderr to stdout to capture errors
-        std::string full_cmd = cmd + " 2>&1";
+        std::string full_cmd = std::string(cmd) + " 2>&1";
         FILE* pipe = popen(full_cmd.c_str(), "r");
 
         if (!pipe) {
-            std::cerr << "[ERROR] popen() failed for command: " << cmd << std::endl;
+            std::cerr << "[ERROR] popen() failed for command: " << std::string(cmd) << std::endl;
             return output;
         }
 
@@ -50,7 +50,7 @@ namespace Utils {
 
         int status = pclose(pipe);
         if (status != 0) {
-            std::cerr << "[WARNING] Command '" << cmd << "' exited with non-zero status: " << status << std::endl;
+            std::cerr << "[WARNING] Command '" << std::string(cmd) << "' exited with non-zero status: " << status << std::endl;
             if (!output.empty()) {
                 std::cerr << "  Output:" << std::endl;
                 for (const auto& line : output) {
@@ -61,8 +61,8 @@ namespace Utils {
         return output;
     }
 
-    std::string stripMarkdown(const std::string& input) {
-        std::string output = input;
+    std::string stripMarkdown(std::string_view input) {
+        std::string output = std::string(input);
         output = std::regex_replace(output, std::regex(R"(\*\*)"), "");
         output = std::regex_replace(output, std::regex(R"(#+\s*)"), "");
         return output;

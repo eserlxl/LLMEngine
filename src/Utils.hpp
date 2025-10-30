@@ -7,6 +7,7 @@
 
 #pragma once
 #include <string>
+#include <string_view>
 #include <vector>
 #include "LLMEngine.hpp"
 
@@ -19,15 +20,15 @@ namespace Utils {
     /**
      * @brief Read up to max_lines from a file.
      */
-    std::vector<std::string> readLines(const std::string& filepath, size_t max_lines = 100);
+    [[nodiscard]] std::vector<std::string> readLines(std::string_view filepath, size_t max_lines = 100);
 
     /**
      * @brief Execute a shell command and capture stdout lines.
      */
-    std::vector<std::string> execCommand(const std::string& cmd);
+    [[nodiscard]] std::vector<std::string> execCommand(std::string_view cmd);
 
     /**
      * @brief Remove Markdown syntax from input string.
      */
-    std::string stripMarkdown(const std::string& input);
+    [[nodiscard]] std::string stripMarkdown(std::string_view input);
 }

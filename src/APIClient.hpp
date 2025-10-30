@@ -7,6 +7,7 @@
 
 #pragma once
 #include <string>
+#include <string_view>
 #include <nlohmann/json.hpp>
 #include <memory>
 #include <map>
@@ -48,7 +49,7 @@ public:
      * @param params Model parameters (temperature, max_tokens, etc.).
      * @return Provider-agnostic APIResponse.
      */
-    virtual APIResponse sendRequest(const std::string& prompt, 
+    virtual APIResponse sendRequest(std::string_view prompt, 
                                    const nlohmann::json& input,
                                    const nlohmann::json& params) const = 0;
     /** @brief Human-readable provider name. */
@@ -67,7 +68,7 @@ public:
      * @param model Default model, e.g. "qwen-flash".
      */
     QwenClient(const std::string& api_key, const std::string& model = "qwen-flash");
-    APIResponse sendRequest(const std::string& prompt, 
+    APIResponse sendRequest(std::string_view prompt, 
                            const nlohmann::json& input,
                            const nlohmann::json& params) const override;
     std::string getProviderName() const override { return "Qwen"; }
@@ -90,7 +91,7 @@ public:
      * @param model Default model, e.g. "gpt-3.5-turbo".
      */
     OpenAIClient(const std::string& api_key, const std::string& model = "gpt-3.5-turbo");
-    APIResponse sendRequest(const std::string& prompt, 
+    APIResponse sendRequest(std::string_view prompt, 
                            const nlohmann::json& input,
                            const nlohmann::json& params) const override;
     std::string getProviderName() const override { return "OpenAI"; }
@@ -113,7 +114,7 @@ public:
      * @param model Default model, e.g. "claude-3-sonnet".
      */
     AnthropicClient(const std::string& api_key, const std::string& model = "claude-3-sonnet");
-    APIResponse sendRequest(const std::string& prompt, 
+    APIResponse sendRequest(std::string_view prompt, 
                            const nlohmann::json& input,
                            const nlohmann::json& params) const override;
     std::string getProviderName() const override { return "Anthropic"; }
@@ -137,7 +138,7 @@ public:
      */
     OllamaClient(const std::string& base_url = "http://localhost:11434", 
                  const std::string& model = "llama2");
-    APIResponse sendRequest(const std::string& prompt, 
+    APIResponse sendRequest(std::string_view prompt, 
                            const nlohmann::json& input,
                            const nlohmann::json& params) const override;
     std::string getProviderName() const override { return "Ollama"; }
@@ -158,20 +159,20 @@ public:
      * @brief Create client by enum type.
      */
     static std::unique_ptr<APIClient> createClient(ProviderType type, 
-                                                   const std::string& api_key = "",
-                                                   const std::string& model = "",
-                                                   const std::string& base_url = "");
+                                                   std::string_view api_key = "",
+                                                   std::string_view model = "",
+                                                   std::string_view base_url = "");
     
     /**
      * @brief Create client by provider name from JSON config.
      */
-    static std::unique_ptr<APIClient> createClientFromConfig(const std::string& provider_name,
+    static std::unique_ptr<APIClient> createClientFromConfig(std::string_view provider_name,
                                                              const nlohmann::json& config);
     
     /**
      * @brief Convert provider string to enum.
      */
-    static ProviderType stringToProviderType(const std::string& provider_name);
+    static ProviderType stringToProviderType(std::string_view provider_name);
     /**
      * @brief Convert enum to provider string.
      */
@@ -189,19 +190,19 @@ public:
      * @brief Load configuration from path or default search order.
      * @return true if configuration loaded successfully.
      */
-    bool loadConfig(const std::string& config_path = "");
+    bool loadConfig(std::string_view config_path = "");
     /** @brief Get provider-specific JSON config. */
-    nlohmann::json getProviderConfig(const std::string& provider_name) const;
+    [[nodiscard]] nlohmann::json getProviderConfig(std::string_view provider_name) const;
     /** @brief List all available provider keys. */
-    std::vector<std::string> getAvailableProviders() const;
+    [[nodiscard]] std::vector<std::string> getAvailableProviders() const;
     /** @brief Default provider key. */
-    std::string getDefaultProvider() const;
+    [[nodiscard]] std::string getDefaultProvider() const;
     /** @brief Global timeout seconds. */
-    int getTimeoutSeconds() const;
+    [[nodiscard]] int getTimeoutSeconds() const;
     /** @brief Global retry attempts. */
-    int getRetryAttempts() const;
+    [[nodiscard]] int getRetryAttempts() const;
     /** @brief Delay in milliseconds between retries. */
-    int getRetryDelayMs() const;
+    [[nodiscard]] int getRetryDelayMs() const;
 
 private:
     APIConfigManager() = default;
