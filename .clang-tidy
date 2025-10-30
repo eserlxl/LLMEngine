@@ -1,0 +1,21 @@
+Checks: |
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  performance-*,
+  modernize-*,
+  readability-*,
+  portability-*,
+  cppcoreguidelines-avoid-magic-numbers,
+  hicpp-use-auto
+WarningsAsErrors: ''
+HeaderFilterRegex: '^(src|examples|test)/.*'
+FormatStyle: none
+AnalyzeTemporaryDtors: false
+CheckOptions:
+  - key:             readability-identifier-naming.VariableCase
+    value:           lower_case
+  - key:             readability-identifier-naming.PrivateMemberSuffix
+    value:           _
+
+
