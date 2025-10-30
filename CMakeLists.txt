@@ -63,7 +63,21 @@ endif()
 # ---- Dependencies ------------------------------------------------------------
 # cpr's CMake config may reference OpenSSL targets; ensure they're available locally
 find_package(OpenSSL REQUIRED)
-find_package(nlohmann_json REQUIRED)
+
+# Prefer system-provided nlohmann_json; fall back to FetchContent if unavailable
+find_package(nlohmann_json QUIET)
+if (NOT nlohmann_json_FOUND)
+  include(FetchContent)
+  message(STATUS "nlohmann_json not found via package config; fetching with FetchContent")
+  FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.11.3
+    FIND_PACKAGE_ARGS NAMES nlohmann_json
+  )
+  FetchContent_MakeAvailable(nlohmann_json)
+endif()
+
 # Prefer system cpr; fall back to FetchContent if not found
 find_package(cpr QUIET)
 if (NOT cpr_FOUND)
