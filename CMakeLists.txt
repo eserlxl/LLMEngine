@@ -76,6 +76,8 @@ if (NOT nlohmann_json_FOUND)
     FIND_PACKAGE_ARGS NAMES nlohmann_json
   )
   FetchContent_MakeAvailable(nlohmann_json)
+  # Ensure CMake registers the package as FOUND for summaries
+  find_package(nlohmann_json CONFIG QUIET)
 endif()
 
 # Prefer system cpr; fall back to FetchContent if not found
@@ -95,6 +97,8 @@ if (NOT cpr_FOUND)
   set(CPR_ENABLE_SSL ON CACHE BOOL "" FORCE)
   set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(cpr)
+  # Ensure CMake registers the package as FOUND for summaries
+  find_package(cpr CONFIG QUIET)
 endif()
 
 # ---- Install dirs and prefix --------------------------------------------------
