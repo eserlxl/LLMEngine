@@ -36,9 +36,12 @@ on:
     branches: [ main ]
     paths-ignore:
       - VERSION
-      - doc/VERSIONING.md
-      - doc/TAG_MANAGEMENT.md
-      - doc/RELEASE_WORKFLOW.md
+      - docs/nextVersion/VERSIONING.md
+      - docs/nextVersion/TAG_MANAGEMENT.md
+      - docs/nextVersion/RELEASE_WORKFLOW.md
+      - docs/nextVersion/BUMP_VERSION_MODULAR_ARCHITECTURE.md
+      - docs/nextVersion/VERSIONING_ALGORITHM.md
+      - docs/nextVersion/LOC_DELTA_SYSTEM.md
       - .shellcheckrc
 
 # Concurrency guard to prevent multiple version bumps running simultaneously
@@ -87,14 +90,14 @@ jobs:
           fi
 
           if [[ "$BUMP_TYPE" == "auto" ]]; then
-            if [[ ! -x ./bin/semantic-version-analyzer.sh ]]; then
+            if [[ ! -x ./nextVersion/semantic-version-analyzer.sh ]]; then
               echo "semantic-version-analyzer.sh not found; skipping version bump analysis for this repo" >&2
               BUMP_TYPE="skip"
             else
               # Run analyzer and capture only stdout, redirect stderr to /dev/null
               # Add debug output to help troubleshoot analyzer issues
               echo "DEBUG: Running semantic-version-analyzer.sh..." >&2
-              BUMP_TYPE_OUTPUT="$(./bin/semantic-version-analyzer.sh --suggest-only 2>/dev/null || true)"
+              BUMP_TYPE_OUTPUT="$(./nextVersion/semantic-version-analyzer.sh --suggest-only 2>/dev/null || true)"
               echo "DEBUG: Analyzer exit code: $?" >&2
               if [[ -n "$BUMP_TYPE_OUTPUT" ]]; then
                 BUMP_TYPE="$(printf '%s' "$BUMP_TYPE_OUTPUT" | tr -d '\n' | tr -d '\r')"
@@ -147,7 +150,7 @@ jobs:
           # Check if GPG secrets are available
           if [[ -z "${{ secrets.GPG_PRIVATE_KEY }}" ]] || [[ -z "${{ secrets.GPG_PASSPHRASE }}" ]]; then
             echo "ERROR: GPG_PRIVATE_KEY and GPG_PASSPHRASE secrets are required for signed commits"
-            echo "Please run ./bin/generate-ci-gpg-key.sh and add the secrets to your repository"
+            echo "Please run ./nextVersion/generate-ci-gpg-key.sh and add the secrets to your repository"
             exit 1
           fi
           
@@ -186,8 +189,8 @@ jobs:
           echo "Bumping version using mathematical analysis"
 
           # Ensure mathematical-version-bump exists early
-          if [[ ! -x ./bin/mathematical-version-bump.sh ]]; then
-            echo "mathematical-version-bump.sh not found or not executable at ./bin/mathematical-version-bump.sh" >&2
+          if [[ ! -x ./nextVersion/mathematical-version-bump.sh ]]; then
+            echo "mathematical-version-bump.sh not found or not executable at ./nextVersion/mathematical-version-bump.sh" >&2
             exit 1
           fi
 
@@ -204,7 +207,7 @@ jobs:
 
           # Add [skip ci] to prevent triggering other workflows
           ANALYSIS_MESSAGE="[skip ci] Auto version bump triggered by ${{ github.event_name }}" \
-            ./bin/mathematical-version-bump.sh --commit
+            ./nextVersion/mathematical-version-bump.sh --commit
 
           # Ensure [skip ci] present even if the script didn't include it
           if ! git log -1 --pretty=%B | grep -q '\[skip ci\]'; then
