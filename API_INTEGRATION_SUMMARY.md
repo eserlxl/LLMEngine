@@ -4,6 +4,15 @@
 
 I have successfully added API support for online AI models (Qwen, OpenAI, Anthropic) to the LLMEngine library. The implementation includes:
 
+### Related Documentation
+
+- Main README: `README.md`
+- Quick Start: `QUICKSTART.md`
+- Configuration: `docs/CONFIGURATION.md`
+- Providers: `docs/PROVIDERS.md`
+- API Reference (headers): `docs/API_REFERENCE.md`
+- FAQ: `docs/FAQ.md`
+
 ## What's Been Completed
 
 ### 1. API Configuration File (`config/api_config.json`)
@@ -190,7 +199,7 @@ APIConfigManager (Singleton)
 
 This implementation follows the project's GPLv3 license.
 
-##Troubleshooting
+## Troubleshooting
 
 ### Build Errors
 
