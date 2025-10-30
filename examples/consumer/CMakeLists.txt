@@ -5,19 +5,42 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Try to locate the package configuration using generic variables first.
-# If not available, fall back to sibling build outputs to keep this example self-contained.
+# Prefer in-tree targets when built as part of the root; otherwise support standalone usage
 get_filename_component(_PROJECT_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 set(_PROJECT_BUILD_DIR "${_PROJECT_ROOT}/build")
 
-set(_HAVE_BUILD_CONFIG OFF)
-if (EXISTS "${_PROJECT_BUILD_DIR}/LLMEngineConfig.cmake" AND EXISTS "${_PROJECT_BUILD_DIR}/LLMEngineTargets.cmake")
-  list(PREPEND CMAKE_PREFIX_PATH "${_PROJECT_BUILD_DIR}")
-  set(_HAVE_BUILD_CONFIG ON)
-endif()
+# If the core target exists, use it directly (in-tree build)
+if (TARGET LLMEngine)
+  # Ensure a consistent namespaced alias for linking
+  if (NOT TARGET ${PROJECT_NAME_LOWER}::${PROJECT_NAME_LOWER})
+    add_library(${PROJECT_NAME_LOWER}::${PROJECT_NAME_LOWER} ALIAS LLMEngine)
+  endif()
+else()
+  # Standalone example flow: try build-tree package, else fallback to sibling static lib
+  set(_HAVE_BUILD_CONFIG OFF)
+  if (EXISTS "${_PROJECT_BUILD_DIR}/LLMEngineConfig.cmake" AND EXISTS "${_PROJECT_BUILD_DIR}/LLMEngineTargets.cmake")
+    list(PREPEND CMAKE_PREFIX_PATH "${_PROJECT_BUILD_DIR}")
+    set(_HAVE_BUILD_CONFIG ON)
+  endif()
 
-if (_HAVE_BUILD_CONFIG)
-  find_package(LLMEngine QUIET)
+  if (_HAVE_BUILD_CONFIG)
+    find_package(LLMEngine QUIET)
+  endif()
+
+  if (NOT LLMEngine_FOUND)
+    set(_PROJECT_STATIC_LIB_PATH "${_PROJECT_BUILD_DIR}/libLLMEngine.a")
+    if (EXISTS "${_PROJECT_STATIC_LIB_PATH}")
+      add_library(LLMEngine STATIC IMPORTED)
+      set_target_properties(LLMEngine PROPERTIES
+        IMPORTED_LOCATION "${_PROJECT_STATIC_LIB_PATH}")
+      target_include_directories(LLMEngine INTERFACE
+        "${_PROJECT_ROOT}/src"
+        "${_PROJECT_BUILD_DIR}/generated_include")
+      add_library(${PROJECT_NAME_LOWER}::${PROJECT_NAME_LOWER} ALIAS LLMEngine)
+    else()
+      message(FATAL_ERROR "Could not find LLMEngine package or sibling build outputs. Build the root project or install LLMEngine.")
+    endif()
+  endif()
 endif()
 if (NOT LLMEngine_FOUND)
   set(_PROJECT_STATIC_LIB_PATH "${_PROJECT_BUILD_DIR}/libLLMEngine.a")
@@ -39,6 +62,6 @@ if (NOT TARGET cpr::cpr)
 endif()
 
 add_executable(consumer main.cpp)
-target_link_libraries(consumer PRIVATE llmengine::llmengine nlohmann_json::nlohmann_json cpr::cpr)
+target_link_libraries(consumer PRIVATE ${PROJECT_NAME_LOWER}::${PROJECT_NAME_LOWER} nlohmann_json::nlohmann_json cpr::cpr)
 
 

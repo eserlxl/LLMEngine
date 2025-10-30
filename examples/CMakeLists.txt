@@ -52,8 +52,12 @@ find_package(OpenSSL REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
 # Use existing cpr target if provided by the root; otherwise try to find it
-if (NOT TARGET cpr::cpr)
+if (NOT TARGET cpr::cpr AND NOT TARGET cpr)
   find_package(cpr REQUIRED)
+endif()
+# Some environments expose an un-namespaced 'cpr' target; normalize to cpr::cpr
+if (NOT TARGET cpr::cpr AND TARGET cpr)
+  add_library(cpr::cpr ALIAS cpr)
 endif()
 
 # Try to consume LLMEngine target if available (when included from the root build)
