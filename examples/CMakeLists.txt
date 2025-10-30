@@ -234,3 +234,8 @@ message(STATUS "ENABLE_CLANG_TIDY        : ${ENABLE_CLANG_TIDY}")
 message(STATUS "Runtime output directory : ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 message(STATUS "========================================")
 message(STATUS "Examples configuration complete")
+
+# Optional consumer example using find_package; not built by default
+if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/consumer/CMakeLists.txt")
+  add_subdirectory(consumer EXCLUDE_FROM_ALL)
+endif()
