@@ -75,7 +75,7 @@ jobs:
       - name: Clean up
         run: |
           echo "Cleaning up temporary directories..."
-          rm -rf /tmp/nextVersion-bench-*
+          rm -rf /tmp/LLMEngine-bench-*
           echo "Cleanup completed"
       
       - name: Performance summary
