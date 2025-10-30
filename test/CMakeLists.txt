@@ -201,6 +201,10 @@ add_executable(test_output_processor_sections test_output_processor_sections.cpp
 target_link_libraries(test_output_processor_sections PRIVATE LLMEngine nlohmann_json::nlohmann_json)
 apply_common_build_flags(test_output_processor_sections)
 
+add_executable(test_provider_mapping_extended test_provider_mapping_extended.cpp)
+target_link_libraries(test_provider_mapping_extended PRIVATE LLMEngine nlohmann_json::nlohmann_json)
+apply_common_build_flags(test_provider_mapping_extended)
+
 # ---- Target properties --------------------------------------------------------
 set_target_properties(test_llmengine PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build")
