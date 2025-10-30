@@ -149,9 +149,11 @@ jobs:
           
           # Check if GPG secrets are available
           if [[ -z "${{ secrets.GPG_PRIVATE_KEY }}" ]] || [[ -z "${{ secrets.GPG_PASSPHRASE }}" ]]; then
-            echo "ERROR: GPG_PRIVATE_KEY and GPG_PASSPHRASE secrets are required for signed commits"
-            echo "Please run ./nextVersion/generate-ci-gpg-key.sh and add the secrets to your repository"
-            exit 1
+            echo "GPG secrets not provided. Proceeding without signed commits."
+            echo "To enable signed commits in CI, run ./nextVersion/generate-ci-gpg-key.sh and add secrets."
+            # Ensure signing is disabled to avoid failures if repo defaults require signing
+            git config --local commit.gpgsign false
+            exit 0
           fi
           
           # Import the GPG private key
