@@ -192,6 +192,15 @@ add_executable(test_llmengine_construction test_llmengine_construction.cpp)
 target_link_libraries(test_llmengine_construction PRIVATE LLMEngine test_support_fake nlohmann_json::nlohmann_json)
 apply_common_build_flags(test_llmengine_construction)
 
+# New tests (Phase 2)
+add_executable(test_api_config_parsing test_api_config_parsing.cpp)
+target_link_libraries(test_api_config_parsing PRIVATE LLMEngine nlohmann_json::nlohmann_json)
+apply_common_build_flags(test_api_config_parsing)
+
+add_executable(test_output_processor_sections test_output_processor_sections.cpp)
+target_link_libraries(test_output_processor_sections PRIVATE LLMEngine nlohmann_json::nlohmann_json)
+apply_common_build_flags(test_output_processor_sections)
+
 # ---- Target properties --------------------------------------------------------
 set_target_properties(test_llmengine PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build")

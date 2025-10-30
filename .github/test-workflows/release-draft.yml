@@ -1,0 +1,51 @@
+name: Release (Draft)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag name (e.g., v0.1.0)"
+        required: true
+
+jobs:
+  build_release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup C++ toolchain
+        uses: ./.github/actions/setup-cpp
+
+      - name: Configure (Release)
+        run: |
+          cmake --preset release -DLLM_ENABLE_LTO=ON
+
+      - name: Build
+        run: |
+          cmake --build build --parallel 4
+
+      - name: Package artifacts
+        run: |
+          tar -C build -czf llmengine-linux-release.tar.gz libLLMEngine.a generated_include/LLMEngine
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: llmengine-linux-release
+          path: llmengine-linux-release.tar.gz
+
+  draft_release:
+    needs: build_release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          draft: true
+          files: llmengine-linux-release.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+

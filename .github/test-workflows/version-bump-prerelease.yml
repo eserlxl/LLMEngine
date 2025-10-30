@@ -1,0 +1,62 @@
+name: Version Bump (Pre-release)
+
+on:
+  workflow_dispatch:
+    inputs:
+      level:
+        description: "Version level (patch|minor|major)"
+        required: true
+        default: patch
+      preid:
+        description: "Pre-release identifier (e.g., rc, beta)"
+        required: true
+        default: rc
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git user
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Compute new version
+        id: ver
+        run: |
+          CURR=$(grep -E "^\s*VERSION\s+" CMakeLists.txt | awk '{print $3}')
+          echo "Current: $CURR"
+          IFS='.' read -r MA MI PA <<<"${CURR}"
+          case "${{ inputs.level }}" in
+            major) MA=$((MA+1)); MI=0; PA=0;;
+            minor) MI=$((MI+1)); PA=0;;
+            patch) PA=$((PA+1));;
+          esac
+          NEW="$MA.$MI.$PA-${{ inputs.preid }}.0"
+          echo "new=${NEW}" >> $GITHUB_OUTPUT
+
+      - name: Update version in CMakeLists
+        run: |
+          ver='${{ steps.ver.outputs.new }}'
+          sed -i "s/^\(\s*VERSION\s*\)\([0-9][0-9.]*\)/\1${ver%%-*}/" CMakeLists.txt
+
+      - name: Commit changes
+        run: |
+          git add CMakeLists.txt
+          git commit -m "chore(version): bump to ${{ steps.ver.outputs.new }} (pre-release)"
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/bump-${{ steps.ver.outputs.new }}
+          title: "chore(version): bump to ${{ steps.ver.outputs.new }}"
+          body: "Automated pre-release version bump."
+          commit-message: "chore(version): bump to ${{ steps.ver.outputs.new }}"
+          signoff: false
+
+
