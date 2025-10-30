@@ -5,6 +5,21 @@
 
 LLMEngine is a C++17 library that provides a unified, type-safe interface to multiple Large Language Model (LLM) providers. It supports local and online providers (Ollama, Qwen/DashScope, OpenAI, Anthropic) with a configuration-driven design, factory-based clients, and a comprehensive test suite.
 
+Architecture overview:
+
+```
+┌─────────────┐     provider-agnostic API     ┌─────────────────────┐
+│  Your App   │ ─────────────────────────────▶ │     LLMEngine       │
+└─────────────┘                               │  (factory, config)  │
+                                              └─────────┬───────────┘
+                                                        │
+                                     selects provider   │
+                                                        ▼
+                   ┌───────────┬───────────┬───────────┬───────────┐
+                   │   Qwen    │  OpenAI   │ Anthropic │  Ollama   │
+                   └───────────┴───────────┴───────────┴───────────┘
+```
+
 Key benefits:
 - Consistent API across providers
 - Config-driven defaults via `config/api_config.json`
@@ -255,22 +270,6 @@ auto result = engine.analyze(prompt, input, "test");
 - API reference: `docs/API_REFERENCE.md` (links to generated Doxygen)
 - FAQ: `docs/FAQ.md`
 - Examples: `examples/README.md`
-
-Architecture overview:
-
-```
-┌─────────────┐     provider-agnostic API     ┌─────────────────────┐
-│  Your App   │ ─────────────────────────────▶ │     LLMEngine       │
-└─────────────┘                               │  (factory, config)  │
-                                              └─────────┬───────────┘
-                                                        │
-                                     selects provider   │
-                                                        ▼
-                   ┌───────────┬───────────┬───────────┬───────────┐
-                   │   Qwen    │  OpenAI   │ Anthropic │  Ollama   │
-                   └───────────┴───────────┴───────────┴───────────┘
-```
-
 
 [↑ Back to top](#llmengine)
 
