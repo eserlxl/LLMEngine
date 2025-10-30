@@ -158,6 +158,29 @@ target_link_libraries(test_api
     OpenSSL::Crypto)
 apply_common_build_flags(test_api)
 
+# New unit tests
+add_library(test_support_fake STATIC
+  support/FakeAPIClient.cpp)
+target_include_directories(test_support_fake PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(test_support_fake PUBLIC nlohmann_json::nlohmann_json)
+apply_common_build_flags(test_support_fake)
+
+add_executable(test_api_config_manager test_api_config_manager.cpp)
+target_link_libraries(test_api_config_manager PRIVATE LLMEngine nlohmann_json::nlohmann_json)
+apply_common_build_flags(test_api_config_manager)
+
+add_executable(test_api_client_factory test_api_client_factory.cpp)
+target_link_libraries(test_api_client_factory PRIVATE LLMEngine nlohmann_json::nlohmann_json)
+apply_common_build_flags(test_api_client_factory)
+
+add_executable(test_provider_type_mapping test_provider_type_mapping.cpp)
+target_link_libraries(test_provider_type_mapping PRIVATE LLMEngine nlohmann_json::nlohmann_json)
+apply_common_build_flags(test_provider_type_mapping)
+
+add_executable(test_llmengine_construction test_llmengine_construction.cpp)
+target_link_libraries(test_llmengine_construction PRIVATE LLMEngine test_support_fake nlohmann_json::nlohmann_json)
+apply_common_build_flags(test_llmengine_construction)
+
 # ---- Target properties --------------------------------------------------------
 set_target_properties(test_llmengine PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build")
