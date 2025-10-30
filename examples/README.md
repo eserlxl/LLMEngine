@@ -394,7 +394,6 @@ Debug files created:
 ## 📚 Learning Resources
 
 - **Main Library**: See `../README.md` for detailed documentation
-- **API Integration**: See `../API_INTEGRATION_SUMMARY.md`
 - **Configuration**: See `../config/README.md`
 - **Quick Start**: See `../QUICKSTART.md`
 

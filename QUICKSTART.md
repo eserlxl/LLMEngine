@@ -320,7 +320,6 @@ export QWEN_API_KEY="sk-your-key"
 ## 📚 More Information
 
 - **Full Documentation**: `config/README.md`
-- **API Integration Summary**: `API_INTEGRATION_SUMMARY.md`
 - **Test Examples**: `test/test_api.cpp`
 - **Qwen Documentation**: https://help.aliyun.com/zh/dashscope/
 

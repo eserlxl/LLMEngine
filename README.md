@@ -222,7 +222,7 @@ auto result = engine.analyze(prompt, input, "test");
 - Providers: `docs/PROVIDERS.md`
 - API reference (headers): `docs/API_REFERENCE.md`
 - FAQ: `docs/FAQ.md`
-- API integration details: `API_INTEGRATION_SUMMARY.md`
+
 
 [↑ Back to top](#llmengine)
 
