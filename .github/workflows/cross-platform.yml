@@ -49,22 +49,22 @@ jobs:
         os:
           - name: Ubuntu
             container: ""
-            packages: "build-essential cmake g++ make"
+            packages: "build-essential cmake g++ make pkg-config libssl-dev"
             update_cmd: "apt-get update"
             install_cmd: "apt-get install -y --no-install-recommends"
           - name: Arch Linux
             container: "archlinux:latest"
-            packages: "base-devel cmake gcc make git ca-certificates"
+            packages: "base-devel cmake gcc make git ca-certificates pkgconf openssl"
             update_cmd: "pacman -Syu --noconfirm --noprogressbar --disable-download-timeout"
             install_cmd: "pacman -S --noconfirm --needed"
           - name: Fedora
             container: "fedora:latest"
-            packages: "gcc-c++ cmake make git ca-certificates"
+            packages: "gcc-c++ cmake make git ca-certificates pkgconf openssl-devel"
             update_cmd: "dnf -y update"
             install_cmd: "dnf -y install"
           - name: Debian
             container: "debian:stable"
-            packages: "build-essential cmake g++ make git ca-certificates"
+            packages: "build-essential cmake g++ make git ca-certificates pkg-config libssl-dev"
             update_cmd: "apt-get update"
             install_cmd: "apt-get install -y --no-install-recommends"
 
