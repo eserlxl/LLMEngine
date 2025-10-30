@@ -17,6 +17,7 @@
 #include "LLMOutputProcessor.hpp"
 #include "Utils.hpp"
 #include <filesystem>
+#include <cstdlib>
 
 // Legacy constructor for Ollama (backward compatibility)
 LLMEngine::LLMEngine(const std::string& ollama_url, 
@@ -70,10 +71,19 @@ LLMEngine::LLMEngine(const std::string& provider_name,
         std::cerr << "[WARNING] Could not load API config, using defaults" << std::endl;
     }
     
+    // Determine provider name (use default if empty)
+    std::string resolved_provider = provider_name;
+    if (resolved_provider.empty()) {
+        resolved_provider = config_mgr.getDefaultProvider();
+        if (resolved_provider.empty()) {
+            resolved_provider = "ollama";
+        }
+    }
+
     // Get provider configuration
-    auto provider_config = config_mgr.getProviderConfig(provider_name);
+    auto provider_config = config_mgr.getProviderConfig(resolved_provider);
     if (provider_config.empty()) {
-        std::cerr << "[ERROR] Provider " << provider_name << " not found in config" << std::endl;
+        std::cerr << "[ERROR] Provider " << resolved_provider << " not found in config" << std::endl;
         throw std::runtime_error("Invalid provider name");
     }
     
@@ -85,7 +95,7 @@ LLMEngine::LLMEngine(const std::string& provider_name,
     }
     
     // Set provider type
-    provider_type_ = ::LLMEngineAPI::APIClientFactory::stringToProviderType(provider_name);
+    provider_type_ = ::LLMEngineAPI::APIClientFactory::stringToProviderType(resolved_provider);
     
     // Set Ollama URL if using Ollama
     if (provider_type_ == ::LLMEngineAPI::ProviderType::OLLAMA) {
@@ -159,6 +169,8 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
     
     std::string full_response;
     
+    const bool write_debug_files = debug_ && (std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") == nullptr);
+
     if (use_api_client_ && api_client_) {
         // Use API client
         nlohmann::json api_params = model_params_;
@@ -177,7 +189,7 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
         
         auto api_response = api_client_->sendRequest(full_prompt, input, api_params);
         
-        if (debug_) {
+        if (write_debug_files) {
             std::error_code ec_dir;
             std::filesystem::create_directories(Utils::TMP_DIR, ec_dir);
             std::ofstream resp_file(Utils::TMP_DIR + "/api_response.json");
@@ -222,7 +234,7 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
                                   cpr::Header{{"Content-Type", "application/json"}},
                                   cpr::Body{payload.dump()});
         
-        if (debug_) {
+        if (write_debug_files) {
             std::error_code ec_dir3;
             std::filesystem::create_directories(Utils::TMP_DIR, ec_dir3);
             std::ofstream resp_file(Utils::TMP_DIR + "/ollama_response.json");
@@ -256,7 +268,7 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
         }
     }
     
-    if (debug_) {
+    if (write_debug_files) {
         std::error_code ec_dir5;
         std::filesystem::create_directories(Utils::TMP_DIR, ec_dir5);
         std::ofstream full_file(Utils::TMP_DIR + "/response_full.txt");

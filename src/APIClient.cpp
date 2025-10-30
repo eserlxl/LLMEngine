@@ -11,6 +11,8 @@
 #include <iostream>
 #include <sstream>
 #include <filesystem>
+#include <thread>
+#include <chrono>
 
 namespace LLMEngineAPI {
 
@@ -33,6 +35,8 @@ APIResponse QwenClient::sendRequest(const std::string& prompt,
     response.success = false;
     
     try {
+        const int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
+        const int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
         
         // Merge default params with provided params
         nlohmann::json request_params = default_params_;
@@ -76,13 +80,20 @@ APIResponse QwenClient::sendRequest(const std::string& prompt,
             timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
         }
         
-        // Send request
-        auto cpr_response = cpr::Post(
-            cpr::Url{base_url_ + "/chat/completions"},
-            cpr::Header{{"Content-Type", "application/json"}, {"Authorization", "Bearer " + api_key_}},
-            cpr::Body{payload.dump()},
-            cpr::Timeout{timeout_seconds * 1000}
-        );
+        cpr::Response cpr_response;
+        for (int attempt = 1; attempt <= max_attempts; ++attempt) {
+            cpr_response = cpr::Post(
+                cpr::Url{base_url_ + "/chat/completions"},
+                cpr::Header{{"Content-Type", "application/json"}, {"Authorization", "Bearer " + api_key_}},
+                cpr::Body{payload.dump()},
+                cpr::Timeout{timeout_seconds * 1000}
+            );
+            if (cpr_response.status_code == 200 && !cpr_response.text.empty()) break;
+            if (attempt < max_attempts) {
+                int delay = base_delay_ms * attempt;
+                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+            }
+        }
         
         response.status_code = static_cast<int>(cpr_response.status_code);
         response.raw_response = nlohmann::json::parse(cpr_response.text);
@@ -132,6 +143,8 @@ APIResponse OpenAIClient::sendRequest(const std::string& prompt,
     response.success = false;
     
     try {
+        const int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
+        const int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
         
         // Merge default params with provided params
         nlohmann::json request_params = default_params_;
@@ -175,13 +188,20 @@ APIResponse OpenAIClient::sendRequest(const std::string& prompt,
             timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
         }
         
-        // Send request
-        auto cpr_response = cpr::Post(
-            cpr::Url{base_url_ + "/chat/completions"},
-            cpr::Header{{"Content-Type", "application/json"}, {"Authorization", "Bearer " + api_key_}},
-            cpr::Body{payload.dump()},
-            cpr::Timeout{timeout_seconds * 1000}
-        );
+        cpr::Response cpr_response;
+        for (int attempt = 1; attempt <= max_attempts; ++attempt) {
+            cpr_response = cpr::Post(
+                cpr::Url{base_url_ + "/chat/completions"},
+                cpr::Header{{"Content-Type", "application/json"}, {"Authorization", "Bearer " + api_key_}},
+                cpr::Body{payload.dump()},
+                cpr::Timeout{timeout_seconds * 1000}
+            );
+            if (cpr_response.status_code == 200 && !cpr_response.text.empty()) break;
+            if (attempt < max_attempts) {
+                int delay = base_delay_ms * attempt;
+                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+            }
+        }
         
         response.status_code = static_cast<int>(cpr_response.status_code);
         response.raw_response = nlohmann::json::parse(cpr_response.text);
@@ -229,6 +249,8 @@ APIResponse AnthropicClient::sendRequest(const std::string& prompt,
     response.success = false;
     
     try {
+        const int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
+        const int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
         
         // Merge default params with provided params
         nlohmann::json request_params = default_params_;
@@ -357,13 +379,20 @@ APIResponse OllamaClient::sendRequest(const std::string& prompt,
                 timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
             }
             
-            // Send request to generate endpoint
-            auto cpr_response = cpr::Post(
-                cpr::Url{base_url_ + "/api/generate"},
-                cpr::Header{{"Content-Type", "application/json"}},
-                cpr::Body{payload.dump()},
-                cpr::Timeout{timeout_seconds * 1000}
-            );
+            cpr::Response cpr_response;
+            for (int attempt = 1; attempt <= max_attempts; ++attempt) {
+                cpr_response = cpr::Post(
+                    cpr::Url{base_url_ + "/api/generate"},
+                    cpr::Header{{"Content-Type", "application/json"}},
+                    cpr::Body{payload.dump()},
+                    cpr::Timeout{timeout_seconds * 1000}
+                );
+                if (cpr_response.status_code == 200 && !cpr_response.text.empty()) break;
+                if (attempt < max_attempts) {
+                    int delay = base_delay_ms * attempt;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+                }
+            }
             
             response.status_code = static_cast<int>(cpr_response.status_code);
             
@@ -428,13 +457,20 @@ APIResponse OllamaClient::sendRequest(const std::string& prompt,
             timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
         }
         
-        // Send request to chat endpoint
-        auto cpr_response = cpr::Post(
-            cpr::Url{base_url_ + "/api/chat"},
-            cpr::Header{{"Content-Type", "application/json"}},
-            cpr::Body{payload.dump()},
-            cpr::Timeout{timeout_seconds * 1000}
-        );
+        cpr::Response cpr_response;
+        for (int attempt = 1; attempt <= max_attempts; ++attempt) {
+            cpr_response = cpr::Post(
+                cpr::Url{base_url_ + "/api/chat"},
+                cpr::Header{{"Content-Type", "application/json"}},
+                cpr::Body{payload.dump()},
+                cpr::Timeout{timeout_seconds * 1000}
+            );
+            if (cpr_response.status_code == 200 && !cpr_response.text.empty()) break;
+            if (attempt < max_attempts) {
+                int delay = base_delay_ms * attempt;
+                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+            }
+        }
         
         response.status_code = static_cast<int>(cpr_response.status_code);
         
