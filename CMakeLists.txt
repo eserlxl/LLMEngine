@@ -64,8 +64,8 @@ endif()
 # cpr's CMake config may reference OpenSSL targets; ensure they're available locally
 find_package(OpenSSL REQUIRED)
 
-# Prefer system-provided nlohmann_json; fall back to FetchContent if unavailable
-find_package(nlohmann_json QUIET)
+# Prefer system-provided nlohmann_json via config; fall back to FetchContent
+find_package(nlohmann_json CONFIG QUIET)
 if (NOT nlohmann_json_FOUND)
   include(FetchContent)
   message(STATUS "nlohmann_json not found via package config; fetching with FetchContent")
@@ -76,14 +76,14 @@ if (NOT nlohmann_json_FOUND)
     FIND_PACKAGE_ARGS NAMES nlohmann_json
   )
   FetchContent_MakeAvailable(nlohmann_json)
-  # Ensure CMake registers the package as FOUND for summaries
-  find_package(nlohmann_json CONFIG QUIET)
-  # Some projects do not provide a config when built as a subproject; set FOUND explicitly
-  set(nlohmann_json_FOUND TRUE CACHE INTERNAL "nlohmann_json available via FetchContent")
+  # Some environments expose an un-namespaced target; normalize if needed
+  if (TARGET nlohmann_json AND NOT TARGET nlohmann_json::nlohmann_json)
+    add_library(nlohmann_json::nlohmann_json ALIAS nlohmann_json)
+  endif()
 endif()
 
-# Prefer system cpr; fall back to FetchContent if not found
-find_package(cpr QUIET)
+# Prefer system-provided cpr via config; fall back to FetchContent
+find_package(cpr CONFIG QUIET)
 if (NOT cpr_FOUND)
   include(FetchContent)
   message(STATUS "cpr not found via package config; fetching with FetchContent")
@@ -99,10 +99,10 @@ if (NOT cpr_FOUND)
   set(CPR_ENABLE_SSL ON CACHE BOOL "" FORCE)
   set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(cpr)
-  # Ensure CMake registers the package as FOUND for summaries
-  find_package(cpr CONFIG QUIET)
-  # cpr built as a subproject may not expose a config; set FOUND explicitly
-  set(cpr_FOUND TRUE CACHE INTERNAL "cpr available via FetchContent")
+  # Some environments expose an un-namespaced target; normalize if needed
+  if (TARGET cpr AND NOT TARGET cpr::cpr)
+    add_library(cpr::cpr ALIAS cpr)
+  endif()
 endif()
 
 # ---- Install dirs and prefix --------------------------------------------------
