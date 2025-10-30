@@ -1,0 +1,69 @@
+# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of nextVersion and is licensed under
+# the GNU General Public License v3.0 or later.
+# See the LICENSE file in the project root for details.
+
+name: Debug Build Testing
+
+permissions:
+  contents: read
+
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'test/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/debug-build-test.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'test/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/debug-build-test.yml'
+
+jobs:
+  debug-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake g++ make gdb
+
+      - name: Configure Debug (CMake)
+        run: |
+          cmake -S . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
+
+      - name: Build (make -j20)
+        run: |
+          cmake --build build -- -j20
+
+      - name: Run tests (ctest)
+        run: |
+          cd build
+          ctest --output-on-failure
+
+      - name: Inspect binaries for debug symbols
+        run: |
+          echo "=== Debug Build Verification ==="
+          set -e
+          FOUND=0
+          for f in $(find build -type f -perm -111 -maxdepth 3 | head -5); do
+            if file "$f" | grep -q "ELF"; then
+              FOUND=1
+              file "$f"
+              if file "$f" | grep -q "not stripped"; then
+                echo "✓ $f has debug symbols"
+              else
+                echo "⚠ $f appears stripped"
+              fi
+            fi
+          done
+          if [ "$FOUND" -eq 0 ]; then
+            echo "No ELF executables found to inspect"
+          fi

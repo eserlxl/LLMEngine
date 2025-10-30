@@ -1,0 +1,25 @@
+# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of nextVersion and is licensed under
+# the GNU General Public License v3.0 or later.
+# See the LICENSE file in the project root for details.
+
+# CODEOWNERS ensures reviewers are auto-assigned
+# See: https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner
+*  @eserlxl
+
+# CI/workflows
+.github/**  @eserlxl
+
+# C/C++ sources
+src/**       @eserlxl
+include/**   @eserlxl
+
+# Docs
+README.md    @eserlxl
+doc/**       @eserlxl
+
+

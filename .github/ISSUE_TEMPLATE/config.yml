@@ -1,0 +1,23 @@
+---
+# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of nextVersion and is licensed under
+# the GNU General Public License v3.0 or later.
+# See the LICENSE file in the project root for details.
+
+# GitHub Issue Template Configuration
+# This file configures how issue templates are displayed and used
+
+# Disable blank issues (users must use a template)
+blank_issues_enabled: false
+
+# Contact links for users who want to report issues outside of templates
+contact_links:
+  - name: Security vulnerabilities
+    url: https://github.com/eserlxl/nextVersion/security/policy
+    about: Please report security vulnerabilities via the security policy.
+  - name: Questions and discussions
+    url: https://github.com/eserlxl/nextVersion/discussions
+    about: Ask questions and propose ideas in Discussions.
+

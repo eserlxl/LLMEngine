@@ -1,0 +1,104 @@
+# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of nextVersion and is licensed under
+# the GNU General Public License v3.0 or later.
+# See the LICENSE file in the project root for details.
+
+name: Cross-Platform Testing
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'test/**'
+      - 'examples/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/cross-platform.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'test/**'
+      - 'examples/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/cross-platform.yml'
+  workflow_dispatch: {}
+
+env:
+  CI: "true"
+
+jobs:
+  test:
+    name: ${{ matrix.os.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - name: Ubuntu
+            container: ""
+            packages: "build-essential cmake g++ make"
+            update_cmd: "apt-get update"
+            install_cmd: "apt-get install -y --no-install-recommends"
+          - name: Arch Linux
+            container: "archlinux:latest"
+            packages: "base-devel cmake gcc make git ca-certificates"
+            update_cmd: "pacman -Syu --noconfirm --noprogressbar --disable-download-timeout"
+            install_cmd: "pacman -S --noconfirm --needed"
+          - name: Fedora
+            container: "fedora:latest"
+            packages: "gcc-c++ cmake make git ca-certificates"
+            update_cmd: "dnf -y update"
+            install_cmd: "dnf -y install"
+          - name: Debian
+            container: "debian:stable"
+            packages: "build-essential cmake g++ make git ca-certificates"
+            update_cmd: "apt-get update"
+            install_cmd: "apt-get install -y --no-install-recommends"
+
+    container: ${{ matrix.os.container }}
+
+    steps:
+      - name: Prepare git for checkout
+        if: matrix.os.container != ''
+        run: |
+          set -euo pipefail
+          ${{ matrix.os.update_cmd }}
+          ${{ matrix.os.install_cmd }} ${{ matrix.os.packages }}
+
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        if: matrix.os.container == ''
+        run: |
+          set -euo pipefail
+          sudo ${{ matrix.os.update_cmd }}
+          sudo ${{ matrix.os.install_cmd }} ${{ matrix.os.packages }}
+          git config --local --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Build and test
+        run: |
+          set -euo pipefail
+          cmake -S . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+          cmake --build build -- -j20
+          cd build
+          ctest --output-on-failure
+
+      - name: Run unit tests
+        if: matrix.os.container == ''
+        run: |
+          echo "Unit tests executed via ctest above"

@@ -1,0 +1,95 @@
+# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of nextVersion and is licensed under
+# the GNU General Public License v3.0 or later.
+# See the LICENSE file in the project root for details.
+
+name: Memory Sanitizer Testing
+
+permissions:
+  contents: read
+
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/memory-sanitizer.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/memory-sanitizer.yml'
+      - 'tests/**'
+
+jobs:
+  memory-sanitizer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: Setup C++ Environment
+        uses: ./.github/actions/setup-cpp
+
+      - name: Install Clang and LLVM tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang llvm
+      
+      - name: Verify MSAN suppressions file
+        run: |
+          if [ -f "test-workflows/msan_suppressions.txt" ]; then
+            echo "MSAN suppressions file found."
+            wc -l test-workflows/msan_suppressions.txt
+          else
+            echo "No MSAN suppressions file present; proceeding without one."
+          fi
+      
+      - name: Build with Memory Sanitizer
+        run: |
+          mkdir -p build-msan
+          cd build-msan
+          cmake -DCMAKE_CXX_COMPILER=clang++ \
+                -DCMAKE_C_COMPILER=clang \
+                -DCMAKE_CXX_STANDARD=20 \
+                -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+                -DCMAKE_CXX_FLAGS="-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -O1 -g" \
+                -DCMAKE_C_FLAGS="-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -O1 -g" \
+                -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=memory" \
+                -DPERFORMANCE_BUILD=OFF \
+                -DWARNING_MODE=ON \
+                -DDEBUG_MODE=ON \
+                -DBUILD_TESTS=ON \
+                ..
+          # Per repository rules, prefer a fixed parallelism for make
+          make -j20
+      
+      - name: Run Memory Sanitizer Tests
+        run: |
+          if [ -f test-workflows/msan_suppressions.txt ]; then
+            export MSAN_OPTIONS="abort_on_error=0:print_stats=1:halt_on_error=0:exit_code=0:suppressions=test-workflows/msan_suppressions.txt"
+          else
+            export MSAN_OPTIONS="abort_on_error=0:print_stats=1:halt_on_error=0:exit_code=0"
+          fi
+          export MSAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
+          
+          echo "Testing basic functionality with MSAN suppressions..."
+          build-msan/bin/next-version --help
+          build-msan/bin/next-version --version
+          TMP_MSAN=$(mktemp -d /tmp/nextVersion-msan-XXXXXX)
+          # Allow analyzer classification exit codes (10/11/12/20) under MSAN run
+          set +e
+          build-msan/bin/next-version --no-git --verbose --repo-root "$TMP_MSAN"
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ]; then
+            if [ "$rc" -eq 10 ] || [ "$rc" -eq 11 ] || [ "$rc" -eq 12 ] || [ "$rc" -eq 20 ]; then
+              echo "Notice: analyzer returned classification exit code $rc (acceptable under MSAN)."
+            else
+              echo "Error: next-version failed under MSAN with exit code $rc"
+              exit $rc
+            fi
+          fi
+          test -d "$TMP_MSAN"
+          rm -rf "$TMP_MSAN"

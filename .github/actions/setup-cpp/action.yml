@@ -1,0 +1,42 @@
+# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of nextVersion and is licensed under
+# the GNU General Public License v3.0 or later.
+# See the LICENSE file in the project root for details.
+
+name: 'Setup C++ Environment'
+description: 'Installs dependencies, sets up caching, and prepares the build environment'
+runs:
+  using: "composite"
+  steps:
+    - name: Cache apt packages
+      uses: actions/cache@v4
+      with:
+        path: /var/cache/apt/archives
+        key: ${{ runner.os }}-apt-${{ hashFiles('**/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          build-essential cmake g++ make binutils coreutils
+
+    - name: Ensure scripts are executable (if present)
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -f "./build.sh" ]; then
+          chmod +x ./build.sh
+        fi
+        if [ -f "./run_tests.sh" ]; then
+          chmod +x ./run_tests.sh
+        fi
+        if [ -f "test/smoke_test.sh" ]; then
+          chmod +x ./test/smoke_test.sh
+        fi
+

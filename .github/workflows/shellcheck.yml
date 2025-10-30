@@ -1,0 +1,100 @@
+# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of nextVersion and is licensed under
+# the GNU General Public License v3.0 or later.
+# See the LICENSE file in the project root for details.
+
+name: ShellCheck
+
+permissions:
+  contents: read
+
+on:
+  push:
+    paths:
+      - 'build.sh'
+      - 'dev-bin/**'
+      - 'scripts/**'
+      - '*.sh'
+      - '.github/workflows/shellcheck.yml'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'build.sh'
+      - 'dev-bin/**'
+      - 'scripts/**'
+      - '*.sh'
+      - '.github/workflows/shellcheck.yml'
+      - 'test-workflows/**'
+  workflow_dispatch:
+
+concurrency:
+  group: shellcheck-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shellcheck:
+    name: Run ShellCheck on shell scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends shellcheck
+          shellcheck --version
+
+      - name: Find shell scripts (including files with shebang, no .sh extension)
+        id: files
+        run: |
+          # Collect tracked files from common locations and patterns
+          git ls-files -z -- \
+            'build.sh' \
+            'dev-bin/**' \
+            'scripts/**' \
+            '*.sh' \
+            '.github/*.sh' \
+            '.github/**/*.sh' > .globs.z || true
+
+          # Add any tracked files that start with a bash/sh shebang (captures executables without .sh)
+          # Exclude markdown files and other documentation
+          git grep -IlzE '^#!.*\b(bash|sh)\b' -- ':!*.md' ':!*.txt' ':!*.rst' > .shebang.z || true
+
+          # Combine and deduplicate (NUL-separated)
+          cat .globs.z .shebang.z 2>/dev/null | sort -zu > files-to-check.txt || true
+
+          # Count NUL-separated entries
+          found=$(tr -cd '\0' < files-to-check.txt | wc -c | tr -d '[:space:]')
+          echo "found=${found}" >> "$GITHUB_OUTPUT"
+
+          if (( found == 0 )); then
+            echo "No shell scripts detected."
+            exit 0
+          fi
+
+          echo "Found ${found} shell script(s) to check:"
+          tr '\0' '\n' < files-to-check.txt | sed 's/^/ - /'
+
+      - name: Run ShellCheck
+        if: steps.files.outputs.found != '0'
+        env:
+          # Follow 'source' statements and resolve relative to script dir when possible
+          SHELLCHECK_OPTS: --external-sources --source-path=SCRIPTDIR
+        run: |
+          # Use -x to follow sourced files and -S style for stricter reporting
+          # -f gcc improves annotation rendering in GitHub UI
+          xargs -0 -a files-to-check.txt shellcheck -x -S style -f gcc
+
+      - name: No shell scripts found
+        if: steps.files.outputs.found == '0'
+        run: echo "No shell scripts matched the configured patterns. Skipping ShellCheck."

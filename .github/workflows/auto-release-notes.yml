@@ -1,0 +1,41 @@
+name: Auto Release Notes
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+
+      - name: Create GitHub Release with Auto Notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes
+
+      - name: Generate Local Release Notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" --json body --jq .body > "release-notes/${GITHUB_REF_NAME}.md"
+
+      - name: Commit and Push Release Notes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add "release-notes/${GITHUB_REF_NAME}.md"
+          git commit -m "docs: add release notes for ${GITHUB_REF_NAME}"
+          git push
+
+

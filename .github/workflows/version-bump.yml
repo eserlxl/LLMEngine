@@ -1,0 +1,269 @@
+# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of nextVersion and is licensed under
+# the GNU General Public License v3.0 or later.
+# See the LICENSE file in the project root for details.
+
+name: Auto Version Bump with Semantic Release Notes
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - major
+          - minor
+          - patch
+      release_notes:
+        description: 'Custom release notes (optional)'
+        required: false
+        type: string
+      prerelease:
+        description: 'Mark as prerelease'
+        required: false
+        default: false
+        type: boolean
+
+  # Automatic trigger for significant changes on main
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - VERSION
+      - doc/VERSIONING.md
+      - doc/TAG_MANAGEMENT.md
+      - doc/RELEASE_WORKFLOW.md
+      - .shellcheckrc
+
+# Concurrency guard to prevent multiple version bumps running simultaneously
+concurrency:
+  group: version-bump-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    env:
+      NEW_VERSION: ""
+      TARGET_BRANCH: "${{ github.ref_name }}"
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Git
+        run: |
+          set -euo pipefail
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Determine version bump type
+        id: version-analysis
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            BUMP_TYPE="${{ github.event.inputs.bump_type }}"
+          else
+            BUMP_TYPE="auto"
+          fi
+
+          if [[ "$BUMP_TYPE" == "auto" ]]; then
+            if [[ ! -x ./bin/semantic-version-analyzer.sh ]]; then
+              echo "semantic-version-analyzer.sh not found; skipping version bump analysis for this repo" >&2
+              BUMP_TYPE="skip"
+            else
+              # Run analyzer and capture only stdout, redirect stderr to /dev/null
+              # Add debug output to help troubleshoot analyzer issues
+              echo "DEBUG: Running semantic-version-analyzer.sh..." >&2
+              BUMP_TYPE_OUTPUT="$(./bin/semantic-version-analyzer.sh --suggest-only 2>/dev/null || true)"
+              echo "DEBUG: Analyzer exit code: $?" >&2
+              if [[ -n "$BUMP_TYPE_OUTPUT" ]]; then
+                BUMP_TYPE="$(printf '%s' "$BUMP_TYPE_OUTPUT" | tr -d '\n' | tr -d '\r')"
+                echo "DEBUG: Analyzer output: '$BUMP_TYPE_OUTPUT' -> BUMP_TYPE: '$BUMP_TYPE'" >&2
+              else
+                BUMP_TYPE="skip"
+                echo "DEBUG: No analyzer output, using skip" >&2
+              fi
+            fi
+          fi
+
+          # Ensure BUMP_TYPE is valid for GitHub Actions output
+          # The semantic-version-analyzer outputs 'none' for no bump needed, but we use 'skip' for GitHub Actions compatibility
+          if [[ "$BUMP_TYPE" == "none" ]]; then
+            BUMP_TYPE="skip"
+          fi
+          
+          # Validate BUMP_TYPE is one of the expected values
+          case "$BUMP_TYPE" in
+            major|minor|patch|skip)
+              echo "DEBUG: Valid BUMP_TYPE: '$BUMP_TYPE'" >&2
+              ;;
+            *)
+              echo "ERROR: Invalid BUMP_TYPE: '$BUMP_TYPE'. Falling back to 'skip'" >&2
+              BUMP_TYPE="skip"
+              ;;
+          esac
+
+          {
+            echo "bump_type=${BUMP_TYPE}"
+            echo "release_notes=${{ github.event.inputs.release_notes || '' }}"
+            echo "prerelease=${{ github.event.inputs.prerelease || false }}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Summarize analysis
+        if: steps.version-analysis.outputs.bump_type != 'skip'
+        run: |
+          {
+            echo "### Version analysis"
+            echo "- Bump type: ${{ steps.version-analysis.outputs.bump_type }}"
+            echo "- Target branch: ${{ env.TARGET_BRANCH }}"
+            echo "- New version (after bump): will be computed in the next step"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Setup GPG for CI signing
+        if: steps.version-analysis.outputs.bump_type != 'skip'
+        run: |
+          set -euo pipefail
+          
+          # Check if GPG secrets are available
+          if [[ -z "${{ secrets.GPG_PRIVATE_KEY }}" ]] || [[ -z "${{ secrets.GPG_PASSPHRASE }}" ]]; then
+            echo "ERROR: GPG_PRIVATE_KEY and GPG_PASSPHRASE secrets are required for signed commits"
+            echo "Please run ./bin/generate-ci-gpg-key.sh and add the secrets to your repository"
+            exit 1
+          fi
+          
+          # Import the GPG private key
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          
+          # Get the key ID from the imported key
+          GPG_KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/{print $10; exit}')
+          if [[ -z "$GPG_KEY_ID" ]]; then
+            echo "ERROR: Failed to import GPG key"
+            exit 1
+          fi
+          
+          # Configure Git to use the GPG key (preserve existing user identity)
+          git config --local user.signingkey "$GPG_KEY_ID"
+          git config --local commit.gpgsign true
+          
+          # Ensure Git identity is set (in case it was cleared)
+          if [[ -z "$(git config --local --get user.name)" ]]; then
+            git config --local user.name "GitHub Action"
+          fi
+          if [[ -z "$(git config --local --get user.email)" ]]; then
+            git config --local user.email "action@github.com"
+          fi
+          
+          # Set up gpg-agent with the passphrase
+          echo "${{ secrets.GPG_PASSPHRASE }}" | gpg --batch --passphrase-fd 0 --pinentry-mode loopback --sign --local-user "$GPG_KEY_ID" /dev/null >/dev/null 2>&1 || true
+
+
+
+      - name: Bump version
+        id: bump
+        if: steps.version-analysis.outputs.bump_type != 'skip'
+        run: |
+          set -euo pipefail
+          echo "Bumping version using mathematical analysis"
+
+          # Ensure mathematical-version-bump exists early
+          if [[ ! -x ./bin/mathematical-version-bump.sh ]]; then
+            echo "mathematical-version-bump.sh not found or not executable at ./bin/mathematical-version-bump.sh" >&2
+            exit 1
+          fi
+
+          if [[ ! -f VERSION ]]; then
+            echo "VERSION file not found at repository root." >&2
+            exit 1
+          fi
+
+          echo "Current version: $(cat VERSION)"
+
+          # Make sure we are up-to-date before bumping to reduce push races
+          git fetch --prune --tags origin
+          git pull --rebase origin "${TARGET_BRANCH}"
+
+          # Add [skip ci] to prevent triggering other workflows
+          ANALYSIS_MESSAGE="[skip ci] Auto version bump triggered by ${{ github.event_name }}" \
+            ./bin/mathematical-version-bump.sh --commit
+
+          # Ensure [skip ci] present even if the script didn't include it
+          if ! git log -1 --pretty=%B | grep -q '\[skip ci\]'; then
+            git commit --amend -m "$(git log -1 --pretty=%B) [skip ci]" --no-edit
+          fi
+
+          NEW_VERSION="$(cat VERSION)"
+          echo "NEW_VERSION=${NEW_VERSION}" >> "$GITHUB_ENV"
+          echo "new_version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+
+          # Push commit to the triggering branch
+          git push origin HEAD:"${TARGET_BRANCH}"
+
+      - name: Append new version to summary
+        if: steps.version-analysis.outputs.bump_type != 'skip'
+        run: |
+          echo "- New version: v${NEW_VERSION}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create annotated tag
+        if: steps.version-analysis.outputs.bump_type != 'skip'
+        run: |
+          set -euo pipefail
+          # Ensure we see the latest tags
+          git fetch --prune --tags origin
+
+          if git rev-parse --verify --quiet "refs/tags/v${NEW_VERSION}" >/dev/null; then
+            echo "Tag v${NEW_VERSION} already exists; skipping tag creation."
+          else
+            git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}"
+            git push origin "v${NEW_VERSION}"
+          fi
+
+      - name: Create Release
+        if: steps.version-analysis.outputs.bump_type != 'skip'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.NEW_VERSION }}
+          name: Release v${{ env.NEW_VERSION }}
+          generate_release_notes: true
+          body: |
+            ## Version Bump Type
+            - **${{ steps.version-analysis.outputs.bump_type }}** version bump
+
+            ## Release Notes
+            ${{ steps.version-analysis.outputs.release_notes }}
+
+            ## Auto-Release Information
+            ${{ github.event_name == 'push' && 'This release was automatically triggered due to significant changes detected.' || 'This release was manually triggered.' }}
+
+            ---
+            *Release notes below are automatically generated by GitHub based on commits since last release.*
+          draft: false
+          prerelease: ${{ steps.version-analysis.outputs.prerelease == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: No bump needed
+        if: steps.version-analysis.outputs.bump_type == 'skip'
+        run: |
+          echo "No significant changes detected; no version bump needed."
+          echo "### No version bump needed" >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,107 @@
+# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of nextVersion and is licensed under
+# the GNU General Public License v3.0 or later.
+# See the LICENSE file in the project root for details.
+
+# Dependabot configuration file
+# See https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Istanbul"
+    open-pull-requests-limit: 5
+    rebase-strategy: "disabled" # only rebase when necessary (reduces CI churn)
+    pull-request-branch-name:
+      separator: "-"
+    reviewers:
+      - "eserlxl"
+    assignees:
+      - "eserlxl"
+    commit-message:
+      prefix: "chore"   # Dependabot will format like: chore(deps): bump ...
+      include: "scope"  # adds scope (e.g., deps) to the commit subject
+    labels:
+      - "dependencies"
+      - "github-actions"
+    groups:
+      actions-minor-patch:
+        applies-to: "version-updates"
+        update-types:
+          - "minor"
+          - "patch"
+        patterns:
+          - "*"
+      actions-major:
+        applies-to: "version-updates"
+        update-types:
+          - "major"
+        patterns:
+          - "*"
+
+  # Future ecosystems can be enabled by uncommenting and adjusting below:
+
+  # - package-ecosystem: "npm"
+  #   directory: "/"
+  #   target-branch: "main"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "monday"
+  #     time: "09:00"
+  #     timezone: "Europe/Istanbul"
+  #   open-pull-requests-limit: 5
+  #   rebase-strategy: "disabled"
+  #   pull-request-branch-name:
+  #     separator: "-"
+  #   reviewers: ["eserlxl"]
+  #   assignees: ["eserlxl"]
+  #   commit-message:
+  #     prefix: "chore"
+  #     include: "scope"
+  #   labels: ["dependencies", "npm"]
+  #   groups:
+  #     npm-minor-patch:
+  #       applies-to: "version-updates"
+  #       update-types: ["minor", "patch"]
+  #       patterns: ["*"]
+  #     npm-major:
+  #       applies-to: "version-updates"
+  #       update-types: ["major"]
+  #       patterns: ["*"]
+
+  # - package-ecosystem: "docker"
+  #   directory: "/"
+  #   target-branch: "main"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "monday"
+  #     time: "09:00"
+  #     timezone: "Europe/Istanbul"
+  #   open-pull-requests-limit: 5
+  #   rebase-strategy: "disabled"
+  #   pull-request-branch-name:
+  #     separator: "-"
+  #   reviewers: ["eserlxl"]
+  #   assignees: ["eserlxl"]
+  #   commit-message:
+  #     prefix: "chore"
+  #     include: "scope"
+  #   labels: ["dependencies", "docker"]
+  #   groups:
+  #     docker-minor-patch:
+  #       applies-to: "version-updates"
+  #       update-types: ["minor", "patch"]
+  #       patterns: ["*"]
+  #     docker-major:
+  #       applies-to: "version-updates"
+  #       update-types: ["major"]
+  #       patterns: ["*"]

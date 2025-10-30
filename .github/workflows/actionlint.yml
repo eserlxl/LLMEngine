@@ -1,0 +1,57 @@
+# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of nextVersion and is licensed under
+# the GNU General Public License v3.0 or later.
+# See the LICENSE file in the project root for details.
+
+name: Lint GitHub Workflows (actionlint)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+  push:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: actionlint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends shellcheck git
+
+      - name: Install actionlint
+        run: |
+          # Download and install actionlint
+          curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash -o /tmp/download-actionlint.bash
+          bash /tmp/download-actionlint.bash 1.7.7 /tmp
+          
+          # Move actionlint to a standard location and make it executable
+          sudo mv /tmp/actionlint /usr/local/bin/
+          sudo chmod +x /usr/local/bin/actionlint
+          
+          # Verify installation
+          echo "actionlint version: $(actionlint -version)"
+
+      - name: Run actionlint
+        env:
+          SHELLCHECK_OPTS: --external-sources --source-path=SCRIPTDIR
+        run: |
+          actionlint -color
+
