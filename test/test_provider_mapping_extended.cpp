@@ -10,10 +10,12 @@ int main() {
     assert(APIClientFactory::stringToProviderType("openai") == ProviderType::OPENAI);
     assert(APIClientFactory::stringToProviderType("anthropic") == ProviderType::ANTHROPIC);
     assert(APIClientFactory::stringToProviderType("ollama") == ProviderType::OLLAMA);
+    assert(APIClientFactory::stringToProviderType("gemini") == ProviderType::GEMINI);
 
     // Case-insensitive
     assert(APIClientFactory::stringToProviderType("QWEN") == ProviderType::QWEN);
     assert(APIClientFactory::stringToProviderType("OpenAI") == ProviderType::OPENAI);
+    assert(APIClientFactory::stringToProviderType("GEMINI") == ProviderType::GEMINI);
 
     // Fallback to default provider when unknown
     APIConfigManager& mgr = APIConfigManager::getInstance();

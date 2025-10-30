@@ -534,6 +534,135 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
     return response;
 }
 
+// GeminiClient Implementation
+GeminiClient::GeminiClient(const std::string& api_key, const std::string& model)
+    : api_key_(api_key), model_(model), base_url_("https://generativelanguage.googleapis.com/v1beta") {
+    default_params_ = {
+        {"temperature", 0.7},
+        {"max_tokens", 2000},
+        {"top_p", 0.9}
+    };
+}
+
+APIResponse GeminiClient::sendRequest(std::string_view prompt,
+                                     const nlohmann::json& input,
+                                     const nlohmann::json& params) const {
+    APIResponse response;
+    response.success = false;
+
+    try {
+        const int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
+        const int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
+
+        // Merge default params with provided params
+        nlohmann::json request_params = default_params_;
+        for (auto& [key, value] : params.items()) {
+            request_params[key] = value;
+        }
+
+        // Compose user content; prepend optional system_prompt
+        std::string user_text;
+        if (input.contains("system_prompt") && input["system_prompt"].is_string()) {
+            user_text += input["system_prompt"].get<std::string>();
+            if (!user_text.empty() && user_text.back() != '\n') user_text += "\n";
+        }
+        user_text += std::string(prompt);
+
+        // Prepare request payload for Gemini generateContent
+        nlohmann::json payload = {
+            {"contents", nlohmann::json::array({ nlohmann::json{
+                {"role", "user"},
+                {"parts", nlohmann::json::array({ nlohmann::json{{"text", user_text}} })}
+            } })},
+            {"generationConfig", nlohmann::json{
+                {"temperature", request_params["temperature"]},
+                {"maxOutputTokens", request_params["max_tokens"]},
+                {"topP", request_params["top_p"]}
+            }}
+        };
+
+        // Get timeout from params or use config default
+        int timeout_seconds = 0;
+        if (params.contains("timeout_seconds")) {
+            timeout_seconds = params["timeout_seconds"].get<int>();
+        } else {
+            timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
+        }
+
+        const std::string url = base_url_ + "/models/" + model_ + ":generateContent?key=" + api_key_;
+
+        cpr::Response cpr_response;
+        for (int attempt = 1; attempt <= max_attempts; ++attempt) {
+            cpr_response = cpr::Post(
+                cpr::Url{url},
+                cpr::Header{{"Content-Type", "application/json"}},
+                cpr::Body{payload.dump()},
+                cpr::Timeout{timeout_seconds * 1000}
+            );
+            if (cpr_response.status_code == 200 && !cpr_response.text.empty()) break;
+            if (attempt < max_attempts) {
+                int delay = base_delay_ms * attempt;
+                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+            }
+        }
+
+        response.status_code = static_cast<int>(cpr_response.status_code);
+
+        if (cpr_response.status_code == 200) {
+            if (cpr_response.text.empty()) {
+                response.error_message = "Empty response from server";
+                response.error_code = APIResponse::APIError::InvalidResponse;
+            } else {
+                try {
+                    response.raw_response = nlohmann::json::parse(cpr_response.text);
+                    if (response.raw_response.contains("candidates") &&
+                        response.raw_response["candidates"].is_array() &&
+                        !response.raw_response["candidates"].empty()) {
+                        const auto& cand = response.raw_response["candidates"][0];
+                        std::string aggregated;
+                        if (cand.contains("content") && cand["content"].contains("parts") && cand["content"]["parts"].is_array()) {
+                            for (const auto& part : cand["content"]["parts"]) {
+                                if (part.contains("text") && part["text"].is_string()) {
+                                    aggregated += part["text"].get<std::string>();
+                                }
+                            }
+                        }
+                        if (!aggregated.empty()) {
+                            response.content = aggregated;
+                            response.success = true;
+                        } else {
+                            response.error_message = "No text content in response";
+                            response.error_code = APIResponse::APIError::InvalidResponse;
+                        }
+                    } else {
+                        response.error_message = "Invalid response format";
+                        response.error_code = APIResponse::APIError::InvalidResponse;
+                    }
+                } catch (const nlohmann::json::parse_error& e) {
+                    response.error_message = std::string("JSON parse error: ") + e.what();
+                    response.error_code = APIResponse::APIError::InvalidResponse;
+                }
+            }
+        } else {
+            response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
+            response.error_code = (cpr_response.status_code == 401 || cpr_response.status_code == 403)
+                ? APIResponse::APIError::Auth
+                : (cpr_response.status_code == 429 ? APIResponse::APIError::RateLimited : APIResponse::APIError::Server);
+            try {
+                response.raw_response = nlohmann::json::parse(cpr_response.text);
+            } catch (...) {
+                // keep raw_response default
+            }
+        }
+
+    } catch (const std::exception& e) {
+        response.error_message = "Exception: " + std::string(e.what());
+        response.error_code = APIResponse::APIError::Network;
+    }
+
+    return response;
+}
+
 // APIClientFactory Implementation
 std::unique_ptr<APIClient> APIClientFactory::createClient(ProviderType type, 
                                                          std::string_view api_key,
@@ -548,6 +677,8 @@ std::unique_ptr<APIClient> APIClientFactory::createClient(ProviderType type,
             return std::make_unique<AnthropicClient>(std::string(api_key), std::string(model));
         case ProviderType::OLLAMA:
             return std::make_unique<OllamaClient>(std::string(base_url), std::string(model));
+        case ProviderType::GEMINI:
+            return std::make_unique<GeminiClient>(std::string(api_key), std::string(model));
         default:
             return nullptr;
     }
@@ -574,6 +705,7 @@ ProviderType APIClientFactory::stringToProviderType(std::string_view provider_na
     if (name == "openai") return ProviderType::OPENAI;
     if (name == "anthropic") return ProviderType::ANTHROPIC;
     if (name == "ollama") return ProviderType::OLLAMA;
+    if (name == "gemini") return ProviderType::GEMINI;
     // Attempt to fall back to configured default provider if available
     const auto& cfg = APIConfigManager::getInstance();
     const std::string def = cfg.getDefaultProvider();
@@ -583,6 +715,7 @@ ProviderType APIClientFactory::stringToProviderType(std::string_view provider_na
     if (def_lower == "openai") return ProviderType::OPENAI;
     if (def_lower == "anthropic") return ProviderType::ANTHROPIC;
     if (def_lower == "ollama") return ProviderType::OLLAMA;
+    if (def_lower == "gemini") return ProviderType::GEMINI;
     return ProviderType::OLLAMA; // Safe default
 }
 
@@ -592,6 +725,7 @@ std::string APIClientFactory::providerTypeToString(ProviderType type) {
         case ProviderType::OPENAI: return "openai";
         case ProviderType::ANTHROPIC: return "anthropic";
         case ProviderType::OLLAMA: return "ollama";
+        case ProviderType::GEMINI: return "gemini";
         default: return "ollama";
     }
 }

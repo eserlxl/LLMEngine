@@ -83,6 +83,27 @@
         "top_p": 0.9
       }
     },
+    "gemini": {
+      "name": "Google Gemini (AI Studio)",
+      "base_url": "https://generativelanguage.googleapis.com/v1beta",
+      "models": {
+        "gemini-1.5-flash": "gemini-1.5-flash",
+        "gemini-1.5-pro": "gemini-1.5-pro"
+      },
+      "default_model": "gemini-1.5-flash",
+      "auth_type": "api_key",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "endpoints": {
+        "chat": "/models/{model}:generateContent"
+      },
+      "default_params": {
+        "temperature": 0.7,
+        "max_tokens": 2000,
+        "top_p": 0.9
+      }
+    },
     "ollama": {
       "name": "Ollama (Local)",
       "base_url": "http://localhost:11434",

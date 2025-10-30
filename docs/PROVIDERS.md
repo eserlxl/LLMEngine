@@ -10,6 +10,7 @@ Overview of supported providers and their identifiers.
 | OpenAI     | `openai`  | Online  | Yes              | Yes       | No           | GPT-3.5/4 family |
 | Anthropic  | `anthropic`| Online | Yes              | Yes       | No           | Claude 3 family |
 | Ollama     | `ollama`  | Local   | Yes              | Yes       | Yes          | Requires running daemon |
+| Gemini     | `gemini`  | Online  | Yes              | No        | No           | Google AI Studio REST |
 
 ## Provider Keys
 
@@ -17,6 +18,7 @@ Overview of supported providers and their identifiers.
 - `openai` → OpenAI
 - `anthropic` → Anthropic Claude
 - `ollama` → Ollama (local)
+- `gemini` → Google Gemini (AI Studio)
 
 ## Models (Examples)
 
@@ -24,6 +26,7 @@ Overview of supported providers and their identifiers.
 - OpenAI: `gpt-3.5-turbo`, `gpt-4o`, `gpt-4.1`
 - Anthropic: `claude-3-haiku`, `claude-3-sonnet`, `claude-3-opus`
 - Ollama: any locally installed model (e.g., `llama3`, `qwen2.5`)
+- Gemini: `gemini-1.5-flash`, `gemini-1.5-pro`
 
 ## Internal Mapping
 

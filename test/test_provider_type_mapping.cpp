@@ -23,6 +23,7 @@ int main() {
     round_trip(ProviderType::OPENAI);
     round_trip(ProviderType::ANTHROPIC);
     round_trip(ProviderType::OLLAMA);
+    round_trip(ProviderType::GEMINI);
     std::cout << "test_provider_type_mapping: OK\n";
     return 0;
 }

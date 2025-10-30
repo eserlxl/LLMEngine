@@ -65,10 +65,11 @@ LLMEngine abstracts away provider-specific details and exposes a consistent API 
 - **Tests**: API integration tests under `test/`
 
 ### Providers
-- Qwen (DashScope) — qwen-flash/qwen-plus/qwen-max/qwen2.5
+- Qwen (DashScope) — qwen-flash/qwen-plus/qwen2.5
 - OpenAI — GPT-3.5, GPT-4 family
 - Anthropic — Claude 3 series
 - Ollama — any locally served model
+- Google Gemini (AI Studio) — gemini-1.5-flash/pro
 
 [↑ Back to top](#llmengine)
 
@@ -182,6 +183,9 @@ LLMEngine openai(::LLMEngineAPI::ProviderType::OPENAI, api_key, "gpt-3.5-turbo")
 // Anthropic
 LLMEngine claude(::LLMEngineAPI::ProviderType::ANTHROPIC, api_key, "claude-3-sonnet");
 
+// Google Gemini (AI Studio)
+LLMEngine gemini(::LLMEngineAPI::ProviderType::GEMINI, api_key, "gemini-1.5-flash");
+
 // Ollama (local)
 LLMEngine ollama("http://localhost:11434", "llama2");
 ```
@@ -230,6 +234,7 @@ See `config/api_config.json` for provider defaults and parameters. Example excer
 export QWEN_API_KEY="sk-your-qwen-key"
 export OPENAI_API_KEY="sk-your-openai-key"
 export ANTHROPIC_API_KEY="sk-your-anthropic-key"
+export GEMINI_API_KEY="your-gemini-api-key"
 ```
 
 [↑ Back to top](#llmengine)

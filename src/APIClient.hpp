@@ -22,7 +22,8 @@ enum class ProviderType {
     QWEN,
     OPENAI,
     ANTHROPIC,
-    OLLAMA
+    OLLAMA,
+    GEMINI
 };
 
 /**
@@ -157,6 +158,29 @@ public:
 private:
     std::string base_url_;
     std::string model_;
+    nlohmann::json default_params_;
+};
+
+/**
+ * @brief Google Gemini (AI Studio) client.
+ */
+class GeminiClient : public APIClient {
+public:
+    /**
+     * @param api_key Google AI Studio API key.
+     * @param model Default model, e.g. "gemini-1.5-flash".
+     */
+    GeminiClient(const std::string& api_key, const std::string& model = "gemini-1.5-flash");
+    APIResponse sendRequest(std::string_view prompt,
+                           const nlohmann::json& input,
+                           const nlohmann::json& params) const override;
+    std::string getProviderName() const override { return "Gemini"; }
+    ProviderType getProviderType() const override { return ProviderType::GEMINI; }
+
+private:
+    std::string api_key_;
+    std::string model_;
+    std::string base_url_;
     nlohmann::json default_params_;
 };
 
