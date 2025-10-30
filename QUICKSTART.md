@@ -10,6 +10,8 @@ The LLMEngine library now supports **online AI model APIs** including:
 
 ## 🚀 Quick Start
 
+See also: `docs/CONFIGURATION.md`, `docs/PROVIDERS.md`, and `docs/API_REFERENCE.md`.
+
 ### 1. Using Qwen API (Recommended for Testing)
 
 ```cpp
@@ -53,7 +55,7 @@ int main() {
 # Rebuild the library
 cd build
 cmake ..
-ninja
+make -j20
 
 # Create a test program
 cat > test_qwen.cpp << 'EOF'
