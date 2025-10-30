@@ -40,7 +40,8 @@ The `api_config.json` file contains provider configurations for various AI servi
 #include "LLMEngine.hpp"
 
 int main() {
-    std::string api_key = "your-qwen-api-key";
+    const char* api_key = std::getenv("QWEN_API_KEY");
+    if (!api_key) { return 1; }
     std::string model = "qwen-flash";
     
     nlohmann::json params = {
@@ -49,7 +50,7 @@ int main() {
     };
     
     // Method 1: Using provider type
-    LLMEngine engine(::LLMEngine::ProviderType::QWEN, api_key, model, params);
+    LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, api_key, model, params);
     
     // Method 2: Using provider name (loads from config)
     LLMEngine engine2("qwen", api_key, model, params);
@@ -70,9 +71,10 @@ int main() {
 #include "LLMEngine.hpp"
 
 int main() {
-    std::string api_key = "your-openai-api-key";
+    const char* api_key = std::getenv("OPENAI_API_KEY");
+    if (!api_key) { return 1; }
     
-    LLMEngine engine(::LLMEngine::ProviderType::OPENAI, api_key, "gpt-3.5-turbo");
+    LLMEngine engine(::LLMEngineAPI::ProviderType::OPENAI, api_key, "gpt-3.5-turbo");
     
     std::string prompt = "Write a haiku about programming";
     nlohmann::json input = {};
@@ -237,7 +239,7 @@ Example custom configuration:
 
 ### Debug Mode
 
-Enable debug mode to see detailed logs:
+Enable debug mode to see detailed logs (avoid hardcoding keys; prefer environment variables):
 
 ```cpp
 LLMEngine engine("qwen", api_key, "qwen-flash", params, 24, true); // debug=true
