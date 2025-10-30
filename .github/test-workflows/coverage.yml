@@ -1,0 +1,40 @@
+name: Test (Coverage)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup C++ toolchain
+        uses: ./.github/actions/setup-cpp
+
+      - name: Configure (Debug + Coverage)
+        run: |
+          cmake --preset debug -DENABLE_COVERAGE=ON
+
+      - name: Build
+        run: |
+          cmake --build build --parallel 4
+
+      - name: Run tests
+        run: |
+          ctest --test-dir build --output-on-failure
+
+      - name: Upload coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-raw
+          path: |
+            build/**/*.profraw
+            build/**/*.profdata
+            build/**/*.gcno
+            build/**/*.gcda
+            build/**/*.info
+
+

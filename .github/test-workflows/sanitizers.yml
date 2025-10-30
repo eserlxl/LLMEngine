@@ -1,0 +1,28 @@
+name: Test (Sanitizers)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  asan_ubsan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup C++ toolchain
+        uses: ./.github/actions/setup-cpp
+
+      - name: Configure (Debug + ASAN/UBSAN)
+        run: |
+          cmake --preset debug -DLLM_ENABLE_ASAN=ON -DLLM_ENABLE_UBSAN=ON
+
+      - name: Build
+        run: |
+          cmake --build build --parallel 4
+
+      - name: Run tests
+        run: |
+          ctest --test-dir build --output-on-failure
+
+
