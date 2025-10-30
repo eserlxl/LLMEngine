@@ -502,11 +502,22 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(const std::s
 }
 
 ProviderType APIClientFactory::stringToProviderType(const std::string& provider_name) {
-    if (provider_name == "qwen") return ProviderType::QWEN;
-    if (provider_name == "openai") return ProviderType::OPENAI;
-    if (provider_name == "anthropic") return ProviderType::ANTHROPIC;
-    if (provider_name == "ollama") return ProviderType::OLLAMA;
-    return ProviderType::OLLAMA; // Default fallback
+    std::string name = provider_name;
+    std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+    if (name == "qwen") return ProviderType::QWEN;
+    if (name == "openai") return ProviderType::OPENAI;
+    if (name == "anthropic") return ProviderType::ANTHROPIC;
+    if (name == "ollama") return ProviderType::OLLAMA;
+    // Attempt to fall back to configured default provider if available
+    const auto& cfg = APIConfigManager::getInstance();
+    const std::string def = cfg.getDefaultProvider();
+    std::string def_lower = def;
+    std::transform(def_lower.begin(), def_lower.end(), def_lower.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+    if (def_lower == "qwen") return ProviderType::QWEN;
+    if (def_lower == "openai") return ProviderType::OPENAI;
+    if (def_lower == "anthropic") return ProviderType::ANTHROPIC;
+    if (def_lower == "ollama") return ProviderType::OLLAMA;
+    return ProviderType::OLLAMA; // Safe default
 }
 
 std::string APIClientFactory::providerTypeToString(ProviderType type) {

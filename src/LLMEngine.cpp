@@ -111,30 +111,35 @@ void LLMEngine::initializeAPIClient() {
 
 void LLMEngine::cleanupResponseFiles() const {
     std::vector<std::string> files_to_clean = {
-        "ollama_response.json",
-        "ollama_response_full.txt",
-        "ollama_response_error.json",
-        "api_response.json",
-        "api_response_error.json"
+        "/ollama_response.json",
+        "/ollama_response_full.txt",
+        "/ollama_response_error.json",
+        "/api_response.json",
+        "/api_response_error.json",
+        "/response_full.txt"
     };
-    
+
+    std::error_code ec_dir;
+    std::filesystem::create_directories(Utils::TMP_DIR, ec_dir);
+
     int cleaned_count = 0;
-    for (const auto& filename : files_to_clean) {
-        if (std::filesystem::exists(filename)) {
-            try {
-                std::filesystem::remove(filename);
+    for (const auto& suffix : files_to_clean) {
+        const std::string path = Utils::TMP_DIR + suffix;
+        std::error_code ec;
+        if (std::filesystem::exists(path, ec) && std::filesystem::is_regular_file(path, ec)) {
+            if (std::filesystem::remove(path, ec)) {
                 cleaned_count++;
                 if (debug_) {
-                    std::cout << "[DEBUG] Cleaned up existing file: " << filename << std::endl;
+                    std::cout << "[DEBUG] Cleaned up existing file: " << path << std::endl;
                 }
-            } catch (const std::filesystem::filesystem_error& e) {
-                std::cerr << "[WARNING] Failed to remove " << filename << ": " << e.what() << std::endl;
+            } else if (ec) {
+                std::cerr << "[WARNING] Failed to remove " << path << ": " << ec.message() << std::endl;
             }
         }
     }
-    
+
     if (cleaned_count > 0 && debug_) {
-        std::cout << "[DEBUG] Cleaned up " << cleaned_count << " existing response file(s)" << std::endl;
+        std::cout << "[DEBUG] Cleaned up " << cleaned_count << " existing response file(s) in " << Utils::TMP_DIR << std::endl;
     }
 }
 
@@ -290,8 +295,22 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
     std::filesystem::create_directories(Utils::TMP_DIR, ec);
     
     // Write files
+    auto sanitize_name = [](std::string name) {
+        if (name.empty()) name = "analysis";
+        // Replace path separators and whitespace with underscore; keep simple ascii
+        for (char& ch : name) {
+            if (!(std::isalnum(static_cast<unsigned char>(ch)) || ch == '-' || ch == '_' || ch == '.')) {
+                ch = '_';
+            }
+        }
+        // Trim excessive length
+        if (name.size() > 64) name.resize(64);
+        return name;
+    };
+    const std::string safe_analysis_name = sanitize_name(analysis_type);
     try {
-        std::ofstream tfile(Utils::TMP_DIR + "/" + analysis_type + ".think.txt", std::ios::trunc);
+        std::ofstream tfile(Utils::TMP_DIR + "/" + safe_analysis_name + ".think.txt", std::ios::trunc);
+        if (!tfile) throw std::runtime_error("open failed");
         tfile << think_section;
         if (debug_) std::cout << "[DEBUG] Wrote think section\n";
     } catch (...) {
@@ -299,7 +318,8 @@ std::vector<std::string> LLMEngine::analyze(const std::string& prompt,
     }
     
     try {
-        std::ofstream rfile(Utils::TMP_DIR + "/" + analysis_type + ".txt", std::ios::trunc);
+        std::ofstream rfile(Utils::TMP_DIR + "/" + safe_analysis_name + ".txt", std::ios::trunc);
+        if (!rfile) throw std::runtime_error("open failed");
         rfile << remaining_section;
         if (debug_) std::cout << "[DEBUG] Wrote remaining section\n";
     } catch (...) {
