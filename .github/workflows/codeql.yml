@@ -17,6 +17,7 @@ on:
       - 'include/**'
       - 'CMakeLists.txt'
       - '.github/workflows/codeql.yml'
+      - '.github/codeql/codeql-config.yml'
       - 'tests/**'
   schedule:
     # Run security scan weekly on Sundays at 02:00 UTC
@@ -56,7 +57,7 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-          queries: security-extended
+          config-file: ./.github/codeql/codeql-config.yml
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v4
