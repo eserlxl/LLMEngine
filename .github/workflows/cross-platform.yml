@@ -99,9 +99,13 @@ jobs:
           else
             PYTHON_CMD=python
           fi
+          # Create virtual environment to avoid PEP 668 issues (Arch Linux)
+          $PYTHON_CMD -m venv /tmp/meson-venv
+          source /tmp/meson-venv/bin/activate
           $PYTHON_CMD -m pip install --upgrade pip
           $PYTHON_CMD -m pip install meson
           meson --version
+          echo "/tmp/meson-venv/bin" >> $GITHUB_PATH
 
       - name: Build and test
         run: |
