@@ -1,20 +1,25 @@
 Checks: |
   -*,
   bugprone-*,
+  -bugprone-easily-swappable-parameters,
   clang-analyzer-*,
   performance-*,
+  -performance-avoid-endl,
   modernize-*,
+  -modernize-pass-by-value,
+  -modernize-use-trailing-return-type,
   readability-*,
+  -readability-identifier-length,
+  -readability-function-cognitive-complexity,
+  -readability-qualified-auto,
+  -readability-braces-around-statements,
+  -readability-simplify-boolean-expr,
+  -readability-implicit-bool-conversion,
+  -readability-identifier-naming,
   portability-*,
-  cppcoreguidelines-avoid-magic-numbers,
   hicpp-use-auto
 WarningsAsErrors: ''
 HeaderFilterRegex: '^(src|examples|test)/.*'
 FormatStyle: none
-CheckOptions:
-  - key:             readability-identifier-naming.VariableCase
-    value:           lower_case
-  - key:             readability-identifier-naming.PrivateMemberSuffix
-    value:           _
 
 
