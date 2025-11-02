@@ -225,7 +225,18 @@ public:
     static APIConfigManager& getInstance();
     
     /**
+     * @brief Set the default configuration file path.
+     * @param config_path The path to use as default when loadConfig() is called without arguments.
+     */
+    void setDefaultConfigPath(std::string_view config_path);
+    /**
+     * @brief Get the current default configuration file path.
+     * @return The current default config path.
+     */
+    [[nodiscard]] std::string getDefaultConfigPath() const;
+    /**
      * @brief Load configuration from path or default search order.
+     * @param config_path Optional explicit path. If empty, uses the default path set via setDefaultConfigPath().
      * @return true if configuration loaded successfully.
      */
     bool loadConfig(std::string_view config_path = "");
@@ -243,10 +254,11 @@ public:
     [[nodiscard]] int getRetryDelayMs() const;
 
 private:
-    APIConfigManager() = default;
+    APIConfigManager();
     mutable std::shared_mutex mutex_;  // For read-write lock
     nlohmann::json config_;
     bool config_loaded_ = false;
+    std::string default_config_path_;  // Default config file path
 };
 
 } // namespace LLMEngineAPI

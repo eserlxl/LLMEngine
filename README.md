@@ -228,6 +228,31 @@ See `config/api_config.json` for provider defaults and parameters. Example excer
 }
 ```
 
+### Customizing Config File Path
+
+You can change the default configuration file path using the `APIConfigManager` API:
+
+```cpp
+#include "APIClient.hpp"
+
+using namespace LLMEngineAPI;
+
+// Get the config manager instance
+auto& config_mgr = APIConfigManager::getInstance();
+
+// Set a custom default path
+config_mgr.setDefaultConfigPath("/custom/path/api_config.json");
+
+// Query the current default path
+std::string current_path = config_mgr.getDefaultConfigPath();
+
+// Now loadConfig() without arguments will use the custom path
+config_mgr.loadConfig();  // Uses "/custom/path/api_config.json"
+
+// Or still override with explicit path when needed
+config_mgr.loadConfig("/another/path/config.json");  // Uses explicit path
+```
+
 ### API Keys
 
 ```bash

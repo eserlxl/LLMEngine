@@ -26,6 +26,23 @@ int main() {
         assert(cfg.is_null() || cfg.empty());
     }
 
+    // Test default config path API
+    {
+        auto& mgr = APIConfigManager::getInstance();
+        
+        // Check default path is set to expected value
+        std::string default_path = mgr.getDefaultConfigPath();
+        assert(default_path == "config/api_config.json");
+        
+        // Change the default path
+        mgr.setDefaultConfigPath("/custom/path/config.json");
+        assert(mgr.getDefaultConfigPath() == "/custom/path/config.json");
+        
+        // Reset to original default
+        mgr.setDefaultConfigPath("config/api_config.json");
+        assert(mgr.getDefaultConfigPath() == "config/api_config.json");
+    }
+
     std::cout << "test_api_config_manager: OK\n";
     return 0;
 }

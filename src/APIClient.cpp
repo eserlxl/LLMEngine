@@ -815,13 +815,38 @@ std::string APIClientFactory::providerTypeToString(ProviderType type) {
 }
 
 // APIConfigManager Implementation
+APIConfigManager::APIConfigManager() : default_config_path_("config/api_config.json") {
+}
+
 APIConfigManager& APIConfigManager::getInstance() {
     static APIConfigManager instance;
     return instance;
 }
 
+void APIConfigManager::setDefaultConfigPath(std::string_view config_path) {
+    // Exclusive lock for writing default path
+    std::unique_lock<std::shared_mutex> lock(mutex_);
+    default_config_path_ = std::string(config_path);
+}
+
+std::string APIConfigManager::getDefaultConfigPath() const {
+    // Shared lock for reading default path
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    return default_config_path_;
+}
+
 bool APIConfigManager::loadConfig(std::string_view config_path) {
-    std::string path = config_path.empty() ? std::string("config/api_config.json") : std::string(config_path);
+    std::string path;
+    if (config_path.empty()) {
+        // Use stored default path - read it first with shared lock
+        {
+            std::shared_lock<std::shared_mutex> lock(mutex_);
+            path = default_config_path_;
+        }
+        // Then acquire exclusive lock for writing configuration
+    } else {
+        path = std::string(config_path);
+    }
     
     // Exclusive lock for writing configuration
     std::unique_lock<std::shared_mutex> lock(mutex_);

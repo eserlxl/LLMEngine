@@ -5,9 +5,35 @@ This document explains how to configure LLMEngine for online providers and local
 ## File Locations
 
 Search order for `api_config.json`:
-1. Explicit path passed to the config manager in your code
-2. `config/api_config.json` (project/local run)
+1. Explicit path passed to `loadConfig(path)` in your code
+2. Default path set via `setDefaultConfigPath()` (defaults to `config/api_config.json`)
 3. `/usr/share/llmEngine/config/api_config.json` (after install)
+
+### Changing the Default Config Path
+
+You can programmatically change the default configuration file path using the `APIConfigManager` API:
+
+```cpp
+#include "APIClient.hpp"
+
+using namespace LLMEngineAPI;
+
+auto& config_mgr = APIConfigManager::getInstance();
+
+// Set a custom default path
+config_mgr.setDefaultConfigPath("/custom/path/api_config.json");
+
+// Query the current default path
+std::string path = config_mgr.getDefaultConfigPath();  // Returns "/custom/path/api_config.json"
+
+// Load using the default path
+config_mgr.loadConfig();  // Uses "/custom/path/api_config.json"
+
+// Or override with explicit path
+config_mgr.loadConfig("/another/path/config.json");  // Uses explicit path
+```
+
+The default path is initialized to `config/api_config.json` when the library starts, but can be changed at runtime. All methods are thread-safe.
 
 Environment overrides: when both config and environment variables are present, the library uses API keys from environment variables and defaults (model/params) from the config file.
 

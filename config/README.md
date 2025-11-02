@@ -202,8 +202,31 @@ export QWEN_API_KEY="your-key"
 The library looks for `api_config.json` in the following locations (in order):
 
 1. Path specified in code: `config_mgr.loadConfig("/custom/path/api_config.json")`
-2. `config/api_config.json` (relative to current directory)
+2. Default path set via `config_mgr.setDefaultConfigPath()` (defaults to `config/api_config.json`)
 3. `/usr/share/llmEngine/config/api_config.json` (after installation)
+
+### Programmatically Setting Default Config Path
+
+You can change the default configuration file path at runtime:
+
+```cpp
+#include "APIClient.hpp"
+
+using namespace LLMEngineAPI;
+
+auto& config_mgr = APIConfigManager::getInstance();
+
+// Set a custom default path
+config_mgr.setDefaultConfigPath("/custom/path/api_config.json");
+
+// Query the current default path
+std::string current_path = config_mgr.getDefaultConfigPath();
+
+// Load using the default path (no arguments needed)
+config_mgr.loadConfig();  // Uses "/custom/path/api_config.json"
+```
+
+This is useful when your application needs to load configuration from a non-standard location or when the config location is determined at runtime.
 
 ## Customizing Configuration
 

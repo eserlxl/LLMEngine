@@ -148,6 +148,14 @@ Edit `config/api_config.json` to customize:
 - Timeout settings
 - Retry configuration
 
+**Custom Config Path**: You can change the default config file path programmatically:
+```cpp
+auto& config_mgr = ::LLMEngineAPI::APIConfigManager::getInstance();
+config_mgr.setDefaultConfigPath("/custom/path/api_config.json");
+config_mgr.loadConfig();  // Uses the custom path
+```
+See `docs/CONFIGURATION.md` for more details.
+
 Example:
 ```json
 {
