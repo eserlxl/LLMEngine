@@ -17,6 +17,7 @@ on:
       - 'include/**'
       - 'CMakeLists.txt'
       - '.github/workflows/codeql.yml'
+      - '.github/codeql/codeql-config.yml'
       - 'tests/**'
   schedule:
     # Run security scan weekly on Sundays at 02:00 UTC
@@ -56,12 +57,12 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-          # Note: If you see errors about "advanced configurations cannot be processed
-          # when the default setup is enabled", you must disable the default CodeQL setup
-          # in repository settings: Settings → Code security and analysis → Code scanning
+          config-file: ./.github/codeql/codeql-config.yml
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
