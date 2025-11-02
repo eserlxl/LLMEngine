@@ -159,8 +159,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 # Public dependencies (exported to consumers)
 target_link_libraries(${PROJECT_NAME} PUBLIC
-  cpr::cpr
   nlohmann_json::nlohmann_json)
+# Private dependencies (implementation only, not exported)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  cpr::cpr)
 
 # Include directories (needed by consumers)
 target_include_directories(${PROJECT_NAME} PUBLIC
