@@ -76,7 +76,7 @@ jobs:
             -DCMAKE_CXX_STANDARD=20 \
             -DCMAKE_CXX_STANDARD_REQUIRED=ON \
             -DBUILD_TESTING=ON \
-            -DCMAKE_CXX_CLANG_TIDY="clang-tidy;-warnings-as-errors=*"
+            -DENABLE_CLANG_TIDY=ON
 
       - name: Build (runs clang-tidy via CMake)
         run: |

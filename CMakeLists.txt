@@ -127,16 +127,26 @@ endif()
 
 # (Removed unused helper target flag wiring; flags applied directly to main target below)
 
-# Optional clang-tidy
+# Optional clang-tidy (set only on our targets, not globally, to avoid running on dependencies)
+# Use CACHE so subdirectories can access it
+set(_CLANG_TIDY_CMD "" CACHE STRING "clang-tidy command for our targets")
 if (ENABLE_CLANG_TIDY)
   find_program(CLANG_TIDY_EXE NAMES clang-tidy)
   if (CLANG_TIDY_EXE)
-    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-warnings-as-errors=*")
-    message(STATUS "clang-tidy enabled: ${CLANG_TIDY_EXE}")
+    set(_CLANG_TIDY_CMD "${CLANG_TIDY_EXE};-warnings-as-errors=*;-header-filter=^(src|examples|test)/.*" CACHE STRING "clang-tidy command for our targets" FORCE)
+    message(STATUS "clang-tidy enabled: ${CLANG_TIDY_EXE} (will be applied to LLMEngine targets only)")
   else()
     message(WARNING "ENABLE_CLANG_TIDY is ON but clang-tidy not found")
+    set(_CLANG_TIDY_CMD "" CACHE STRING "clang-tidy command for our targets" FORCE)
   endif()
 endif()
+
+# Helper function to apply clang-tidy to a target (for use in subdirectories)
+function(apply_clang_tidy_to_target target_name)
+  if (_CLANG_TIDY_CMD)
+    set_target_properties(${target_name} PROPERTIES CXX_CLANG_TIDY "${_CLANG_TIDY_CMD}")
+  endif()
+endfunction()
 
 # ---- Helper macros for reusable patterns ------------------------------------
 # Creates a namespaced alias for a library target (e.g., mylib::mylib)
@@ -165,6 +175,12 @@ add_library(${PROJECT_NAME}
 set_target_properties(${PROJECT_NAME} PROPERTIES
   VERSION ${PROJECT_VERSION}
   SOVERSION ${PROJECT_VERSION_MAJOR})
+
+# Apply clang-tidy only to our target (not dependencies)
+if (_CLANG_TIDY_CMD)
+  set_target_properties(${PROJECT_NAME} PROPERTIES
+    CXX_CLANG_TIDY "${_CLANG_TIDY_CMD}")
+endif()
 
 # Public dependencies (exported to consumers)
 target_link_libraries(${PROJECT_NAME} PUBLIC
