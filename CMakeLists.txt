@@ -66,6 +66,7 @@ find_package(OpenSSL REQUIRED)
 
 # Prefer system-provided nlohmann_json via config; fall back to FetchContent
 find_package(nlohmann_json CONFIG QUIET)
+set(NLOHMANN_JSON_FETCHED FALSE)
 if (NOT nlohmann_json_FOUND)
   include(FetchContent)
   message(STATUS "nlohmann_json not found via package config; fetching with FetchContent")
@@ -76,6 +77,7 @@ if (NOT nlohmann_json_FOUND)
     FIND_PACKAGE_ARGS NAMES nlohmann_json
   )
   FetchContent_MakeAvailable(nlohmann_json)
+  set(NLOHMANN_JSON_FETCHED TRUE)
   # Some environments expose an un-namespaced target; normalize if needed
   if (TARGET nlohmann_json AND NOT TARGET nlohmann_json::nlohmann_json)
     add_library(nlohmann_json::nlohmann_json ALIAS nlohmann_json)
@@ -110,8 +112,9 @@ endif()
 # ---- Install dirs and prefix --------------------------------------------------
 include(GNUInstallDirs)
 
-# Track if cpr needs to be added to the export set (when fetched via FetchContent)
+# Track if dependencies need to be added to the export set (when fetched via FetchContent)
 # This is used later when installing targets to satisfy CMake's export validation
+set(NLOHMANN_JSON_NEEDS_EXPORT ${NLOHMANN_JSON_FETCHED})
 set(CPR_NEEDS_EXPORT ${CPR_FETCHED})
 
 # ---- Helper interface targets ------------------------------------------------
@@ -274,20 +277,25 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 # ---- Install ------------------------------------------------------------------
 # Install library (handles both static and shared) and export targets
-# If cpr was fetched, include it in the same export set to satisfy CMake validation
-if (CPR_NEEDS_EXPORT AND TARGET cpr)
-  install(TARGETS ${PROJECT_NAME} cpr
-    EXPORT ${PROJECT_NAME}Targets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-else()
-  install(TARGETS ${PROJECT_NAME}
-    EXPORT ${PROJECT_NAME}Targets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+# If dependencies were fetched via FetchContent, include them in the same export set
+# to satisfy CMake's export validation (required for PUBLIC dependencies)
+set(_targets_to_install ${PROJECT_NAME})
+if (NLOHMANN_JSON_NEEDS_EXPORT)
+  # Check for the actual target name (may be namespaced or not depending on FetchContent)
+  if (TARGET nlohmann_json)
+    list(APPEND _targets_to_install nlohmann_json)
+  elseif (TARGET nlohmann_json::nlohmann_json)
+    list(APPEND _targets_to_install nlohmann_json::nlohmann_json)
+  endif()
 endif()
+if (CPR_NEEDS_EXPORT AND TARGET cpr)
+  list(APPEND _targets_to_install cpr)
+endif()
+install(TARGETS ${_targets_to_install}
+  EXPORT ${PROJECT_NAME}Targets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # Install public headers
 install(FILES
