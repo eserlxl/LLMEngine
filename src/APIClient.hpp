@@ -12,6 +12,7 @@
 #include <memory>
 #include <map>
 #include <vector>
+#include <shared_mutex>
 
 namespace LLMEngineAPI {
 
@@ -215,6 +216,9 @@ public:
 
 /**
  * @brief Singleton managing `api_config.json` loading and access.
+ * 
+ * Thread-safe singleton for configuration management. All methods are thread-safe
+ * and can be called concurrently from multiple threads.
  */
 class APIConfigManager {
 public:
@@ -240,6 +244,7 @@ public:
 
 private:
     APIConfigManager() = default;
+    mutable std::shared_mutex mutex_;  // For read-write lock
     nlohmann::json config_;
     bool config_loaded_ = false;
 };

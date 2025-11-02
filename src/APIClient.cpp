@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <thread>
 #include <chrono>
+#include <cstring>
 
 namespace LLMEngineAPI {
 
@@ -51,8 +52,6 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
                                     const nlohmann::json& params) const {
     APIResponse response;
     response.success = false;
-    response.error_code = APIResponse::APIError::Unknown;
-    response.error_code = APIResponse::APIError::Unknown;
     response.error_code = APIResponse::APIError::Unknown;
     
     try {
@@ -117,26 +116,34 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
         }
         
         response.status_code = static_cast<int>(cpr_response.status_code);
-        response.raw_response = nlohmann::json::parse(cpr_response.text);
         
         if (cpr_response.status_code == HTTP_STATUS_OK) {
-            if (response.raw_response.contains("choices") && 
-                response.raw_response["choices"].is_array() && 
-                !response.raw_response["choices"].empty()) {
+            // Only parse JSON for successful responses
+            try {
+                response.raw_response = nlohmann::json::parse(cpr_response.text);
                 
-                auto choice = response.raw_response["choices"][0];
-                if (choice.contains("message") && choice["message"].contains("content")) {
-                    response.content = choice["message"]["content"].get<std::string>();
-                    response.success = true;
+                if (response.raw_response.contains("choices") && 
+                    response.raw_response["choices"].is_array() && 
+                    !response.raw_response["choices"].empty()) {
+                    
+                    auto choice = response.raw_response["choices"][0];
+                    if (choice.contains("message") && choice["message"].contains("content")) {
+                        response.content = choice["message"]["content"].get<std::string>();
+                        response.success = true;
+                    } else {
+                        response.error_message = "No content in response";
+                        response.error_code = APIResponse::APIError::InvalidResponse;
+                    }
                 } else {
-                    response.error_message = "No content in response";
+                    response.error_message = "Invalid response format";
                     response.error_code = APIResponse::APIError::InvalidResponse;
                 }
-            } else {
-                response.error_message = "Invalid response format";
+            } catch (const nlohmann::json::parse_error& e) {
+                response.error_message = "JSON parse error in successful response: " + std::string(e.what());
                 response.error_code = APIResponse::APIError::InvalidResponse;
             }
         } else {
+            // For error responses, attempt to parse JSON but don't fail if it's not JSON
             response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
             if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
                 response.error_code = APIResponse::APIError::Auth;
@@ -144,6 +151,16 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
                 response.error_code = APIResponse::APIError::RateLimited;
             } else {
                 response.error_code = APIResponse::APIError::Server;
+            }
+            
+            // Attempt to parse error response JSON if available
+            if (!cpr_response.text.empty()) {
+                try {
+                    response.raw_response = nlohmann::json::parse(cpr_response.text);
+                } catch (const nlohmann::json::parse_error&) {
+                    // Non-JSON error response is acceptable - keep raw_response as default empty json
+                    // error_message already contains the text
+                }
             }
         }
         
@@ -723,7 +740,25 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_
         std::string model = config.value("default_model", "llama2");
         return std::make_unique<OllamaClient>(base_url, model);
     }
+    
+    // SECURITY: Prefer environment variables for API keys over config file
+    // Environment variable names: QWEN_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY
     std::string api_key = config.value("api_key", "");
+    std::string env_var_name;
+    switch (type) {
+        case ProviderType::QWEN: env_var_name = "QWEN_API_KEY"; break;
+        case ProviderType::OPENAI: env_var_name = "OPENAI_API_KEY"; break;
+        case ProviderType::ANTHROPIC: env_var_name = "ANTHROPIC_API_KEY"; break;
+        case ProviderType::GEMINI: env_var_name = "GEMINI_API_KEY"; break;
+        default: break;
+    }
+    
+    // Override config API key with environment variable if available
+    const char* env_api_key = std::getenv(env_var_name.c_str());
+    if (env_api_key && strlen(env_api_key) > 0) {
+        api_key = env_api_key;
+    }
+    
     std::string model = config.value("default_model", "");
     return createClient(type, api_key, model);
 }
@@ -731,22 +766,37 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_
 ProviderType APIClientFactory::stringToProviderType(std::string_view provider_name) {
     std::string name(provider_name);
     std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+    
+    // Direct mapping for known providers
     if (name == "qwen") return ProviderType::QWEN;
     if (name == "openai") return ProviderType::OPENAI;
     if (name == "anthropic") return ProviderType::ANTHROPIC;
     if (name == "ollama") return ProviderType::OLLAMA;
     if (name == "gemini") return ProviderType::GEMINI;
-    // Attempt to fall back to configured default provider if available
+    
+    // SECURITY: Fail fast on unknown providers instead of silently falling back
+    // This prevents unexpected provider selection in multi-tenant contexts
+    // If an empty or invalid provider is provided, throw an exception rather than defaulting
+    if (!name.empty()) {
+        throw std::runtime_error("Unknown provider: " + name + 
+                                 ". Supported providers: qwen, openai, anthropic, ollama, gemini");
+    }
+    
+    // Only use default for empty string (explicit empty provider request)
+    // This maintains backward compatibility while preventing silent failures
     const auto& cfg = APIConfigManager::getInstance();
     const std::string def = cfg.getDefaultProvider();
     std::string def_lower = def;
     std::transform(def_lower.begin(), def_lower.end(), def_lower.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+    
     if (def_lower == "qwen") return ProviderType::QWEN;
     if (def_lower == "openai") return ProviderType::OPENAI;
     if (def_lower == "anthropic") return ProviderType::ANTHROPIC;
     if (def_lower == "ollama") return ProviderType::OLLAMA;
     if (def_lower == "gemini") return ProviderType::GEMINI;
-    return ProviderType::OLLAMA; // Safe default
+    
+    // Last resort: use Ollama as safe default only if default provider is also invalid
+    return ProviderType::OLLAMA;
 }
 
 std::string APIClientFactory::providerTypeToString(ProviderType type) {
@@ -769,6 +819,9 @@ APIConfigManager& APIConfigManager::getInstance() {
 bool APIConfigManager::loadConfig(std::string_view config_path) {
     std::string path = config_path.empty() ? std::string("config/api_config.json") : std::string(config_path);
     
+    // Exclusive lock for writing configuration
+    std::unique_lock<std::shared_mutex> lock(mutex_);
+    
     try {
         std::ifstream file(path);
         if (!file.is_open()) {
@@ -786,6 +839,9 @@ bool APIConfigManager::loadConfig(std::string_view config_path) {
 }
 
 nlohmann::json APIConfigManager::getProviderConfig(std::string_view provider_name) const {
+    // Shared lock for reading configuration
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    
     if (!config_loaded_) {
         return nlohmann::json{};
     }
@@ -801,6 +857,9 @@ nlohmann::json APIConfigManager::getProviderConfig(std::string_view provider_nam
 }
 
 std::vector<std::string> APIConfigManager::getAvailableProviders() const {
+    // Shared lock for reading configuration
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    
     std::vector<std::string> providers;
     
     if (config_loaded_ && config_.contains("providers")) {
@@ -813,6 +872,9 @@ std::vector<std::string> APIConfigManager::getAvailableProviders() const {
 }
 
 std::string APIConfigManager::getDefaultProvider() const {
+    // Shared lock for reading configuration
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    
     if (config_loaded_ && config_.contains("default_provider")) {
         return config_["default_provider"].get<std::string>();
     }
@@ -820,6 +882,9 @@ std::string APIConfigManager::getDefaultProvider() const {
 }
 
 int APIConfigManager::getTimeoutSeconds() const {
+    // Shared lock for reading configuration
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    
     if (config_loaded_ && config_.contains("timeout_seconds")) {
         return config_["timeout_seconds"].get<int>();
     }
@@ -827,6 +892,9 @@ int APIConfigManager::getTimeoutSeconds() const {
 }
 
 int APIConfigManager::getRetryAttempts() const {
+    // Shared lock for reading configuration
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    
     if (config_loaded_ && config_.contains("retry_attempts")) {
         return config_["retry_attempts"].get<int>();
     }
@@ -834,6 +902,9 @@ int APIConfigManager::getRetryAttempts() const {
 }
 
 int APIConfigManager::getRetryDelayMs() const {
+    // Shared lock for reading configuration
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    
     if (config_loaded_ && config_.contains("retry_delay_ms")) {
         return config_["retry_delay_ms"].get<int>();
     }

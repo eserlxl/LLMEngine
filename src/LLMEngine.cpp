@@ -14,6 +14,9 @@
 #include <vector>
 #include <ctime>
 #include <iomanip>
+#include <chrono>
+#include <algorithm>
+#include <cctype>
 #include "LLMOutputProcessor.hpp"
 #include "Utils.hpp"
 #include <filesystem>
@@ -111,15 +114,38 @@ LLMEngine::LLMEngine(std::string_view provider_name,
         throw std::runtime_error("Invalid provider name");
     }
     
+    // Set provider type
+    provider_type_ = ::LLMEngineAPI::APIClientFactory::stringToProviderType(resolved_provider);
+    
+    // SECURITY: Prefer environment variables for API keys over config file or constructor parameter
+    // Only use provided api_key if environment variable is not set
+    std::string env_var_name;
+    switch (provider_type_) {
+        case ::LLMEngineAPI::ProviderType::QWEN: env_var_name = "QWEN_API_KEY"; break;
+        case ::LLMEngineAPI::ProviderType::OPENAI: env_var_name = "OPENAI_API_KEY"; break;
+        case ::LLMEngineAPI::ProviderType::ANTHROPIC: env_var_name = "ANTHROPIC_API_KEY"; break;
+        case ::LLMEngineAPI::ProviderType::GEMINI: env_var_name = "GEMINI_API_KEY"; break;
+        default: break;
+    }
+    
+    // Override API key with environment variable if available
+    const char* env_api_key = std::getenv(env_var_name.c_str());
+    if (env_api_key && strlen(env_api_key) > 0) {
+        api_key_ = env_api_key;
+    } else if (!std::string(api_key).empty()) {
+        // Use provided API key if environment variable is not set
+        api_key_ = std::string(api_key);
+    } else {
+        // Fall back to config file (last resort - not recommended for production)
+        api_key_ = provider_config.value("api_key", "");
+    }
+    
     // Set model
     if (std::string(model).empty()) {
         model_ = provider_config.value("default_model", "");
     } else {
         model_ = std::string(model);
     }
-    
-    // Set provider type
-    provider_type_ = ::LLMEngineAPI::APIClientFactory::stringToProviderType(resolved_provider);
     
     // Set Ollama URL if using Ollama
     if (provider_type_ == ::LLMEngineAPI::ProviderType::OLLAMA) {
@@ -140,6 +166,87 @@ void LLMEngine::initializeAPIClient() {
     
     if (!api_client_) {
         throw std::runtime_error("Failed to create API client");
+    }
+}
+
+// Helper function to sanitize JSON by redacting sensitive fields
+namespace {
+    nlohmann::json sanitizeJson(const nlohmann::json& json, const std::string& api_key = "") {
+        if (json.is_string()) {
+            // Handle string values - redact API key if present
+            std::string str = json.get<std::string>();
+            if (!api_key.empty()) {
+                size_t pos = 0;
+                while ((pos = str.find(api_key, pos)) != std::string::npos) {
+                    str.replace(pos, api_key.length(), "<REDACTED>");
+                    pos += 10; // length of "<REDACTED>"
+                }
+            }
+            return nlohmann::json(str);
+        }
+        
+        if (!json.is_object()) {
+            return json;
+        }
+        
+        nlohmann::json sanitized = json;
+        
+        // List of fields that may contain sensitive information
+        const std::vector<std::string> sensitive_keys = {
+            "api_key", "apikey", "access_token", "accesstoken", "token",
+            "authorization", "x-api-key", "xapikey",
+            "secret", "password", "passwd", "pwd", "credential"
+        };
+        
+        // Redact sensitive fields
+        for (auto& [key, value] : sanitized.items()) {
+            std::string key_lower = key;
+            std::transform(key_lower.begin(), key_lower.end(), key_lower.begin(), ::tolower);
+            
+            for (const auto& sensitive : sensitive_keys) {
+                if (key_lower.find(sensitive) != std::string::npos) {
+                    sanitized[key] = "<REDACTED>";
+                    break;
+                }
+            }
+            
+            // Recursively sanitize nested objects and arrays
+            if (value.is_object()) {
+                sanitized[key] = sanitizeJson(value, api_key);
+            } else if (value.is_array()) {
+                nlohmann::json sanitized_array = nlohmann::json::array();
+                for (const auto& item : value) {
+                    sanitized_array.push_back(sanitizeJson(item, api_key));
+                }
+                sanitized[key] = sanitized_array;
+            } else if (value.is_string() && !api_key.empty()) {
+                // Redact API key from string values
+                std::string str = value.get<std::string>();
+                size_t pos = 0;
+                while ((pos = str.find(api_key, pos)) != std::string::npos) {
+                    str.replace(pos, api_key.length(), "<REDACTED>");
+                    pos += 10;
+                }
+                sanitized[key] = str;
+            }
+        }
+        
+        return sanitized;
+    }
+    
+    // Helper to sanitize plain text (for non-JSON debug files)
+    std::string sanitizeText(const std::string& text, const std::string& api_key = "") {
+        if (api_key.empty()) {
+            return text;
+        }
+        
+        std::string sanitized = text;
+        size_t pos = 0;
+        while ((pos = sanitized.find(api_key, pos)) != std::string::npos) {
+            sanitized.replace(pos, api_key.length(), "<REDACTED>");
+            pos += 10;
+        }
+        return sanitized;
     }
 }
 
@@ -174,6 +281,51 @@ void LLMEngine::cleanupResponseFiles() const {
 
     if (cleaned_count > 0 && debug_) {
         std::cout << "[DEBUG] Cleaned up " << cleaned_count << " existing response file(s) in " << Utils::TMP_DIR << std::endl;
+    }
+}
+
+// Clean up old debug files based on log_retention_hours_
+void LLMEngine::cleanupOldDebugFiles() const {
+    if (log_retention_hours_ <= 0) {
+        return; // Retention disabled or invalid
+    }
+    
+    try {
+        namespace fs = std::filesystem;
+        const auto now = std::chrono::system_clock::now();
+        const auto retention_duration = std::chrono::hours(log_retention_hours_);
+        
+        if (!fs::exists(Utils::TMP_DIR)) {
+            return;
+        }
+        
+        int cleaned_count = 0;
+        for (const auto& entry : fs::directory_iterator(Utils::TMP_DIR)) {
+            if (entry.is_regular_file()) {
+                const auto file_time = entry.last_write_time();
+                const auto file_time_point = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                    file_time - fs::file_time_type::clock::now() + std::chrono::system_clock::now()
+                );
+                
+                const auto age = now - file_time_point;
+                if (age > retention_duration) {
+                    std::error_code ec;
+                    if (fs::remove(entry.path(), ec)) {
+                        cleaned_count++;
+                        if (debug_) {
+                            std::cout << "[DEBUG] Removed old debug file: " << entry.path() << std::endl;
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (cleaned_count > 0 && debug_) {
+            std::cout << "[DEBUG] Cleaned up " << cleaned_count << " old debug file(s) older than " 
+                      << log_retention_hours_ << " hours" << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "[WARNING] Failed to cleanup old debug files: " << e.what() << std::endl;
     }
 }
 
@@ -216,8 +368,12 @@ std::vector<std::string> LLMEngine::analyze(std::string_view prompt,
         if (write_debug_files) {
             std::error_code ec_dir;
             std::filesystem::create_directories(Utils::TMP_DIR, ec_dir);
+            
+            // Sanitize JSON before writing to prevent leaking secrets
+            nlohmann::json sanitized_response = sanitizeJson(api_response.raw_response, api_key_);
+            
             std::ofstream resp_file(Utils::TMP_DIR + "/api_response.json");
-            resp_file << api_response.raw_response.dump(2);
+            resp_file << sanitized_response.dump(2);
             resp_file.close();
             std::cout << "[DEBUG] API response saved to " << (Utils::TMP_DIR + "/api_response.json") << std::endl;
         }
@@ -227,8 +383,12 @@ std::vector<std::string> LLMEngine::analyze(std::string_view prompt,
         } else {
             std::error_code ec_dir2;
             std::filesystem::create_directories(Utils::TMP_DIR, ec_dir2);
+            
+            // Sanitize error response JSON before writing
+            nlohmann::json sanitized_error = sanitizeJson(api_response.raw_response, api_key_);
+            
             std::ofstream err_file(Utils::TMP_DIR + "/api_response_error.json");
-            err_file << api_response.raw_response.dump(2);
+            err_file << sanitized_error.dump(2);
             err_file.close();
             std::cerr << "[ERROR] API error: " << api_response.error_message << std::endl;
             std::cerr << "[INFO] Error response saved to " << (Utils::TMP_DIR + "/api_response_error.json") << std::endl;
@@ -295,10 +455,17 @@ std::vector<std::string> LLMEngine::analyze(std::string_view prompt,
     if (write_debug_files) {
         std::error_code ec_dir5;
         std::filesystem::create_directories(Utils::TMP_DIR, ec_dir5);
+        
+        // Sanitize text response to remove any potential API keys
+        std::string sanitized_response = sanitizeText(full_response, api_key_);
+        
         std::ofstream full_file(Utils::TMP_DIR + "/response_full.txt");
-        full_file << full_response;
+        full_file << sanitized_response;
         full_file.close();
         std::cout << "[DEBUG] Full response saved to " << (Utils::TMP_DIR + "/response_full.txt") << std::endl;
+        
+        // Clean up old debug files based on retention policy
+        cleanupOldDebugFiles();
     }
     
     // Extract THINK section

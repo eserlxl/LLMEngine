@@ -24,6 +24,16 @@ namespace Utils {
 
     /**
      * @brief Execute a shell command and capture stdout lines.
+     * 
+     * SECURITY WARNING: This function validates commands to prevent command injection,
+     * but it should NEVER be used with untrusted input. Only use with hardcoded commands
+     * or commands that have been explicitly validated and sanitized by the caller.
+     * 
+     * Allowed characters: alphanumeric, spaces, hyphens, underscores, dots, forward slashes.
+     * Shell metacharacters (|, &, ;, $, `, <, >, parentheses) are explicitly rejected.
+     * 
+     * @param cmd Command string to execute (must be trusted/validated)
+     * @return Vector of output lines
      */
     [[nodiscard]] std::vector<std::string> execCommand(std::string_view cmd);
 

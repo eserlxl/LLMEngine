@@ -241,6 +241,60 @@ export GEMINI_API_KEY="your-gemini-api-key"
 
 ## Security
 
+LLMEngine has been designed with security best practices in mind. Follow these guidelines to ensure secure usage:
+
+### API Key Management
+
+- **Always use environment variables** for API keys. The library automatically checks environment variables first:
+  - `QWEN_API_KEY`
+  - `OPENAI_API_KEY`
+  - `ANTHROPIC_API_KEY`
+  - `GEMINI_API_KEY`
+
+```bash
+export QWEN_API_KEY="sk-your-qwen-key"
+export OPENAI_API_KEY="sk-your-openai-key"
+```
+
+- **Never commit API keys** to version control. The `config/api_config.json` should only contain non-secret defaults.
+- **Prefer environment variables** over config file values. The library prioritizes environment variables over config file entries.
+
+### Debug Mode and Sensitive Data
+
+When debug mode is enabled (`debug=true`), LLMEngine writes response artifacts to `/tmp/llmengine`. To protect sensitive data:
+
+- **Debug files are automatically sanitized**: API keys and other sensitive fields are redacted before writing to disk.
+- **Log retention is enforced**: Files older than `log_retention_hours` are automatically cleaned up.
+- **Disable debug files in production**: Set the environment variable `LLMENGINE_DISABLE_DEBUG_FILES=1` to prevent any debug file writes.
+- **Review debug files**: Before sharing debug files, verify that sensitive information has been properly redacted.
+
+```cpp
+// Debug mode with 24-hour retention
+LLMEngine engine(provider_type, api_key, model, params, 24, true);
+
+// Disable debug files entirely
+setenv("LLMENGINE_DISABLE_DEBUG_FILES", "1", 1);
+```
+
+### Command Execution Security
+
+The `Utils::execCommand()` function includes validation to prevent command injection:
+- Shell metacharacters are explicitly rejected
+- Only trusted commands should be passed to this function
+- Never use `execCommand()` with untrusted user input
+
+### Provider Selection
+
+- **Unknown providers fail fast**: Invalid provider names throw exceptions instead of silently falling back to defaults.
+- This prevents unexpected traffic routing in multi-tenant scenarios.
+
+### Thread Safety
+
+- **APIConfigManager is thread-safe**: Concurrent access is safe using reader-writer locks.
+- Multiple threads can safely read configuration while one thread writes.
+
+### Best Practices
+
 - Do not hardcode API keys; use environment variables.
 - Prefer secure endpoints (HTTPS) and verify firewall/network settings.
 - Avoid committing secrets; keep sensitive files out of VCS.
