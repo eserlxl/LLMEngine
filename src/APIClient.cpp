@@ -157,10 +157,9 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
             if (!cpr_response.text.empty()) {
                 try {
                     response.raw_response = nlohmann::json::parse(cpr_response.text);
-                } catch (const nlohmann::json::parse_error&) {
+                } catch (const nlohmann::json::parse_error&) {  // NOLINT(bugprone-empty-catch): Intentionally ignoring parse errors for non-JSON error responses
                     // Non-JSON error response is acceptable - keep raw_response as default empty json
                     // error_message already contains the text
-                    // NOLINTNEXTLINE(bugprone-empty-catch): Intentionally ignoring parse errors for non-JSON error responses
                 }
             }
         }
