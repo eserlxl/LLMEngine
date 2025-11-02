@@ -54,7 +54,7 @@ LLMEngine abstracts away provider-specific details and exposes a consistent API 
 ## Features
 
 ### Core
-- **Multi-provider support**: Qwen (DashScope), OpenAI, Anthropic, and local Ollama
+- **Multi-provider support**: Qwen (DashScope), OpenAI, Anthropic, Google Gemini, and local Ollama
 - **Unified interface**: One API across different providers and models
 - **Config-driven**: Provider defaults and parameters from `config/api_config.json`
 - **Backward compatible**: Existing Ollama code paths continue to work
@@ -66,7 +66,7 @@ LLMEngine abstracts away provider-specific details and exposes a consistent API 
 
 ### Providers
 - Qwen (DashScope) — qwen-flash/qwen-plus/qwen2.5
-- OpenAI — GPT-3.5, GPT-4 family
+- OpenAI — GPT-3.5, GPT-4 family, GPT-5
 - Anthropic — Claude 3 series
 - Ollama — any locally served model
 - Google Gemini (AI Studio) — gemini-1.5-flash/pro
