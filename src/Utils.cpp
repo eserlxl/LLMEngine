@@ -11,6 +11,7 @@
 #include <sstream>
 #include <vector>
 #include <cstdio>
+#include <cctype>
 #include <array>
 #include <regex>
 #include <iostream>
@@ -39,9 +40,11 @@ namespace Utils {
         std::array<char, COMMAND_BUFFER_SIZE> buffer;
 
         // SECURITY: Validate command string to prevent command injection
-        // Only allow alphanumeric, spaces, hyphens, underscores, dots, slashes, and common safe characters
-        // This is a whitelist approach - if your use case needs special characters, validate them explicitly
-        const std::regex safe_chars(R"([a-zA-Z0-9_./\s-]+)");
+        // CRITICAL: This function uses popen() which routes through a shell.
+        // We must prevent newlines and control characters that could allow command chaining.
+        // Only allow alphanumeric, single spaces (not newlines/tabs), hyphens, underscores, dots, slashes
+        // Note: Consider migrating to posix_spawn/execve with argv arrays for production use
+        const std::regex safe_chars(R"([a-zA-Z0-9_./ -]+)");
         std::string cmd_str(cmd);
         
         if (cmd_str.empty()) {
@@ -49,15 +52,32 @@ namespace Utils {
             return output;
         }
         
-        // Check if command contains potentially dangerous characters
-        if (!std::regex_match(cmd_str, safe_chars)) {
-            std::cerr << "[ERROR] execCommand: Command contains potentially unsafe characters: " << cmd_str << std::endl;
-            std::cerr << "[ERROR] Only alphanumeric, spaces, hyphens, underscores, dots, and slashes are allowed" << std::endl;
-            std::cerr << "[ERROR] For security reasons, shell metacharacters (|, &, ;, $, `, etc.) are not permitted" << std::endl;
+        // Explicitly reject control characters including newlines, tabs, carriage returns
+        // These can be used for command injection even with metacharacter checks
+        for (char c : cmd_str) {
+            if (std::iscntrl(static_cast<unsigned char>(c))) {
+                std::cerr << "[ERROR] execCommand: Command contains control characters (newlines, tabs, etc.) - rejected for security" << std::endl;
+                return output;
+            }
+        }
+        
+        // Explicitly check for newlines and tabs (redundant but defensive)
+        if (cmd_str.find('\n') != std::string::npos ||
+            cmd_str.find('\r') != std::string::npos ||
+            cmd_str.find('\t') != std::string::npos) {
+            std::cerr << "[ERROR] execCommand: Command contains newlines, carriage returns, or tabs - rejected for security" << std::endl;
             return output;
         }
         
-        // Additional check: prevent command chaining attempts
+        // Check if command matches whitelist pattern (no \s, only explicit space)
+        if (!std::regex_match(cmd_str, safe_chars)) {
+            std::cerr << "[ERROR] execCommand: Command contains potentially unsafe characters: " << cmd_str << std::endl;
+            std::cerr << "[ERROR] Only alphanumeric, single spaces, hyphens, underscores, dots, and slashes are allowed" << std::endl;
+            std::cerr << "[ERROR] For security reasons, shell metacharacters and control characters are not permitted" << std::endl;
+            return output;
+        }
+        
+        // Additional check: prevent command chaining attempts via shell metacharacters
         if (cmd_str.find('|') != std::string::npos ||
             cmd_str.find('&') != std::string::npos ||
             cmd_str.find(';') != std::string::npos ||
@@ -66,12 +86,28 @@ namespace Utils {
             cmd_str.find('(') != std::string::npos ||
             cmd_str.find(')') != std::string::npos ||
             cmd_str.find('<') != std::string::npos ||
-            cmd_str.find('>') != std::string::npos) {
+            cmd_str.find('>') != std::string::npos ||
+            cmd_str.find('{') != std::string::npos ||
+            cmd_str.find('}') != std::string::npos ||
+            cmd_str.find('[') != std::string::npos ||
+            cmd_str.find(']') != std::string::npos ||
+            cmd_str.find('*') != std::string::npos ||
+            cmd_str.find('?') != std::string::npos ||
+            cmd_str.find('!') != std::string::npos ||
+            cmd_str.find('#') != std::string::npos ||
+            cmd_str.find('~') != std::string::npos) {
             std::cerr << "[ERROR] execCommand: Command contains shell metacharacters - rejected for security" << std::endl;
+            return output;
+        }
+        
+        // Prevent multiple consecutive spaces (could be used to hide malicious content)
+        if (cmd_str.find("  ") != std::string::npos) {
+            std::cerr << "[ERROR] execCommand: Command contains multiple consecutive spaces - rejected for security" << std::endl;
             return output;
         }
 
         // Redirect stderr to stdout to capture errors
+        // NOTE: popen() still routes through shell, but validation above prevents injection
         std::string full_cmd = cmd_str + " 2>&1";
         FILE* pipe = popen(full_cmd.c_str(), "r");
 
