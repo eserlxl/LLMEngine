@@ -87,11 +87,11 @@ find_package(cpr CONFIG QUIET)
 if (NOT cpr_FOUND)
   include(FetchContent)
   message(STATUS "cpr not found via package config; fetching with FetchContent")
-  # Use a stable cpr release tag
+  # Use master branch
   FetchContent_Declare(
     cpr
     GIT_REPOSITORY https://github.com/libcpr/cpr.git
-    GIT_TAG 1.12.1
+    GIT_TAG master
     FIND_PACKAGE_ARGS NAMES cpr
   )
   set(CPR_BUILD_TESTS OFF CACHE BOOL "" FORCE)
