@@ -28,6 +28,7 @@ namespace {
     constexpr size_t REDACTED_REASONING_TAG_LENGTH = 20;  // "<think>" length
     constexpr size_t REDACTED_REASONING_CLOSE_TAG_LENGTH = 21;  // "</think>" length
     constexpr size_t MAX_FILENAME_LENGTH = 64;
+    constexpr size_t REDACTED_TAG_LENGTH = 10;  // "<REDACTED>" length
 }
 
 // Legacy constructor for Ollama (backward compatibility)
@@ -179,10 +180,10 @@ namespace {
                 size_t pos = 0;
                 while ((pos = str.find(api_key, pos)) != std::string::npos) {
                     str.replace(pos, api_key.length(), "<REDACTED>");
-                    pos += 10; // length of "<REDACTED>"
+                    pos += REDACTED_TAG_LENGTH;
                 }
             }
-            return nlohmann::json(str);
+            return nlohmann::json{str};
         }
         
         if (!json.is_object()) {
@@ -225,7 +226,7 @@ namespace {
                 size_t pos = 0;
                 while ((pos = str.find(api_key, pos)) != std::string::npos) {
                     str.replace(pos, api_key.length(), "<REDACTED>");
-                    pos += 10;
+                    pos += REDACTED_TAG_LENGTH;
                 }
                 sanitized[key] = str;
             }
@@ -244,7 +245,7 @@ namespace {
         size_t pos = 0;
         while ((pos = sanitized.find(api_key, pos)) != std::string::npos) {
             sanitized.replace(pos, api_key.length(), "<REDACTED>");
-            pos += 10;
+            pos += REDACTED_TAG_LENGTH;
         }
         return sanitized;
     }

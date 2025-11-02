@@ -31,10 +31,10 @@ std::string lower(const std::string& s) {
 }
 
 namespace Color {
-    constexpr const char* Red = "\033[31m";
-    constexpr const char* Green = "\033[32m";
-    constexpr const char* Yellow = "\033[33m";
-    constexpr const char* Reset = "\033[0m";
+    [[maybe_unused]] constexpr const char* Red = "\033[31m";
+    [[maybe_unused]] constexpr const char* Green = "\033[32m";
+    [[maybe_unused]] constexpr const char* Yellow = "\033[33m";
+    [[maybe_unused]] constexpr const char* Reset = "\033[0m";
 }
 }
 

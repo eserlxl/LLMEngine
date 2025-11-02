@@ -160,6 +160,7 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
                 } catch (const nlohmann::json::parse_error&) {
                     // Non-JSON error response is acceptable - keep raw_response as default empty json
                     // error_message already contains the text
+                    // NOLINTNEXTLINE(bugprone-empty-catch): Intentionally ignoring parse errors for non-JSON error responses
                 }
             }
         }
@@ -484,9 +485,13 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                 }
             } else {
                 response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
-                response.error_code = (cpr_response.status_code == 401 || cpr_response.status_code == 403)
-                    ? APIResponse::APIError::Auth
-                    : (cpr_response.status_code == 429 ? APIResponse::APIError::RateLimited : APIResponse::APIError::Server);
+                if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
+                    response.error_code = APIResponse::APIError::Auth;
+                } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
+                    response.error_code = APIResponse::APIError::RateLimited;
+                } else {
+                    response.error_code = APIResponse::APIError::Server;
+                }
             }
         } else {
             // Use chat API for conversational mode (default)
