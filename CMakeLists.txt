@@ -84,6 +84,7 @@ endif()
 
 # Prefer system-provided cpr via config; fall back to FetchContent
 find_package(cpr CONFIG QUIET)
+set(CPR_FETCHED FALSE)
 if (NOT cpr_FOUND)
   include(FetchContent)
   message(STATUS "cpr not found via package config; fetching with FetchContent")
@@ -99,6 +100,7 @@ if (NOT cpr_FOUND)
   set(CPR_ENABLE_SSL ON CACHE BOOL "" FORCE)
   set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(cpr)
+  set(CPR_FETCHED TRUE)
   # Some environments expose an un-namespaced target; normalize if needed
   if (TARGET cpr AND NOT TARGET cpr::cpr)
     add_library(cpr::cpr ALIAS cpr)
@@ -107,6 +109,10 @@ endif()
 
 # ---- Install dirs and prefix --------------------------------------------------
 include(GNUInstallDirs)
+
+# Track if cpr needs to be added to the export set (when fetched via FetchContent)
+# This is used later when installing targets to satisfy CMake's export validation
+set(CPR_NEEDS_EXPORT ${CPR_FETCHED})
 
 # ---- Helper interface targets ------------------------------------------------
 # (Removed unused helper targets; flags applied directly on main target)
@@ -268,11 +274,20 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 # ---- Install ------------------------------------------------------------------
 # Install library (handles both static and shared) and export targets
-install(TARGETS ${PROJECT_NAME}
-  EXPORT ${PROJECT_NAME}Targets
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+# If cpr was fetched, include it in the same export set to satisfy CMake validation
+if (CPR_NEEDS_EXPORT AND TARGET cpr)
+  install(TARGETS ${PROJECT_NAME} cpr
+    EXPORT ${PROJECT_NAME}Targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+else()
+  install(TARGETS ${PROJECT_NAME}
+    EXPORT ${PROJECT_NAME}Targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
 
 # Install public headers
 install(FILES
