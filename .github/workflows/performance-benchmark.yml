@@ -37,14 +37,19 @@ jobs:
       - name: Install toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential cmake g++ make time
+          sudo apt-get install -y --no-install-recommends build-essential cmake g++ make time python3 python3-pip
       
       - name: Install GNU time
         run: |
           sudo apt-get update
           sudo apt-get install -y time
       
-      
+      - name: Install meson
+        run: |
+          set -euo pipefail
+          python3 -m pip install --upgrade pip
+          python3 -m pip install meson
+          meson --version
       
       - name: Configure Release
         run: |

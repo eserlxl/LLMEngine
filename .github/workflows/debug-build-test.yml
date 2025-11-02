@@ -33,7 +33,14 @@ jobs:
       - name: Install toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential cmake g++ make gdb ccache
+          sudo apt-get install -y --no-install-recommends build-essential cmake g++ make gdb ccache python3 python3-pip
+
+      - name: Install meson
+        run: |
+          set -euo pipefail
+          python3 -m pip install --upgrade pip
+          python3 -m pip install meson
+          meson --version
 
       - name: Configure Debug (CMake)
         run: |

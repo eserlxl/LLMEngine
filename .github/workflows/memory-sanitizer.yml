@@ -33,7 +33,7 @@ jobs:
       - name: Install Clang and LLVM tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang llvm
+          sudo apt-get install -y clang llvm python3 python3-pip
       
       - name: Verify MSAN suppressions file
         run: |
@@ -43,6 +43,13 @@ jobs:
           else
             echo "No MSAN suppressions file present; proceeding without one."
           fi
+      
+      - name: Install meson
+        run: |
+          set -euo pipefail
+          python3 -m pip install --upgrade pip
+          python3 -m pip install meson
+          meson --version
       
       - name: Build with Memory Sanitizer
         run: |
