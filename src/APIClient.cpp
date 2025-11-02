@@ -16,13 +16,31 @@
 
 namespace LLMEngineAPI {
 
+// Constants
+namespace {
+    constexpr double DEFAULT_TEMPERATURE = 0.7;
+    constexpr int DEFAULT_MAX_TOKENS = 2000;
+    constexpr double DEFAULT_TOP_P = 0.9;
+    constexpr double DEFAULT_MIN_P = 0.05;
+    constexpr int DEFAULT_TOP_K = 40;
+    constexpr int DEFAULT_CONTEXT_WINDOW = 10000;
+    constexpr int MILLISECONDS_PER_SECOND = 1000;
+    constexpr int HTTP_STATUS_OK = 200;
+    constexpr int HTTP_STATUS_UNAUTHORIZED = 401;
+    constexpr int HTTP_STATUS_FORBIDDEN = 403;
+    constexpr int HTTP_STATUS_TOO_MANY_REQUESTS = 429;
+    constexpr int DEFAULT_TIMEOUT_SECONDS = 30;
+    constexpr int DEFAULT_RETRY_ATTEMPTS = 3;
+    constexpr int DEFAULT_RETRY_DELAY_MS = 1000;
+}
+
 // QwenClient Implementation
 QwenClient::QwenClient(const std::string& api_key, const std::string& model)
     : api_key_(api_key), model_(model), base_url_("https://dashscope-intl.aliyuncs.com/compatible-mode/v1") {
     default_params_ = {
-        {"temperature", 0.7},
-        {"max_tokens", 2000},
-        {"top_p", 0.9},
+        {"temperature", DEFAULT_TEMPERATURE},
+        {"max_tokens", DEFAULT_MAX_TOKENS},
+        {"top_p", DEFAULT_TOP_P},
         {"frequency_penalty", 0.0},
         {"presence_penalty", 0.0}
     };
@@ -89,9 +107,9 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
                 cpr::Url{base_url_ + "/chat/completions"},
                 cpr::Header{{"Content-Type", "application/json"}, {"Authorization", "Bearer " + api_key_}},
                 cpr::Body{payload.dump()},
-                cpr::Timeout{timeout_seconds * 1000}
+                cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
             );
-            if (cpr_response.status_code == 200 && !cpr_response.text.empty()) break;
+            if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
             if (attempt < max_attempts) {
                 int delay = base_delay_ms * attempt;
                 std::this_thread::sleep_for(std::chrono::milliseconds(delay));
@@ -101,7 +119,7 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
         response.status_code = static_cast<int>(cpr_response.status_code);
         response.raw_response = nlohmann::json::parse(cpr_response.text);
         
-        if (cpr_response.status_code == 200) {
+        if (cpr_response.status_code == HTTP_STATUS_OK) {
             if (response.raw_response.contains("choices") && 
                 response.raw_response["choices"].is_array() && 
                 !response.raw_response["choices"].empty()) {
@@ -120,9 +138,13 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
             }
         } else {
             response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
-            response.error_code = (cpr_response.status_code == 401 || cpr_response.status_code == 403)
-                ? APIResponse::APIError::Auth
-                : (cpr_response.status_code == 429 ? APIResponse::APIError::RateLimited : APIResponse::APIError::Server);
+            if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
+                response.error_code = APIResponse::APIError::Auth;
+            } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
+                response.error_code = APIResponse::APIError::RateLimited;
+            } else {
+                response.error_code = APIResponse::APIError::Server;
+            }
         }
         
     } catch (const std::exception& e) {
@@ -137,9 +159,9 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
 OpenAIClient::OpenAIClient(const std::string& api_key, const std::string& model)
     : api_key_(api_key), model_(model), base_url_("https://api.openai.com/v1") {
     default_params_ = {
-        {"temperature", 0.7},
-        {"max_tokens", 2000},
-        {"top_p", 0.9},
+        {"temperature", DEFAULT_TEMPERATURE},
+        {"max_tokens", DEFAULT_MAX_TOKENS},
+        {"top_p", DEFAULT_TOP_P},
         {"frequency_penalty", 0.0},
         {"presence_penalty", 0.0}
     };
@@ -203,9 +225,9 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
                 cpr::Url{base_url_ + "/chat/completions"},
                 cpr::Header{{"Content-Type", "application/json"}, {"Authorization", "Bearer " + api_key_}},
                 cpr::Body{payload.dump()},
-                cpr::Timeout{timeout_seconds * 1000}
+                cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
             );
-            if (cpr_response.status_code == 200 && !cpr_response.text.empty()) break;
+            if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
             if (attempt < max_attempts) {
                 int delay = base_delay_ms * attempt;
                 std::this_thread::sleep_for(std::chrono::milliseconds(delay));
@@ -215,7 +237,7 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
         response.status_code = static_cast<int>(cpr_response.status_code);
         response.raw_response = nlohmann::json::parse(cpr_response.text);
         
-        if (cpr_response.status_code == 200) {
+        if (cpr_response.status_code == HTTP_STATUS_OK) {
             if (response.raw_response.contains("choices") && 
                 response.raw_response["choices"].is_array() && 
                 !response.raw_response["choices"].empty()) {
@@ -234,9 +256,13 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
             }
         } else {
             response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
-            response.error_code = (cpr_response.status_code == 401 || cpr_response.status_code == 403)
-                ? APIResponse::APIError::Auth
-                : (cpr_response.status_code == 429 ? APIResponse::APIError::RateLimited : APIResponse::APIError::Server);
+            if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
+                response.error_code = APIResponse::APIError::Auth;
+            } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
+                response.error_code = APIResponse::APIError::RateLimited;
+            } else {
+                response.error_code = APIResponse::APIError::Server;
+            }
         }
         
     } catch (const std::exception& e) {
@@ -251,9 +277,9 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
 AnthropicClient::AnthropicClient(const std::string& api_key, const std::string& model)
     : api_key_(api_key), model_(model), base_url_("https://api.anthropic.com/v1") {
     default_params_ = {
-        {"max_tokens", 2000},
-        {"temperature", 0.7},
-        {"top_p", 0.9}
+        {"max_tokens", DEFAULT_MAX_TOKENS},
+        {"temperature", DEFAULT_TEMPERATURE},
+        {"top_p", DEFAULT_TOP_P}
     };
 }
 
@@ -309,9 +335,9 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
                 cpr::Url{base_url_ + "/messages"},
                 cpr::Header{{"Content-Type", "application/json"}, {"x-api-key", api_key_}, {"anthropic-version", "2023-06-01"}},
                 cpr::Body{payload.dump()},
-                cpr::Timeout{timeout_seconds * 1000}
+                cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
             );
-            if (cpr_response.status_code == 200 && !cpr_response.text.empty()) break;
+            if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
             if (attempt < max_attempts) {
                 int delay = base_delay_ms * attempt;
                 std::this_thread::sleep_for(std::chrono::milliseconds(delay));
@@ -321,7 +347,7 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
         response.status_code = static_cast<int>(cpr_response.status_code);
         response.raw_response = nlohmann::json::parse(cpr_response.text);
         
-        if (cpr_response.status_code == 200) {
+        if (cpr_response.status_code == HTTP_STATUS_OK) {
             if (response.raw_response.contains("content") && 
                 response.raw_response["content"].is_array() && 
                 !response.raw_response["content"].empty()) {
@@ -351,11 +377,11 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
 OllamaClient::OllamaClient(const std::string& base_url, const std::string& model)
     : base_url_(base_url), model_(model) {
     default_params_ = {
-        {"temperature", 0.7},
-        {"top_p", 0.9},
-        {"top_k", 40},
-        {"min_p", 0.05},
-        {"context_window", 10000}
+        {"temperature", DEFAULT_TEMPERATURE},
+        {"top_p", DEFAULT_TOP_P},
+        {"top_k", DEFAULT_TOP_K},
+        {"min_p", DEFAULT_MIN_P},
+        {"context_window", DEFAULT_CONTEXT_WINDOW}
     };
 }
 
@@ -410,9 +436,9 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                     cpr::Url{base_url_ + "/api/generate"},
                     cpr::Header{{"Content-Type", "application/json"}},
                     cpr::Body{payload.dump()},
-                    cpr::Timeout{timeout_seconds * 1000}
+                    cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
                 );
-                if (cpr_response.status_code == 200 && !cpr_response.text.empty()) break;
+                if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
                 if (attempt < max_attempts) {
                     int delay = base_delay_ms * attempt;
                     std::this_thread::sleep_for(std::chrono::milliseconds(delay));
@@ -421,7 +447,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             
             response.status_code = static_cast<int>(cpr_response.status_code);
             
-            if (cpr_response.status_code == 200) {
+            if (cpr_response.status_code == HTTP_STATUS_OK) {
                 if (cpr_response.text.empty()) {
                     response.error_message = "Empty response from server";
                 } else {
@@ -492,9 +518,9 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                 cpr::Url{base_url_ + "/api/chat"},
                 cpr::Header{{"Content-Type", "application/json"}},
                 cpr::Body{payload.dump()},
-                cpr::Timeout{timeout_seconds * 1000}
+                cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
             );
-            if (cpr_response.status_code == 200 && !cpr_response.text.empty()) break;
+            if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
             if (attempt < max_attempts) {
                 int delay = base_delay_ms * attempt;
                 std::this_thread::sleep_for(std::chrono::milliseconds(delay));
@@ -503,7 +529,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
         
         response.status_code = static_cast<int>(cpr_response.status_code);
         
-        if (cpr_response.status_code == 200) {
+        if (cpr_response.status_code == HTTP_STATUS_OK) {
             if (cpr_response.text.empty()) {
                 response.error_message = "Empty response from server";
             } else {
@@ -538,9 +564,9 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
 GeminiClient::GeminiClient(const std::string& api_key, const std::string& model)
     : api_key_(api_key), model_(model), base_url_("https://generativelanguage.googleapis.com/v1beta") {
     default_params_ = {
-        {"temperature", 0.7},
-        {"max_tokens", 2000},
-        {"top_p", 0.9}
+        {"temperature", DEFAULT_TEMPERATURE},
+        {"max_tokens", DEFAULT_MAX_TOKENS},
+        {"top_p", DEFAULT_TOP_P}
     };
 }
 
@@ -597,9 +623,9 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
                 cpr::Url{url},
                 cpr::Header{{"Content-Type", "application/json"}},
                 cpr::Body{payload.dump()},
-                cpr::Timeout{timeout_seconds * 1000}
+                cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
             );
-            if (cpr_response.status_code == 200 && !cpr_response.text.empty()) break;
+            if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
             if (attempt < max_attempts) {
                 int delay = base_delay_ms * attempt;
                 std::this_thread::sleep_for(std::chrono::milliseconds(delay));
@@ -608,7 +634,7 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
 
         response.status_code = static_cast<int>(cpr_response.status_code);
 
-        if (cpr_response.status_code == 200) {
+        if (cpr_response.status_code == HTTP_STATUS_OK) {
             if (cpr_response.text.empty()) {
                 response.error_message = "Empty response from server";
                 response.error_code = APIResponse::APIError::InvalidResponse;
@@ -645,13 +671,18 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
             }
         } else {
             response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
-            response.error_code = (cpr_response.status_code == 401 || cpr_response.status_code == 403)
-                ? APIResponse::APIError::Auth
-                : (cpr_response.status_code == 429 ? APIResponse::APIError::RateLimited : APIResponse::APIError::Server);
+            if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
+                response.error_code = APIResponse::APIError::Auth;
+            } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
+                response.error_code = APIResponse::APIError::RateLimited;
+            } else {
+                response.error_code = APIResponse::APIError::Server;
+            }
             try {
                 response.raw_response = nlohmann::json::parse(cpr_response.text);
-            } catch (...) {
-                // keep raw_response default
+            } catch (const std::exception& e) {
+                // keep raw_response default, ignore parse errors
+                static_cast<void>(e);
             }
         }
 
@@ -691,11 +722,10 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_
         std::string base_url = config.value("base_url", "http://localhost:11434");
         std::string model = config.value("default_model", "llama2");
         return std::make_unique<OllamaClient>(base_url, model);
-    } else {
-        std::string api_key = config.value("api_key", "");
-        std::string model = config.value("default_model", "");
-        return createClient(type, api_key, model);
     }
+    std::string api_key = config.value("api_key", "");
+    std::string model = config.value("default_model", "");
+    return createClient(type, api_key, model);
 }
 
 ProviderType APIClientFactory::stringToProviderType(std::string_view provider_name) {
@@ -793,21 +823,21 @@ int APIConfigManager::getTimeoutSeconds() const {
     if (config_loaded_ && config_.contains("timeout_seconds")) {
         return config_["timeout_seconds"].get<int>();
     }
-    return 30;
+    return DEFAULT_TIMEOUT_SECONDS;
 }
 
 int APIConfigManager::getRetryAttempts() const {
     if (config_loaded_ && config_.contains("retry_attempts")) {
         return config_["retry_attempts"].get<int>();
     }
-    return 3;
+    return DEFAULT_RETRY_ATTEMPTS;
 }
 
 int APIConfigManager::getRetryDelayMs() const {
     if (config_loaded_ && config_.contains("retry_delay_ms")) {
         return config_["retry_delay_ms"].get<int>();
     }
-    return 1000;
+    return DEFAULT_RETRY_DELAY_MS;
 }
 
 } // namespace LLMEngineAPI

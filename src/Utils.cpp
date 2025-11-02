@@ -21,6 +21,9 @@ namespace Utils {
     std::string TMP_DIR = "/tmp/llmengine";
     namespace fs = std::filesystem;
 
+    // Constants
+    constexpr size_t COMMAND_BUFFER_SIZE = 256;
+
     std::vector<std::string> readLines(std::string_view filepath, size_t max_lines) {
         std::vector<std::string> lines;
         std::ifstream file{std::string(filepath)};
@@ -33,7 +36,7 @@ namespace Utils {
 
     std::vector<std::string> execCommand(std::string_view cmd) {
         std::vector<std::string> output;
-        std::array<char, 256> buffer;
+        std::array<char, COMMAND_BUFFER_SIZE> buffer;
 
         // Redirect stderr to stdout to capture errors
         std::string full_cmd = std::string(cmd) + " 2>&1";

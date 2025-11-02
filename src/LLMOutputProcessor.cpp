@@ -77,7 +77,10 @@ bool LLMOutputProcessor::hasCriticalVulnerabilities() const {
 }
 
 bool LLMOutputProcessor::hasErrors() const {
-    return analysis.rfind("[ERROR]", 0) == 0;
+    constexpr const char* error_prefix = "[ERROR]";
+    constexpr size_t error_prefix_len = 7;
+    return analysis.length() >= error_prefix_len && 
+           analysis.compare(0, error_prefix_len, error_prefix) == 0;
 }
 
 void LLMOutputProcessor::parseJson(std::string_view jsonContent) {

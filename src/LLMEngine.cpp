@@ -19,6 +19,14 @@
 #include <filesystem>
 #include <cstdlib>
 
+// Constants
+namespace {
+    constexpr int HTTP_STATUS_OK = 200;
+    constexpr size_t REDACTED_REASONING_TAG_LENGTH = 20;  // "<think>" length
+    constexpr size_t REDACTED_REASONING_CLOSE_TAG_LENGTH = 21;  // "</think>" length
+    constexpr size_t MAX_FILENAME_LENGTH = 64;
+}
+
 // Legacy constructor for Ollama (backward compatibility)
 LLMEngine::LLMEngine(std::string_view ollama_url, 
                      std::string_view model, 
@@ -259,7 +267,7 @@ std::vector<std::string> LLMEngine::analyze(std::string_view prompt,
             std::cout << "[DEBUG] Ollama response saved to " << (Utils::TMP_DIR + "/ollama_response.json") << std::endl;
         }
         
-        if (response.status_code != 200) {
+        if (response.status_code != HTTP_STATUS_OK) {
             std::error_code ec_dir4;
             std::filesystem::create_directories(Utils::TMP_DIR, ec_dir4);
             std::ofstream err_file(Utils::TMP_DIR + "/ollama_response_error.json");
@@ -297,7 +305,7 @@ std::vector<std::string> LLMEngine::analyze(std::string_view prompt,
     auto trim_copy = [](const std::string& s) -> std::string {
         const char* ws = " \t\n\r";
         std::string::size_type start = s.find_first_not_of(ws);
-        if (start == std::string::npos) return std::string();
+        if (start == std::string::npos) return {};
         std::string::size_type end = s.find_last_not_of(ws);
         return s.substr(start, end - start + 1);
     };
@@ -309,9 +317,9 @@ std::vector<std::string> LLMEngine::analyze(std::string_view prompt,
     std::string::size_type close = full_response.find("</redacted_reasoning>");
     
     if (open != std::string::npos && close != std::string::npos && close > open) {
-        think_section = full_response.substr(open + 20, close - (open + 20));
+        think_section = full_response.substr(open + REDACTED_REASONING_TAG_LENGTH, close - (open + REDACTED_REASONING_TAG_LENGTH));
         std::string before = full_response.substr(0, open);
-        std::string after  = full_response.substr(close + 21);
+        std::string after  = full_response.substr(close + REDACTED_REASONING_CLOSE_TAG_LENGTH);
         remaining_section = before + after;
     }
     
@@ -332,7 +340,7 @@ std::vector<std::string> LLMEngine::analyze(std::string_view prompt,
             }
         }
         // Trim excessive length
-        if (name.size() > 64) name.resize(64);
+        if (name.size() > MAX_FILENAME_LENGTH) name.resize(MAX_FILENAME_LENGTH);
         return name;
     };
     const std::string safe_analysis_name = sanitize_name(std::string(analysis_type));
