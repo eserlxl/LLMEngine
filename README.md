@@ -1,15 +1,15 @@
 # LLMEngine
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/std/status)
+[![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://isocpp.org/std/status)
 
-LLMEngine is a C++17 library that provides a unified, type-safe interface to multiple Large Language Model (LLM) providers. It supports local and online providers (Ollama, Qwen/DashScope, OpenAI, Anthropic) with a configuration-driven design, factory-based clients, and a comprehensive test suite.
+LLMEngine is a C++20 library that provides a unified, type-safe interface to multiple Large Language Model (LLM) providers. It supports local and online providers (Ollama, Qwen/DashScope, OpenAI, Anthropic) with a configuration-driven design, factory-based clients, and a comprehensive test suite.
 
 Architecture overview:
 
 ```
 ┌─────────────┐     provider-agnostic API     ┌─────────────────────┐
-│  Your App   │ ───────────────────────────▶ │     LLMEngine       │
+│ Application │ ───────────────────────────▶ │     LLMEngine       │
 └─────────────┘                               │  (factory, config)  │
                                               └─────────┬───────────┘
                                                         │
@@ -45,7 +45,7 @@ Key benefits:
 LLMEngine abstracts away provider-specific details and exposes a consistent API for text generation and analysis. It offers seamless switching between providers, sensible defaults via `config/api_config.json`, and preserves backward compatibility with legacy Ollama-only usage.
 
 - **Project**: LLMEngine 0.1.0
-- **Language/Std**: C++17
+- **Language/Std**: C++20
 - **Build System**: CMake 3.16+
 - **Platforms**: Linux, macOS, Windows
 
@@ -76,7 +76,7 @@ LLMEngine abstracts away provider-specific details and exposes a consistent API 
 ## Quick Start
 
 ### Prerequisites
-- C++17-compatible compiler
+- C++20-compatible compiler
 - CMake 3.16+
 - Dependencies: OpenSSL, nlohmann_json, cpr
 
@@ -230,7 +230,7 @@ See `config/api_config.json` for provider defaults and parameters. Example excer
 
 ### Customizing Config File Path
 
-You can change the default configuration file path using the `APIConfigManager` API:
+The default configuration file path can be changed using the `APIConfigManager` API:
 
 ```cpp
 #include "APIClient.hpp"
@@ -327,9 +327,9 @@ The `Utils::execCommand()` function includes validation to prevent command injec
 
 ### Best Practices
 
-- Do not hardcode API keys; use environment variables.
-- Prefer secure endpoints (HTTPS) and verify firewall/network settings.
-- Avoid committing secrets; keep sensitive files out of VCS.
+- API keys must not be hardcoded; environment variables must be used.
+- Secure endpoints (HTTPS) should be preferred and firewall/network settings should be verified.
+- Secrets must not be committed; sensitive files must be kept out of version control.
 
 Example:
 

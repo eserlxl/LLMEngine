@@ -42,7 +42,7 @@ When using string-based constructors without a model, the `default_model` from `
 
 ## Choosing a Provider
 
-Use enum-based or string-based constructors:
+Enum-based or string-based constructors can be used:
 
 ```cpp
 // Enum

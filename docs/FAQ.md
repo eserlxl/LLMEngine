@@ -3,7 +3,7 @@
 ## Build errors about namespaces
 Ensure all references use `::LLMEngineAPI::ProviderType`.
 
-## How do I build and run tests quickly?
+## How to build and run tests quickly
 Use CMake out-of-source builds and CTest:
 ```bash
 cmake -S . -B build
@@ -17,7 +17,7 @@ Check environment variables are set (e.g., `QWEN_API_KEY`). Avoid hardcoding.
 ## Rate limit exceeded (429)
 - Reduce request frequency
 - Implement retries with backoff
-- Upgrade your plan
+- Upgrade the API plan
 
 ## Timeouts
 Increase `timeout_seconds` in `api_config.json` or simplify prompts.
@@ -36,10 +36,10 @@ Verify the daemon is running at `http://localhost:11434` and model is pulled.
 - Balanced: `qwen-plus`
 - Most capable: `qwen-max`
 
-## Where is the configuration loaded from?
+## Where the configuration is loaded from
 See search order in `docs/CONFIGURATION.md` and `config/README.md`.
 
-## How do I generate API documentation?
+## How to generate API documentation
 If your build exposes a docs target:
 ```bash
 cmake -S . -B build
@@ -51,8 +51,8 @@ Open `build/docs/html/index.html` afterwards. See `docs/API_REFERENCE.md`.
 Yes, via `ollama` when running a local Ollama daemon. Online providers require internet access and API keys.
 
 ## Logging and troubleshooting
-Enable debug mode in the constructor to write artifacts like `api_response.json` and `response_full.txt`. Verify file permissions in your working directory.
+Debug mode can be enabled in the constructor to write artifacts like `api_response.json` and `response_full.txt`. File permissions in the working directory should be verified.
 
-## Where is the config file loaded from?
+## Where the config file is loaded from
 See search order in `docs/CONFIGURATION.md` and `config/README.md`.
 

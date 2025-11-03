@@ -4,10 +4,10 @@ This page is the entry point to the generated Doxygen documentation for LLMEngin
 
 ## Generated HTML (Doxygen)
 
-If your build generates documentation, open the HTML output in your browser. Typical locations:
+If the build generates documentation, open the HTML output in a browser. Typical locations:
 
 - After configuring a docs target: `build/docs/html/index.html`
-- Or your build system's doc artifact directory
+- Or the build system's doc artifact directory
 
 ## Generate Locally
 
@@ -24,7 +24,7 @@ Then open:
 xdg-open build/docs/html/index.html
 ```
 
-If your environment does not define a `docs` target, you can run Doxygen manually using the provided `docs/Doxyfile`.
+If the environment does not define a `docs` target, Doxygen can be run manually using the provided `docs/Doxyfile`.
 
 ## Public Headers (reference points)
 

@@ -5,13 +5,13 @@ This document explains how to configure LLMEngine for online providers and local
 ## File Locations
 
 Search order for `api_config.json`:
-1. Explicit path passed to `loadConfig(path)` in your code
+1. Explicit path passed to `loadConfig(path)` in application code
 2. Default path set via `setDefaultConfigPath()` (defaults to `config/api_config.json`)
-3. `/usr/share/llmEngine/config/api_config.json` (after install)
+3. `/usr/share/llmEngine/config/api_config.json` (after installation)
 
 ### Changing the Default Config Path
 
-You can programmatically change the default configuration file path using the `APIConfigManager` API:
+The default configuration file path can be changed programmatically using the `APIConfigManager` API:
 
 ```cpp
 #include "APIClient.hpp"
@@ -39,7 +39,7 @@ Environment overrides: when both config and environment variables are present, t
 
 ## Authentication
 
-Use environment variables. Do not hardcode keys.
+Environment variables must be used for API keys. Keys must not be hardcoded in application code.
 
 ```bash
 export QWEN_API_KEY="sk-..."
@@ -52,7 +52,7 @@ In code:
 const char* apiKey = std::getenv("QWEN_API_KEY");
 ```
 
-If an expected key is missing, ensure the environment variable is set before initializing the engine.
+If an expected key is missing, the environment variable must be set before initializing the engine.
 
 ## Provider Endpoints (defaults)
 
@@ -161,15 +161,15 @@ Expanded example with multiple providers:
 
 ## Timeouts and Retries
 
-- Increase `timeout_seconds` for larger responses or slow networks.
-- Set `retry_attempts` to handle transient HTTP 429/5xx.
-- Backoff uses exponential with full jitter. Global keys:
-  - `retry_attempts`, `retry_delay_ms` (base), optional `retry_max_delay_ms` (cap)
-- Per-request overrides via params: `retry_attempts`, `retry_base_delay_ms`, `retry_max_delay_ms`, and `jitter_seed` (tests).
+- `timeout_seconds` should be increased for larger responses or slow networks.
+- `retry_attempts` should be set to handle transient HTTP 429/5xx errors.
+- Backoff uses exponential backoff with full jitter. Global configuration keys:
+  - `retry_attempts`, `retry_delay_ms` (base delay), optional `retry_max_delay_ms` (maximum delay cap)
+- Per-request overrides are available via params: `retry_attempts`, `retry_base_delay_ms`, `retry_max_delay_ms`, and `jitter_seed` (for deterministic testing).
 
 ## Logging and Debugging
 
-Enable debug mode to write response artifacts for troubleshooting.
+Debug mode can be enabled to write response artifacts for troubleshooting purposes.
 
 ```cpp
 LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, apiKey, "qwen-flash", {}, 24, true);
@@ -182,9 +182,9 @@ Artifacts:
 
 ## Security Notes
 
-- Do not commit secrets.
-- Use environment variables or secret managers.
-- Prefer HTTPS for online providers.
+- Secrets must not be committed to version control.
+- Environment variables or secret managers must be used for API key storage.
+- HTTPS should be preferred for online providers.
 
 ## See Also
 

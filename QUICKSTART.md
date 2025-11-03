@@ -8,7 +8,7 @@ This guide shows the minimal steps to build the library, configure a provider, a
 #include "LLMEngine.hpp"
 
 int main() {
-    // Get your API key from environment
+    // Get API key from environment
     const char* api_key = std::getenv("QWEN_API_KEY");
     
     // Create engine with Qwen
@@ -28,13 +28,13 @@ int main() {
 }
 ```
 
-## 2. Get Your Qwen API Key
+## 2. Obtaining a Qwen API Key
 
 1. Visit: https://dashscope.console.aliyuncs.com/
 2. Sign up or log in
 3. Navigate to **API Keys** section
 4. Click **Create API Key**
-5. Copy your key and set it:
+5. Copy the key and set it:
    ```bash
    export QWEN_API_KEY="sk-your-api-key-here"
    ```
@@ -148,7 +148,7 @@ Edit `config/api_config.json` to customize:
 - Timeout settings
 - Retry configuration
 
-**Custom Config Path**: You can change the default config file path programmatically:
+**Custom Config Path**: The default config file path can be changed programmatically:
 ```cpp
 auto& config_mgr = ::LLMEngineAPI::APIConfigManager::getInstance();
 config_mgr.setDefaultConfigPath("/custom/path/api_config.json");
@@ -308,8 +308,8 @@ export QWEN_API_KEY="sk-your-key"
 
 ### "Rate limit exceeded"
 - Wait a few seconds between requests
-- Consider upgrading your Qwen API plan
-- Implement exponential backoff in your code
+- Consider upgrading the Qwen API plan
+- Implement exponential backoff in application code
 
 ## 12. More Information
 
@@ -337,8 +337,8 @@ int main() {
         
         if (user_input == "quit") break;
         
-        auto result = engine.analyze(user_input, {}, "chat");
-        std::cout << "Bot: " << result[1] << std::endl << std::endl;
+        AnalysisResult result = engine.analyze(user_input, {}, "chat");
+        std::cout << "Bot: " << result.content << std::endl << std::endl;
     }
     
     return 0;
@@ -360,8 +360,8 @@ nlohmann::json input = {
     {"language", "python"}
 };
 
-auto result = engine.analyze(prompt, input, "code_review");
-std::cout << "Analysis: " << result[1] << std::endl;
+AnalysisResult result = engine.analyze(prompt, input, "code_review");
+std::cout << "Analysis: " << result.content << std::endl;
 ```
 
 ## 14. Contributing
@@ -374,5 +374,5 @@ This project is licensed under GPL v3. See LICENSE file for details.
 
 ---
 
-Ready to get started? Set your `QWEN_API_KEY` and start coding.
+To get started, set the `QWEN_API_KEY` environment variable and begin coding.
 
