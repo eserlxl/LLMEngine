@@ -12,6 +12,7 @@
 #include <vector>
 #include <memory>
 #include "APIClient.hpp"
+#include "Logger.hpp"
 
 struct AnalysisResult {
     bool success;
@@ -89,6 +90,8 @@ public:
     [[nodiscard]] ::LLMEngineAPI::ProviderType getProviderType() const;
     /** @brief True if using an online provider (not local Ollama). */
     [[nodiscard]] bool isOnlineProvider() const;
+    // Logging
+    void setLogger(std::shared_ptr<Logger> logger);
     
 private:
     void cleanupResponseFiles() const;
@@ -107,4 +110,5 @@ private:
     ::LLMEngineAPI::ProviderType provider_type_;
     std::string api_key_;
     bool use_api_client_;
+    std::shared_ptr<Logger> logger_;
 };

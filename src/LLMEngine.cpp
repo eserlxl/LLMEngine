@@ -45,6 +45,7 @@ LLMEngine::LLMEngine(std::string_view ollama_url,
       debug_(debug),
       provider_type_(::LLMEngineAPI::ProviderType::OLLAMA),
       use_api_client_(false) {
+    logger_ = std::make_shared<DefaultLogger>();
     // Legacy mode - use direct HTTP calls to Ollama
 }
 
@@ -58,6 +59,7 @@ LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
       debug_(debug),
       api_client_(std::move(client)),
       use_api_client_(true) {
+    logger_ = std::make_shared<DefaultLogger>();
     if (!api_client_) {
         throw std::runtime_error("API client must not be null");
     }
@@ -78,6 +80,7 @@ LLMEngine::LLMEngine(::LLMEngineAPI::ProviderType provider_type,
       provider_type_(provider_type),
       api_key_(std::string(api_key)),
       use_api_client_(true) {
+    logger_ = std::make_shared<DefaultLogger>();
     initializeAPIClient();
 }
 
@@ -93,6 +96,7 @@ LLMEngine::LLMEngine(std::string_view provider_name,
       debug_(debug),
       api_key_(std::string(api_key)),
       use_api_client_(true) {
+    logger_ = std::make_shared<DefaultLogger>();
     
     // Load config
     auto& config_mgr = ::LLMEngineAPI::APIConfigManager::getInstance();
@@ -293,7 +297,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
             std::filesystem::create_directories(Utils::TMP_DIR, ec_dir);
             
             DebugArtifacts::writeJson(Utils::TMP_DIR + "/api_response.json", api_response.raw_response, /*redactSecrets*/true);
-            std::cout << "[DEBUG] API response saved to " << (Utils::TMP_DIR + "/api_response.json") << std::endl;
+            logger_->log(LogLevel::Debug, std::string("API response saved to ") + (Utils::TMP_DIR + "/api_response.json"));
         }
         
         if (api_response.success) {
@@ -303,8 +307,8 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
             std::filesystem::create_directories(Utils::TMP_DIR, ec_dir2);
             
             DebugArtifacts::writeJson(Utils::TMP_DIR + "/api_response_error.json", api_response.raw_response, /*redactSecrets*/true);
-            std::cerr << "[ERROR] API error: " << api_response.error_message << std::endl;
-            std::cerr << "[INFO] Error response saved to " << (Utils::TMP_DIR + "/api_response_error.json") << std::endl;
+            logger_->log(LogLevel::Error, std::string("API error: ") + api_response.error_message);
+            logger_->log(LogLevel::Info, std::string("Error response saved to ") + (Utils::TMP_DIR + "/api_response_error.json"));
             return AnalysisResult{false, "", "", api_response.error_message, api_response.status_code};
         }
     } else {
@@ -335,14 +339,14 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
             std::error_code ec_dir3;
             std::filesystem::create_directories(Utils::TMP_DIR, ec_dir3);
             DebugArtifacts::writeText(Utils::TMP_DIR + "/ollama_response.json", response.text, /*redactSecrets*/true);
-            std::cout << "[DEBUG] Ollama response saved to " << (Utils::TMP_DIR + "/ollama_response.json") << std::endl;
+            logger_->log(LogLevel::Debug, std::string("Ollama response saved to ") + (Utils::TMP_DIR + "/ollama_response.json"));
         }
         
         if (response.status_code != HTTP_STATUS_OK) {
             std::error_code ec_dir4;
             std::filesystem::create_directories(Utils::TMP_DIR, ec_dir4);
             DebugArtifacts::writeText(Utils::TMP_DIR + "/ollama_response_error.json", response.text, /*redactSecrets*/true);
-            std::cerr << "[ERROR] Ollama error response saved to " << (Utils::TMP_DIR + "/ollama_response_error.json") << std::endl;
+            logger_->log(LogLevel::Error, std::string("Ollama error response saved to ") + (Utils::TMP_DIR + "/ollama_response_error.json"));
             return AnalysisResult{false, "", "", "Failed to contact Ollama server.", static_cast<int>(response.status_code)};
         }
         
@@ -356,7 +360,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                     full_response += line_json["response"].get<std::string>();
                 }
             } catch (const std::exception& e) {
-                std::cerr << "[ERROR] Failed to parse NDJSON line: " << e.what() << std::endl;
+                logger_->log(LogLevel::Error, std::string("Failed to parse NDJSON line: ") + e.what());
             }
         }
     }
@@ -366,7 +370,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         std::filesystem::create_directories(Utils::TMP_DIR, ec_dir5);
         
         DebugArtifacts::writeText(Utils::TMP_DIR + "/response_full.txt", full_response, /*redactSecrets*/true);
-        std::cout << "[DEBUG] Full response saved to " << (Utils::TMP_DIR + "/response_full.txt") << std::endl;
+        logger_->log(LogLevel::Debug, std::string("Full response saved to ") + (Utils::TMP_DIR + "/response_full.txt"));
         
         // Clean up old debug files based on retention policy
         DebugArtifacts::cleanupOld(Utils::TMP_DIR, log_retention_hours_);
@@ -416,10 +420,10 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
     };
     const std::string safe_analysis_name = sanitize_name(std::string(analysis_type));
     DebugArtifacts::writeText(Utils::TMP_DIR + "/" + safe_analysis_name + ".think.txt", think_section, /*redactSecrets*/true);
-    if (debug_) std::cout << "[DEBUG] Wrote think section\n";
+    if (debug_) logger_->log(LogLevel::Debug, "Wrote think section");
     
     DebugArtifacts::writeText(Utils::TMP_DIR + "/" + safe_analysis_name + ".txt", remaining_section, /*redactSecrets*/true);
-    if (debug_) std::cout << "[DEBUG] Wrote remaining section\n";
+    if (debug_) logger_->log(LogLevel::Debug, "Wrote remaining section");
     
     return AnalysisResult{true, think_section, remaining_section, "", HTTP_STATUS_OK};
 }
@@ -441,5 +445,11 @@ std::string LLMEngine::getModelName() const {
 
 bool LLMEngine::isOnlineProvider() const {
     return use_api_client_ && provider_type_ != ::LLMEngineAPI::ProviderType::OLLAMA;
+}
+
+void LLMEngine::setLogger(std::shared_ptr<Logger> logger) {
+    if (logger) {
+        logger_ = std::move(logger);
+    }
 }
 
