@@ -123,11 +123,12 @@
         "top_k": 40,
         "min_p": 0.05,
         "context_window": 10000
-      }
+      },
+      "timeout_seconds": 300
     }
   },
   "default_provider": "qwen",
-  "timeout_seconds": 300,
+  "timeout_seconds": 30,
   "retry_attempts": 3,
   "retry_delay_ms": 1000
 }

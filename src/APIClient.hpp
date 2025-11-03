@@ -248,6 +248,8 @@ public:
     [[nodiscard]] std::string getDefaultProvider() const;
     /** @brief Global timeout seconds. */
     [[nodiscard]] int getTimeoutSeconds() const;
+    /** @brief Get timeout seconds for a specific provider, falling back to global if not provider-specific. */
+    [[nodiscard]] int getTimeoutSeconds(std::string_view provider_name) const;
     /** @brief Global retry attempts. */
     [[nodiscard]] int getRetryAttempts() const;
     /** @brief Delay in milliseconds between retries. */

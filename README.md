@@ -262,6 +262,35 @@ export ANTHROPIC_API_KEY="sk-your-anthropic-key"
 export GEMINI_API_KEY="your-gemini-api-key"
 ```
 
+### Running Analysis Requests
+
+The `analyze()` method is the primary interface for making LLM requests:
+
+```cpp
+AnalysisResult result = engine.analyze("Explain quantum computing:", {}, "analysis");
+if (result.success) {
+    std::cout << "Response: " << result.content << std::endl;
+    std::cout << "Thinking: " << result.think << std::endl;
+} else {
+    std::cerr << "Error: " << result.errorMessage << std::endl;
+}
+```
+
+**Important Note on Prompt Modification**: By default, `analyze()` prepends a system instruction asking for brief, concise responses (one to two sentences). This behavior can be disabled by setting the `prepend_terse_instruction` parameter to `false`:
+
+```cpp
+// Use prompt verbatim without modification
+AnalysisResult result = engine.analyze(
+    "Your exact prompt here", 
+    {}, 
+    "analysis", 
+    "chat", 
+    false  // Disable terse-response instruction
+);
+```
+
+This option is useful when you need precise control over prompts for evaluation or when integrating with downstream agents that require exact prompt matching.
+
 [↑ Back to top](#llmengine)
 
 ## Security
@@ -283,6 +312,7 @@ export OPENAI_API_KEY="sk-your-openai-key"
 
 - **Never commit API keys** to version control. The `config/api_config.json` should only contain non-secret defaults.
 - **Prefer environment variables** over config file values. The library prioritizes environment variables over config file entries.
+- **Warning on config file fallback**: If an API key is not found in environment variables or constructor parameters, the library may fall back to `api_config.json`. When this happens, a warning is emitted to stderr. For production deployments, ensure API keys are always provided via environment variables to avoid this fallback.
 
 ### Debug Mode and Sensitive Data
 
@@ -292,6 +322,7 @@ When debug mode is enabled (`debug=true`), LLMEngine writes response artifacts t
 - **Log retention is enforced**: Files older than `log_retention_hours` are automatically cleaned up.
 - **Disable debug files in production**: Set the environment variable `LLMENGINE_DISABLE_DEBUG_FILES=1` to prevent any debug file writes.
 - **Review debug files**: Before sharing debug files, verify that sensitive information has been properly redacted.
+- **Secure directory permissions**: Debug artifact directories are automatically created with 0700 permissions (owner-only access) to prevent cross-user data exposure on shared hosts.
 
 ```cpp
 // Debug mode with 24-hour retention

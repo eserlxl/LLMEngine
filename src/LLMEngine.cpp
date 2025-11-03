@@ -143,6 +143,11 @@ LLMEngine::LLMEngine(std::string_view provider_name,
     } else {
         // Fall back to config file (last resort - not recommended for production)
         api_key_ = provider_config.value("api_key", "");
+        if (!api_key_.empty()) {
+            std::cerr << "[WARNING] Using API key from config file. For production use, "
+                      << "set the " << env_var_name << " environment variable instead. "
+                      << "Storing credentials in config files is a security risk." << std::endl;
+        }
     }
     
     // Set model
@@ -188,6 +193,12 @@ void LLMEngine::cleanupResponseFiles() const {
 
     std::error_code ec_dir;
     std::filesystem::create_directories(Utils::TMP_DIR, ec_dir);
+    // Set directory permissions to 0700 (owner-only read/write/execute) for security
+    if (!ec_dir && std::filesystem::exists(Utils::TMP_DIR)) {
+        std::filesystem::permissions(Utils::TMP_DIR, 
+            std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
+            std::filesystem::perm_options::replace);
+    }
 
     int cleaned_count = 0;
     for (const auto& suffix : files_to_clean) {
@@ -258,16 +269,33 @@ void LLMEngine::cleanupOldDebugFiles() const {
 AnalysisResult LLMEngine::analyze(std::string_view prompt, 
                                   const nlohmann::json& input, 
                                   std::string_view analysis_type, 
-                                  std::string_view mode) const {
+                                  std::string_view mode,
+                                  bool prepend_terse_instruction) const {
     // Clean up existing response files
     cleanupResponseFiles();
     
-    // Prepend short-answer instruction
-    std::string system_instruction = 
-        "Please respond directly to the previous message, engaging with its content. "
-        "Try to be brief and concise and complete your response in one or two sentences, "
-        "mostly one sentence.\n";
-    std::string full_prompt = system_instruction + std::string(prompt);
+    // Helper to ensure TMP_DIR exists with secure permissions (0700)
+    auto ensureSecureTmpDir = []() {
+        std::error_code ec;
+        std::filesystem::create_directories(Utils::TMP_DIR, ec);
+        if (!ec && std::filesystem::exists(Utils::TMP_DIR)) {
+            std::filesystem::permissions(Utils::TMP_DIR, 
+                std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
+                std::filesystem::perm_options::replace);
+        }
+    };
+    
+    // Optionally prepend short-answer instruction
+    std::string full_prompt;
+    if (prepend_terse_instruction) {
+        std::string system_instruction = 
+            "Please respond directly to the previous message, engaging with its content. "
+            "Try to be brief and concise and complete your response in one or two sentences, "
+            "mostly one sentence.\n";
+        full_prompt = system_instruction + std::string(prompt);
+    } else {
+        full_prompt = std::string(prompt);
+    }
     
     std::string full_response;
     
@@ -292,8 +320,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         auto api_response = api_client_->sendRequest(full_prompt, input, api_params);
         
         if (write_debug_files) {
-            std::error_code ec_dir;
-            std::filesystem::create_directories(Utils::TMP_DIR, ec_dir);
+            ensureSecureTmpDir();
             
             DebugArtifacts::writeJson(Utils::TMP_DIR + "/api_response.json", api_response.raw_response, /*redactSecrets*/true);
             logger_->log(LogLevel::Debug, std::string("API response saved to ") + (Utils::TMP_DIR + "/api_response.json"));
@@ -302,8 +329,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         if (api_response.success) {
             full_response = api_response.content;
         } else {
-            std::error_code ec_dir2;
-            std::filesystem::create_directories(Utils::TMP_DIR, ec_dir2);
+            ensureSecureTmpDir();
             
             DebugArtifacts::writeJson(Utils::TMP_DIR + "/api_response_error.json", api_response.raw_response, /*redactSecrets*/true);
             logger_->log(LogLevel::Error, std::string("API error: ") + api_response.error_message);
@@ -335,15 +361,13 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                   cpr::Body{payload.dump()});
         
         if (write_debug_files) {
-            std::error_code ec_dir3;
-            std::filesystem::create_directories(Utils::TMP_DIR, ec_dir3);
+            ensureSecureTmpDir();
             DebugArtifacts::writeText(Utils::TMP_DIR + "/ollama_response.json", response.text, /*redactSecrets*/true);
             logger_->log(LogLevel::Debug, std::string("Ollama response saved to ") + (Utils::TMP_DIR + "/ollama_response.json"));
         }
         
         if (response.status_code != HTTP_STATUS_OK) {
-            std::error_code ec_dir4;
-            std::filesystem::create_directories(Utils::TMP_DIR, ec_dir4);
+            ensureSecureTmpDir();
             DebugArtifacts::writeText(Utils::TMP_DIR + "/ollama_response_error.json", response.text, /*redactSecrets*/true);
             logger_->log(LogLevel::Error, std::string("Ollama error response saved to ") + (Utils::TMP_DIR + "/ollama_response_error.json"));
             return AnalysisResult{false, "", "", "Failed to contact Ollama server.", static_cast<int>(response.status_code)};
@@ -365,8 +389,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
     }
     
     if (write_debug_files) {
-        std::error_code ec_dir5;
-        std::filesystem::create_directories(Utils::TMP_DIR, ec_dir5);
+        ensureSecureTmpDir();
         
         DebugArtifacts::writeText(Utils::TMP_DIR + "/response_full.txt", full_response, /*redactSecrets*/true);
         logger_->log(LogLevel::Debug, std::string("Full response saved to ") + (Utils::TMP_DIR + "/response_full.txt"));
@@ -400,9 +423,8 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
     think_section     = trim_copy(think_section);
     remaining_section = trim_copy(remaining_section);
     
-    // Ensure temporary directory exists
-    std::error_code ec;
-    std::filesystem::create_directories(Utils::TMP_DIR, ec);
+    // Ensure temporary directory exists with secure permissions
+    ensureSecureTmpDir();
     
     // Write files
     auto sanitize_name = [](std::string name) {

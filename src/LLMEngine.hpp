@@ -77,9 +77,19 @@ public:
      * @param input Structured input payload.
      * @param analysis_type Tag used for routing/processing.
      * @param mode Provider-specific mode (default: "chat").
+     * @param prepend_terse_instruction If true (default), prepends a system instruction asking for brief, concise responses. 
+     *                                  Set to false to use the prompt verbatim without modification, useful for evaluation 
+     *                                  or when precise prompt control is needed for downstream agents.
      * @return AnalysisResult with typed fields.
+     * 
+     * @note By default, this method prepends the following instruction to your prompt:
+     *       "Please respond directly to the previous message, engaging with its content. 
+     *        Try to be brief and concise and complete your response in one or two sentences, 
+     *        mostly one sentence.\n"
+     *       To disable this behavior and use your prompt exactly as provided, set 
+     *       prepend_terse_instruction to false.
      */
-    [[nodiscard]] AnalysisResult analyze(std::string_view prompt, const nlohmann::json& input, std::string_view analysis_type, std::string_view mode = "chat") const;
+    [[nodiscard]] AnalysisResult analyze(std::string_view prompt, const nlohmann::json& input, std::string_view analysis_type, std::string_view mode = "chat", bool prepend_terse_instruction = true) const;
     
     // Utility methods
     /** @brief Provider display name. */

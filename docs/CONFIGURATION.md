@@ -66,7 +66,7 @@ If an expected key is missing, the environment variable must be set before initi
 These keys live at the root of `api_config.json`:
 
 - `default_provider`: string provider key, e.g. `"qwen"`
-- `timeout_seconds`: integer request timeout
+- `timeout_seconds`: integer request timeout (default: 30 seconds)
 - `retry_attempts`: integer retry count on transient failures
 
 Example:
@@ -77,6 +77,21 @@ Example:
   "retry_attempts": 3
 }
 ```
+
+**Provider-Specific Timeouts**: Individual providers can override the global timeout by setting `timeout_seconds` in their provider configuration. For example, local Ollama uses a 300-second timeout by default to accommodate slower local processing:
+
+```json
+{
+  "providers": {
+    "ollama": {
+      "timeout_seconds": 300,
+      ...
+    }
+  }
+}
+```
+
+When a provider-specific timeout is set, it takes precedence over the global timeout for that provider. Other providers without a specific timeout will use the global value.
 
 Minimal `api_config.json` (schema skeleton):
 

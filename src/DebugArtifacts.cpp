@@ -14,7 +14,14 @@ namespace {
 
 void DebugArtifacts::writeJson(const std::string& path, const nlohmann::json& json, bool redactSecrets) {
     try {
-        std::filesystem::create_directories(std::filesystem::path(path).parent_path());
+        std::filesystem::path dir_path = std::filesystem::path(path).parent_path();
+        if (!dir_path.empty()) {
+            std::filesystem::create_directories(dir_path);
+            // Set directory permissions to 0700 (owner-only read/write/execute) for security
+            std::filesystem::permissions(dir_path, 
+                std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
+                std::filesystem::perm_options::replace);
+        }
         nlohmann::json payload = redactSecrets ? redactJson(json) : json;
         std::ofstream f(path);
         if (!f) return;
@@ -27,7 +34,14 @@ void DebugArtifacts::writeJson(const std::string& path, const nlohmann::json& js
 
 void DebugArtifacts::writeText(const std::string& path, std::string_view text, bool redactSecrets) {
     try {
-        std::filesystem::create_directories(std::filesystem::path(path).parent_path());
+        std::filesystem::path dir_path = std::filesystem::path(path).parent_path();
+        if (!dir_path.empty()) {
+            std::filesystem::create_directories(dir_path);
+            // Set directory permissions to 0700 (owner-only read/write/execute) for security
+            std::filesystem::permissions(dir_path, 
+                std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
+                std::filesystem::perm_options::replace);
+        }
         std::ofstream f(path);
         if (!f) return;
         if (redactSecrets) {

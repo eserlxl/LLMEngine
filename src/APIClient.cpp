@@ -487,12 +487,13 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                 }
             }
             
-            // Get timeout from params or use config default
+            // Get timeout from params or use provider-specific/default config
             int timeout_seconds = 0;
             if (params.contains("timeout_seconds")) {
                 timeout_seconds = params["timeout_seconds"].get<int>();
             } else {
-                timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
+                // Use provider-specific timeout (300s for Ollama) or global default (30s)
+                timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds("ollama");
             }
             
             cpr::Response cpr_response;
@@ -573,12 +574,13 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             }
         }
         
-        // Get timeout from params or use config default
+        // Get timeout from params or use provider-specific/default config
         int timeout_seconds = 0;
         if (params.contains("timeout_seconds")) {
             timeout_seconds = params["timeout_seconds"].get<int>();
         } else {
-            timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
+            // Use provider-specific timeout (300s for Ollama) or global default (30s)
+            timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds("ollama");
         }
         
         cpr::Response cpr_response;
@@ -819,6 +821,11 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_
     const char* env_api_key = std::getenv(env_var_name.c_str());
     if (env_api_key && strlen(env_api_key) > 0) {
         api_key = env_api_key;
+    } else if (!api_key.empty()) {
+        // Warn if falling back to config file for credentials
+        std::cerr << "[WARNING] Using API key from config file. For production use, "
+                  << "set the " << env_var_name << " environment variable instead. "
+                  << "Storing credentials in config files is a security risk." << std::endl;
     }
     
     std::string model = config.value("default_model", "");
@@ -976,6 +983,25 @@ int APIConfigManager::getTimeoutSeconds() const {
         return config_["timeout_seconds"].get<int>();
     }
     return DEFAULT_TIMEOUT_SECONDS;
+}
+
+int APIConfigManager::getTimeoutSeconds(std::string_view provider_name) const {
+    // Shared lock for reading configuration
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    
+    // Check for provider-specific timeout first
+    if (config_loaded_ && config_.contains("providers")) {
+        std::string provider_key(provider_name);
+        if (config_["providers"].contains(provider_key)) {
+            const auto& provider_config = config_["providers"][provider_key];
+            if (provider_config.contains("timeout_seconds") && provider_config["timeout_seconds"].is_number_integer()) {
+                return provider_config["timeout_seconds"].get<int>();
+            }
+        }
+    }
+    
+    // Fall back to global timeout
+    return getTimeoutSeconds();
 }
 
 int APIConfigManager::getRetryAttempts() const {
