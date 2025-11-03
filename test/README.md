@@ -11,7 +11,7 @@ This directory contains a comprehensive test suite for the LLMEngine library.
 
 ## Prerequisites
 
-1. **Ollama Server**: You need to have Ollama running locally
+1. **Ollama Server**: A local Ollama instance must be running
    ```bash
    # Install Ollama (if not already installed)
    curl -fsSL https://ollama.ai/install.sh | sh
@@ -50,7 +50,7 @@ make -j20
 
 ## Test Coverage
 
-You can enable coverage locally without CI.
+Coverage can be enabled locally without CI.
 
 1. Configure a Debug build with coverage flags:
    ```bash
@@ -78,7 +78,7 @@ The test suite covers:
 
 ## Configuration
 
-Before running the test, you may need to modify the following in `test.cpp`:
+Before running the test, the following may need to be modified in `test.cpp`:
 
 - `ollama_url`: Default is "http://localhost:11434"
 - `model`: Default is "llama3.2" (change to your available model)

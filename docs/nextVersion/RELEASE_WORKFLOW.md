@@ -36,11 +36,11 @@ Key components of the release process include:
 
 ## Quick Start: Creating a Release
 
-This section provides a condensed guide for quickly creating a release.
+This section provides a condensed guide for creating a release.
 
 ### 1. Analyze Changes
 
-Before initiating a release, it's good practice to analyze the changes since the last release to understand the suggested version bump. Use the `semantic-version-analyzer` tool:
+Before initiating a release, it is good practice to analyze the changes since the last release to understand the suggested version bump. The `semantic-version-analyzer` tool can be used:
 
 ```bash
 # Analyze changes since the last official release
@@ -90,9 +90,9 @@ For most feature additions, bug fixes, or breaking changes, simply push your fin
 
 #### Option B: Manual Release (For specific control or overriding automation)
 
-If you need to manually trigger a release (e.g., for a hotfix, a specific prerelease, or to override the automatic detection):
+If a manual release is required (e.g., for a hotfix, a specific prerelease, or to override the automatic detection):
 
-1.  Navigate to your repository on GitHub.
+1.  Navigate to the repository on GitHub.
 2.  Go to the **Actions** tab.
 3.  Select the workflow named **"Auto Version Bump with Semantic Release Notes"** from the left sidebar.
 4.  Click the **"Run workflow"** dropdown button on the right.
@@ -110,14 +110,14 @@ This section provides a more in-depth look at each step of the release process.
 
 ### Step 1: Prepare for Release
 
-Before initiating any release, ensure your `main` branch is clean, up-to-date, and all intended changes are committed.
+Before initiating any release, ensure the `main` branch is clean, up-to-date, and all intended changes are committed.
 
 ```bash
-# Ensure your local main branch is synchronized with remote
+# Ensure the local main branch is synchronized with remote
 git checkout main
 git pull origin main
 
-# Check for any uncommitted changes
+# Check for uncommitted changes
 git status
 
 # Verify the current version

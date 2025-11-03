@@ -113,7 +113,7 @@ export OPENAI_API_KEY="your-openai-api-key"
 export ANTHROPIC_API_KEY="your-anthropic-api-key"
 ```
 
-Then in your code:
+In application code:
 
 ```cpp
 const char* api_key = std::getenv("QWEN_API_KEY");
@@ -207,7 +207,7 @@ The library looks for `api_config.json` in the following locations (in order):
 
 ### Programmatically Setting Default Config Path
 
-You can change the default configuration file path at runtime:
+The default configuration file path can be changed at runtime:
 
 ```cpp
 #include "APIClient.hpp"
@@ -226,11 +226,11 @@ std::string current_path = config_mgr.getDefaultConfigPath();
 config_mgr.loadConfig();  // Uses "/custom/path/api_config.json"
 ```
 
-This is useful when your application needs to load configuration from a non-standard location or when the config location is determined at runtime.
+This is useful when an application needs to load configuration from a non-standard location or when the configuration location is determined at runtime.
 
 ## Customizing Configuration
 
-You can modify `api_config.json` to:
+The `api_config.json` file can be modified to:
 
 - Add custom base URLs for self-hosted APIs
 - Change default models

@@ -1,6 +1,6 @@
 # Version Management Scripts - Modular Architecture
 
-This directory contains modular version management scripts for the next-version project. The original monolithic `bump-version` script has been split into smaller, focused modules for better maintainability and development.
+This directory contains modular version management scripts for the next-version project. The original monolithic `bump-version` script has been split into smaller, focused modules for improved maintainability and development.
 
 ## Architecture Overview
 
