@@ -214,8 +214,8 @@ namespace Utils {
             std::cerr << "[WARNING] Command '" << cmd_str << "' exited with non-zero status: " << WEXITSTATUS(status) << std::endl;
             if (!output.empty()) {
                 std::cerr << "  Output:" << std::endl;
-                for (const auto& line : output) {
-                    std::cerr << "    " << line;
+                for (const auto& output_line : output) {
+                    std::cerr << "    " << output_line;
                 }
             }
         } else if (WIFSIGNALED(status)) {
