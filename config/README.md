@@ -85,14 +85,17 @@ int main() {
 }
 ```
 
-### Backward Compatibility with Ollama
+### Using Ollama Provider
 
 ```cpp
 #include "LLMEngine.hpp"
 
 int main() {
-    // Legacy constructor still works
-    LLMEngine engine("http://localhost:11434", "llama2");
+    // Using ProviderType constructor
+    LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "llama2");
+    
+    // Or using provider name
+    LLMEngine engine2("ollama", "", "llama2");
     
     std::string prompt = "Hello, how are you?";
     nlohmann::json input = {};

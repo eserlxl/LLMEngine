@@ -80,10 +80,11 @@ The test suite covers:
 
 Before running the test, the following may need to be modified in `test.cpp`:
 
-- `ollama_url`: Default is "http://localhost:11434"
 - `model`: Default is "llama3.2" (change to your available model)
 - `temperature`: Default is 0.7
 - `debug`: Set to true for verbose output
+
+Note: Ollama URL is configured via `config/api_config.json` or defaults to "http://localhost:11434"
 
 ## Expected Output
 

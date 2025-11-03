@@ -20,9 +20,8 @@ int main() {
         // Test 1: Basic LLMEngine initialization with payload
         std::cout << "\n1. Testing LLMEngine initialization with payload..." << std::endl;
         
-        // Initialize LLMEngine with payload-based parameters
+        // Initialize LLMEngine with Ollama provider
         // Note: You'll need to have an Ollama server running for this to work
-        std::string ollama_url = "http://localhost:11434";
         std::string model = "ertghiu256/qwen3-4b-code-reasoning";  // Change this to your available model
         int log_retention_hours = 24;
         bool debug = true;  // Enable debug mode for testing
@@ -37,7 +36,7 @@ int main() {
             {"min_p", 0.05}
         };
         
-        LLMEngine engine(ollama_url, model, model_params, log_retention_hours, debug);
+        LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", model, model_params, log_retention_hours, debug);
         std::cout << "✓ LLMEngine initialized successfully with payload" << std::endl;
         
         // Test 1.5: Test optional parameters (empty payload)
@@ -45,7 +44,7 @@ int main() {
         
         // Create engine with empty payload to test default behavior
         nlohmann::json empty_params = {};
-        LLMEngine engine_empty(ollama_url, model, empty_params, log_retention_hours, debug);
+        LLMEngine engine_empty(::LLMEngineAPI::ProviderType::OLLAMA, "", model, empty_params, log_retention_hours, debug);
         std::cout << "✓ LLMEngine with empty payload initialized successfully" << std::endl;
         std::cout << "Note: Empty payload means Ollama will use all default values" << std::endl;
         
@@ -57,7 +56,7 @@ int main() {
             {"temperature", 0.5},
             {"top_p", 0.8}
         };
-        LLMEngine engine_partial(ollama_url, model, partial_params, log_retention_hours, debug);
+        LLMEngine engine_partial(::LLMEngineAPI::ProviderType::OLLAMA, "", model, partial_params, log_retention_hours, debug);
         std::cout << "✓ LLMEngine with partial payload initialized successfully" << std::endl;
         std::cout << "Note: Only specified parameters will be sent to Ollama" << std::endl;
         

@@ -27,18 +27,7 @@ struct AnalysisResult {
  */
 class LLMEngine {
 public:
-    // Legacy constructor for Ollama (backward compatibility)
-    /**
-     * @brief Construct an engine for local Ollama.
-     * @param ollama_url Base URL of Ollama server.
-     * @param model Default model name.
-     * @param model_params Default model params (temperature, max_tokens, ...).
-     * @param log_retention_hours Hours to keep debug artifacts.
-     * @param debug Enable response artifact logging.
-     */
-    LLMEngine(std::string_view ollama_url, std::string_view model, const nlohmann::json& model_params = {}, int log_retention_hours = 24, bool debug = false);
-    
-    // New constructor for API-based providers
+    // Constructor for API-based providers
     /**
      * @brief Construct an engine for an online provider.
      * @param provider_type Provider enum value.
@@ -100,6 +89,10 @@ public:
     [[nodiscard]] ::LLMEngineAPI::ProviderType getProviderType() const;
     /** @brief True if using an online provider (not local Ollama). */
     [[nodiscard]] bool isOnlineProvider() const;
+    
+    // Temporary directory configuration
+    void setTempDirectory(const std::string& tmp_dir);
+    [[nodiscard]] std::string getTempDirectory() const;
     // Logging
     void setLogger(std::shared_ptr<Logger> logger);
     
@@ -107,17 +100,15 @@ private:
     void cleanupResponseFiles() const;
     void initializeAPIClient();
     
-    // Legacy Ollama fields (for backward compatibility)
-    std::string ollama_url_;
     std::string model_;
     nlohmann::json model_params_;
     int log_retention_hours_;
     bool debug_;
+    std::string tmp_dir_;  // Configurable temporary directory (defaults to Utils::TMP_DIR)
     
-    // New API client support
+    // API client support
     std::unique_ptr<::LLMEngineAPI::APIClient> api_client_;
     ::LLMEngineAPI::ProviderType provider_type_;
     std::string api_key_;
-    bool use_api_client_;
+    std::string ollama_url_;  // Only used when provider_type is OLLAMA
     std::shared_ptr<Logger> logger_;
-};

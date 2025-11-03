@@ -23,9 +23,9 @@ int main() {
     // Visible content contains fake marker
     assert(out.content.find("[FAKE]") != std::string::npos);
 
-    // Legacy constructors still compile and construct; avoid network by not calling analyze
-    LLMEngine legacy("http://localhost:11434", "llama2");
-    (void)legacy;
+    // Test Ollama provider via ProviderType constructor
+    LLMEngine ollama_engine(ProviderType::OLLAMA, "", "llama2");
+    (void)ollama_engine;
 
     std::cout << "test_llmengine_construction: OK\n";
     return 0;

@@ -42,7 +42,7 @@ Key benefits:
 
 ## Overview
 
-LLMEngine abstracts away provider-specific details and exposes a consistent API for text generation and analysis. It offers seamless switching between providers, sensible defaults via `config/api_config.json`, and preserves backward compatibility with legacy Ollama-only usage.
+LLMEngine abstracts away provider-specific details and exposes a consistent API for text generation and analysis. It offers seamless switching between providers with sensible defaults via `config/api_config.json`.
 
 - **Project**: LLMEngine 0.1.0
 - **Language/Std**: C++20
@@ -57,7 +57,6 @@ LLMEngine abstracts away provider-specific details and exposes a consistent API 
 - **Multi-provider support**: Qwen (DashScope), OpenAI, Anthropic, Google Gemini, and local Ollama
 - **Unified interface**: One API across different providers and models
 - **Config-driven**: Provider defaults and parameters from `config/api_config.json`
-- **Backward compatible**: Existing Ollama code paths continue to work
 
 ### Developer Experience
 - **Type-safe APIs** with enums and factory patterns
@@ -187,7 +186,9 @@ LLMEngine claude(::LLMEngineAPI::ProviderType::ANTHROPIC, api_key, "claude-3-son
 LLMEngine gemini(::LLMEngineAPI::ProviderType::GEMINI, api_key, "gemini-1.5-flash");
 
 // Ollama (local)
-LLMEngine ollama("http://localhost:11434", "llama2");
+LLMEngine ollama(::LLMEngineAPI::ProviderType::OLLAMA, "", "llama2");
+// Or using provider name:
+LLMEngine ollama2("ollama", "", "llama2");
 ```
 
 ### Using Provider Names (string)

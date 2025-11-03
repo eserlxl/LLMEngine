@@ -33,23 +33,6 @@ namespace {
     constexpr size_t MAX_FILENAME_LENGTH = 64;
 }
 
-// Legacy constructor for Ollama (backward compatibility)
-LLMEngine::LLMEngine(std::string_view ollama_url, 
-                     std::string_view model, 
-                     const nlohmann::json& model_params, 
-                     int log_retention_hours, 
-                     bool debug)
-    : ollama_url_(std::string(ollama_url)), 
-      model_(std::string(model)), 
-      model_params_(model_params), 
-      log_retention_hours_(log_retention_hours), 
-      debug_(debug),
-      provider_type_(::LLMEngineAPI::ProviderType::OLLAMA),
-      use_api_client_(false) {
-    logger_ = std::make_shared<DefaultLogger>();
-    // Legacy mode - use direct HTTP calls to Ollama
-}
-
 // Dependency injection constructor
 LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
                      const nlohmann::json& model_params,
@@ -58,8 +41,8 @@ LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
     : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
-      api_client_(std::move(client)),
-      use_api_client_(true) {
+      tmp_dir_(Utils::TMP_DIR),
+      api_client_(std::move(client)) {
     logger_ = std::make_shared<DefaultLogger>();
     if (!api_client_) {
         throw std::runtime_error("API client must not be null");
@@ -78,9 +61,9 @@ LLMEngine::LLMEngine(::LLMEngineAPI::ProviderType provider_type,
       model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
+      tmp_dir_(Utils::TMP_DIR),
       provider_type_(provider_type),
-      api_key_(std::string(api_key)),
-      use_api_client_(true) {
+      api_key_(std::string(api_key)) {
     logger_ = std::make_shared<DefaultLogger>();
     initializeAPIClient();
 }
@@ -95,8 +78,8 @@ LLMEngine::LLMEngine(std::string_view provider_name,
     : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
-      api_key_(std::string(api_key)),
-      use_api_client_(true) {
+      tmp_dir_(Utils::TMP_DIR),
+      api_key_(std::string(api_key)) {
     logger_ = std::make_shared<DefaultLogger>();
     
     // Load config
@@ -193,22 +176,11 @@ void LLMEngine::cleanupResponseFiles() const {
         "/response_full.txt"
     };
 
-    std::error_code ec_dir;
-    std::filesystem::create_directories(Utils::TMP_DIR, ec_dir);
-    // Set directory permissions to 0700 (owner-only read/write/execute) for security
-    if (!ec_dir && std::filesystem::exists(Utils::TMP_DIR)) {
-        std::error_code ec_perm;
-        std::filesystem::permissions(Utils::TMP_DIR, 
-            std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
-            std::filesystem::perm_options::replace, ec_perm);
-        if (ec_perm && logger_) {
-            logger_->log(LogLevel::Warn, std::string("Failed to set permissions on ") + Utils::TMP_DIR + ": " + ec_perm.message());
-        }
-    }
+    ensureSecureTmpDir();
 
     int cleaned_count = 0;
     for (const auto& suffix : files_to_clean) {
-        const std::string path = Utils::TMP_DIR + suffix;
+        const std::string path = tmp_dir_ + suffix;
         std::error_code ec;
         if (std::filesystem::exists(path, ec) && std::filesystem::is_regular_file(path, ec)) {
             if (std::filesystem::remove(path, ec)) {
@@ -223,7 +195,7 @@ void LLMEngine::cleanupResponseFiles() const {
     }
 
     if (cleaned_count > 0 && debug_ && logger_) {
-        logger_->log(LogLevel::Debug, std::string("Cleaned up ") + std::to_string(cleaned_count) + " existing response file(s) in " + Utils::TMP_DIR);
+        logger_->log(LogLevel::Debug, std::string("Cleaned up ") + std::to_string(cleaned_count) + " existing response file(s) in " + tmp_dir_);
     }
 }
 
@@ -236,35 +208,17 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
     // Clean up existing response files
     cleanupResponseFiles();
     
-    // Cache temporary directory setup to avoid repeated work
-    static std::once_flag tmp_dir_initialized;
-    static bool tmp_dir_ready = false;
-    std::call_once(tmp_dir_initialized, []() {
+    // Helper to ensure tmp_dir_ exists with secure permissions (0700)
+    auto ensureSecureTmpDir = [this]() {
         std::error_code ec;
-        std::filesystem::create_directories(Utils::TMP_DIR, ec);
-        if (!ec && std::filesystem::exists(Utils::TMP_DIR)) {
+        std::filesystem::create_directories(tmp_dir_, ec);
+        if (!ec && std::filesystem::exists(tmp_dir_)) {
             std::error_code ec_perm;
-            std::filesystem::permissions(Utils::TMP_DIR, 
+            std::filesystem::permissions(tmp_dir_, 
                 std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
                 std::filesystem::perm_options::replace, ec_perm);
-            // Best-effort: silently ignore permission errors (may fail in restricted environments)
-            tmp_dir_ready = true;
-        }
-    });
-    
-    // Helper to ensure TMP_DIR exists with secure permissions (0700) - only if not already initialized
-    auto ensureSecureTmpDir = [this]() {
-        if (!tmp_dir_ready) {
-            std::error_code ec;
-            std::filesystem::create_directories(Utils::TMP_DIR, ec);
-            if (!ec && std::filesystem::exists(Utils::TMP_DIR)) {
-                std::error_code ec_perm;
-                std::filesystem::permissions(Utils::TMP_DIR, 
-                    std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
-                    std::filesystem::perm_options::replace, ec_perm);
-                if (ec_perm && logger_) {
-                    logger_->log(LogLevel::Warn, std::string("Failed to set permissions on ") + Utils::TMP_DIR + ": " + ec_perm.message());
-                }
+            if (ec_perm && logger_) {
+                logger_->log(LogLevel::Warn, std::string("Failed to set permissions on ") + tmp_dir_ + ": " + ec_perm.message());
             }
         }
     };
@@ -285,7 +239,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
     
     const bool write_debug_files = debug_ && (std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") == nullptr);
 
-    if (use_api_client_ && api_client_) {
+    if (api_client_) {
         // Use API client
         nlohmann::json api_params = model_params_;
         
@@ -306,8 +260,8 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         if (write_debug_files) {
             ensureSecureTmpDir();
             
-            DebugArtifacts::writeJson(Utils::TMP_DIR + "/api_response.json", api_response.raw_response, /*redactSecrets*/true);
-            logger_->log(LogLevel::Debug, std::string("API response saved to ") + (Utils::TMP_DIR + "/api_response.json"));
+            DebugArtifacts::writeJson(tmp_dir_ + "/api_response.json", api_response.raw_response, /*redactSecrets*/true);
+            logger_->log(LogLevel::Debug, std::string("API response saved to ") + (tmp_dir_ + "/api_response.json"));
         }
         
         if (api_response.success) {
@@ -315,71 +269,23 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         } else {
             ensureSecureTmpDir();
             
-            DebugArtifacts::writeJson(Utils::TMP_DIR + "/api_response_error.json", api_response.raw_response, /*redactSecrets*/true);
+            DebugArtifacts::writeJson(tmp_dir_ + "/api_response_error.json", api_response.raw_response, /*redactSecrets*/true);
             logger_->log(LogLevel::Error, std::string("API error: ") + api_response.error_message);
-            logger_->log(LogLevel::Info, std::string("Error response saved to ") + (Utils::TMP_DIR + "/api_response_error.json"));
+            logger_->log(LogLevel::Info, std::string("Error response saved to ") + (tmp_dir_ + "/api_response_error.json"));
             return AnalysisResult{false, "", "", api_response.error_message, api_response.status_code};
         }
     } else {
-        // Legacy Ollama mode
-        nlohmann::json payload = {
-            {"model", model_},
-            {"prompt", full_prompt},
-            {"input", input}
-        };
-        
-        for (auto& [key, value] : model_params_.items()) {
-            payload[key] = value;
-        }
-        
-        // Get max_tokens from input payload if provided
-        if (input.contains("max_tokens") && input["max_tokens"].is_number_integer()) {
-            int max_tokens = input["max_tokens"].get<int>();
-            if (max_tokens > 0) {
-                payload["max_tokens"] = max_tokens;
-            }
-        }
-        
-        auto response = cpr::Post(cpr::Url{ollama_url_ + "/api/generate"},
-                                  cpr::Header{{"Content-Type", "application/json"}},
-                                  cpr::Body{payload.dump()});
-        
-        if (write_debug_files) {
-            ensureSecureTmpDir();
-            DebugArtifacts::writeText(Utils::TMP_DIR + "/ollama_response.json", response.text, /*redactSecrets*/true);
-            logger_->log(LogLevel::Debug, std::string("Ollama response saved to ") + (Utils::TMP_DIR + "/ollama_response.json"));
-        }
-        
-        if (response.status_code != HTTP_STATUS_OK) {
-            ensureSecureTmpDir();
-            DebugArtifacts::writeText(Utils::TMP_DIR + "/ollama_response_error.json", response.text, /*redactSecrets*/true);
-            logger_->log(LogLevel::Error, std::string("Ollama error response saved to ") + (Utils::TMP_DIR + "/ollama_response_error.json"));
-            return AnalysisResult{false, "", "", "Failed to contact Ollama server.", static_cast<int>(response.status_code)};
-        }
-        
-        // Reconstruct full response from NDJSON
-        std::istringstream resp_stream(response.text);
-        std::string line;
-        while (std::getline(resp_stream, line)) {
-            try {
-                auto line_json = nlohmann::json::parse(line);
-                if (line_json.contains("response")) {
-                    full_response += line_json["response"].get<std::string>();
-                }
-            } catch (const std::exception& e) {
-                logger_->log(LogLevel::Error, std::string("Failed to parse NDJSON line: ") + e.what());
-            }
-        }
+        return AnalysisResult{false, "", "", "API client not initialized", 500};
     }
     
     if (write_debug_files) {
         ensureSecureTmpDir();
         
-        DebugArtifacts::writeText(Utils::TMP_DIR + "/response_full.txt", full_response, /*redactSecrets*/true);
-        logger_->log(LogLevel::Debug, std::string("Full response saved to ") + (Utils::TMP_DIR + "/response_full.txt"));
+        DebugArtifacts::writeText(tmp_dir_ + "/response_full.txt", full_response, /*redactSecrets*/true);
+        logger_->log(LogLevel::Debug, std::string("Full response saved to ") + (tmp_dir_ + "/response_full.txt"));
         
         // Clean up old debug files based on retention policy
-        DebugArtifacts::cleanupOld(Utils::TMP_DIR, log_retention_hours_);
+        DebugArtifacts::cleanupOld(tmp_dir_, log_retention_hours_);
     }
     
     // Extract THINK section
@@ -407,8 +313,6 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
     think_section     = trim_copy(think_section);
     remaining_section = trim_copy(remaining_section);
     
-    // Ensure temporary directory exists with secure permissions
-    ensureSecureTmpDir();
     
     // Write files
     auto sanitize_name = [](std::string name) {
@@ -424,10 +328,10 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         return name;
     };
     const std::string safe_analysis_name = sanitize_name(std::string(analysis_type));
-    DebugArtifacts::writeText(Utils::TMP_DIR + "/" + safe_analysis_name + ".think.txt", think_section, /*redactSecrets*/true);
+    DebugArtifacts::writeText(tmp_dir_ + "/" + safe_analysis_name + ".think.txt", think_section, /*redactSecrets*/true);
     if (debug_) logger_->log(LogLevel::Debug, "Wrote think section");
     
-    DebugArtifacts::writeText(Utils::TMP_DIR + "/" + safe_analysis_name + ".txt", remaining_section, /*redactSecrets*/true);
+    DebugArtifacts::writeText(tmp_dir_ + "/" + safe_analysis_name + ".txt", remaining_section, /*redactSecrets*/true);
     if (debug_) logger_->log(LogLevel::Debug, "Wrote remaining section");
     
     return AnalysisResult{true, think_section, remaining_section, "", HTTP_STATUS_OK};
@@ -449,12 +353,20 @@ std::string LLMEngine::getModelName() const {
 }
 
 bool LLMEngine::isOnlineProvider() const {
-    return use_api_client_ && provider_type_ != ::LLMEngineAPI::ProviderType::OLLAMA;
+    return provider_type_ != ::LLMEngineAPI::ProviderType::OLLAMA;
 }
 
 void LLMEngine::setLogger(std::shared_ptr<Logger> logger) {
     if (logger) {
         logger_ = std::move(logger);
     }
+}
+
+void LLMEngine::setTempDirectory(const std::string& tmp_dir) {
+    tmp_dir_ = tmp_dir;
+}
+
+std::string LLMEngine::getTempDirectory() const {
+    return tmp_dir_;
 }
 

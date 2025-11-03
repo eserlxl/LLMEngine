@@ -140,23 +140,26 @@ void testLLMEngineWithQwen() {
     }
 }
 
-void testLLMEngineBackwardCompatibility() {
-    printSeparator("Testing LLMEngine Backward Compatibility (Ollama)");
+void testLLMEngineOllamaProvider() {
+    printSeparator("Testing LLMEngine Ollama Provider");
     
-    std::cout << "Testing legacy Ollama constructor..." << std::endl;
+    std::cout << "Testing Ollama provider via ProviderType constructor..." << std::endl;
     
     try {
-        std::string ollama_url = "http://localhost:11434";
         std::string model = "llama2";
         nlohmann::json model_params = {
             {"temperature", 0.7},
             {"top_p", 0.9}
         };
         
-        LLMEngine engine(ollama_url, model, model_params, 24, true);
-        std::cout << "✓ LLMEngine initialized with legacy Ollama constructor" << std::endl;
+        LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", model, model_params, 24, true);
+        std::cout << "✓ LLMEngine initialized with Ollama provider" << std::endl;
         std::cout << "  Provider: " << engine.getProviderName() << std::endl;
         std::cout << "  Is online: " << (engine.isOnlineProvider() ? "Yes" : "No") << std::endl;
+        
+        // Test with provider name constructor
+        LLMEngine engine2("ollama", "", model, model_params, 24, true);
+        std::cout << "✓ LLMEngine initialized with provider name 'ollama'" << std::endl;
         
         // Note: We don't actually make a request here since Ollama might not be running
         std::cout << "Note: Skipping actual request (Ollama might not be running)" << std::endl;
@@ -213,8 +216,8 @@ int main() {
         // Test 4: LLMEngine with Qwen
         testLLMEngineWithQwen();
         
-        // Test 5: Backward compatibility
-        testLLMEngineBackwardCompatibility();
+        // Test 5: Ollama provider
+        testLLMEngineOllamaProvider();
         
         printSeparator("All Tests Completed");
         std::cout << "\nTest Summary:" << std::endl;
@@ -222,7 +225,7 @@ int main() {
         std::cout << "  - API Client Factory: ✓" << std::endl;
         std::cout << "  - Qwen Client: " << (std::getenv("QWEN_API_KEY") ? "✓" : "⊘ (skipped)") << std::endl;
         std::cout << "  - LLMEngine with Qwen: " << (std::getenv("QWEN_API_KEY") ? "✓" : "⊘ (skipped)") << std::endl;
-        std::cout << "  - Backward Compatibility: ✓" << std::endl;
+        std::cout << "  - Ollama Provider: ✓" << std::endl;
         
         std::cout << "\nTo test Qwen integration, set QWEN_API_KEY environment variable:" << std::endl;
         std::cout << "  export QWEN_API_KEY='your-api-key-here'" << std::endl;
