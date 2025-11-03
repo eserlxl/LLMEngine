@@ -21,6 +21,7 @@
 #include "Utils.hpp"
 #include <filesystem>
 #include <cstdlib>
+#include "DebugArtifacts.hpp"
 
 // Constants
 namespace {
@@ -170,86 +171,7 @@ void LLMEngine::initializeAPIClient() {
     }
 }
 
-// Helper function to sanitize JSON by redacting sensitive fields
-namespace {
-    nlohmann::json sanitizeJson(const nlohmann::json& json, const std::string& api_key = "") {
-        if (json.is_string()) {
-            // Handle string values - redact API key if present
-            std::string str = json.get<std::string>();
-            if (!api_key.empty()) {
-                size_t pos = 0;
-                while ((pos = str.find(api_key, pos)) != std::string::npos) {
-                    str.replace(pos, api_key.length(), "<REDACTED>");
-                    pos += REDACTED_TAG_LENGTH;
-                }
-            }
-            return nlohmann::json{str};
-        }
-        
-        if (!json.is_object()) {
-            return json;
-        }
-        
-        nlohmann::json sanitized = json;
-        
-        // List of fields that may contain sensitive information
-        const std::vector<std::string> sensitive_keys = {
-            "api_key", "apikey", "access_token", "accesstoken", "token",
-            "authorization", "x-api-key", "xapikey",
-            "secret", "password", "passwd", "pwd", "credential"
-        };
-        
-        // Redact sensitive fields
-        for (auto& [key, value] : sanitized.items()) {
-            std::string key_lower = key;
-            std::transform(key_lower.begin(), key_lower.end(), key_lower.begin(), ::tolower);
-            
-            for (const auto& sensitive : sensitive_keys) {
-                if (key_lower.find(sensitive) != std::string::npos) {
-                    sanitized[key] = "<REDACTED>";
-                    break;
-                }
-            }
-            
-            // Recursively sanitize nested objects and arrays
-            if (value.is_object()) {
-                sanitized[key] = sanitizeJson(value, api_key);
-            } else if (value.is_array()) {
-                nlohmann::json sanitized_array = nlohmann::json::array();
-                for (const auto& item : value) {
-                    sanitized_array.push_back(sanitizeJson(item, api_key));
-                }
-                sanitized[key] = sanitized_array;
-            } else if (value.is_string() && !api_key.empty()) {
-                // Redact API key from string values
-                std::string str = value.get<std::string>();
-                size_t pos = 0;
-                while ((pos = str.find(api_key, pos)) != std::string::npos) {
-                    str.replace(pos, api_key.length(), "<REDACTED>");
-                    pos += REDACTED_TAG_LENGTH;
-                }
-                sanitized[key] = str;
-            }
-        }
-        
-        return sanitized;
-    }
-    
-    // Helper to sanitize plain text (for non-JSON debug files)
-    std::string sanitizeText(const std::string& text, const std::string& api_key = "") {
-        if (api_key.empty()) {
-            return text;
-        }
-        
-        std::string sanitized = text;
-        size_t pos = 0;
-        while ((pos = sanitized.find(api_key, pos)) != std::string::npos) {
-            sanitized.replace(pos, api_key.length(), "<REDACTED>");
-            pos += REDACTED_TAG_LENGTH;
-        }
-        return sanitized;
-    }
-}
+// Redaction and debug file I/O moved to DebugArtifacts
 
 void LLMEngine::cleanupResponseFiles() const {
     std::vector<std::string> files_to_clean = {
@@ -370,12 +292,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
             std::error_code ec_dir;
             std::filesystem::create_directories(Utils::TMP_DIR, ec_dir);
             
-            // Sanitize JSON before writing to prevent leaking secrets
-            nlohmann::json sanitized_response = sanitizeJson(api_response.raw_response, api_key_);
-            
-            std::ofstream resp_file(Utils::TMP_DIR + "/api_response.json");
-            resp_file << sanitized_response.dump(2);
-            resp_file.close();
+            DebugArtifacts::writeJson(Utils::TMP_DIR + "/api_response.json", api_response.raw_response, /*redactSecrets*/true);
             std::cout << "[DEBUG] API response saved to " << (Utils::TMP_DIR + "/api_response.json") << std::endl;
         }
         
@@ -385,12 +302,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
             std::error_code ec_dir2;
             std::filesystem::create_directories(Utils::TMP_DIR, ec_dir2);
             
-            // Sanitize error response JSON before writing
-            nlohmann::json sanitized_error = sanitizeJson(api_response.raw_response, api_key_);
-            
-            std::ofstream err_file(Utils::TMP_DIR + "/api_response_error.json");
-            err_file << sanitized_error.dump(2);
-            err_file.close();
+            DebugArtifacts::writeJson(Utils::TMP_DIR + "/api_response_error.json", api_response.raw_response, /*redactSecrets*/true);
             std::cerr << "[ERROR] API error: " << api_response.error_message << std::endl;
             std::cerr << "[INFO] Error response saved to " << (Utils::TMP_DIR + "/api_response_error.json") << std::endl;
             return AnalysisResult{false, "", "", api_response.error_message, api_response.status_code};
@@ -422,18 +334,14 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         if (write_debug_files) {
             std::error_code ec_dir3;
             std::filesystem::create_directories(Utils::TMP_DIR, ec_dir3);
-            std::ofstream resp_file(Utils::TMP_DIR + "/ollama_response.json");
-            resp_file << response.text;
-            resp_file.close();
+            DebugArtifacts::writeText(Utils::TMP_DIR + "/ollama_response.json", response.text, /*redactSecrets*/true);
             std::cout << "[DEBUG] Ollama response saved to " << (Utils::TMP_DIR + "/ollama_response.json") << std::endl;
         }
         
         if (response.status_code != HTTP_STATUS_OK) {
             std::error_code ec_dir4;
             std::filesystem::create_directories(Utils::TMP_DIR, ec_dir4);
-            std::ofstream err_file(Utils::TMP_DIR + "/ollama_response_error.json");
-            err_file << response.text;
-            err_file.close();
+            DebugArtifacts::writeText(Utils::TMP_DIR + "/ollama_response_error.json", response.text, /*redactSecrets*/true);
             std::cerr << "[ERROR] Ollama error response saved to " << (Utils::TMP_DIR + "/ollama_response_error.json") << std::endl;
             return AnalysisResult{false, "", "", "Failed to contact Ollama server.", static_cast<int>(response.status_code)};
         }
@@ -457,16 +365,11 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         std::error_code ec_dir5;
         std::filesystem::create_directories(Utils::TMP_DIR, ec_dir5);
         
-        // Sanitize text response to remove any potential API keys
-        std::string sanitized_response = sanitizeText(full_response, api_key_);
-        
-        std::ofstream full_file(Utils::TMP_DIR + "/response_full.txt");
-        full_file << sanitized_response;
-        full_file.close();
+        DebugArtifacts::writeText(Utils::TMP_DIR + "/response_full.txt", full_response, /*redactSecrets*/true);
         std::cout << "[DEBUG] Full response saved to " << (Utils::TMP_DIR + "/response_full.txt") << std::endl;
         
         // Clean up old debug files based on retention policy
-        cleanupOldDebugFiles();
+        DebugArtifacts::cleanupOld(Utils::TMP_DIR, log_retention_hours_);
     }
     
     // Extract THINK section
@@ -512,23 +415,11 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         return name;
     };
     const std::string safe_analysis_name = sanitize_name(std::string(analysis_type));
-    try {
-        std::ofstream tfile(Utils::TMP_DIR + "/" + safe_analysis_name + ".think.txt", std::ios::trunc);
-        if (!tfile) throw std::runtime_error("open failed");
-        tfile << think_section;
-        if (debug_) std::cout << "[DEBUG] Wrote think section\n";
-    } catch (...) {
-        std::cerr << "[ERROR] Could not write think file\n";
-    }
+    DebugArtifacts::writeText(Utils::TMP_DIR + "/" + safe_analysis_name + ".think.txt", think_section, /*redactSecrets*/true);
+    if (debug_) std::cout << "[DEBUG] Wrote think section\n";
     
-    try {
-        std::ofstream rfile(Utils::TMP_DIR + "/" + safe_analysis_name + ".txt", std::ios::trunc);
-        if (!rfile) throw std::runtime_error("open failed");
-        rfile << remaining_section;
-        if (debug_) std::cout << "[DEBUG] Wrote remaining section\n";
-    } catch (...) {
-        std::cerr << "[ERROR] Could not write remaining file\n";
-    }
+    DebugArtifacts::writeText(Utils::TMP_DIR + "/" + safe_analysis_name + ".txt", remaining_section, /*redactSecrets*/true);
+    if (debug_) std::cout << "[DEBUG] Wrote remaining section\n";
     
     return AnalysisResult{true, think_section, remaining_section, "", HTTP_STATUS_OK};
 }
