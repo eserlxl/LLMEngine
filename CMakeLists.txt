@@ -97,11 +97,11 @@ if (NOT cpr_FOUND)
   endif()
   include(FetchContent)
   message(STATUS "cpr not found via package config; fetching with FetchContent")
-  # Use master branch
+  # Use a released tag for reproducible builds
   FetchContent_Declare(
     cpr
     GIT_REPOSITORY https://github.com/libcpr/cpr.git
-    GIT_TAG master
+    GIT_TAG 1.10.5
     FIND_PACKAGE_ARGS NAMES cpr
   )
   set(CPR_BUILD_TESTS OFF CACHE BOOL "" FORCE)

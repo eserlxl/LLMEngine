@@ -821,10 +821,11 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_
     
     // Override config API key with environment variable if available
     const char* env_api_key = std::getenv(env_var_name.c_str());
-    if (env_api_key && strlen(env_api_key) > 0) {
+    if (env_api_key && std::strlen(env_api_key) > 0) {
         api_key = env_api_key;
     } else if (!api_key.empty()) {
         // Warn if falling back to config file for credentials
+        // Note: APIClient doesn't have access to logger, so we use std::cerr
         std::cerr << "[WARNING] Using API key from config file. For production use, "
                   << "set the " << env_var_name << " environment variable instead. "
                   << "Storing credentials in config files is a security risk." << std::endl;

@@ -17,6 +17,8 @@
 #include <chrono>
 #include <algorithm>
 #include <cctype>
+#include <cstring>
+#include <mutex>
 #include "LLMOutputProcessor.hpp"
 #include "Utils.hpp"
 #include <filesystem>
@@ -100,7 +102,7 @@ LLMEngine::LLMEngine(std::string_view provider_name,
     // Load config
     auto& config_mgr = ::LLMEngineAPI::APIConfigManager::getInstance();
     if (!config_mgr.loadConfig()) {
-        std::cerr << "[WARNING] Could not load API config, using defaults" << std::endl;
+        logger_->log(LogLevel::Warn, "Could not load API config, using defaults");
     }
     
     // Determine provider name (use default if empty)
@@ -115,7 +117,7 @@ LLMEngine::LLMEngine(std::string_view provider_name,
     // Get provider configuration
     auto provider_config = config_mgr.getProviderConfig(resolved_provider);
     if (provider_config.empty()) {
-        std::cerr << "[ERROR] Provider " << resolved_provider << " not found in config" << std::endl;
+        logger_->log(LogLevel::Error, std::string("Provider ") + resolved_provider + " not found in config");
         throw std::runtime_error("Invalid provider name");
     }
     
@@ -144,9 +146,9 @@ LLMEngine::LLMEngine(std::string_view provider_name,
         // Fall back to config file (last resort - not recommended for production)
         api_key_ = provider_config.value("api_key", "");
         if (!api_key_.empty()) {
-            std::cerr << "[WARNING] Using API key from config file. For production use, "
-                      << "set the " << env_var_name << " environment variable instead. "
-                      << "Storing credentials in config files is a security risk." << std::endl;
+            logger_->log(LogLevel::Warn, std::string("Using API key from config file. For production use, ")
+                      + "set the " + env_var_name + " environment variable instead. "
+                      + "Storing credentials in config files is a security risk.");
         }
     }
     
@@ -195,9 +197,13 @@ void LLMEngine::cleanupResponseFiles() const {
     std::filesystem::create_directories(Utils::TMP_DIR, ec_dir);
     // Set directory permissions to 0700 (owner-only read/write/execute) for security
     if (!ec_dir && std::filesystem::exists(Utils::TMP_DIR)) {
+        std::error_code ec_perm;
         std::filesystem::permissions(Utils::TMP_DIR, 
             std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
-            std::filesystem::perm_options::replace);
+            std::filesystem::perm_options::replace, ec_perm);
+        if (ec_perm && logger_) {
+            logger_->log(LogLevel::Warn, std::string("Failed to set permissions on ") + Utils::TMP_DIR + ": " + ec_perm.message());
+        }
     }
 
     int cleaned_count = 0;
@@ -207,64 +213,20 @@ void LLMEngine::cleanupResponseFiles() const {
         if (std::filesystem::exists(path, ec) && std::filesystem::is_regular_file(path, ec)) {
             if (std::filesystem::remove(path, ec)) {
                 cleaned_count++;
-                if (debug_) {
-                    std::cout << "[DEBUG] Cleaned up existing file: " << path << std::endl;
+                if (debug_ && logger_) {
+                    logger_->log(LogLevel::Debug, std::string("Cleaned up existing file: ") + path);
                 }
-            } else if (ec) {
-                std::cerr << "[WARNING] Failed to remove " << path << ": " << ec.message() << std::endl;
+            } else if (ec && logger_) {
+                logger_->log(LogLevel::Warn, std::string("Failed to remove ") + path + ": " + ec.message());
             }
         }
     }
 
-    if (cleaned_count > 0 && debug_) {
-        std::cout << "[DEBUG] Cleaned up " << cleaned_count << " existing response file(s) in " << Utils::TMP_DIR << std::endl;
+    if (cleaned_count > 0 && debug_ && logger_) {
+        logger_->log(LogLevel::Debug, std::string("Cleaned up ") + std::to_string(cleaned_count) + " existing response file(s) in " + Utils::TMP_DIR);
     }
 }
 
-// Clean up old debug files based on log_retention_hours_
-void LLMEngine::cleanupOldDebugFiles() const {
-    if (log_retention_hours_ <= 0) {
-        return; // Retention disabled or invalid
-    }
-    
-    try {
-        namespace fs = std::filesystem;
-        const auto now = std::chrono::system_clock::now();
-        const auto retention_duration = std::chrono::hours(log_retention_hours_);
-        
-        if (!fs::exists(Utils::TMP_DIR)) {
-            return;
-        }
-        
-        int cleaned_count = 0;
-        for (const auto& entry : fs::directory_iterator(Utils::TMP_DIR)) {
-            if (entry.is_regular_file()) {
-                const auto file_time = entry.last_write_time();
-                const auto file_time_point = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-                    file_time - fs::file_time_type::clock::now() + std::chrono::system_clock::now()
-                );
-                
-                const auto age = now - file_time_point;
-                if (age > retention_duration) {
-                    std::error_code ec;
-                    if (fs::remove(entry.path(), ec)) {
-                        cleaned_count++;
-                        if (debug_) {
-                            std::cout << "[DEBUG] Removed old debug file: " << entry.path() << std::endl;
-                        }
-                    }
-                }
-            }
-        }
-        
-        if (cleaned_count > 0 && debug_) {
-            std::cout << "[DEBUG] Cleaned up " << cleaned_count << " old debug file(s) older than " 
-                      << log_retention_hours_ << " hours" << std::endl;
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "[WARNING] Failed to cleanup old debug files: " << e.what() << std::endl;
-    }
-}
 
 AnalysisResult LLMEngine::analyze(std::string_view prompt, 
                                   const nlohmann::json& input, 
@@ -274,14 +236,36 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
     // Clean up existing response files
     cleanupResponseFiles();
     
-    // Helper to ensure TMP_DIR exists with secure permissions (0700)
-    auto ensureSecureTmpDir = []() {
+    // Cache temporary directory setup to avoid repeated work
+    static std::once_flag tmp_dir_initialized;
+    static bool tmp_dir_ready = false;
+    std::call_once(tmp_dir_initialized, []() {
         std::error_code ec;
         std::filesystem::create_directories(Utils::TMP_DIR, ec);
         if (!ec && std::filesystem::exists(Utils::TMP_DIR)) {
+            std::error_code ec_perm;
             std::filesystem::permissions(Utils::TMP_DIR, 
                 std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
-                std::filesystem::perm_options::replace);
+                std::filesystem::perm_options::replace, ec_perm);
+            // Best-effort: silently ignore permission errors (may fail in restricted environments)
+            tmp_dir_ready = true;
+        }
+    });
+    
+    // Helper to ensure TMP_DIR exists with secure permissions (0700) - only if not already initialized
+    auto ensureSecureTmpDir = [this]() {
+        if (!tmp_dir_ready) {
+            std::error_code ec;
+            std::filesystem::create_directories(Utils::TMP_DIR, ec);
+            if (!ec && std::filesystem::exists(Utils::TMP_DIR)) {
+                std::error_code ec_perm;
+                std::filesystem::permissions(Utils::TMP_DIR, 
+                    std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
+                    std::filesystem::perm_options::replace, ec_perm);
+                if (ec_perm && logger_) {
+                    logger_->log(LogLevel::Warn, std::string("Failed to set permissions on ") + Utils::TMP_DIR + ": " + ec_perm.message());
+                }
+            }
         }
     };
     

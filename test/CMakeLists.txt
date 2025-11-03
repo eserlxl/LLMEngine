@@ -15,8 +15,8 @@ project(LLMEngineTest
 # Build system quality-of-life
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# C++ standard (no compiler extensions)
-set(CMAKE_CXX_STANDARD 17)
+# C++ standard (no compiler extensions) - align with library requirement
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -204,6 +204,20 @@ apply_common_build_flags(test_output_processor_sections)
 add_executable(test_provider_mapping_extended test_provider_mapping_extended.cpp)
 target_link_libraries(test_provider_mapping_extended PRIVATE LLMEngine nlohmann_json::nlohmann_json)
 apply_common_build_flags(test_provider_mapping_extended)
+
+# ---- CTest Integration --------------------------------------------------------
+# Register tests with CTest for automatic execution
+if (BUILD_TESTING)
+  add_test(NAME test_llmengine COMMAND test_llmengine)
+  add_test(NAME test_api COMMAND test_api)
+  add_test(NAME test_api_config_manager COMMAND test_api_config_manager)
+  add_test(NAME test_api_client_factory COMMAND test_api_client_factory)
+  add_test(NAME test_provider_type_mapping COMMAND test_provider_type_mapping)
+  add_test(NAME test_llmengine_construction COMMAND test_llmengine_construction)
+  add_test(NAME test_api_config_parsing COMMAND test_api_config_parsing)
+  add_test(NAME test_output_processor_sections COMMAND test_output_processor_sections)
+  add_test(NAME test_provider_mapping_extended COMMAND test_provider_mapping_extended)
+endif()
 
 # ---- Target properties --------------------------------------------------------
 set_target_properties(test_llmengine PROPERTIES

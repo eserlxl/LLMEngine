@@ -105,7 +105,6 @@ public:
     
 private:
     void cleanupResponseFiles() const;
-    void cleanupOldDebugFiles() const;
     void initializeAPIClient();
     
     // Legacy Ollama fields (for backward compatibility)

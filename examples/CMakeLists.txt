@@ -15,8 +15,8 @@ project(LLMEngineExamples
 # Build system quality-of-life
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# C++ standard (no compiler extensions)
-set(CMAKE_CXX_STANDARD 17)
+# C++ standard (no compiler extensions) - align with library requirement
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 

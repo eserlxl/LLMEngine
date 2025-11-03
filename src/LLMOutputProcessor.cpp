@@ -11,10 +11,27 @@
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <unordered_set>
-#include <unistd.h>
-#include <cstdio>
 #include <algorithm>
 #include <cctype>
+
+// Portable terminal detection for Windows/Unix
+#if defined(_WIN32) || defined(_WIN64)
+    #include <io.h>
+    #include <windows.h>
+    namespace {
+        bool isTerminalOutput() {
+            return _isatty(_fileno(stdout)) != 0;
+        }
+    }
+#else
+    #include <unistd.h>
+    #include <cstdio>
+    namespace {
+        bool isTerminalOutput() {
+            return isatty(fileno(stdout)) != 0;
+        }
+    }
+#endif
 
 namespace {
 std::string trim(const std::string& s) {
@@ -40,7 +57,7 @@ namespace Color {
 
 LLMOutputProcessor::LLMOutputProcessor(std::string_view jsonContent, bool debug)
     : debug_(debug) {
-    colors_ = isatty(fileno(stdout));
+    colors_ = isTerminalOutput();
     parseJson(jsonContent);
     parseSections();
 }

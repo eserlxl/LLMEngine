@@ -16,11 +16,16 @@ void DebugArtifacts::writeJson(const std::string& path, const nlohmann::json& js
     try {
         std::filesystem::path dir_path = std::filesystem::path(path).parent_path();
         if (!dir_path.empty()) {
-            std::filesystem::create_directories(dir_path);
+            std::error_code ec;
+            std::filesystem::create_directories(dir_path, ec);
             // Set directory permissions to 0700 (owner-only read/write/execute) for security
-            std::filesystem::permissions(dir_path, 
-                std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
-                std::filesystem::perm_options::replace);
+            if (!ec) {
+                std::error_code ec_perm;
+                std::filesystem::permissions(dir_path, 
+                    std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
+                    std::filesystem::perm_options::replace, ec_perm);
+                // Best-effort: silently ignore permission errors (may fail in restricted environments)
+            }
         }
         nlohmann::json payload = redactSecrets ? redactJson(json) : json;
         std::ofstream f(path);
@@ -34,11 +39,16 @@ void DebugArtifacts::writeText(const std::string& path, std::string_view text, b
     try {
         std::filesystem::path dir_path = std::filesystem::path(path).parent_path();
         if (!dir_path.empty()) {
-            std::filesystem::create_directories(dir_path);
+            std::error_code ec;
+            std::filesystem::create_directories(dir_path, ec);
             // Set directory permissions to 0700 (owner-only read/write/execute) for security
-            std::filesystem::permissions(dir_path, 
-                std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
-                std::filesystem::perm_options::replace);
+            if (!ec) {
+                std::error_code ec_perm;
+                std::filesystem::permissions(dir_path, 
+                    std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
+                    std::filesystem::perm_options::replace, ec_perm);
+                // Best-effort: silently ignore permission errors (may fail in restricted environments)
+            }
         }
         std::ofstream f(path);
         if (!f) return;

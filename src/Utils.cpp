@@ -28,6 +28,43 @@ namespace Utils {
 
     // Constants
     constexpr size_t COMMAND_BUFFER_SIZE = 256;
+    
+    // Precompiled regex patterns
+    static const std::regex SAFE_CHARS_REGEX(R"([a-zA-Z0-9_./ -]+)");
+    static const std::regex MARKDOWN_BOLD_REGEX(R"(\*\*)");
+    static const std::regex MARKDOWN_HEADER_REGEX(R"(#+\s*)");
+    
+    // RAII wrapper for pipe file descriptors
+    class PipeFD {
+    public:
+        explicit PipeFD(int fd) : fd_(fd) {}
+        ~PipeFD() {
+            if (fd_ >= 0) {
+                close(fd_);
+            }
+        }
+        PipeFD(const PipeFD&) = delete;
+        PipeFD& operator=(const PipeFD&) = delete;
+        PipeFD(PipeFD&& other) noexcept : fd_(other.fd_) {
+            other.fd_ = -1;
+        }
+        PipeFD& operator=(PipeFD&& other) noexcept {
+            if (this != &other) {
+                if (fd_ >= 0) close(fd_);
+                fd_ = other.fd_;
+                other.fd_ = -1;
+            }
+            return *this;
+        }
+        int get() const { return fd_; }
+        int release() {
+            int fd = fd_;
+            fd_ = -1;
+            return fd;
+        }
+    private:
+        int fd_;
+    };
 
     std::vector<std::string> readLines(std::string_view filepath, size_t max_lines) {
         std::vector<std::string> lines;
@@ -48,9 +85,9 @@ namespace Utils {
         // eliminating shell injection risks. However, we still validate input to ensure
         // only safe command strings are accepted.
         // Only allow alphanumeric, single spaces (not newlines/tabs), hyphens, underscores, dots, slashes
-        const std::regex safe_chars(R"([a-zA-Z0-9_./ -]+)");
         
         if (cmd_str.empty()) {
+            // Note: Utils cannot access logger, so we keep std::cerr for error reporting
             std::cerr << "[ERROR] execCommand: Empty command string" << std::endl;
             return output;
         }
@@ -73,7 +110,8 @@ namespace Utils {
         }
         
         // Check if command matches whitelist pattern (no \s, only explicit space)
-        if (!std::regex_match(cmd_str, safe_chars)) {
+        if (!std::regex_match(cmd_str, SAFE_CHARS_REGEX)) {
+            // Note: Utils cannot access logger, so we keep std::cerr for error reporting
             std::cerr << "[ERROR] execCommand: Command contains potentially unsafe characters: " << cmd_str << std::endl;
             std::cerr << "[ERROR] Only alphanumeric, single spaces, hyphens, underscores, dots, and slashes are allowed" << std::endl;
             std::cerr << "[ERROR] For security reasons, shell metacharacters and control characters are not permitted" << std::endl;
@@ -138,15 +176,21 @@ namespace Utils {
             return output;
         }
 
+        // RAII wrappers to ensure pipes are closed on all error paths
+        PipeFD stdout_read(stdout_pipe[0]);
+        PipeFD stdout_write(stdout_pipe[1]);
+        PipeFD stderr_read(stderr_pipe[0]);
+        PipeFD stderr_write(stderr_pipe[1]);
+
         // Set up file actions for posix_spawn
         posix_spawn_file_actions_t file_actions;
         posix_spawn_file_actions_init(&file_actions);
-        posix_spawn_file_actions_addclose(&file_actions, stdout_pipe[0]);
-        posix_spawn_file_actions_addclose(&file_actions, stderr_pipe[0]);
-        posix_spawn_file_actions_adddup2(&file_actions, stdout_pipe[1], STDOUT_FILENO);
-        posix_spawn_file_actions_adddup2(&file_actions, stderr_pipe[1], STDERR_FILENO);
-        posix_spawn_file_actions_addclose(&file_actions, stdout_pipe[1]);
-        posix_spawn_file_actions_addclose(&file_actions, stderr_pipe[1]);
+        posix_spawn_file_actions_addclose(&file_actions, stdout_read.get());
+        posix_spawn_file_actions_addclose(&file_actions, stderr_read.get());
+        posix_spawn_file_actions_adddup2(&file_actions, stdout_write.get(), STDOUT_FILENO);
+        posix_spawn_file_actions_adddup2(&file_actions, stderr_write.get(), STDERR_FILENO);
+        posix_spawn_file_actions_addclose(&file_actions, stdout_write.get());
+        posix_spawn_file_actions_addclose(&file_actions, stderr_write.get());
 
         // Spawn the process
         pid_t pid;
@@ -158,16 +202,13 @@ namespace Utils {
 
         if (spawn_result != 0) {
             std::cerr << "[ERROR] execCommand: posix_spawnp() failed for command: " << cmd_str << " (error: " << spawn_result << ")" << std::endl;
-            close(stdout_pipe[0]);
-            close(stdout_pipe[1]);
-            close(stderr_pipe[0]);
-            close(stderr_pipe[1]);
+            // Pipes are automatically closed by RAII wrappers
             return output;
         }
 
-        // Close write ends of pipes in parent
-        close(stdout_pipe[1]);
-        close(stderr_pipe[1]);
+        // Close write ends of pipes in parent (RAII will handle cleanup on return)
+        stdout_write = PipeFD(-1);
+        stderr_write = PipeFD(-1);
 
         // Read stdout and stderr
         // Note: We read both sequentially. In practice, commands typically write to one or the other,
@@ -177,32 +218,30 @@ namespace Utils {
         
         // Read stdout
         std::string stdout_buffer;
-        while ((bytes_read = read(stdout_pipe[0], buffer.data(), buffer.size())) > 0) {
+        while ((bytes_read = read(stdout_read.get(), buffer.data(), buffer.size())) > 0) {
             stdout_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
         }
         
         // Read stderr
         std::string stderr_buffer;
-        while ((bytes_read = read(stderr_pipe[0], buffer.data(), buffer.size())) > 0) {
+        while ((bytes_read = read(stderr_read.get(), buffer.data(), buffer.size())) > 0) {
             stderr_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
         }
         
-        // Process stdout line by line (preserving original fgets behavior)
+        // Process stdout line by line (return raw lines without extra newlines)
         std::istringstream stdout_stream(stdout_buffer);
         std::string line;
         while (std::getline(stdout_stream, line)) {
-            output.push_back(line + "\n");
+            output.push_back(line);
         }
         
-        // Process stderr line by line and append
+        // Process stderr line by line and append (return raw lines without extra newlines)
         std::istringstream stderr_stream(stderr_buffer);
         while (std::getline(stderr_stream, line)) {
-            output.push_back(line + "\n");
+            output.push_back(line);
         }
 
-        // Close read ends
-        close(stdout_pipe[0]);
-        close(stderr_pipe[0]);
+        // Pipes are automatically closed by RAII wrappers
 
         // Wait for process to complete
         int status;
@@ -228,8 +267,8 @@ namespace Utils {
 
     std::string stripMarkdown(std::string_view input) {
         std::string output = std::string(input);
-        output = std::regex_replace(output, std::regex(R"(\*\*)"), "");
-        output = std::regex_replace(output, std::regex(R"(#+\s*)"), "");
+        output = std::regex_replace(output, MARKDOWN_BOLD_REGEX, "");
+        output = std::regex_replace(output, MARKDOWN_HEADER_REGEX, "");
         return output;
     }
 } 
