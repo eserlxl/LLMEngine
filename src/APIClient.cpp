@@ -14,6 +14,8 @@
 #include <thread>
 #include <chrono>
 #include <cstring>
+#include <random>
+#include "Backoff.hpp"
 
 namespace LLMEngineAPI {
 
@@ -55,8 +57,16 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
     response.error_code = APIResponse::APIError::Unknown;
     
     try {
-        const int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
-        const int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
+        int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
+        int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
+        int max_delay_ms = 30000;
+        uint64_t jitter_seed = 0;
+        if (params.contains("retry_attempts")) max_attempts = std::max(1, params["retry_attempts"].get<int>());
+        if (params.contains("retry_base_delay_ms")) base_delay_ms = std::max(0, params["retry_base_delay_ms"].get<int>());
+        if (params.contains("retry_max_delay_ms")) max_delay_ms = std::max(0, params["retry_max_delay_ms"].get<int>());
+        if (params.contains("jitter_seed")) jitter_seed = params["jitter_seed"].get<uint64_t>();
+        BackoffConfig bcfg{base_delay_ms, max_delay_ms};
+        std::mt19937_64 rng(jitter_seed);
         
         // Merge default params with provided params
         nlohmann::json request_params = default_params_;
@@ -110,7 +120,8 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
             );
             if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
             if (attempt < max_attempts) {
-                int delay = base_delay_ms * attempt;
+                const uint64_t cap = computeBackoffCapMs(bcfg, attempt);
+                const int delay = jitterDelayMs(rng, cap);
                 std::this_thread::sleep_for(std::chrono::milliseconds(delay));
             }
         }
@@ -191,8 +202,16 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
     response.success = false;
     
     try {
-        const int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
-        const int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
+        int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
+        int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
+        int max_delay_ms = 30000;
+        uint64_t jitter_seed = 0;
+        if (params.contains("retry_attempts")) max_attempts = std::max(1, params["retry_attempts"].get<int>());
+        if (params.contains("retry_base_delay_ms")) base_delay_ms = std::max(0, params["retry_base_delay_ms"].get<int>());
+        if (params.contains("retry_max_delay_ms")) max_delay_ms = std::max(0, params["retry_max_delay_ms"].get<int>());
+        if (params.contains("jitter_seed")) jitter_seed = params["jitter_seed"].get<uint64_t>();
+        BackoffConfig bcfg{base_delay_ms, max_delay_ms};
+        std::mt19937_64 rng(jitter_seed);
         
         // Merge default params with provided params
         nlohmann::json request_params = default_params_;
@@ -246,7 +265,8 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
             );
             if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
             if (attempt < max_attempts) {
-                int delay = base_delay_ms * attempt;
+                const uint64_t cap = computeBackoffCapMs(bcfg, attempt);
+                const int delay = jitterDelayMs(rng, cap);
                 std::this_thread::sleep_for(std::chrono::milliseconds(delay));
             }
         }
@@ -307,8 +327,16 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
     response.success = false;
     
     try {
-        const int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
-        const int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
+        int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
+        int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
+        int max_delay_ms = 30000;
+        uint64_t jitter_seed = 0;
+        if (params.contains("retry_attempts")) max_attempts = std::max(1, params["retry_attempts"].get<int>());
+        if (params.contains("retry_base_delay_ms")) base_delay_ms = std::max(0, params["retry_base_delay_ms"].get<int>());
+        if (params.contains("retry_max_delay_ms")) max_delay_ms = std::max(0, params["retry_max_delay_ms"].get<int>());
+        if (params.contains("jitter_seed")) jitter_seed = params["jitter_seed"].get<uint64_t>();
+        BackoffConfig bcfg{base_delay_ms, max_delay_ms};
+        std::mt19937_64 rng(jitter_seed);
         
         // Merge default params with provided params
         nlohmann::json request_params = default_params_;
@@ -356,7 +384,8 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
             );
             if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
             if (attempt < max_attempts) {
-                int delay = base_delay_ms * attempt;
+                const uint64_t cap = computeBackoffCapMs(bcfg, attempt);
+                const int delay = jitterDelayMs(rng, cap);
                 std::this_thread::sleep_for(std::chrono::milliseconds(delay));
             }
         }
@@ -381,6 +410,15 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
             }
         } else {
             response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
+            if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
+                response.error_code = APIResponse::APIError::Auth;
+            } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
+                response.error_code = APIResponse::APIError::RateLimited;
+            } else if (cpr_response.status_code >= 500) {
+                response.error_code = APIResponse::APIError::Server;
+            } else {
+                response.error_code = APIResponse::APIError::Unknown;
+            }
         }
         
     } catch (const std::exception& e) {
@@ -409,8 +447,16 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
     response.success = false;
     
     try {
-        const int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
-        const int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
+        int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
+        int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
+        int max_delay_ms = 30000;
+        uint64_t jitter_seed = 0;
+        if (params.contains("retry_attempts")) max_attempts = std::max(1, params["retry_attempts"].get<int>());
+        if (params.contains("retry_base_delay_ms")) base_delay_ms = std::max(0, params["retry_base_delay_ms"].get<int>());
+        if (params.contains("retry_max_delay_ms")) max_delay_ms = std::max(0, params["retry_max_delay_ms"].get<int>());
+        if (params.contains("jitter_seed")) jitter_seed = params["jitter_seed"].get<uint64_t>();
+        BackoffConfig bcfg{base_delay_ms, max_delay_ms};
+        std::mt19937_64 rng(jitter_seed);
         
         // Merge default params with provided params
         nlohmann::json request_params = default_params_;
@@ -543,7 +589,8 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             );
             if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
             if (attempt < max_attempts) {
-                int delay = base_delay_ms * attempt;
+                const uint64_t cap = computeBackoffCapMs(bcfg, attempt);
+                const int delay = jitterDelayMs(rng, cap);
                 std::this_thread::sleep_for(std::chrono::milliseconds(delay));
             }
         }
@@ -570,6 +617,15 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             }
         } else {
             response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
+            if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
+                response.error_code = APIResponse::APIError::Auth;
+            } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
+                response.error_code = APIResponse::APIError::RateLimited;
+            } else if (cpr_response.status_code >= 500) {
+                response.error_code = APIResponse::APIError::Server;
+            } else {
+                response.error_code = APIResponse::APIError::Unknown;
+            }
         }
         } // End of else block for chat mode
         
