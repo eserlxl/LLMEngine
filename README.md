@@ -355,12 +355,12 @@ auto result = engine.analyze(prompt, input, "test");
 
 ## Documentation
 
-- Quick start: `QUICKSTART.md`
-- Configuration: `docs/CONFIGURATION.md`
-- Providers: `docs/PROVIDERS.md`
-- API reference: `docs/API_REFERENCE.md` (links to generated Doxygen)
-- FAQ: `docs/FAQ.md`
-- Examples: `examples/README.md`
+ - Quick start: [QUICKSTART.md](QUICKSTART.md)
+ - Configuration: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
+ - Providers: [docs/PROVIDERS.md](docs/PROVIDERS.md)
+ - API reference: [docs/API_REFERENCE.md](docs/API_REFERENCE.md) (links to generated Doxygen)
+ - FAQ: [docs/FAQ.md](docs/FAQ.md)
+ - Examples: [examples/README.md](examples/README.md)
 
 [↑ Back to top](#llmengine)
 
