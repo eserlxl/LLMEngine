@@ -166,6 +166,20 @@ void LLMEngine::initializeAPIClient() {
 
 // Redaction and debug file I/O moved to DebugArtifacts
 
+void LLMEngine::ensureSecureTmpDir() const {
+    std::error_code ec;
+    std::filesystem::create_directories(tmp_dir_, ec);
+    if (!ec && std::filesystem::exists(tmp_dir_)) {
+        std::error_code ec_perm;
+        std::filesystem::permissions(tmp_dir_, 
+            std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
+            std::filesystem::perm_options::replace, ec_perm);
+        if (ec_perm && logger_) {
+            logger_->log(LogLevel::Warn, std::string("Failed to set permissions on ") + tmp_dir_ + ": " + ec_perm.message());
+        }
+    }
+}
+
 void LLMEngine::cleanupResponseFiles() const {
     std::vector<std::string> files_to_clean = {
         "/ollama_response.json",
@@ -207,21 +221,6 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                   bool prepend_terse_instruction) const {
     // Clean up existing response files
     cleanupResponseFiles();
-    
-    // Helper to ensure tmp_dir_ exists with secure permissions (0700)
-    auto ensureSecureTmpDir = [this]() {
-        std::error_code ec;
-        std::filesystem::create_directories(tmp_dir_, ec);
-        if (!ec && std::filesystem::exists(tmp_dir_)) {
-            std::error_code ec_perm;
-            std::filesystem::permissions(tmp_dir_, 
-                std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
-                std::filesystem::perm_options::replace, ec_perm);
-            if (ec_perm && logger_) {
-                logger_->log(LogLevel::Warn, std::string("Failed to set permissions on ") + tmp_dir_ + ": " + ec_perm.message());
-            }
-        }
-    };
     
     // Optionally prepend short-answer instruction
     std::string full_prompt;

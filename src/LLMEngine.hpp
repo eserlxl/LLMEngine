@@ -99,6 +99,7 @@ public:
 private:
     void cleanupResponseFiles() const;
     void initializeAPIClient();
+    void ensureSecureTmpDir() const;
     
     std::string model_;
     nlohmann::json model_params_;
@@ -112,3 +113,4 @@ private:
     std::string api_key_;
     std::string ollama_url_;  // Only used when provider_type is OLLAMA
     std::shared_ptr<Logger> logger_;
+};
