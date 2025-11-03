@@ -68,8 +68,8 @@ public:
             std::string prompt = createImagePrompt(description, image_type);
             
             // Generate SVG image code from LLM
-            auto result = engine_->analyze(prompt, nlohmann::json{}, "image_generation");
-            std::string svg_content = result[1];
+            AnalysisResult result = engine_->analyze(prompt, nlohmann::json{}, "image_generation");
+            std::string svg_content = result.content;
             
             // Process the SVG response and convert to PNG
             processSVGResponse(svg_content, description, image_type, filename);
@@ -167,8 +167,8 @@ public:
             std::string prompt = createImprovementPrompt(original_svg, improvement_prompt);
             
             // Generate improved SVG from LLM
-            auto result = engine_->analyze(prompt, nlohmann::json{}, "svg_improvement");
-            std::string improved_svg_content = result[1];
+            AnalysisResult result = engine_->analyze(prompt, nlohmann::json{}, "svg_improvement");
+            std::string improved_svg_content = result.content;
             
             // Process the improved SVG response
             processImprovedSVGResponse(improved_svg_content, svg_path, improvement_prompt, output_filename);

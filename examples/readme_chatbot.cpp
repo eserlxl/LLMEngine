@@ -160,8 +160,8 @@ public:
                 std::string context_prompt = createContextPrompt(user_input);
                 
                 // Get response from LLM
-                auto result = engine_->analyze(context_prompt, nlohmann::json{}, "chat", "chat");
-                std::string response = result[1];
+                AnalysisResult result = engine_->analyze(context_prompt, nlohmann::json{}, "chat", "chat");
+                std::string response = result.content;
                 
                 // Display response
                 std::cout << "🤖 Bot: " << response << std::endl;
@@ -331,8 +331,8 @@ private:
             std::string summary_prompt = "Based on the README content, provide a concise summary of what this project is about, its main features, and how to get started. Keep it under 200 words.";
             std::string context_prompt = createContextPrompt(summary_prompt);
             
-            auto result = engine_->analyze(context_prompt, nlohmann::json{}, "chat", "chat");
-            std::string summary = result[1];
+            AnalysisResult result = engine_->analyze(context_prompt, nlohmann::json{}, "chat", "chat");
+            std::string summary = result.content;
             
             std::cout << "\n📋 Project Summary:" << std::endl;
             std::cout << std::string(40, '-') << std::endl;

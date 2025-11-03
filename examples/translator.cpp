@@ -69,8 +69,8 @@ public:
             std::string prompt = buildTranslationPrompt(source_language, target_language);
             nlohmann::json input = {{"text", text}};
             
-            auto result = engine_->analyze(prompt, input, "translation", mode_);
-            std::string translation = result[1];
+            AnalysisResult result = engine_->analyze(prompt, input, "translation", mode_);
+            std::string translation = result.content;
             
             std::cout << "🌍 Translation:" << std::endl;
             std::cout << translation << std::endl;
@@ -153,8 +153,8 @@ public:
                                "3. Brief explanation of your detection";
             nlohmann::json input = {{"text", text}};
             
-            auto result = engine_->analyze(prompt, input, "language_detection", mode_);
-            std::string detection = result[1];
+            AnalysisResult result = engine_->analyze(prompt, input, "language_detection", mode_);
+            std::string detection = result.content;
             
             std::cout << "🔍 Language Detection:" << std::endl;
             std::cout << detection << std::endl;

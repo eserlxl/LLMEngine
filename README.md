@@ -89,8 +89,8 @@ LLMEngine abstracts away provider-specific details and exposes a consistent API 
 int main() {
     const char* api_key = std::getenv("QWEN_API_KEY");
     LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash");
-    auto result = engine.analyze("Explain quantum computing simply:", {}, "test");
-    std::cout << "Response: " << result[1] << std::endl;
+    AnalysisResult result = engine.analyze("Explain quantum computing simply:", {}, "test");
+    std::cout << "Response: " << result.content << std::endl;
     return 0;
 }
 ```
@@ -348,7 +348,10 @@ const char* api_key = std::getenv("QWEN_API_KEY");
 
 ```cpp
 nlohmann::json input = {{"max_tokens", 500}};
-auto result = engine.analyze(prompt, input, "test");
+AnalysisResult result = engine.analyze(prompt, input, "test");
+if (!result.success) {
+    std::cerr << "Error: " << result.errorMessage << " (status " << result.statusCode << ")\n";
+}
 ```
 
 [↑ Back to top](#llmengine)

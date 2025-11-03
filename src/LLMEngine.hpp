@@ -13,6 +13,14 @@
 #include <memory>
 #include "APIClient.hpp"
 
+struct AnalysisResult {
+    bool success;
+    std::string think;
+    std::string content;
+    std::string errorMessage;
+    int statusCode;
+};
+
 /**
  * @brief High-level interface for interacting with LLM providers.
  */
@@ -68,9 +76,9 @@ public:
      * @param input Structured input payload.
      * @param analysis_type Tag used for routing/processing.
      * @param mode Provider-specific mode (default: "chat").
-     * @return Vector of strings: [raw_json, primary_text, ...].
+     * @return AnalysisResult with typed fields.
      */
-    [[nodiscard]] std::vector<std::string> analyze(std::string_view prompt, const nlohmann::json& input, std::string_view analysis_type, std::string_view mode = "chat") const;
+    [[nodiscard]] AnalysisResult analyze(std::string_view prompt, const nlohmann::json& input, std::string_view analysis_type, std::string_view mode = "chat") const;
     
     // Utility methods
     /** @brief Provider display name. */

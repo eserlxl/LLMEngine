@@ -71,8 +71,8 @@ public:
                 {"filepath", filepath}
             };
             
-            auto result = engine_->analyze(prompt, input, "code_analysis", mode_);
-            std::string analysis = result[1];
+            AnalysisResult result = engine_->analyze(prompt, input, "code_analysis", mode_);
+            std::string analysis = result.content;
             
             std::cout << analysis << std::endl;
             
@@ -133,8 +133,8 @@ public:
                 {"file2", file2}
             };
             
-            auto result = engine_->analyze(prompt, input, "code_comparison", mode_);
-            std::string comparison = result[1];
+            AnalysisResult result = engine_->analyze(prompt, input, "code_comparison", mode_);
+            std::string comparison = result.content;
             
             std::cout << comparison << std::endl;
             

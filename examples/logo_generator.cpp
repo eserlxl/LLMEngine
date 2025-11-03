@@ -60,8 +60,8 @@ public:
             std::string prompt = createLogoPrompt(description, format);
             
             // Generate SVG logo code directly from LLM
-            auto result = engine_->analyze(prompt, nlohmann::json{}, "logo_generation");
-            std::string svg_content = result[1];
+            AnalysisResult result = engine_->analyze(prompt, nlohmann::json{}, "logo_generation");
+            std::string svg_content = result.content;
             
             // Clean up the SVG content (remove any markdown formatting or extra text)
             svg_content = cleanSVGContent(svg_content);

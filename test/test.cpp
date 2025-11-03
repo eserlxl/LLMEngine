@@ -76,21 +76,21 @@ int main() {
         // Add max_tokens to input payload for testing
         input_data["max_tokens"] = 100;  // Limit tokens for testing
         
-        std::vector<std::string> result = engine.analyze(prompt, input_data, analysis_type);
+        AnalysisResult result = engine.analyze(prompt, input_data, analysis_type);
         
-        if (result.size() >= 2) {
+        if (result.success) {
             std::cout << "✓ Analysis completed successfully" << std::endl;
-            std::cout << "Think section length: " << result[0].length() << " characters" << std::endl;
-            std::cout << "Response section length: " << result[1].length() << " characters" << std::endl;
+            std::cout << "Think section length: " << result.think.length() << " characters" << std::endl;
+            std::cout << "Response section length: " << result.content.length() << " characters" << std::endl;
             
             // Display first 200 characters of each section
             std::cout << "\nThink section preview: " << std::endl;
-            std::cout << result[0].substr(0, std::min(200UL, result[0].length())) << "..." << std::endl;
+            std::cout << result.think.substr(0, std::min(200UL, result.think.length())) << "..." << std::endl;
             
             std::cout << "\nResponse section preview: " << std::endl;
-            std::cout << result[1].substr(0, std::min(200UL, result[1].length())) << "..." << std::endl;
+            std::cout << result.content.substr(0, std::min(200UL, result.content.length())) << "..." << std::endl;
         } else {
-            std::cout << "✗ Analysis failed - insufficient results" << std::endl;
+            std::cout << "✗ Analysis failed: " << result.errorMessage << " (status " << result.statusCode << ")" << std::endl;
         }
         
         // Test 3: LLMOutputProcessor usage

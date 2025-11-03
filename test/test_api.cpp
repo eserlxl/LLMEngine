@@ -117,16 +117,16 @@ void testLLMEngineWithQwen() {
         input["max_tokens"] = 100;  // Add max_tokens to input payload
         
         std::cout << "Running analysis..." << std::endl;
-        auto result = engine.analyze(prompt, input, "qwen_test");
+        AnalysisResult result = engine.analyze(prompt, input, "qwen_test");
         
-        if (result.size() >= 2) {
+        if (result.success) {
             std::cout << "✓ Analysis completed" << std::endl;
-            std::cout << "Think section (" << result[0].length() << " chars): " 
-                      << (result[0].empty() ? "(empty)" : result[0].substr(0, std::min(100UL, result[0].length()))) << std::endl;
-            std::cout << "Response section (" << result[1].length() << " chars): " 
-                      << result[1].substr(0, std::min(200UL, result[1].length())) << "..." << std::endl;
+            std::cout << "Think section (" << result.think.length() << " chars): " 
+                      << (result.think.empty() ? "(empty)" : result.think.substr(0, std::min(100UL, result.think.length()))) << std::endl;
+            std::cout << "Response section (" << result.content.length() << " chars): " 
+                      << result.content.substr(0, std::min(200UL, result.content.length())) << "..." << std::endl;
         } else {
-            std::cout << "✗ Analysis failed" << std::endl;
+            std::cout << "✗ Analysis failed: " << result.errorMessage << " (status " << result.statusCode << ")" << std::endl;
         }
         
         // Test with provider name constructor

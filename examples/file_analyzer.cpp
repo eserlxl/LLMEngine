@@ -378,8 +378,8 @@ private:
                 {"filepath", filepath}
             };
             
-            auto result = engine_->analyze(prompt, input, "file_analysis", mode_);
-            std::string analysis = result[1];
+            AnalysisResult result = engine_->analyze(prompt, input, "file_analysis", mode_);
+            std::string analysis = result.content;
             
             std::cout << "\n📋 Content Analysis:" << std::endl;
             std::cout << analysis << std::endl;

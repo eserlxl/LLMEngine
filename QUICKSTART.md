@@ -19,10 +19,10 @@ int main() {
     // Make a request
     std::string prompt = "Explain quantum computing in simple terms:";
     nlohmann::json input = {};
-    auto result = engine.analyze(prompt, input, "test");
+    AnalysisResult result = engine.analyze(prompt, input, "test");
     
     // Print response
-    std::cout << "Response: " << result[1] << std::endl;
+    std::cout << "Response: " << result.content << std::endl;
     
     return 0;
 }
@@ -63,9 +63,9 @@ int main() {
         
         std::string prompt = "What is 2+2? Answer with just the number.";
         nlohmann::json input = {};
-        auto result = engine.analyze(prompt, input, "math_test");
+        AnalysisResult result = engine.analyze(prompt, input, "math_test");
         
-        std::cout << "Answer: " << result[1] << std::endl;
+        std::cout << "Answer: " << result.content << std::endl;
         
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
@@ -77,7 +77,7 @@ int main() {
 EOF
 
 # Compile
-g++ -std=c++17 test_qwen.cpp -o test_qwen
+g++ -std=c++20 test_qwen.cpp -o test_qwen
 pkg-config --cflags --libs libcpr nlohmann_json
 
 # Run
@@ -276,7 +276,7 @@ Debug files created:
 
 2. **Limit tokens for faster responses**
    ```cpp
-   auto result = engine.analyze(prompt, input, "test", 500); // max 500 tokens
+   AnalysisResult result = engine.analyze(prompt, input, "test");
    ```
 
 3. **Adjust temperature for deterministic results**

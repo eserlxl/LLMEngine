@@ -330,10 +330,10 @@ void LLMEngine::cleanupOldDebugFiles() const {
     }
 }
 
-std::vector<std::string> LLMEngine::analyze(std::string_view prompt, 
-                                           const nlohmann::json& input, 
-                                           std::string_view analysis_type, 
-                                           std::string_view mode) const {
+AnalysisResult LLMEngine::analyze(std::string_view prompt, 
+                                  const nlohmann::json& input, 
+                                  std::string_view analysis_type, 
+                                  std::string_view mode) const {
     // Clean up existing response files
     cleanupResponseFiles();
     
@@ -393,7 +393,7 @@ std::vector<std::string> LLMEngine::analyze(std::string_view prompt,
             err_file.close();
             std::cerr << "[ERROR] API error: " << api_response.error_message << std::endl;
             std::cerr << "[INFO] Error response saved to " << (Utils::TMP_DIR + "/api_response_error.json") << std::endl;
-            return {"[LLMEngine] Error: " + api_response.error_message, ""};
+            return AnalysisResult{false, "", "", api_response.error_message, api_response.status_code};
         }
     } else {
         // Legacy Ollama mode
@@ -435,7 +435,7 @@ std::vector<std::string> LLMEngine::analyze(std::string_view prompt,
             err_file << response.text;
             err_file.close();
             std::cerr << "[ERROR] Ollama error response saved to " << (Utils::TMP_DIR + "/ollama_response_error.json") << std::endl;
-            return {"[LLMEngine] Error: Failed to contact Ollama server.", ""};
+            return AnalysisResult{false, "", "", "Failed to contact Ollama server.", static_cast<int>(response.status_code)};
         }
         
         // Reconstruct full response from NDJSON
@@ -530,7 +530,7 @@ std::vector<std::string> LLMEngine::analyze(std::string_view prompt,
         std::cerr << "[ERROR] Could not write remaining file\n";
     }
     
-    return {think_section, remaining_section};
+    return AnalysisResult{true, think_section, remaining_section, "", HTTP_STATUS_OK};
 }
 
 std::string LLMEngine::getProviderName() const {

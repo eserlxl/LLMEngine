@@ -265,7 +265,7 @@ make -j20
 ### Individual Build
 ```bash
 # Build specific example
-g++ -std=c++17 ../chatbot.cpp -o chatbot \
+g++ -std=c++20 ../chatbot.cpp -o chatbot \
     -I../../src \
     -L../../build -lLLMEngine \
     $(pkg-config --cflags --libs libcpr nlohmann_json)
@@ -347,9 +347,9 @@ int main(int argc, char* argv[]) {
         // Your application logic here
         std::string prompt = "Your prompt here";
         nlohmann::json input = {};
-        auto result = engine.analyze(prompt, input, "your_analysis_type");
+        AnalysisResult result = engine.analyze(prompt, input, "your_analysis_type");
         
-        std::cout << "Result: " << result[1] << std::endl;
+        std::cout << "Result: " << result.content << std::endl;
         
     } catch (const std::exception& e) {
         std::cerr << "❌ Error: " << e.what() << std::endl;

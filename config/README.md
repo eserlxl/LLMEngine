@@ -58,9 +58,9 @@ int main() {
     // Make a request
     std::string prompt = "Explain quantum computing";
     nlohmann::json input = {{"context", "educational"}};
-    auto result = engine.analyze(prompt, input, "test", 1000);
+    AnalysisResult result = engine.analyze(prompt, input, "test");
     
-    std::cout << result[1] << std::endl; // Print response
+    std::cout << result.content << std::endl; // Print response
     return 0;
 }
 ```
@@ -78,9 +78,9 @@ int main() {
     
     std::string prompt = "Write a haiku about programming";
     nlohmann::json input = {};
-    auto result = engine.analyze(prompt, input, "poetry");
+    AnalysisResult result = engine.analyze(prompt, input, "poetry");
     
-    std::cout << result[1] << std::endl;
+    std::cout << result.content << std::endl;
     return 0;
 }
 ```
@@ -96,9 +96,9 @@ int main() {
     
     std::string prompt = "Hello, how are you?";
     nlohmann::json input = {};
-    auto result = engine.analyze(prompt, input, "chat");
+    AnalysisResult result = engine.analyze(prompt, input, "chat");
     
-    std::cout << result[1] << std::endl;
+    std::cout << result.content << std::endl;
     return 0;
 }
 ```

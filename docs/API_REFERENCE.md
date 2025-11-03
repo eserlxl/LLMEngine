@@ -28,10 +28,20 @@ If your environment does not define a `docs` target, you can run Doxygen manuall
 
 ## Public Headers (reference points)
 
-- `src/LLMEngine.hpp` — Main entry point; constructors, analyze method, provider info
+- `src/LLMEngine.hpp` — Main entry point; constructors, analyze method, provider info, `AnalysisResult`
 - `src/APIClient.hpp` — Interface and concrete clients for providers
 - `src/LLMOutputProcessor.hpp` — Output parsing/normalization helpers
 - `src/Utils.hpp` — Utility helpers used across the library
 
 For configuration details, see `docs/CONFIGURATION.md` and `config/api_config.json`.
+
+## Typed Result
+
+`LLMEngine::analyze` returns `AnalysisResult`:
+
+```0:0:src/LLMEngine.hpp
+struct AnalysisResult { bool success; std::string think; std::string content; std::string errorMessage; int statusCode; };
+```
+
+Access response text via `result.content`. The previous `std::vector<std::string>` return is removed.
 

@@ -18,10 +18,10 @@ int main() {
     LLMEngine engine(std::move(fake), /*model_params*/{}, /*log_retention_hours*/1, /*debug*/false);
 
     // Smoke test analyze (uses FakeAPIClient)
-    auto out = engine.analyze("hello", {}, "unittest", "chat");
-    assert(out.size() == 2);
-    // The second element is the visible content
-    assert(out[1].find("[FAKE]") != std::string::npos);
+    AnalysisResult out = engine.analyze("hello", {}, "unittest", "chat");
+    assert(out.success);
+    // Visible content contains fake marker
+    assert(out.content.find("[FAKE]") != std::string::npos);
 
     // Legacy constructors still compile and construct; avoid network by not calling analyze
     LLMEngine legacy("http://localhost:11434", "llama2");

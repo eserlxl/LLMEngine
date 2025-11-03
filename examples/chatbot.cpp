@@ -74,8 +74,8 @@ public:
             
             try {
                 // Get response from LLM
-                auto result = engine_->analyze(user_input, nlohmann::json{}, "chat", mode_);
-                std::string response = result[1];
+                AnalysisResult result = engine_->analyze(user_input, nlohmann::json{}, "chat", mode_);
+                std::string response = result.content;
                 
                 // Display response
                 std::cout << "🤖 Bot: " << response << std::endl;
