@@ -26,9 +26,7 @@ void DebugArtifacts::writeJson(const std::string& path, const nlohmann::json& js
         std::ofstream f(path);
         if (!f) return;
         f << payload.dump(2);
-    } catch (...) {
-        // best-effort, swallow
-        // NOLINTNEXTLINE(bugprone-empty-catch)
+    } catch (...) {  // NOLINT(bugprone-empty-catch): best-effort, swallow exceptions
     }
 }
 
@@ -50,9 +48,7 @@ void DebugArtifacts::writeText(const std::string& path, std::string_view text, b
         } else {
             f << text;
         }
-    } catch (...) {
-        // best-effort, swallow
-        // NOLINTNEXTLINE(bugprone-empty-catch)
+    } catch (...) {  // NOLINT(bugprone-empty-catch): best-effort, swallow exceptions
     }
 }
 
@@ -73,9 +69,7 @@ void DebugArtifacts::cleanupOld(const std::string& dir, int hours) {
                 fs::remove(entry.path(), ec);
             }
         }
-    } catch (...) {
-        // best-effort, swallow
-        // NOLINTNEXTLINE(bugprone-empty-catch)
+    } catch (...) {  // NOLINT(bugprone-empty-catch): best-effort, swallow exceptions
     }
 }
 
