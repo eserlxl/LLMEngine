@@ -32,9 +32,11 @@ namespace {
     constexpr int HTTP_STATUS_UNAUTHORIZED = 401;
     constexpr int HTTP_STATUS_FORBIDDEN = 403;
     constexpr int HTTP_STATUS_TOO_MANY_REQUESTS = 429;
+    constexpr int HTTP_STATUS_SERVER_ERROR_MIN = 500;
     constexpr int DEFAULT_TIMEOUT_SECONDS = 30;
     constexpr int DEFAULT_RETRY_ATTEMPTS = 3;
     constexpr int DEFAULT_RETRY_DELAY_MS = 1000;
+    constexpr int DEFAULT_MAX_BACKOFF_DELAY_MS = 30000; // maximum cap for backoff delays in milliseconds
 }
 
 // QwenClient Implementation
@@ -59,7 +61,7 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
     try {
         int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
         int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
-        int max_delay_ms = 30000;
+        int max_delay_ms = DEFAULT_MAX_BACKOFF_DELAY_MS;
         uint64_t jitter_seed = 0;
         if (params.contains("retry_attempts")) max_attempts = std::max(1, params["retry_attempts"].get<int>());
         if (params.contains("retry_base_delay_ms")) base_delay_ms = std::max(0, params["retry_base_delay_ms"].get<int>());
@@ -204,7 +206,7 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
     try {
         int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
         int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
-        int max_delay_ms = 30000;
+        int max_delay_ms = DEFAULT_MAX_BACKOFF_DELAY_MS;
         uint64_t jitter_seed = 0;
         if (params.contains("retry_attempts")) max_attempts = std::max(1, params["retry_attempts"].get<int>());
         if (params.contains("retry_base_delay_ms")) base_delay_ms = std::max(0, params["retry_base_delay_ms"].get<int>());
@@ -329,7 +331,7 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
     try {
         int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
         int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
-        int max_delay_ms = 30000;
+        int max_delay_ms = DEFAULT_MAX_BACKOFF_DELAY_MS;
         uint64_t jitter_seed = 0;
         if (params.contains("retry_attempts")) max_attempts = std::max(1, params["retry_attempts"].get<int>());
         if (params.contains("retry_base_delay_ms")) base_delay_ms = std::max(0, params["retry_base_delay_ms"].get<int>());
@@ -414,7 +416,7 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
                 response.error_code = APIResponse::APIError::Auth;
             } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
                 response.error_code = APIResponse::APIError::RateLimited;
-            } else if (cpr_response.status_code >= 500) {
+            } else if (cpr_response.status_code >= HTTP_STATUS_SERVER_ERROR_MIN) {
                 response.error_code = APIResponse::APIError::Server;
             } else {
                 response.error_code = APIResponse::APIError::Unknown;
@@ -449,7 +451,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
     try {
         int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
         int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
-        int max_delay_ms = 30000;
+        int max_delay_ms = DEFAULT_MAX_BACKOFF_DELAY_MS;
         uint64_t jitter_seed = 0;
         if (params.contains("retry_attempts")) max_attempts = std::max(1, params["retry_attempts"].get<int>());
         if (params.contains("retry_base_delay_ms")) base_delay_ms = std::max(0, params["retry_base_delay_ms"].get<int>());
@@ -621,7 +623,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                 response.error_code = APIResponse::APIError::Auth;
             } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
                 response.error_code = APIResponse::APIError::RateLimited;
-            } else if (cpr_response.status_code >= 500) {
+            } else if (cpr_response.status_code >= HTTP_STATUS_SERVER_ERROR_MIN) {
                 response.error_code = APIResponse::APIError::Server;
             } else {
                 response.error_code = APIResponse::APIError::Unknown;
