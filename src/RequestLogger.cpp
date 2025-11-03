@@ -7,6 +7,7 @@
 
 #include "RequestLogger.hpp"
 #include <algorithm>
+#include <ranges>
 #include <sstream>
 #include <cctype>
 
@@ -66,17 +67,13 @@ std::string RequestLogger::redactUrl(std::string_view url) {
         }
         
         std::string param_name = param_pair.substr(0, equals_pos);
-        std::string param_value = param_pair.substr(equals_pos + 1);
         
         // Check if this is a sensitive parameter
-        bool is_sensitive = false;
         std::string lower_name = toLower(param_name);
-        for (const auto& sensitive : getSensitiveQueryParamsImpl()) {
-            if (lower_name == sensitive) {
-                is_sensitive = true;
-                break;
-            }
-        }
+        bool is_sensitive = std::ranges::any_of(getSensitiveQueryParamsImpl(),
+            [&lower_name](const std::string& sensitive) {
+                return lower_name == sensitive;
+            });
         
         if (is_sensitive) {
             // Redact the value
@@ -137,11 +134,9 @@ const std::vector<std::string>& RequestLogger::getSensitiveHeaderNames() {
 
 bool RequestLogger::isSensitiveHeader(std::string_view header_name) {
     std::string lower_name = toLower(header_name);
-    for (const auto& sensitive : getSensitiveHeaderNamesImpl()) {
-        if (lower_name == sensitive) {
-            return true;
-        }
-    }
-    return false;
+    return std::ranges::any_of(getSensitiveHeaderNamesImpl(),
+        [&lower_name](const std::string& sensitive) {
+            return lower_name == sensitive;
+        });
 }
 

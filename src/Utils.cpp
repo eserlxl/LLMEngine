@@ -178,13 +178,13 @@ namespace Utils {
         // Read stdout
         std::string stdout_buffer;
         while ((bytes_read = read(stdout_pipe[0], buffer.data(), buffer.size())) > 0) {
-            stdout_buffer.append(buffer.data(), bytes_read);
+            stdout_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
         }
         
         // Read stderr
         std::string stderr_buffer;
         while ((bytes_read = read(stderr_pipe[0], buffer.data(), buffer.size())) > 0) {
-            stderr_buffer.append(buffer.data(), bytes_read);
+            stderr_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
         }
         
         // Process stdout line by line (preserving original fgets behavior)
