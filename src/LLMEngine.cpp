@@ -29,7 +29,6 @@ namespace {
     constexpr size_t REDACTED_REASONING_TAG_LENGTH = 20;  // "<think>" length
     constexpr size_t REDACTED_REASONING_CLOSE_TAG_LENGTH = 21;  // "</think>" length
     constexpr size_t MAX_FILENAME_LENGTH = 64;
-    constexpr size_t REDACTED_TAG_LENGTH = 10;  // "<REDACTED>" length
 }
 
 // Legacy constructor for Ollama (backward compatibility)

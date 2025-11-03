@@ -9,6 +9,7 @@
 
 namespace {
     constexpr size_t REDACTED_TAG_LENGTH = 10; // "<REDACTED>"
+    constexpr size_t MIN_TOKEN_LENGTH_FOR_REDACTION = 32; // Minimum length for token redaction
 }
 
 void DebugArtifacts::writeJson(const std::string& path, const nlohmann::json& json, bool redactSecrets) {
@@ -20,6 +21,7 @@ void DebugArtifacts::writeJson(const std::string& path, const nlohmann::json& js
         f << payload.dump(2);
     } catch (...) {
         // best-effort, swallow
+        // NOLINTNEXTLINE(bugprone-empty-catch)
     }
 }
 
@@ -36,6 +38,7 @@ void DebugArtifacts::writeText(const std::string& path, std::string_view text, b
         }
     } catch (...) {
         // best-effort, swallow
+        // NOLINTNEXTLINE(bugprone-empty-catch)
     }
 }
 
@@ -58,6 +61,7 @@ void DebugArtifacts::cleanupOld(const std::string& dir, int hours) {
         }
     } catch (...) {
         // best-effort, swallow
+        // NOLINTNEXTLINE(bugprone-empty-catch)
     }
 }
 
@@ -94,7 +98,7 @@ nlohmann::json DebugArtifacts::redactJson(const nlohmann::json& j) {
 std::string DebugArtifacts::redactText(std::string_view text) {
     // Conservative masking: mask bearer tokens that look like long base64/hex strings
     std::string s(text);
-    // Heuristic: any contiguous token chars of length >= 32 become <REDACTED>
+    // Heuristic: any contiguous token chars of length >= MIN_TOKEN_LENGTH_FOR_REDACTION become <REDACTED>
     size_t i = 0;
     while (i < s.size()) {
         if (std::isalnum(static_cast<unsigned char>(s[i])) || s[i] == '_' || s[i] == '-' ) {
@@ -102,7 +106,7 @@ std::string DebugArtifacts::redactText(std::string_view text) {
             while (j < s.size() && (std::isalnum(static_cast<unsigned char>(s[j])) || s[j] == '_' || s[j] == '-' )) {
                 ++j;
             }
-            if (j - i >= 32) {
+            if (j - i >= MIN_TOKEN_LENGTH_FOR_REDACTION) {
                 s.replace(i, j - i, "<REDACTED>");
                 i += REDACTED_TAG_LENGTH;
                 continue;
