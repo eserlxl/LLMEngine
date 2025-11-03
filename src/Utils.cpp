@@ -124,15 +124,16 @@ namespace Utils {
 
         // Prepare argv array for execve (must be null-terminated)
         std::vector<char*> argv;
+        argv.reserve(args.size() + 1);  // Pre-allocate capacity for args + nullptr
         for (auto& arg_str : args) {
             argv.push_back(const_cast<char*>(arg_str.c_str()));
         }
         argv.push_back(nullptr);
 
         // Create pipes for stdout and stderr
-        int stdout_pipe[2];
-        int stderr_pipe[2];
-        if (pipe(stdout_pipe) != 0 || pipe(stderr_pipe) != 0) {
+        std::array<int, 2> stdout_pipe;
+        std::array<int, 2> stderr_pipe;
+        if (pipe(stdout_pipe.data()) != 0 || pipe(stderr_pipe.data()) != 0) {
             std::cerr << "[ERROR] execCommand: Failed to create pipes for command: " << cmd_str << std::endl;
             return output;
         }
