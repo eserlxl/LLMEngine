@@ -40,7 +40,7 @@ Verify the daemon is running at `http://localhost:11434` and model is pulled.
 See search order in `docs/CONFIGURATION.md` and `config/README.md`.
 
 ## How to generate API documentation
-If your build exposes a docs target:
+If the build exposes a docs target:
 ```bash
 cmake -S . -B build
 cmake --build build --target docs

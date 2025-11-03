@@ -11,7 +11,7 @@ If the build generates documentation, open the HTML output in a browser. Typical
 
 ## Generate Locally
 
-If a `docs` target is available in your CMake setup:
+If a `docs` target is available in the CMake setup:
 
 ```bash
 cmake -S . -B build
