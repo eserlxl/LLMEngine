@@ -17,6 +17,10 @@
 #include <iostream>
 #include <filesystem>
 #include <map>
+#include <spawn.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <algorithm>
 
 namespace Utils {
     std::string TMP_DIR = "/tmp/llmengine";
@@ -37,15 +41,14 @@ namespace Utils {
 
     std::vector<std::string> execCommand(std::string_view cmd) {
         std::vector<std::string> output;
-        std::array<char, COMMAND_BUFFER_SIZE> buffer;
+        std::string cmd_str(cmd);
 
         // SECURITY: Validate command string to prevent command injection
-        // CRITICAL: This function uses popen() which routes through a shell.
-        // We must prevent newlines and control characters that could allow command chaining.
+        // This function uses posix_spawn() which does NOT route through a shell,
+        // eliminating shell injection risks. However, we still validate input to ensure
+        // only safe command strings are accepted.
         // Only allow alphanumeric, single spaces (not newlines/tabs), hyphens, underscores, dots, slashes
-        // Note: Consider migrating to posix_spawn/execve with argv arrays for production use
         const std::regex safe_chars(R"([a-zA-Z0-9_./ -]+)");
-        std::string cmd_str(cmd);
         
         if (cmd_str.empty()) {
             std::cerr << "[ERROR] execCommand: Empty command string" << std::endl;
@@ -106,30 +109,119 @@ namespace Utils {
             return output;
         }
 
-        // Redirect stderr to stdout to capture errors
-        // NOTE: popen() still routes through shell, but validation above prevents injection
-        std::string full_cmd = cmd_str + " 2>&1";
-        FILE* pipe = popen(full_cmd.c_str(), "r");
-
-        if (!pipe) {
-            std::cerr << "[ERROR] popen() failed for command: " << cmd_str << std::endl;
+        // Parse command string into argv array (split on spaces)
+        std::vector<std::string> args;
+        std::istringstream iss(cmd_str);
+        std::string arg;
+        while (iss >> arg) {
+            args.push_back(arg);
+        }
+        
+        if (args.empty()) {
+            std::cerr << "[ERROR] execCommand: No command found in: " << cmd_str << std::endl;
             return output;
         }
 
-        while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
-            output.emplace_back(buffer.data());
+        // Prepare argv array for execve (must be null-terminated)
+        std::vector<char*> argv;
+        for (auto& arg_str : args) {
+            argv.push_back(const_cast<char*>(arg_str.c_str()));
+        }
+        argv.push_back(nullptr);
+
+        // Create pipes for stdout and stderr
+        int stdout_pipe[2];
+        int stderr_pipe[2];
+        if (pipe(stdout_pipe) != 0 || pipe(stderr_pipe) != 0) {
+            std::cerr << "[ERROR] execCommand: Failed to create pipes for command: " << cmd_str << std::endl;
+            return output;
         }
 
-        int status = pclose(pipe);
-        if (status != 0) {
-            std::cerr << "[WARNING] Command '" << cmd_str << "' exited with non-zero status: " << status << std::endl;
+        // Set up file actions for posix_spawn
+        posix_spawn_file_actions_t file_actions;
+        posix_spawn_file_actions_init(&file_actions);
+        posix_spawn_file_actions_addclose(&file_actions, stdout_pipe[0]);
+        posix_spawn_file_actions_addclose(&file_actions, stderr_pipe[0]);
+        posix_spawn_file_actions_adddup2(&file_actions, stdout_pipe[1], STDOUT_FILENO);
+        posix_spawn_file_actions_adddup2(&file_actions, stderr_pipe[1], STDERR_FILENO);
+        posix_spawn_file_actions_addclose(&file_actions, stdout_pipe[1]);
+        posix_spawn_file_actions_addclose(&file_actions, stderr_pipe[1]);
+
+        // Spawn the process
+        pid_t pid;
+        extern char** environ;  // Use current environment
+        int spawn_result = posix_spawnp(&pid, argv[0], &file_actions, nullptr, argv.data(), environ);
+
+        // Clean up file actions
+        posix_spawn_file_actions_destroy(&file_actions);
+
+        if (spawn_result != 0) {
+            std::cerr << "[ERROR] execCommand: posix_spawnp() failed for command: " << cmd_str << " (error: " << spawn_result << ")" << std::endl;
+            close(stdout_pipe[0]);
+            close(stdout_pipe[1]);
+            close(stderr_pipe[0]);
+            close(stderr_pipe[1]);
+            return output;
+        }
+
+        // Close write ends of pipes in parent
+        close(stdout_pipe[1]);
+        close(stderr_pipe[1]);
+
+        // Read stdout and stderr
+        // Note: We read both sequentially. In practice, commands typically write to one or the other,
+        // and this approach matches the original popen() behavior (which merged via 2>&1)
+        std::array<char, COMMAND_BUFFER_SIZE> buffer;
+        ssize_t bytes_read;
+        
+        // Read stdout
+        std::string stdout_buffer;
+        while ((bytes_read = read(stdout_pipe[0], buffer.data(), buffer.size())) > 0) {
+            stdout_buffer.append(buffer.data(), bytes_read);
+        }
+        
+        // Read stderr
+        std::string stderr_buffer;
+        while ((bytes_read = read(stderr_pipe[0], buffer.data(), buffer.size())) > 0) {
+            stderr_buffer.append(buffer.data(), bytes_read);
+        }
+        
+        // Process stdout line by line (preserving original fgets behavior)
+        std::istringstream stdout_stream(stdout_buffer);
+        std::string line;
+        while (std::getline(stdout_stream, line)) {
+            output.push_back(line + "\n");
+        }
+        
+        // Process stderr line by line and append
+        std::istringstream stderr_stream(stderr_buffer);
+        while (std::getline(stderr_stream, line)) {
+            output.push_back(line + "\n");
+        }
+
+        // Close read ends
+        close(stdout_pipe[0]);
+        close(stderr_pipe[0]);
+
+        // Wait for process to complete
+        int status;
+        if (waitpid(pid, &status, 0) == -1) {
+            std::cerr << "[ERROR] execCommand: waitpid() failed for command: " << cmd_str << std::endl;
+            return output;
+        }
+
+        if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+            std::cerr << "[WARNING] Command '" << cmd_str << "' exited with non-zero status: " << WEXITSTATUS(status) << std::endl;
             if (!output.empty()) {
                 std::cerr << "  Output:" << std::endl;
                 for (const auto& line : output) {
                     std::cerr << "    " << line;
                 }
             }
+        } else if (WIFSIGNALED(status)) {
+            std::cerr << "[WARNING] Command '" << cmd_str << "' terminated by signal: " << WTERMSIG(status) << std::endl;
         }
+
         return output;
     }
 

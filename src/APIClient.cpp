@@ -696,13 +696,15 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
             timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
         }
 
-        const std::string url = base_url_ + "/models/" + model_ + ":generateContent?key=" + api_key_;
+        // SECURITY: Use header-based authentication instead of URL query parameter
+        // to prevent API key leakage through logs, proxies, or analytics layers
+        const std::string url = base_url_ + "/models/" + model_ + ":generateContent";
 
         cpr::Response cpr_response;
         for (int attempt = 1; attempt <= max_attempts; ++attempt) {
             cpr_response = cpr::Post(
                 cpr::Url{url},
-                cpr::Header{{"Content-Type", "application/json"}},
+                cpr::Header{{"Content-Type", "application/json"}, {"x-goog-api-key", api_key_}},
                 cpr::Body{payload.dump()},
                 cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
             );

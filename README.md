@@ -334,17 +334,18 @@ setenv("LLMENGINE_DISABLE_DEBUG_FILES", "1", 1);
 
 ### Command Execution Security
 
-The `Utils::execCommand()` function includes validation to prevent command injection:
+The `Utils::execCommand()` function uses `posix_spawn()` which does NOT route through a shell, eliminating shell injection risks entirely:
+- **No shell involvement**: Commands are executed directly via `posix_spawn()` with explicit argument vectors
 - **Control characters are rejected**: Newlines, tabs, carriage returns, and all control characters are explicitly blocked
 - **Shell metacharacters are rejected**: All shell metacharacters (|, &, ;, $, `, <, >, parentheses, brackets, wildcards) are blocked
 - **Whitelist approach**: Only alphanumeric, single spaces, hyphens, underscores, dots, and slashes are allowed
 - **Multiple spaces prevented**: Consecutive spaces are rejected to prevent obfuscation attempts
 
-**Important Security Notes:**
-- This function uses `popen()` which routes through a shell, so validation must be strict
+**Security Benefits:**
+- Eliminates shell injection risks by bypassing shell interpretation entirely
+- Commands are parsed into argument vectors and executed directly via `posix_spawn()`
+- Validation remains in place as an additional defense-in-depth measure
 - Only trusted commands should be passed to this function
-- Never use `execCommand()` with untrusted user input
-- For production use with untrusted input, consider using `posix_spawn` or `execve` with argv arrays instead
 
 ### Provider Selection
 

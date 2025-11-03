@@ -43,6 +43,28 @@ int main() {
         assert(mgr.getDefaultConfigPath() == "config/api_config.json");
     }
 
+    // Test provider-specific timeout
+    {
+        auto& mgr = APIConfigManager::getInstance();
+        bool ok = mgr.loadConfig("config/api_config.json");
+        if (ok) {
+            // Global timeout should be 30 seconds
+            assert(mgr.getTimeoutSeconds() == 30);
+            
+            // Ollama should have provider-specific timeout of 300 seconds
+            int ollama_timeout = mgr.getTimeoutSeconds("ollama");
+            assert(ollama_timeout == 300);
+            
+            // Other providers should fall back to global timeout (30 seconds)
+            int qwen_timeout = mgr.getTimeoutSeconds("qwen");
+            assert(qwen_timeout == 30);
+            
+            // Non-existent provider should fall back to global timeout
+            int unknown_timeout = mgr.getTimeoutSeconds("nonexistent");
+            assert(unknown_timeout == 30);
+        }
+    }
+
     std::cout << "test_api_config_manager: OK\n";
     return 0;
 }

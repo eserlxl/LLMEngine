@@ -23,12 +23,11 @@ namespace Utils {
     [[nodiscard]] std::vector<std::string> readLines(std::string_view filepath, size_t max_lines = 100);
 
     /**
-     * @brief Execute a shell command and capture stdout lines.
+     * @brief Execute a command and capture stdout/stderr lines.
      * 
-     * SECURITY WARNING: This function uses popen() which routes through a shell.
-     * While validation prevents most injection vectors, it should NEVER be used with
-     * untrusted input. Only use with hardcoded commands or commands that have been
-     * explicitly validated and sanitized by the caller.
+     * SECURITY: This function uses posix_spawn() which does NOT route through a shell,
+     * eliminating shell injection risks. The command string is parsed into an argv array
+     * and executed directly, bypassing shell interpretation entirely.
      * 
      * Validation rules:
      * - Allowed: alphanumeric, single spaces (no newlines/tabs), hyphens, underscores, dots, forward slashes
@@ -36,11 +35,11 @@ namespace Utils {
      * - Rejected: shell metacharacters (|, &, ;, $, `, <, >, parentheses, brackets, wildcards, etc.)
      * - Rejected: multiple consecutive spaces
      * 
-     * NOTE: For production use with untrusted input, consider using posix_spawn/execve
-     * with argv arrays instead of this shell-based approach.
+     * The command string is split on spaces to create the argument vector. Only simple
+     * commands with space-separated arguments are supported (no shell features).
      * 
-     * @param cmd Command string to execute (must be trusted/validated)
-     * @return Vector of output lines
+     * @param cmd Command string to execute (e.g., "ls -la /tmp") - must be trusted/validated
+     * @return Vector of output lines (stdout and stderr merged)
      */
     [[nodiscard]] std::vector<std::string> execCommand(std::string_view cmd);
 

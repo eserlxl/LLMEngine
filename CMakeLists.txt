@@ -191,6 +191,7 @@ add_library(${PROJECT_NAME}
     src/Utils.cpp
     src/APIClient.cpp
     src/DebugArtifacts.cpp
+    src/RequestLogger.cpp
 )
 
 # Versioning for shared libraries
@@ -295,6 +296,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/LLMOutputProcessor.hpp" "${CMAKE
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/Utils.hpp" COPYONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/Logger.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/Logger.hpp" COPYONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/DebugArtifacts.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/DebugArtifacts.hpp" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/RequestLogger.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/RequestLogger.hpp" COPYONLY)
 
 # Warnings configuration (build-time only)
 if (WARNING_MODE)
@@ -345,6 +347,7 @@ install(FILES
     src/APIClient.hpp
     src/Logger.hpp
     src/DebugArtifacts.hpp
+    src/RequestLogger.hpp
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 
 # Install config and scripts (if these directories exist)

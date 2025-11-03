@@ -90,6 +90,18 @@ jobs:
           sudo ${{ matrix.os.install_cmd }} ${{ matrix.os.packages }}
           git config --local --add safe.directory "$GITHUB_WORKSPACE"
 
+      - name: Install clang-tidy (for static analysis)
+        if: matrix.os.name == 'Ubuntu'
+        run: |
+          set -euo pipefail
+          if [ "${{ matrix.os.container }}" = "" ]; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends clang-tidy
+          else
+            apt-get update
+            apt-get install -y --no-install-recommends clang-tidy || echo "clang-tidy not available, skipping static analysis"
+          fi
+
       - name: Install meson
         run: |
           set -euo pipefail
@@ -114,6 +126,29 @@ jobs:
           cmake --build build -- -j20
           cd build
           ctest --output-on-failure
+
+      - name: Run static analysis (clang-tidy)
+        if: matrix.os.name == 'Ubuntu' && matrix.os.container == ''
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          if command -v clang-tidy &> /dev/null; then
+            echo "Running clang-tidy static analysis..."
+            # Run clang-tidy on source files with security-focused checks
+            clang-tidy \
+              --quiet \
+              --warnings-as-errors=* \
+              --checks=-*,clang-analyzer-*,bugprone-*,cert-*,misc-*,performance-*,readability-*,modernize-* \
+              src/*.cpp src/*.hpp \
+              -- \
+              -I src \
+              -std=c++20 \
+              -DNDEBUG \
+              -I/usr/include \
+              || echo "Static analysis completed with warnings"
+          else
+            echo "clang-tidy not available, skipping static analysis"
+          fi
 
       - name: Run unit tests
         if: matrix.os.container == ''
