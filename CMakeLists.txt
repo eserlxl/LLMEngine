@@ -289,7 +289,7 @@ if (WARNING_MODE)
   endif()
 endif()
 
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 
 # ---- Install ------------------------------------------------------------------
 # Install library (handles both static and shared) and export targets
