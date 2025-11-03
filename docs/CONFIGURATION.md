@@ -163,6 +163,9 @@ Expanded example with multiple providers:
 
 - Increase `timeout_seconds` for larger responses or slow networks.
 - Set `retry_attempts` to handle transient HTTP 429/5xx.
+- Backoff uses exponential with full jitter. Global keys:
+  - `retry_attempts`, `retry_delay_ms` (base), optional `retry_max_delay_ms` (cap)
+- Per-request overrides via params: `retry_attempts`, `retry_base_delay_ms`, `retry_max_delay_ms`, and `jitter_seed` (tests).
 
 ## Logging and Debugging
 

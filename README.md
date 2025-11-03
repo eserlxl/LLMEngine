@@ -387,3 +387,7 @@ git push origin feature/name
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 
 [↑ Back to top](#llmengine)
+
+## Migration Note (Breaking Change)
+
+`LLMEngine::analyze` now returns `AnalysisResult` instead of `std::vector<std::string>`. Replace `result[1]` with `result.content` and `result[0]` with `result.think`. On failure, check `result.success` and read `result.errorMessage`/`result.statusCode`.
