@@ -292,6 +292,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/LLMEngine.hpp" "${CMAKE_CURRENT_
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/APIClient.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/APIClient.hpp" COPYONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/LLMOutputProcessor.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMOutputProcessor.hpp" COPYONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/Utils.hpp" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/Logger.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/Logger.hpp" COPYONLY)
 
 # Warnings configuration (build-time only)
 if (WARNING_MODE)
@@ -340,6 +341,7 @@ install(FILES
     src/LLMOutputProcessor.hpp
     src/Utils.hpp
     src/APIClient.hpp
+    src/Logger.hpp
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 
 # Install config and scripts (if these directories exist)
