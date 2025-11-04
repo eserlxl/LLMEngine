@@ -157,8 +157,6 @@ namespace LLMEngineSystem {
         std::string::size_type open = full_response.find("<redacted_reasoning>");
         std::string::size_type close = full_response.find("</redacted_reasoning>");
         if (open != std::string::npos && close != std::string::npos && close > open) {
-            const std::string tag_open = std::string(::LLMEngine::Constants::DebugArtifacts::REDACTED_REASONING_TAG_OPEN);
-            const std::string tag_close = std::string(::LLMEngine::Constants::DebugArtifacts::REDACTED_REASONING_TAG_CLOSE);
             think_section = full_response.substr(open + tag_open.length(), close - (open + tag_open.length()));
             std::string before = full_response.substr(0, open);
             std::string after  = full_response.substr(close + tag_close.length());
