@@ -133,6 +133,7 @@ set(CPR_NEEDS_EXPORT ${CPR_FETCHED})
 add_library(${PROJECT_NAME}_compile_options INTERFACE)
 string(TOLOWER "${PROJECT_NAME}" _ns)
 add_library(${_ns}::compile_options ALIAS ${PROJECT_NAME}_compile_options)
+set_target_properties(${PROJECT_NAME}_compile_options PROPERTIES EXPORT_NAME compile_options)
 
 target_compile_features(${PROJECT_NAME}_compile_options INTERFACE cxx_std_20)
 if (MSVC)
@@ -352,9 +353,21 @@ endif()
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 
 # ---- Install ------------------------------------------------------------------
-# Install only our project targets. Do not export third-party dependency targets;
-# they are resolved for consumers via find_dependency() in the package config.
-install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_compile_options
+# Install library (handles both static and shared) and export targets
+# If dependencies were fetched via FetchContent, include them in the same export set
+# to satisfy CMake's export validation (required for PUBLIC dependencies)
+set(_targets_to_install ${PROJECT_NAME})
+if (NLOHMANN_JSON_NEEDS_EXPORT)
+  if (TARGET nlohmann_json)
+    list(APPEND _targets_to_install nlohmann_json)
+  elseif (TARGET nlohmann_json::nlohmann_json)
+    list(APPEND _targets_to_install nlohmann_json::nlohmann_json)
+  endif()
+endif()
+if (CPR_NEEDS_EXPORT AND TARGET cpr)
+  list(APPEND _targets_to_install cpr)
+endif()
+install(TARGETS ${_targets_to_install} ${PROJECT_NAME}_compile_options
   EXPORT ${PROJECT_NAME}Targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
