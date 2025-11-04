@@ -421,11 +421,12 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
     // Hash thread ID to hex string for efficient formatting (avoids locale-sensitive formatting)
     const auto thread_id = std::this_thread::get_id();
     std::hash<std::thread::id> hasher;
-    const uint64_t thread_hash = static_cast<uint64_t>(hasher(thread_id));
+    const auto thread_hash = static_cast<uint64_t>(hasher(thread_id));
     
     // Pre-allocate string with estimated size
     std::string request_tmp_dir;
-    request_tmp_dir.reserve(tmp_dir_.size() + 32); // Reserve space for "/req_" + milliseconds + "_" + hex hash
+    constexpr size_t kRequestPathSuffixSize = 32; // Reserve space for "/req_" + milliseconds + "_" + hex hash
+    request_tmp_dir.reserve(tmp_dir_.size() + kRequestPathSuffixSize);
     request_tmp_dir = tmp_dir_;
     request_tmp_dir += "/req_";
     request_tmp_dir += std::to_string(milliseconds);
@@ -433,8 +434,11 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
     
     // Convert thread hash to hex string
     constexpr const char* hex_digits = "0123456789abcdef";
-    for (int i = 60; i >= 0; i -= 4) {
-        request_tmp_dir += hex_digits[(thread_hash >> i) & 0xF];
+    constexpr int kHexBitsPerDigit = 4;
+    constexpr int kHexStartBit = 60; // Start from bit 60 (64 - 4) for a 64-bit hash
+    constexpr uint64_t kHexDigitMask = 0xF; // Mask to extract 4 bits (one hex digit)
+    for (int i = kHexStartBit; i >= 0; i -= kHexBitsPerDigit) {
+        request_tmp_dir += hex_digits[(thread_hash >> i) & kHexDigitMask];
     }
     
     LLMEngineSystem::Context ctx{
