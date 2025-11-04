@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine.hpp"
+#include "LLMEngine/ITempDirProvider.hpp"
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -455,7 +456,7 @@ void LLMEngine::LLMEngine::setLogger(std::shared_ptr<::LLMEngine::Logger> logger
 void LLMEngine::LLMEngine::setTempDirectory(const std::string& tmp_dir) {
     // Only accept directories within the default root to avoid accidental deletion elsewhere
     try {
-        const std::filesystem::path default_root = std::filesystem::path(Utils::TMP_DIR).lexically_normal();
+        const std::filesystem::path default_root = std::filesystem::path(::LLMEngine::DefaultTempDirProvider().getTempDir()).lexically_normal();
         const std::filesystem::path requested    = std::filesystem::path(tmp_dir).lexically_normal();
         // Check prefix match: requested path must begin with default_root components
         auto it_def = default_root.begin();

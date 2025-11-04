@@ -22,6 +22,8 @@ namespace LLMEngineAPI {
 
 /**
  * @brief Supported LLM providers.
+ * 
+ * **Thread Safety:** This enum is thread-safe (enum values are immutable).
  */
 enum class ProviderType {
     QWEN,
@@ -33,6 +35,12 @@ enum class ProviderType {
 
 /**
  * @brief Normalized API response returned by all providers.
+ * 
+ * **Thread Safety:** This struct is thread-safe for read access. It is typically
+ * created by APIClient implementations and returned by value.
+ * 
+ * **Ownership:** Contains a nlohmann::json object (value semantics, no special
+ * ownership concerns).
  */
 struct APIResponse {
     bool success;
@@ -225,8 +233,36 @@ public:
 /**
  * @brief Singleton managing `api_config.json` loading and access.
  * 
- * Thread-safe singleton for configuration management. All methods are thread-safe
- * and can be called concurrently from multiple threads.
+ * ## Thread Safety
+ * 
+ * **All methods are thread-safe** and can be called concurrently from multiple threads.
+ * Uses reader-writer locks (std::shared_mutex) to allow concurrent reads while
+ * protecting writes.
+ * 
+ * ## Lifecycle
+ * 
+ * - **Singleton Pattern:** Single instance per process (created on first getInstance() call)
+ * - **Lifetime:** Lives for the duration of the program
+ * - **Initialization:** Config is loaded lazily via loadConfig()
+ * 
+ * ## Ownership
+ * 
+ * - **Logger:** Holds a raw pointer (not owned) to allow optional logging
+ * - **Configuration:** Owned by the singleton instance
+ * - **Thread Safety:** Logger pointer access is protected by mutex
+ * 
+ * ## Usage Pattern
+ * 
+ * ```cpp
+ * auto& config = APIConfigManager::getInstance();
+ * config.loadConfig();  // Load from default path
+ * auto provider_config = config.getProviderConfig("qwen");
+ * ```
+ * 
+ * ## Future Considerations
+ * 
+ * The singleton pattern may be replaced with dependency injection in future versions
+ * while maintaining backward compatibility.
  */
 class LLMENGINE_EXPORT APIConfigManager {
 public:
@@ -244,7 +280,13 @@ public:
     [[nodiscard]] std::string getDefaultConfigPath() const;
     /**
      * @brief Set logger for error messages (optional).
-     * @param logger Logger instance (can be nullptr to disable logging)
+     * 
+     * **Ownership:** Does NOT take ownership. The logger must outlive the
+     * APIConfigManager instance. Use nullptr to disable logging.
+     * 
+     * **Thread Safety:** This method is thread-safe (protected by mutex).
+     * 
+     * @param logger Logger instance (raw pointer, not owned, can be nullptr)
      */
     void setLogger(::LLMEngine::Logger* logger);
     

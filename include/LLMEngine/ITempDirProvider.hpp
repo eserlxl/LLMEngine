@@ -34,7 +34,16 @@ public:
 /**
  * @brief Default implementation that returns a constant path.
  * 
- * Thread-safe: uses a static constexpr string, so no synchronization needed.
+ * ## Thread Safety
+ * 
+ * **DefaultTempDirProvider is thread-safe.** Uses a constexpr string_view
+ * (or stored string), so no synchronization is needed. Multiple threads can
+ * call getTempDir() concurrently without issues.
+ * 
+ * ## Ownership
+ * 
+ * Can be created on the stack or heap. Typically used as a default when
+ * no custom provider is specified.
  */
 class LLMENGINE_EXPORT DefaultTempDirProvider : public ITempDirProvider {
 public:

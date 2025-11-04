@@ -28,6 +28,47 @@ struct LLMENGINE_EXPORT AnalysisResult {
 
 /**
  * @brief High-level interface for interacting with LLM providers.
+ * 
+ * ## Thread Safety
+ * 
+ * **LLMEngine instances are NOT thread-safe.** Each instance should be used from
+ * a single thread. To use LLMEngine from multiple threads, create separate instances.
+ * 
+ * The underlying APIClient implementations are thread-safe (stateless), but the
+ * LLMEngine class maintains internal state (model parameters, configuration, logger)
+ * that is not protected by locks.
+ * 
+ * ## Lifecycle and Ownership
+ * 
+ * - **LLMEngine instances** are moveable but not copyable
+ * - **API Client ownership**: LLMEngine owns the APIClient instance via unique_ptr
+ * - **Logger ownership**: LLMEngine holds a shared_ptr to the Logger, allowing
+ *   multiple instances to share the same logger safely (if the logger is thread-safe)
+ * - **Temp Directory Provider**: If provided, held via shared_ptr (shared ownership)
+ * 
+ * ## Resource Management
+ * 
+ * - Temporary directories are created per-request and cleaned up automatically
+ * - Debug artifacts are managed according to retention policy
+ * - No manual cleanup required for normal usage
+ * 
+ * ## Example Usage
+ * 
+ * ```cpp
+ * // Single-threaded usage
+ * LLMEngine engine(LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash");
+ * auto result = engine.analyze("Analyze this code", input, "code_analysis");
+ * 
+ * // Multi-threaded usage (create separate instances)
+ * std::thread t1([&]() {
+ *     LLMEngine engine1(LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash");
+ *     // use engine1
+ * });
+ * std::thread t2([&]() {
+ *     LLMEngine engine2(LLMEngineAPI::ProviderType::OPENAI, api_key2, "gpt-4");
+ *     // use engine2
+ * });
+ * ```
  */
 class LLMENGINE_EXPORT LLMEngine {
 public:
@@ -58,11 +99,21 @@ public:
     // Dependency injection constructor for tests and advanced usage
     /**
      * @brief Construct with a custom API client (testing/advanced scenarios).
-     * @param client Custom API client instance
+     * 
+     * **Ownership:** Takes ownership of the client via unique_ptr. The client
+     * will be destroyed when this LLMEngine instance is destroyed.
+     * 
+     * **Thread Safety:** The client implementation must be thread-safe if the
+     * resulting LLMEngine instance will be used from multiple threads (though
+     * LLMEngine itself is not thread-safe).
+     * 
+     * @param client Custom API client instance (transferred ownership)
      * @param model_params Default model params
      * @param log_retention_hours Hours to keep debug artifacts
      * @param debug Enable response artifact logging
-     * @param temp_dir_provider Optional temporary directory provider (defaults to DefaultTempDirProvider)
+     * @param temp_dir_provider Optional temporary directory provider (shared ownership).
+     *                          If nullptr, uses DefaultTempDirProvider. Must be
+     *                          thread-safe if shared across multiple LLMEngine instances.
      */
     LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
               const nlohmann::json& model_params = {},
@@ -101,9 +152,41 @@ public:
     [[nodiscard]] bool isOnlineProvider() const;
     
     // Temporary directory configuration
+    /**
+     * @brief Set the temporary directory for debug artifacts.
+     * 
+     * **Thread Safety:** This method modifies internal state and is not thread-safe.
+     * Do not call concurrently with other methods on the same instance.
+     * 
+     * **Security:** Only directories within the default root are accepted to prevent
+     * accidental deletion of system directories.
+     * 
+     * @param tmp_dir Temporary directory path (must be within default root)
+     */
     void setTempDirectory(const std::string& tmp_dir);
+    
+    /**
+     * @brief Get the current temporary directory path.
+     * 
+     * **Thread Safety:** This method is thread-safe for read access, but LLMEngine
+     * itself is not thread-safe, so concurrent access should be avoided.
+     * 
+     * @return Current temporary directory path
+     */
     [[nodiscard]] std::string getTempDirectory() const;
+    
     // Logging
+    /**
+     * @brief Set a custom logger instance.
+     * 
+     * **Ownership:** Takes shared ownership of the logger. Multiple LLMEngine instances
+     * can share the same logger safely if the logger implementation is thread-safe.
+     * 
+     * **Thread Safety:** The logger must be thread-safe if it will be used by multiple
+     * LLMEngine instances concurrently. DefaultLogger is thread-safe.
+     * 
+     * @param logger Logger instance (shared ownership)
+     */
     void setLogger(std::shared_ptr<Logger> logger);
     
 private:
