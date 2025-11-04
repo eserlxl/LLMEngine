@@ -5,7 +5,7 @@
 # licensed under the GNU General Public License v3.0 or later.
 # See the LICENSE file in the project root for details.
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 
 # ---- Project -----------------------------------------------------------------
 project(LLMEngineTest
@@ -153,6 +153,7 @@ add_executable(test_llmengine test.cpp)
 target_link_libraries(test_llmengine
     PRIVATE
     LLMEngine
+    llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json
     OpenSSL::SSL
@@ -163,6 +164,7 @@ add_executable(test_api test_api.cpp)
 target_link_libraries(test_api
     PRIVATE
     LLMEngine
+    llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json
     OpenSSL::SSL
@@ -177,32 +179,32 @@ target_link_libraries(test_support_fake PUBLIC nlohmann_json::nlohmann_json)
 apply_common_build_flags(test_support_fake)
 
 add_executable(test_api_config_manager test_api_config_manager.cpp)
-target_link_libraries(test_api_config_manager PRIVATE LLMEngine nlohmann_json::nlohmann_json)
+target_link_libraries(test_api_config_manager PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 apply_common_build_flags(test_api_config_manager)
 
 add_executable(test_api_client_factory test_api_client_factory.cpp)
-target_link_libraries(test_api_client_factory PRIVATE LLMEngine nlohmann_json::nlohmann_json)
+target_link_libraries(test_api_client_factory PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 apply_common_build_flags(test_api_client_factory)
 
 add_executable(test_provider_type_mapping test_provider_type_mapping.cpp)
-target_link_libraries(test_provider_type_mapping PRIVATE LLMEngine nlohmann_json::nlohmann_json)
+target_link_libraries(test_provider_type_mapping PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 apply_common_build_flags(test_provider_type_mapping)
 
 add_executable(test_llmengine_construction test_llmengine_construction.cpp)
-target_link_libraries(test_llmengine_construction PRIVATE LLMEngine test_support_fake nlohmann_json::nlohmann_json)
+target_link_libraries(test_llmengine_construction PRIVATE LLMEngine llmengine::compile_options test_support_fake nlohmann_json::nlohmann_json)
 apply_common_build_flags(test_llmengine_construction)
 
 # New tests (Phase 2)
 add_executable(test_api_config_parsing test_api_config_parsing.cpp)
-target_link_libraries(test_api_config_parsing PRIVATE LLMEngine nlohmann_json::nlohmann_json)
+target_link_libraries(test_api_config_parsing PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 apply_common_build_flags(test_api_config_parsing)
 
 add_executable(test_output_processor_sections test_output_processor_sections.cpp)
-target_link_libraries(test_output_processor_sections PRIVATE LLMEngine nlohmann_json::nlohmann_json)
+target_link_libraries(test_output_processor_sections PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 apply_common_build_flags(test_output_processor_sections)
 
 add_executable(test_provider_mapping_extended test_provider_mapping_extended.cpp)
-target_link_libraries(test_provider_mapping_extended PRIVATE LLMEngine nlohmann_json::nlohmann_json)
+target_link_libraries(test_provider_mapping_extended PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 apply_common_build_flags(test_provider_mapping_extended)
 
 # ---- CTest Integration --------------------------------------------------------

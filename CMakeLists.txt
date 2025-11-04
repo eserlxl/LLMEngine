@@ -5,7 +5,7 @@
 # and is licensed under the GNU General Public License v3.0 or later.
 # See the LICENSE file in the project root for details.
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 
 # ---- Project -----------------------------------------------------------------
 project(LLMEngine
@@ -129,7 +129,29 @@ set(NLOHMANN_JSON_NEEDS_EXPORT ${NLOHMANN_JSON_FETCHED})
 set(CPR_NEEDS_EXPORT ${CPR_FETCHED})
 
 # ---- Helper interface targets ------------------------------------------------
-# (Removed unused helper targets; flags applied directly on main target)
+# Introduce INTERFACE target to centralize common compile/link options
+add_library(${PROJECT_NAME}_compile_options INTERFACE)
+string(TOLOWER "${PROJECT_NAME}" _ns)
+add_library(${_ns}::compile_options ALIAS ${PROJECT_NAME}_compile_options)
+
+target_compile_features(${PROJECT_NAME}_compile_options INTERFACE cxx_std_20)
+if (MSVC)
+  target_compile_options(${PROJECT_NAME}_compile_options INTERFACE /permissive-)
+else()
+  target_compile_options(${PROJECT_NAME}_compile_options INTERFACE -fstack-protector-strong)
+  target_link_options(${PROJECT_NAME}_compile_options INTERFACE -Wl,-z,relro,-z,now)
+  if (WARNING_MODE)
+    target_compile_options(${PROJECT_NAME}_compile_options INTERFACE
+      -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wnon-virtual-dtor
+      -Wold-style-cast -Woverloaded-virtual -Wnull-dereference -Wformat=2 -Wimplicit-fallthrough)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      target_compile_options(${PROJECT_NAME}_compile_options INTERFACE -Wduplicated-cond -Wlogical-op -Wuseless-cast)
+    endif()
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      target_compile_options(${PROJECT_NAME}_compile_options INTERFACE -Wextra-semi -Wno-c99-extensions)
+    endif()
+  endif()
+endif()
 
 # Pin MSVC runtime library deterministically
 if (MSVC)
@@ -215,6 +237,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 # Private dependencies (implementation only, not exported)
 target_link_libraries(${PROJECT_NAME} PRIVATE
   cpr::cpr)
+
+# Propagate common compile options to consumers
+target_link_libraries(${PROJECT_NAME} PUBLIC ${PROJECT_NAME}_compile_options)
 
 # Include directories (needed by consumers)
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -302,6 +327,11 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/Logger.hpp" "${CMAKE_CURRENT_BIN
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/DebugArtifacts.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/DebugArtifacts.hpp" COPYONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/RequestLogger.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/RequestLogger.hpp" COPYONLY)
 
+# ---- Export header (visibility) ----------------------------------------------
+include(GenerateExportHeader)
+generate_export_header(${PROJECT_NAME}
+  EXPORT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMEngineExport.hpp")
+
 # Warnings configuration (build-time only)
 if (WARNING_MODE)
   if (MSVC)
@@ -337,7 +367,7 @@ endif()
 if (CPR_NEEDS_EXPORT AND TARGET cpr)
   list(APPEND _targets_to_install cpr)
 endif()
-install(TARGETS ${_targets_to_install}
+install(TARGETS ${_targets_to_install} ${PROJECT_NAME}_compile_options
   EXPORT ${PROJECT_NAME}Targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -352,6 +382,7 @@ install(FILES
     src/Logger.hpp
     src/DebugArtifacts.hpp
     src/RequestLogger.hpp
+    "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMEngineExport.hpp"
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 
 # Install config and scripts (if these directories exist)
@@ -429,6 +460,13 @@ if (BUILD_TESTING)
     add_subdirectory(test EXCLUDE_FROM_ALL)
   endif()
 endif()
+
+# ---- Packaging (CPack) -------------------------------------------------------
+set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
+set(CPACK_PACKAGE_VENDOR "${PROJECT_NAME}")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_GENERATOR "TGZ")
+include(CPack)
 
 if (ENABLE_EXAMPLES)
   if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/examples/CMakeLists.txt")

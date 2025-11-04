@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 project(LLMEngineConsumer LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -59,6 +59,6 @@ if (NOT TARGET cpr::cpr)
 endif()
 
 add_executable(consumer main.cpp)
-target_link_libraries(consumer PRIVATE ${_llm_target} nlohmann_json::nlohmann_json cpr::cpr)
+target_link_libraries(consumer PRIVATE ${_llm_target} llmengine::compile_options nlohmann_json::nlohmann_json cpr::cpr)
 
 

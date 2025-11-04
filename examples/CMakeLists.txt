@@ -5,7 +5,7 @@
 # licensed under the GNU General Public License v3.0 or later.
 # See the LICENSE file in the project root for details.
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 
 # ---- Project -----------------------------------------------------------------
 project(LLMEngineExamples
@@ -153,6 +153,7 @@ add_executable(chatbot chatbot.cpp)
 target_link_libraries(chatbot
   PRIVATE
     LLMEngine
+    llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json
     OpenSSL::SSL
@@ -163,6 +164,7 @@ add_executable(code_analyzer code_analyzer.cpp)
 target_link_libraries(code_analyzer
   PRIVATE
     LLMEngine
+    llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json
     OpenSSL::SSL
@@ -173,6 +175,7 @@ add_executable(text_processor text_processor.cpp)
 target_link_libraries(text_processor
   PRIVATE
     LLMEngine
+    llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json
     OpenSSL::SSL
@@ -183,6 +186,7 @@ add_executable(file_analyzer file_analyzer.cpp)
 target_link_libraries(file_analyzer
   PRIVATE
     LLMEngine
+    llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json
     OpenSSL::SSL
@@ -193,6 +197,7 @@ add_executable(translator translator.cpp)
 target_link_libraries(translator
   PRIVATE
     LLMEngine
+    llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json
     OpenSSL::SSL
@@ -203,6 +208,7 @@ add_executable(logo_generator logo_generator.cpp)
 target_link_libraries(logo_generator
   PRIVATE
     LLMEngine
+    llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json
     OpenSSL::SSL
@@ -213,6 +219,7 @@ add_executable(image_generator image_generator.cpp)
 target_link_libraries(image_generator
   PRIVATE
     LLMEngine
+    llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json
     OpenSSL::SSL
@@ -223,6 +230,7 @@ add_executable(readme_chatbot readme_chatbot.cpp)
 target_link_libraries(readme_chatbot
   PRIVATE
     LLMEngine
+    llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json
     OpenSSL::SSL
