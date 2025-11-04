@@ -78,13 +78,14 @@ namespace LLMEngineSystem {
         // Get unique temp directory for this request to avoid conflicts in concurrent scenarios
         const std::string request_tmp_dir = getUniqueTmpDir();
         
-        // Create request directory once at the start if debug files will be written
-        bool request_dir_created = false;
+        // Create debug artifact manager if debug files are enabled
+        std::unique_ptr<::LLMEngine::DebugArtifactManager> debug_mgr;
         if (write_debug_files) {
             ensureSecureTmpDir();
-            std::error_code ec_dir;
-            std::filesystem::create_directories(request_tmp_dir, ec_dir);
-            request_dir_created = true;
+            debug_mgr = std::make_unique<::LLMEngine::DebugArtifactManager>(
+                request_tmp_dir, ctx.tmp_dir, ctx.log_retention_hours, 
+                ctx.logger ? ctx.logger.get() : nullptr);
+            debug_mgr->ensureRequestDirectory();
         }
 
         if (ctx.api_client) {
