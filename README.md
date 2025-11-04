@@ -65,7 +65,7 @@ LLMEngine abstracts away provider-specific details and exposes a consistent API 
 
 ### Providers
 - Qwen (DashScope) — qwen-flash/qwen-plus/qwen2.5
-- OpenAI — GPT-3.5, GPT-4 family, GPT-5
+- OpenAI — GPT-3.5, GPT-4 family
 - Anthropic — Claude 3 series
 - Ollama — any locally served model
 - Google Gemini (AI Studio) — gemini-1.5-flash/pro
@@ -302,96 +302,13 @@ This option is useful when you need precise control over prompts for evaluation 
 
 ## Security
 
-LLMEngine has been designed with security best practices in mind. Follow these guidelines to ensure secure usage:
-
-### API Key Management
-
-- **Always use environment variables** for API keys. The library automatically checks environment variables first:
-  - `QWEN_API_KEY`
-  - `OPENAI_API_KEY`
-  - `ANTHROPIC_API_KEY`
-  - `GEMINI_API_KEY`
-
-```bash
-export QWEN_API_KEY="sk-your-qwen-key"
-export OPENAI_API_KEY="sk-your-openai-key"
-```
-
-- **Never commit API keys** to version control. The `config/api_config.json` should only contain non-secret defaults.
-- **Prefer environment variables** over config file values. The library prioritizes environment variables over config file entries.
-- **Warning on config file fallback**: If an API key is not found in environment variables or constructor parameters, the library may fall back to `api_config.json`. When this happens, a warning is emitted to stderr. For production deployments, ensure API keys are always provided via environment variables to avoid this fallback.
-
-### Debug Mode and Sensitive Data
-
-When debug mode is enabled (`debug=true`), LLMEngine writes response artifacts to `/tmp/llmengine`. To protect sensitive data:
-
-- **Debug files are automatically sanitized**: API keys and other sensitive fields are redacted before writing to disk.
-- **Log retention is enforced**: Files older than `log_retention_hours` are automatically cleaned up.
-- **Disable debug files in production**: Set the environment variable `LLMENGINE_DISABLE_DEBUG_FILES=1` to prevent any debug file writes.
-- **Review debug files**: Before sharing debug files, verify that sensitive information has been properly redacted.
-- **Secure directory permissions**: Debug artifact directories are automatically created with 0700 permissions (owner-only access) to prevent cross-user data exposure on shared hosts.
-
-```cpp
-// Debug mode with 24-hour retention
-LLMEngine engine(provider_type, api_key, model, params, 24, true);
-
-// Disable debug files entirely
-setenv("LLMENGINE_DISABLE_DEBUG_FILES", "1", 1);
-```
-
-### Command Execution Security
-
-The `Utils::execCommand()` function uses `posix_spawn()` which does NOT route through a shell, eliminating shell injection risks entirely:
-- **No shell involvement**: Commands are executed directly via `posix_spawn()` with explicit argument vectors
-- **Control characters are rejected**: Newlines, tabs, carriage returns, and all control characters are explicitly blocked
-- **Shell metacharacters are rejected**: All shell metacharacters (|, &, ;, $, `, <, >, parentheses, brackets, wildcards) are blocked
-- **Whitelist approach**: Only alphanumeric, single spaces, hyphens, underscores, dots, and slashes are allowed
-- **Multiple spaces prevented**: Consecutive spaces are rejected to prevent obfuscation attempts
-
-**Security Benefits:**
-- Eliminates shell injection risks by bypassing shell interpretation entirely
-- Commands are parsed into argument vectors and executed directly via `posix_spawn()`
-- Validation remains in place as an additional defense-in-depth measure
-- Only trusted commands should be passed to this function
-
-### Provider Selection
-
-- **Unknown providers fail fast**: Invalid provider names throw exceptions instead of silently falling back to defaults.
-- This prevents unexpected traffic routing in multi-tenant scenarios.
-
-### Thread Safety
-
-- **APIConfigManager is thread-safe**: Concurrent access is safe using reader-writer locks.
-- Multiple threads can safely read configuration while one thread writes.
-
-### Best Practices
-
-- API keys must not be hardcoded; environment variables must be used.
-- Secure endpoints (HTTPS) should be preferred and firewall/network settings should be verified.
-- Secrets must not be committed; sensitive files must be kept out of version control.
-
-Example:
-
-```cpp
-// Correct
-const char* api_key = std::getenv("QWEN_API_KEY");
-```
+See the dedicated guide: [docs/SECURITY.md](docs/SECURITY.md)
 
 [↑ Back to top](#llmengine)
 
 ## Performance
 
-- Use `qwen-flash` for fastest responses.
-- Limit `max_tokens` to reduce latency and cost.
-- Lower `temperature` for more deterministic output.
-
-```cpp
-nlohmann::json input = {{"max_tokens", 500}};
-AnalysisResult result = engine.analyze(prompt, input, "test");
-if (!result.success) {
-    std::cerr << "Error: " << result.errorMessage << " (status " << result.statusCode << ")\n";
-}
-```
+See tips and examples: [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
 
 [↑ Back to top](#llmengine)
 
@@ -402,6 +319,8 @@ if (!result.success) {
  - Providers: [docs/PROVIDERS.md](docs/PROVIDERS.md)
  - API reference: [docs/API_REFERENCE.md](docs/API_REFERENCE.md) (links to generated Doxygen)
  - FAQ: [docs/FAQ.md](docs/FAQ.md)
+- Security: [docs/SECURITY.md](docs/SECURITY.md)
+- Performance: [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
  - Examples: [examples/README.md](examples/README.md)
 
 [↑ Back to top](#llmengine)
