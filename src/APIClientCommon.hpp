@@ -10,6 +10,7 @@
 #include "Backoff.hpp"
 #include "RequestLogger.hpp"
 #include <cpr/cpr.h>
+#include <iostream>
 #include <thread>
 #include <chrono>
 #include <random>

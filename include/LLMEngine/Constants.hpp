@@ -88,6 +88,26 @@ namespace ConfigPaths {
     constexpr std::string_view INSTALL_CONFIG = "/usr/share/llmEngine/config/api_config.json";
 } // namespace ConfigPaths
 
+// File Paths (for backward compatibility)
+namespace FilePaths {
+    constexpr std::string_view DEFAULT_CONFIG_PATH = "config/api_config.json";
+    constexpr std::string_view TMP_DIR = "/tmp/llmengine";
+} // namespace FilePaths
+
+// Default Values
+namespace DefaultValues {
+    constexpr int TIMEOUT_SECONDS = 30;
+    constexpr int RETRY_ATTEMPTS = 3;
+    constexpr int RETRY_DELAY_MS = 1000;
+    constexpr int MAX_BACKOFF_DELAY_MS = 30000;
+    constexpr double TEMPERATURE = 0.7;
+    constexpr int MAX_TOKENS = 2000;
+    constexpr double TOP_P = 0.9;
+    constexpr double MIN_P = 0.05;
+    constexpr int TOP_K = 40;
+    constexpr int CONTEXT_WINDOW = 10000;
+} // namespace DefaultValues
+
 // Request Directory Prefix
 namespace RequestDirs {
     constexpr std::string_view PREFIX = "req_";

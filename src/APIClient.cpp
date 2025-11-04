@@ -217,6 +217,20 @@ nlohmann::json APIConfigManager::getProviderConfig(std::string_view provider_nam
     return nlohmann::json{};
 }
 
+std::vector<std::string> APIConfigManager::getAvailableProviders() const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    
+    std::vector<std::string> providers;
+    
+    if (config_loaded_ && config_.contains(std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS))) {
+        for (auto& [key, value] : config_[std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS)].items()) {
+            providers.push_back(key);
+        }
+    }
+    
+    return providers;
+}
+
 std::string APIConfigManager::getDefaultProvider() const {
     std::shared_lock<std::shared_mutex> lock(mutex_);
     if (!config_loaded_ || !config_.contains(std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_PROVIDER))) {
@@ -225,13 +239,21 @@ std::string APIConfigManager::getDefaultProvider() const {
     return config_[std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_PROVIDER)].get<std::string>();
 }
 
-int APIConfigManager::getTimeoutSeconds(const std::string& provider) const {
+int APIConfigManager::getTimeoutSeconds() const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    if (!config_loaded_ || !config_.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
+        return ::LLMEngine::Constants::DefaultValues::TIMEOUT_SECONDS;
+    }
+    return config_[std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)].get<int>();
+}
+
+int APIConfigManager::getTimeoutSeconds(std::string_view provider_name) const {
     std::shared_lock<std::shared_mutex> lock(mutex_);
     int default_timeout = ::LLMEngine::Constants::DefaultValues::TIMEOUT_SECONDS;
     
     if (!config_loaded_) {
         // Provider-specific defaults
-        if (provider == "ollama") {
+        if (provider_name == "ollama") {
             return 300; // 5 minutes for Ollama
         }
         return default_timeout;
@@ -243,9 +265,10 @@ int APIConfigManager::getTimeoutSeconds(const std::string& provider) const {
     }
     
     // Check provider-specific timeout
-    if (!provider.empty() && config_.contains(std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS))) {
-        if (config_[std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS)].contains(provider)) {
-            auto provider_config = config_[std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS)][provider];
+    if (!provider_name.empty() && config_.contains(std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS))) {
+        std::string provider_key(provider_name);
+        if (config_[std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS)].contains(provider_key)) {
+            auto provider_config = config_[std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS)][provider_key];
             if (provider_config.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
                 return provider_config[std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)].get<int>();
             }
@@ -253,7 +276,7 @@ int APIConfigManager::getTimeoutSeconds(const std::string& provider) const {
     }
     
     // Provider-specific defaults if not in config
-    if (provider == "ollama") {
+    if (provider_name == "ollama") {
         return 300; // 5 minutes for Ollama
     }
     
