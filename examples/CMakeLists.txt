@@ -50,7 +50,9 @@ endforeach()
 # ---- Dependencies ------------------------------------------------------------
 # If building within the same source tree, prefer existing core target directly
 if (TARGET llmengine::llmengine)
-  add_library(LLMEngine ALIAS llmengine::llmengine)
+  if (NOT TARGET LLMEngine)
+    add_library(LLMEngine ALIAS llmengine::llmengine)
+  endif()
 elseif (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../build/${CMAKE_PROJECT_NAME}Targets.cmake" OR
         EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../build/LLMEngineTargets.cmake")
   list(PREPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../build")
