@@ -144,12 +144,22 @@ bash examples/build_examples.sh
 
 ### From Source
 
+Clone repository and use the provided `build.sh` script:
+
 ```bash
-git clone <repository-url>
+git clone https://github.com/eserlxl/LLMEngine
 cd LLMEngine
-cmake -S . -B build
-cmake --build build --config Release -j$(nproc)
+./build.sh
 ```
+
+The `build.sh` script supports:
+- **performance**: Enable performance optimizations (mutually exclusive with debug)
+- **warnings**: Enable extra compiler warnings
+- **debug**: Enable debug mode (mutually exclusive with performance)
+- **clean**: Remove build directory and reconfigure
+- **tests**: Build and run tests (uses ctest if available)
+- **-j, --jobs N**: Parallel build jobs (default: auto-detected)
+- **--build-dir DIR**: Custom build directory (default: `build`)
 
 ### Install Dependencies
 
