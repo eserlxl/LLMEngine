@@ -44,10 +44,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Clang
+      - name: Install Clang and dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ninja-build clang clang-tidy clang-tools python3 python3-pip
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build \
+            clang \
+            clang-tidy \
+            clang-tools \
+            cmake \
+            build-essential \
+            libssl-dev \
+            libbrotli-dev \
+            python3 \
+            python3-pip
           clang --version
           clang++ --version
           clang-tidy --version
