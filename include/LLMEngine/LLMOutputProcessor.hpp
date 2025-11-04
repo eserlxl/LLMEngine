@@ -13,11 +13,12 @@
 #include <vector>
 #include <unordered_map>
 #include <nlohmann/json.hpp>
+#include "LLMEngineExport.hpp"
 
 /**
  * @brief Parses and queries structured LLM outputs.
  */
-class LLMOutputProcessor {
+class LLMENGINE_EXPORT LLMOutputProcessor {
 public:
     /** @brief Construct from a JSON string payload. */
     LLMOutputProcessor(std::string_view jsonContent, bool debug = false);

@@ -10,6 +10,7 @@
 #include <string_view>
 #include <map>
 #include <vector>
+#include "LLMEngineExport.hpp"
 
 /**
  * @brief Centralized request logging utility with automatic redaction of sensitive data.
@@ -18,7 +19,7 @@
  * by automatically redacting API keys, tokens, and other sensitive information
  * to prevent accidental credential leakage in logs.
  */
-class RequestLogger {
+class LLMENGINE_EXPORT RequestLogger {
 public:
     /**
      * @brief Redact sensitive query parameters from a URL.

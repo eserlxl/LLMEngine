@@ -11,10 +11,11 @@
 #include <nlohmann/json.hpp>
 #include <vector>
 #include <memory>
+#include "LLMEngineExport.hpp"
 #include "APIClient.hpp"
 #include "Logger.hpp"
 
-struct AnalysisResult {
+struct LLMENGINE_EXPORT AnalysisResult {
     bool success;
     std::string think;
     std::string content;
@@ -25,7 +26,7 @@ struct AnalysisResult {
 /**
  * @brief High-level interface for interacting with LLM providers.
  */
-class LLMEngine {
+class LLMENGINE_EXPORT LLMEngine {
 public:
     // Constructor for API-based providers
     /**

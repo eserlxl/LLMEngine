@@ -5,8 +5,9 @@
 #include <string>
 #include <string_view>
 #include <nlohmann/json.hpp>
+#include "LLMEngineExport.hpp"
 
-class DebugArtifacts {
+class LLMENGINE_EXPORT DebugArtifacts {
 public:
     // Write JSON to path. When redactSecrets is true, common secret fields are masked.
     static void writeJson(const std::string& path, const nlohmann::json& json, bool redactSecrets);

@@ -14,6 +14,9 @@
 #include <vector>
 #include <shared_mutex>
 
+// Ensure export macros are available
+#include "LLMEngineExport.hpp"
+
 namespace LLMEngineAPI {
 
 /**
@@ -51,7 +54,7 @@ struct APIResponse {
 /**
  * @brief Abstract client interface implemented by all providers.
  */
-class APIClient {
+class LLMENGINE_EXPORT APIClient {
 public:
     virtual ~APIClient() = default;
     /**
@@ -73,7 +76,7 @@ public:
 /**
  * @brief Qwen (DashScope) client.
  */
-class QwenClient : public APIClient {
+class LLMENGINE_EXPORT QwenClient : public APIClient {
 public:
     /**
      * @param api_key Qwen API key (environment-retrieved recommended).
@@ -96,7 +99,7 @@ private:
 /**
  * @brief OpenAI client.
  */
-class OpenAIClient : public APIClient {
+class LLMENGINE_EXPORT OpenAIClient : public APIClient {
 public:
     /**
      * @param api_key OpenAI API key.
@@ -119,7 +122,7 @@ private:
 /**
  * @brief Anthropic Claude client.
  */
-class AnthropicClient : public APIClient {
+class LLMENGINE_EXPORT AnthropicClient : public APIClient {
 public:
     /**
      * @param api_key Anthropic API key.
@@ -142,7 +145,7 @@ private:
 /**
  * @brief Local Ollama client.
  */
-class OllamaClient : public APIClient {
+class LLMENGINE_EXPORT OllamaClient : public APIClient {
 public:
     /**
      * @param base_url Ollama server URL.
@@ -165,7 +168,7 @@ private:
 /**
  * @brief Google Gemini (AI Studio) client.
  */
-class GeminiClient : public APIClient {
+class LLMENGINE_EXPORT GeminiClient : public APIClient {
 public:
     /**
      * @param api_key Google AI Studio API key.
@@ -188,7 +191,7 @@ private:
 /**
  * @brief Factory for creating provider clients.
  */
-class APIClientFactory {
+class LLMENGINE_EXPORT APIClientFactory {
 public:
     /**
      * @brief Create client by enum type.
@@ -220,7 +223,7 @@ public:
  * Thread-safe singleton for configuration management. All methods are thread-safe
  * and can be called concurrently from multiple threads.
  */
-class APIConfigManager {
+class LLMENGINE_EXPORT APIConfigManager {
 public:
     static APIConfigManager& getInstance();
     

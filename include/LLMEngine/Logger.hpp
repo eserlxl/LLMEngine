@@ -5,15 +5,16 @@
 #include <memory>
 #include <string_view>
 #include <iostream>
+#include "LLMEngineExport.hpp"
 
 enum class LogLevel { Debug, Info, Warn, Error };
 
-struct Logger {
+struct LLMENGINE_EXPORT Logger {
 	virtual ~Logger() = default;
 	virtual void log(LogLevel level, std::string_view message) = 0;
 };
 
-class DefaultLogger : public Logger {
+class LLMENGINE_EXPORT DefaultLogger : public Logger {
 public:
 	void log(LogLevel level, std::string_view message) override {
 		switch (level) {
