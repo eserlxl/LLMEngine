@@ -16,6 +16,8 @@
 #include <iomanip>
 #include <ctime>
 
+using namespace LLMEngine;
+
 class TextProcessor {
 private:
     std::unique_ptr<LLMEngine> engine_;

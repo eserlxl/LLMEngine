@@ -14,6 +14,9 @@
 #include "LLMOutputProcessor.hpp"
 #include "Utils.hpp"
 
+using namespace LLMEngine;
+using namespace LLMEngineAPI;
+
 void printSeparator(const std::string& title) {
     std::cout << "\n" << std::string(60, '=') << std::endl;
     std::cout << " " << title << std::endl;

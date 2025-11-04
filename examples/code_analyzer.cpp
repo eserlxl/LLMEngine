@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <sstream>
 
+using namespace LLMEngine;
+
 class CodeAnalyzer {
 private:
     std::unique_ptr<LLMEngine> engine_;

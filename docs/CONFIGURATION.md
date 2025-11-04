@@ -210,8 +210,10 @@ The library uses a pluggable `Logger` interface for all diagnostic output. By de
 
 **Setting a custom logger:**
 ```cpp
-#include "LLMEngine.hpp"
-#include "Logger.hpp"
+#include "LLMEngine/LLMEngine.hpp"
+#include "LLMEngine/Logger.hpp"
+
+using namespace LLMEngine;
 
 class MyLogger : public Logger {
 public:
@@ -223,15 +225,15 @@ public:
 
 // Set custom logger
 auto logger = std::make_shared<MyLogger>();
-LLMEngine engine(...);
+LLMEngine::LLMEngine engine(...);
 engine.setLogger(logger);
 ```
 
 **Log levels:**
-- `LogLevel::Debug`: Detailed diagnostic information (debug artifacts, request/response details)
-- `LogLevel::Info`: General informational messages
-- `LogLevel::Warn`: Warning messages (e.g., failed artifact writes, API key from config file)
-- `LogLevel::Error`: Error messages (e.g., API failures, configuration errors)
+- `LLMEngine::LogLevel::Debug`: Detailed diagnostic information (debug artifacts, request/response details)
+- `LLMEngine::LogLevel::Info`: General informational messages
+- `LLMEngine::LogLevel::Warn`: Warning messages (e.g., failed artifact writes, API key from config file)
+- `LLMEngine::LogLevel::Error`: Error messages (e.g., API failures, configuration errors)
 
 **Environment variable for request logging:**
 Set `LLMENGINE_LOG_REQUESTS=1` to enable detailed HTTP request logging (useful for debugging network issues).

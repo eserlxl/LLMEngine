@@ -18,6 +18,8 @@
 #include <cstdlib>
 #include <map>
 
+using namespace LLMEngine;
+
 class ImageGenerator {
 private:
     std::unique_ptr<LLMEngine> engine_;

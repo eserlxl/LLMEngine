@@ -13,6 +13,8 @@
 #include "LLMOutputProcessor.hpp"
 #include "Utils.hpp"
 
+using namespace LLMEngine;
+
 int main() {
     std::cout << "=== LLMEngine Library Test ===" << std::endl;
     

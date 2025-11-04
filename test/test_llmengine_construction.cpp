@@ -11,6 +11,7 @@
 #include <iostream>
 
 using namespace LLMEngineAPI;
+using namespace LLMEngine;
 
 int main() {
     // Construct with DI client

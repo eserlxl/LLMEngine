@@ -2,6 +2,8 @@
 #include <nlohmann/json.hpp>
 #include <iostream>
 
+using namespace LLMEngine;
+
 int main() {
     try {
         LLMEngine engine("ollama", "", "llama2");

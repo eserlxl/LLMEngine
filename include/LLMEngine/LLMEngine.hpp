@@ -13,8 +13,9 @@
 #include <memory>
 #include "LLMEngine/LLMEngineExport.hpp"
 #include "LLMEngine/APIClient.hpp"
-#include "Logger.hpp"
+#include "LLMEngine/Logger.hpp"
 
+namespace LLMEngine {
 
 struct LLMENGINE_EXPORT AnalysisResult {
     bool success;
@@ -116,3 +117,5 @@ private:
     std::string ollama_url_;  // Only used when provider_type is OLLAMA
     std::shared_ptr<Logger> logger_;
 };
+
+} // namespace LLMEngine

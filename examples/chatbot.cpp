@@ -14,6 +14,8 @@
 #include <iomanip>
 #include <sstream>
 
+using namespace LLMEngine;
+
 class ChatBot {
 private:
     std::unique_ptr<LLMEngine> engine_;

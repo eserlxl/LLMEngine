@@ -106,8 +106,10 @@ Its configuration-driven design allows rapid experimentation and reliable runtim
 ### Minimal Example
 
 ```cpp
-#include "LLMEngine.hpp"
+#include "LLMEngine/LLMEngine.hpp"
 #include <iostream>
+
+using namespace LLMEngine;
 
 int main() {
     const char* api_key = std::getenv("QWEN_API_KEY");
@@ -207,6 +209,9 @@ A consumer example using `find_package(LLMEngine)` exists in `examples/consumer`
 ### Provider Initialization
 
 ```cpp
+#include "LLMEngine/LLMEngine.hpp"
+using namespace LLMEngine;
+
 LLMEngine qwen(::LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash");
 LLMEngine openai(::LLMEngineAPI::ProviderType::OPENAI, api_key, "gpt-4-turbo");
 LLMEngine claude(::LLMEngineAPI::ProviderType::ANTHROPIC, api_key, "claude-3-sonnet");
@@ -219,6 +224,8 @@ LLMEngine ollama2("ollama", "", "llama2");
 ### Using Provider Names
 
 ```cpp
+using namespace LLMEngine;
+
 LLMEngine engine("qwen", api_key, "qwen-flash");
 LLMEngine engine2("qwen", api_key);  // Uses default model from config
 ```
@@ -226,6 +233,8 @@ LLMEngine engine2("qwen", api_key);  // Uses default model from config
 ### Custom Parameters
 
 ```cpp
+using namespace LLMEngine;
+
 nlohmann::json params = {
     {"temperature", 0.7},
     {"max_tokens", 2000},
@@ -310,6 +319,8 @@ export GEMINI_API_KEY="your-gemini-api-key"
 The `analyze()` method is the primary interface for making LLM requests:
 
 ```cpp
+using namespace LLMEngine;
+
 auto result = engine.analyze("Explain quantum computing:", {}, "analysis");
 if (result.success) {
     std::cout << "Response: " << result.content << std::endl;

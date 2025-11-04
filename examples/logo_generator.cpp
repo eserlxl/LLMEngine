@@ -17,6 +17,8 @@
 #include <algorithm>
 #include <cstdlib>
 
+using namespace LLMEngine;
+
 class LogoGenerator {
 private:
     std::unique_ptr<LLMEngine> engine_;

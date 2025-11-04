@@ -7,6 +7,8 @@
 #include <iostream>
 #include "LLMEngine/LLMEngineExport.hpp"
 
+namespace LLMEngine {
+
 enum class LogLevel { Debug, Info, Warn, Error };
 
 struct LLMENGINE_EXPORT Logger {
@@ -25,5 +27,7 @@ public:
 		}
 	}
 };
+
+} // namespace LLMEngine
 
 

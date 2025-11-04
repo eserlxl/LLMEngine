@@ -17,6 +17,8 @@
 #include <ctime>
 #include <map>
 
+using namespace LLMEngine;
+
 class FileAnalyzer {
 private:
     std::unique_ptr<LLMEngine> engine_;

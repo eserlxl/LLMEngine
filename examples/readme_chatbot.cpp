@@ -18,6 +18,8 @@
 #include <filesystem>
 #include <cpr/cpr.h>
 
+using namespace LLMEngine;
+
 class ReadmeChatBot {
 private:
     std::unique_ptr<LLMEngine> engine_;
