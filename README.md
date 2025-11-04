@@ -312,8 +312,6 @@ This option is useful when you need precise control over prompts for evaluation 
 
 [↑ Back to top](#llmengine)
 
-[↑ Back to top](#llmengine)
-
 ## License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
