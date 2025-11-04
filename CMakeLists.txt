@@ -378,6 +378,15 @@ install(DIRECTORY include/LLMEngine/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
     FILES_MATCHING PATTERN "*.hpp")
 install(FILES
+    include/LLMEngine.hpp
+    include/APIClient.hpp
+    include/Utils.hpp
+    include/Logger.hpp
+    include/RequestLogger.hpp
+    include/LLMOutputProcessor.hpp
+    include/DebugArtifacts.hpp
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
+install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMEngineExport.hpp"
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 
