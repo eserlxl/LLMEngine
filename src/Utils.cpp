@@ -282,7 +282,7 @@ namespace Utils {
         size_t stderr_total_size = 0;
         
         // Set up poll structures for both pipes
-        struct pollfd pollfds[2];
+        std::array<struct pollfd, 2> pollfds;
         pollfds[0].fd = stdout_read.get();
         pollfds[0].events = POLLIN;
         pollfds[1].fd = stderr_read.get();
@@ -334,14 +334,10 @@ namespace Utils {
                     } else {
                         stdout_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
                     }
-                } else if (bytes_read == 0) {
-                    // EOF
+                } else if (bytes_read == 0 || (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK)) {
+                    // EOF or error (not just would-block)
                     stdout_closed = true;
                     pollfds[0].fd = -1;  // Remove from poll set
-                } else if (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-                    // Error (not just would-block)
-                    stdout_closed = true;
-                    pollfds[0].fd = -1;
                 }
             } else if (!stdout_closed && (pollfds[0].revents & (POLLHUP | POLLERR))) {
                 stdout_closed = true;
@@ -361,14 +357,10 @@ namespace Utils {
                     } else {
                         stderr_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
                     }
-                } else if (bytes_read == 0) {
-                    // EOF
+                } else if (bytes_read == 0 || (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK)) {
+                    // EOF or error (not just would-block)
                     stderr_closed = true;
                     pollfds[1].fd = -1;  // Remove from poll set
-                } else if (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-                    // Error (not just would-block)
-                    stderr_closed = true;
-                    pollfds[1].fd = -1;
                 }
             } else if (!stderr_closed && (pollfds[1].revents & (POLLHUP | POLLERR))) {
                 stderr_closed = true;

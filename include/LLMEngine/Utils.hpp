@@ -12,7 +12,7 @@
 
 // Forward declaration
 namespace LLMEngine {
-    class Logger;
+    struct Logger;
 }
 
 namespace Utils {
