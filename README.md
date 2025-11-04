@@ -3,11 +3,14 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://isocpp.org/std/status)
 
-LLMEngine is a C++20 library that provides a unified, type-safe interface to multiple Large Language Model (LLM) providers. It supports local and online providers (Ollama, Qwen/DashScope, OpenAI, Anthropic) with a configuration-driven design, factory-based clients, and a comprehensive test suite.
+**LLMEngine** is a modern **C++20 library** that provides a unified, type-safe interface for interacting with multiple **Large Language Model (LLM)** providers.  
+It supports both local and cloud-based backends — **Ollama**, **Qwen (DashScope)**, **OpenAI**, **Anthropic**, and **Gemini (AI Studio)** — with a flexible, configuration-driven architecture.
 
-Architecture overview:
+---
 
-```
+## 🚀 Architecture Overview
+
+```text
 ┌─────────────┐     provider-agnostic API     ┌─────────────────────┐
 │ Application │ ───────────────────────────▶ │     LLMEngine       │
 └─────────────┘                               │  (factory, config)  │
@@ -20,13 +23,18 @@ Architecture overview:
                    └───────────┴───────────┴───────────┴───────────┴───────────┘
 ```
 
-Key benefits:
-- Consistent API across providers
-- Config-driven defaults via `config/api_config.json`
-- Simple model/provider switching
-- Examples and tests included
+---
 
-## Contents
+## 🌟 Key Highlights
+
+- **Consistent API** across all supported providers.  
+- **Configuration-first design** via `config/api_config.json`.  
+- **Factory-based provider selection** for seamless switching.  
+- **Comprehensive examples** and **test suite** included.
+
+---
+
+## 📖 Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
@@ -38,46 +46,55 @@ Key benefits:
 - [Contributing](#contributing)
 - [License](#license)
 
-## Overview
+## 🧩 Overview
 
-LLMEngine abstracts away provider-specific details and exposes a consistent API for text generation and analysis. It offers seamless switching between providers with sensible defaults via `config/api_config.json`.
+LLMEngine abstracts away the differences between major LLM providers, offering a **unified C++ API** for text generation, reasoning, and analysis.  
+Its configuration-driven design allows rapid experimentation and reliable runtime switching between providers.
 
-- **Project**: LLMEngine 0.1.0
-- **Language/Std**: C++20
-- **Build System**: CMake 3.20+
-- **Platforms**: Linux, macOS
+| Property | Value |
+|-----------|--------|
+| **Project** | LLMEngine 0.1.0 |
+| **Language** | C++20 |
+| **Build System** | CMake 3.20+ |
+| **Supported Platforms** | Linux, macOS |
 
-[↑ Back to top](#llmengine)
+---
 
-## Features
+## ⚙️ Features
 
 ### Core
-- **Multi-provider support**: Qwen (DashScope), OpenAI, Anthropic, Google Gemini, and local Ollama
-- **Unified interface**: One API across different providers and models
-- **Config-driven**: Provider defaults and parameters from `config/api_config.json`
+
+- **Multi-provider support:** Qwen, OpenAI, Anthropic, Gemini, Ollama.  
+- **Unified interface:** Same API, different models.  
+- **JSON configuration:** All defaults live in `config/api_config.json`.
 
 ### Developer Experience
-- **Type-safe APIs** with enums and factory patterns
-- **Examples**: Multiple example programs under `examples/`
-- **Tests**: API integration tests under `test/`
 
-### Providers
-- Qwen (DashScope) — qwen-flash/qwen-plus/qwen2.5
-- OpenAI — GPT-3.5, GPT-4 family
-- Anthropic — Claude 3 series
-- Ollama — any locally served model
-- Google Gemini (AI Studio) — gemini-1.5-flash/pro
+- Type-safe, modern C++ API (with enums, smart pointers, and factories).  
+- Built-in examples under `examples/`.  
+- Integration and regression tests under `test/`.
 
-[↑ Back to top](#llmengine)
+### Supported Providers
 
-## Quick Start
+| Provider | Example Models |
+|-----------|----------------|
+| **Qwen (DashScope)** | qwen-flash, qwen-plus, qwen2.5 |
+| **OpenAI** | GPT-3.5, GPT-4 series |
+| **Anthropic** | Claude 3 series |
+| **Gemini (AI Studio)** | gemini-1.5-flash, gemini-1.5-pro |
+| **Ollama (Local)** | Any locally hosted model |
+
+---
+
+## ⚡ Quick Start
 
 ### Prerequisites
-- C++20-compatible compiler
-- CMake 3.20+
-- Dependencies: OpenSSL, nlohmann_json, cpr
 
-### Minimal Example (Qwen)
+- C++20 compiler (e.g., GCC 11+, Clang 14+, MSVC 2022)  
+- CMake 3.20+  
+- Dependencies: **OpenSSL**, **nlohmann_json**, **cpr**
+
+### Minimal Example
 
 ```cpp
 #include "LLMEngine.hpp"
@@ -86,30 +103,30 @@ LLMEngine abstracts away provider-specific details and exposes a consistent API 
 int main() {
     const char* api_key = std::getenv("QWEN_API_KEY");
     LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash");
-    AnalysisResult result = engine.analyze("Explain quantum computing simply:", {}, "test");
-    std::cout << "Response: " << result.content << std::endl;
+    auto result = engine.analyze("Explain quantum computing simply:", {}, "demo");
+    std::cout << result.content << std::endl;
     return 0;
 }
 ```
 
-### Build and Test the Library (from source)
+### Build and Test
 
 ```bash
 cmake -S . -B build
-cmake --build build --config Release -j20
+cmake --build build --config Release -j$(nproc)
 ctest --test-dir build --output-on-failure
 ```
 
-Then build and run an example:
+Example execution:
 
 ```bash
 bash examples/build_examples.sh
 ./examples/build_examples/chatbot
 ```
 
-[↑ Back to top](#llmengine)
+---
 
-## Installation
+## 🧱 Installation
 
 ### From Source
 
@@ -117,38 +134,31 @@ bash examples/build_examples.sh
 git clone <repository-url>
 cd LLMEngine
 cmake -S . -B build
-cmake --build build --config Release -j20
+cmake --build build --config Release -j$(nproc)
 ```
 
-### Dependencies
+### Install Dependencies
 
-- OpenSSL
-- nlohmann_json
-- cpr
-
-#### Ubuntu/Debian
+**Ubuntu/Debian**
 ```bash
-sudo apt update
-sudo apt install build-essential cmake libssl-dev
-sudo apt install nlohmann-json3-dev libcpr-dev
+sudo apt install build-essential cmake libssl-dev nlohmann-json3-dev libcpr-dev
 ```
 
-#### Arch Linux
+**Arch Linux**
 ```bash
-sudo pacman -S base-devel cmake openssl
-sudo pacman -S nlohmann-json cpr
+sudo pacman -S base-devel cmake openssl nlohmann-json cpr
 ```
 
-#### macOS (Homebrew)
+**macOS (Homebrew)**
 ```bash
 brew install cmake openssl nlohmann-json cpr
 ```
 
-[↑ Back to top](#llmengine)
+---
 
-## Build Presets
+## 🧰 Build Presets
 
-This repo ships `CMakePresets.json` with ready-to-use configurations:
+The repo includes a `CMakePresets.json` file with ready-to-use presets:
 
 ```bash
 cmake --preset debug
@@ -159,10 +169,10 @@ cmake --preset release
 Build with make:
 
 ```bash
-cmake --build build -j20
+cmake --build build -j$(nproc)
 ```
 
-Granular toggles (examples):
+Optional build toggles:
 
 ```bash
 cmake --preset debug -DLLM_ENABLE_ASAN=ON -DLLM_ENABLE_UBSAN=ON
@@ -172,46 +182,45 @@ cmake --preset debug -DENABLE_COVERAGE=ON
 
 A consumer example using `find_package(LLMEngine)` exists in `examples/consumer`.
 
-## Usage
+---
 
-### Provider Selection
+## 💻 Usage
+
+### Provider Initialization
 
 ```cpp
-// Qwen (recommended for speed/cost)
 LLMEngine qwen(::LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash");
-
-// OpenAI
-LLMEngine openai(::LLMEngineAPI::ProviderType::OPENAI, api_key, "gpt-3.5-turbo");
-
-// Anthropic
+LLMEngine openai(::LLMEngineAPI::ProviderType::OPENAI, api_key, "gpt-4-turbo");
 LLMEngine claude(::LLMEngineAPI::ProviderType::ANTHROPIC, api_key, "claude-3-sonnet");
-
-// Google Gemini (AI Studio)
 LLMEngine gemini(::LLMEngineAPI::ProviderType::GEMINI, api_key, "gemini-1.5-flash");
-
-// Ollama (local)
-LLMEngine ollama(::LLMEngineAPI::ProviderType::OLLAMA, "", "llama2");
+LLMEngine ollama(::LLMEngineAPI::ProviderType::OLLAMA, "", "llama3");
 // Or using provider name:
 LLMEngine ollama2("ollama", "", "llama2");
 ```
 
-### Using Provider Names (string)
+### Using Provider Names
 
 ```cpp
 LLMEngine engine("qwen", api_key, "qwen-flash");
-LLMEngine engine2("qwen", api_key); // uses default model from config
+LLMEngine engine2("qwen", api_key);  // Uses default model from config
 ```
 
 ### Custom Parameters
 
 ```cpp
-nlohmann::json params = {{"temperature", 0.7}, {"max_tokens", 2000}, {"top_p", 0.9}};
+nlohmann::json params = {
+    {"temperature", 0.7},
+    {"max_tokens", 2000},
+    {"top_p", 0.9}
+};
 LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-plus", params);
 ```
 
-### Configuration File
+---
 
-See `config/api_config.json` for provider defaults and parameters. Example excerpt:
+## 🧩 Configuration
+
+The default config file defines provider endpoints and defaults:
 
 ```json
 {
@@ -235,7 +244,7 @@ See `config/api_config.json` for provider defaults and parameters. Example excer
 
 ### Customizing Config File Path
 
-The default configuration file path can be changed using the `APIConfigManager` API:
+To change configuration paths programmatically:
 
 ```cpp
 #include "APIClient.hpp"
@@ -258,7 +267,9 @@ config_mgr.loadConfig();  // Uses "/custom/path/api_config.json"
 config_mgr.loadConfig("/another/path/config.json");  // Uses explicit path
 ```
 
-### API Keys
+---
+
+## 🔑 API Keys
 
 ```bash
 export QWEN_API_KEY="sk-your-qwen-key"
@@ -267,12 +278,14 @@ export ANTHROPIC_API_KEY="sk-your-anthropic-key"
 export GEMINI_API_KEY="your-gemini-api-key"
 ```
 
-### Running Analysis Requests
+---
+
+## 🧠 Running Analysis Requests
 
 The `analyze()` method is the primary interface for making LLM requests:
 
 ```cpp
-AnalysisResult result = engine.analyze("Explain quantum computing:", {}, "analysis");
+auto result = engine.analyze("Explain quantum computing:", {}, "analysis");
 if (result.success) {
     std::cout << "Response: " << result.content << std::endl;
     std::cout << "Thinking: " << result.think << std::endl;
@@ -285,7 +298,7 @@ if (result.success) {
 
 ```cpp
 // Use prompt verbatim without modification
-AnalysisResult result = engine.analyze(
+auto result = engine.analyze(
     "Your exact prompt here", 
     {}, 
     "analysis", 
@@ -296,24 +309,25 @@ AnalysisResult result = engine.analyze(
 
 This option is useful when you need precise control over prompts for evaluation or when integrating with downstream agents that require exact prompt matching.
 
-[↑ Back to top](#llmengine)
+---
 
-## Documentation
+## 📚 Documentation
 
- - Quick start: [QUICKSTART.md](QUICKSTART.md)
- - Configuration: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
- - Providers: [docs/PROVIDERS.md](docs/PROVIDERS.md)
- - API reference: [docs/API_REFERENCE.md](docs/API_REFERENCE.md) (links to generated Doxygen)
- - FAQ: [docs/FAQ.md](docs/FAQ.md)
- - Security: [docs/SECURITY.md](docs/SECURITY.md)
- - Performance: [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
- - Contributing: [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md)
- - Examples: [examples/README.md](examples/README.md)
+| File | Description |
+|------|--------------|
+| `QUICKSTART.md` | Getting started guide |
+| `docs/CONFIGURATION.md` | Configuration structure |
+| `docs/PROVIDERS.md` | Provider details |
+| `docs/API_REFERENCE.md` | Generated Doxygen API |
+| `docs/FAQ.md` | Frequently Asked Questions |
+| `docs/SECURITY.md` | Security notes |
+| `docs/PERFORMANCE.md` | Optimization tips |
+| `.github/CONTRIBUTING.md` | Contribution guidelines |
+| `examples/README.md` | Example usage guide |
 
-[↑ Back to top](#llmengine)
+---
 
-## License
+## 📜 License
 
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
-
-[↑ Back to top](#llmengine)
+This project is licensed under the **GNU General Public License v3.0**.  
+See the [LICENSE](LICENSE) file for full details.
