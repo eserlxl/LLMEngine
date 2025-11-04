@@ -17,6 +17,7 @@
 // Ensure export macros are available
 #include "LLMEngine/LLMEngineExport.hpp"
 #include "LLMEngine/Logger.hpp"
+#include "LLMEngine/IConfigManager.hpp"
 
 namespace LLMEngineAPI {
 
@@ -272,6 +273,9 @@ public:
 /**
  * @brief Singleton managing `api_config.json` loading and access.
  * 
+ * Implements IConfigManager interface for dependency injection support while
+ * maintaining singleton pattern for backward compatibility.
+ * 
  * ## Thread Safety
  * 
  * **All methods are thread-safe** and can be called concurrently from multiple threads.
@@ -293,17 +297,18 @@ public:
  * ## Usage Pattern
  * 
  * ```cpp
+ * // Singleton usage (backward compatible)
  * auto& config = APIConfigManager::getInstance();
  * config.loadConfig();  // Load from default path
  * auto provider_config = config.getProviderConfig("qwen");
+ * 
+ * // Dependency injection usage (new)
+ * std::shared_ptr<IConfigManager> config = std::make_shared<APIConfigManager>();
+ * // or use singleton as shared_ptr
+ * auto config = std::shared_ptr<IConfigManager>(&APIConfigManager::getInstance(), [](auto*) {});
  * ```
- * 
- * ## Future Considerations
- * 
- * The singleton pattern may be replaced with dependency injection in future versions
- * while maintaining backward compatibility.
  */
-class LLMENGINE_EXPORT APIConfigManager {
+class LLMENGINE_EXPORT APIConfigManager : public IConfigManager {
 public:
     static APIConfigManager& getInstance();
     
@@ -317,38 +322,15 @@ public:
      * @return The current default config path.
      */
     [[nodiscard]] std::string getDefaultConfigPath() const;
-    /**
-     * @brief Set logger for error messages (optional).
-     * 
-     * **Ownership:** Does NOT take ownership. The logger must outlive the
-     * APIConfigManager instance. Use nullptr to disable logging.
-     * 
-     * **Thread Safety:** This method is thread-safe (protected by mutex).
-     * 
-     * @param logger Logger instance (raw pointer, not owned, can be nullptr)
-     */
-    void setLogger(::LLMEngine::Logger* logger);
-    
-    /**
-     * @brief Load configuration from path or default search order.
-     * @param config_path Optional explicit path. If empty, uses the default path set via setDefaultConfigPath().
-     * @return true if configuration loaded successfully.
-     */
-    bool loadConfig(std::string_view config_path = "");
-    /** @brief Get provider-specific JSON config. */
-    [[nodiscard]] nlohmann::json getProviderConfig(std::string_view provider_name) const;
-    /** @brief List all available provider keys. */
-    [[nodiscard]] std::vector<std::string> getAvailableProviders() const;
-    /** @brief Default provider key. */
-    [[nodiscard]] std::string getDefaultProvider() const;
-    /** @brief Global timeout seconds. */
-    [[nodiscard]] int getTimeoutSeconds() const;
-    /** @brief Get timeout seconds for a specific provider, falling back to global if not provider-specific. */
-    [[nodiscard]] int getTimeoutSeconds(std::string_view provider_name) const;
-    /** @brief Global retry attempts. */
-    [[nodiscard]] int getRetryAttempts() const;
-    /** @brief Delay in milliseconds between retries. */
-    [[nodiscard]] int getRetryDelayMs() const;
+    void setLogger(::LLMEngine::Logger* logger) override;
+    bool loadConfig(std::string_view config_path = "") override;
+    [[nodiscard]] nlohmann::json getProviderConfig(std::string_view provider_name) const override;
+    [[nodiscard]] std::vector<std::string> getAvailableProviders() const override;
+    [[nodiscard]] std::string getDefaultProvider() const override;
+    [[nodiscard]] int getTimeoutSeconds() const override;
+    [[nodiscard]] int getTimeoutSeconds(std::string_view provider_name) const override;
+    [[nodiscard]] int getRetryAttempts() const override;
+    [[nodiscard]] int getRetryDelayMs() const override;
 
 private:
     APIConfigManager();
