@@ -904,7 +904,7 @@ std::string APIClientFactory::providerTypeToString(ProviderType type) {
 }
 
 // APIConfigManager Implementation
-APIConfigManager::APIConfigManager() : default_config_path_("config/api_config.json") {
+APIConfigManager::APIConfigManager() : default_config_path_("config/api_config.json"), logger_(nullptr) {
 }
 
 APIConfigManager& APIConfigManager::getInstance() {
@@ -922,6 +922,11 @@ std::string APIConfigManager::getDefaultConfigPath() const {
     // Shared lock for reading default path
     std::shared_lock<std::shared_mutex> lock(mutex_);
     return default_config_path_;
+}
+
+void APIConfigManager::setLogger(::LLMEngine::Logger* logger) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
+    logger_ = logger;
 }
 
 bool APIConfigManager::loadConfig(std::string_view config_path) {
@@ -943,7 +948,9 @@ bool APIConfigManager::loadConfig(std::string_view config_path) {
     try {
         std::ifstream file(path);
         if (!file.is_open()) {
-            std::cerr << "[ERROR] Could not open config file: " << path << std::endl;
+            if (logger_) {
+                logger_->log(::LLMEngine::LogLevel::Error, std::string("Could not open config file: ") + path);
+            }
             config_loaded_ = false;
             config_ = nlohmann::json{}; // Clear stale configuration
             return false;
@@ -953,7 +960,9 @@ bool APIConfigManager::loadConfig(std::string_view config_path) {
         config_loaded_ = true;
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "[ERROR] Failed to load config: " << e.what() << std::endl;
+        if (logger_) {
+            logger_->log(::LLMEngine::LogLevel::Error, std::string("Failed to load config: ") + e.what());
+        }
         config_loaded_ = false;
         config_ = nlohmann::json{}; // Clear stale configuration
         return false;

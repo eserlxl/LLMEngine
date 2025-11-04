@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "Utils.hpp"
+#include "LLMEngine/Logger.hpp"
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -95,12 +96,14 @@ namespace Utils {
         return lines;
     }
 
-    std::vector<std::string> execCommand(std::string_view cmd) {
+    std::vector<std::string> execCommand(std::string_view cmd, ::LLMEngine::Logger* logger) {
         std::vector<std::string> output;
         
         // Windows support: execCommand is not available on Windows due to POSIX dependencies
 #if defined(_WIN32) || defined(_WIN64)
-        std::cerr << "[ERROR] execCommand: Not available on Windows. This function requires POSIX spawn API." << std::endl;
+        if (logger) {
+            logger->log(::LLMEngine::LogLevel::Error, "execCommand: Not available on Windows. This function requires POSIX spawn API.");
+        }
         return output;
 #endif
         
@@ -113,8 +116,9 @@ namespace Utils {
         // Only allow alphanumeric, single spaces (not newlines/tabs), hyphens, underscores, dots, slashes
         
         if (cmd_str.empty()) {
-            // Note: Utils cannot access logger, so we keep std::cerr for error reporting
-            std::cerr << "[ERROR] execCommand: Empty command string" << std::endl;
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, "execCommand: Empty command string");
+            }
             return output;
         }
         
@@ -122,7 +126,9 @@ namespace Utils {
         // These can be used for command injection even with metacharacter checks
         for (char c : cmd_str) {
             if (std::iscntrl(static_cast<unsigned char>(c))) {
-                std::cerr << "[ERROR] execCommand: Command contains control characters (newlines, tabs, etc.) - rejected for security" << std::endl;
+                if (logger) {
+                    logger->log(::LLMEngine::LogLevel::Error, "execCommand: Command contains control characters (newlines, tabs, etc.) - rejected for security");
+                }
                 return output;
             }
         }
@@ -131,16 +137,19 @@ namespace Utils {
         if (cmd_str.find('\n') != std::string::npos ||
             cmd_str.find('\r') != std::string::npos ||
             cmd_str.find('\t') != std::string::npos) {
-            std::cerr << "[ERROR] execCommand: Command contains newlines, carriage returns, or tabs - rejected for security" << std::endl;
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, "execCommand: Command contains newlines, carriage returns, or tabs - rejected for security");
+            }
             return output;
         }
         
         // Check if command matches whitelist pattern (no \s, only explicit space)
         if (!std::regex_match(cmd_str, SAFE_CHARS_REGEX)) {
-            // Note: Utils cannot access logger, so we keep std::cerr for error reporting
-            std::cerr << "[ERROR] execCommand: Command contains potentially unsafe characters: " << cmd_str << std::endl;
-            std::cerr << "[ERROR] Only alphanumeric, single spaces, hyphens, underscores, dots, and slashes are allowed" << std::endl;
-            std::cerr << "[ERROR] For security reasons, shell metacharacters and control characters are not permitted" << std::endl;
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: Command contains potentially unsafe characters: ") + cmd_str);
+                logger->log(::LLMEngine::LogLevel::Error, "Only alphanumeric, single spaces, hyphens, underscores, dots, and slashes are allowed");
+                logger->log(::LLMEngine::LogLevel::Error, "For security reasons, shell metacharacters and control characters are not permitted");
+            }
             return output;
         }
         
@@ -163,16 +172,20 @@ namespace Utils {
             cmd_str.find('!') != std::string::npos ||
             cmd_str.find('#') != std::string::npos ||
             cmd_str.find('~') != std::string::npos) {
-            std::cerr << "[ERROR] execCommand: Command contains shell metacharacters - rejected for security" << std::endl;
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, "execCommand: Command contains shell metacharacters - rejected for security");
+            }
             return output;
         }
         
         // Prevent multiple consecutive spaces (could be used to hide malicious content)
         if (cmd_str.find("  ") != std::string::npos) {
-            std::cerr << "[ERROR] execCommand: Command contains multiple consecutive spaces - rejected for security" << std::endl;
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, "execCommand: Command contains multiple consecutive spaces - rejected for security");
+            }
             return output;
         }
-
+        
         // Parse command string into argv array (split on spaces)
         std::vector<std::string> args;
         std::istringstream iss(cmd_str);
@@ -182,7 +195,9 @@ namespace Utils {
         }
         
         if (args.empty()) {
-            std::cerr << "[ERROR] execCommand: No command found in: " << cmd_str << std::endl;
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: No command found in: ") + cmd_str);
+            }
             return output;
         }
 
@@ -198,7 +213,9 @@ namespace Utils {
         std::array<int, 2> stdout_pipe;
         std::array<int, 2> stderr_pipe;
         if (pipe(stdout_pipe.data()) != 0 || pipe(stderr_pipe.data()) != 0) {
-            std::cerr << "[ERROR] execCommand: Failed to create pipes for command: " << cmd_str << std::endl;
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: Failed to create pipes for command: ") + cmd_str);
+            }
             return output;
         }
 
@@ -211,12 +228,16 @@ namespace Utils {
         // Set up file actions for posix_spawn
         posix_spawn_file_actions_t file_actions;
         if (posix_spawn_file_actions_init(&file_actions) != 0) {
-            std::cerr << "[ERROR] execCommand: posix_spawn_file_actions_init failed" << std::endl;
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, "execCommand: posix_spawn_file_actions_init failed");
+            }
             return output;
         }
         auto add_action = [&](int rc, const char* what) -> bool {
             if (rc != 0) {
-                std::cerr << "[ERROR] execCommand: " << what << " failed (" << rc << ")" << std::endl;
+                if (logger) {
+                    logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: ") + what + " failed (" + std::to_string(rc) + ")");
+                }
                 posix_spawn_file_actions_destroy(&file_actions);
                 return false;
             }
@@ -237,7 +258,9 @@ namespace Utils {
         posix_spawn_file_actions_destroy(&file_actions);
 
         if (spawn_result != 0) {
-            std::cerr << "[ERROR] execCommand: posix_spawnp() failed for command: " << cmd_str << " (error: " << spawn_result << ")" << std::endl;
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: posix_spawnp() failed for command: ") + cmd_str + " (error: " + std::to_string(spawn_result) + ")");
+            }
             // Pipes are automatically closed by RAII wrappers
             return output;
         }
@@ -261,7 +284,9 @@ namespace Utils {
             stdout_total_size += static_cast<size_t>(bytes_read);
             // Limit total buffer size to prevent memory exhaustion
             if (stdout_total_size > MAX_LINE_LENGTH * MAX_OUTPUT_LINES) {
-                std::cerr << "[WARNING] execCommand: Output exceeds maximum size limit, truncating" << std::endl;
+                if (logger) {
+                    logger->log(::LLMEngine::LogLevel::Warn, "execCommand: Output exceeds maximum size limit, truncating");
+                }
                 break;
             }
             stdout_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
@@ -274,7 +299,9 @@ namespace Utils {
             stderr_total_size += static_cast<size_t>(bytes_read);
             // Limit total buffer size to prevent memory exhaustion
             if (stderr_total_size > MAX_LINE_LENGTH * MAX_OUTPUT_LINES) {
-                std::cerr << "[WARNING] execCommand: Error output exceeds maximum size limit, truncating" << std::endl;
+                if (logger) {
+                    logger->log(::LLMEngine::LogLevel::Warn, "execCommand: Error output exceeds maximum size limit, truncating");
+                }
                 break;
             }
             stderr_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
@@ -287,13 +314,17 @@ namespace Utils {
             // Limit individual line length
             if (line.size() > MAX_LINE_LENGTH) {
                 line.resize(MAX_LINE_LENGTH);
-                std::cerr << "[WARNING] execCommand: Line truncated due to length limit" << std::endl;
+                if (logger) {
+                    logger->log(::LLMEngine::LogLevel::Warn, "execCommand: Line truncated due to length limit");
+                }
             }
             output.push_back(line);
             total_lines++;
         }
         if (total_lines >= MAX_OUTPUT_LINES) {
-            std::cerr << "[WARNING] execCommand: Output truncated at " << MAX_OUTPUT_LINES << " lines" << std::endl;
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Warn, std::string("execCommand: Output truncated at ") + std::to_string(MAX_OUTPUT_LINES) + " lines");
+            }
         }
         
         // Process stderr line by line with limits
@@ -302,13 +333,17 @@ namespace Utils {
             // Limit individual line length
             if (line.size() > MAX_LINE_LENGTH) {
                 line.resize(MAX_LINE_LENGTH);
-                std::cerr << "[WARNING] execCommand: Error line truncated due to length limit" << std::endl;
+                if (logger) {
+                    logger->log(::LLMEngine::LogLevel::Warn, "execCommand: Error line truncated due to length limit");
+                }
             }
             output.push_back(line);
             total_lines++;
         }
         if (total_lines >= MAX_OUTPUT_LINES) {
-            std::cerr << "[WARNING] execCommand: Total output truncated at " << MAX_OUTPUT_LINES << " lines" << std::endl;
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Warn, std::string("execCommand: Total output truncated at ") + std::to_string(MAX_OUTPUT_LINES) + " lines");
+            }
         }
 
         // Pipes are automatically closed by RAII wrappers
@@ -316,20 +351,27 @@ namespace Utils {
         // Wait for process to complete
         int status;
         if (waitpid(pid, &status, 0) == -1) {
-            std::cerr << "[ERROR] execCommand: waitpid() failed for command: " << cmd_str << std::endl;
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: waitpid() failed for command: ") + cmd_str);
+            }
             return output;
         }
 
         if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-            std::cerr << "[WARNING] Command '" << cmd_str << "' exited with non-zero status: " << WEXITSTATUS(status) << std::endl;
-            if (!output.empty()) {
-                std::cerr << "  Output:" << std::endl;
-                for (const auto& output_line : output) {
-                    std::cerr << "    " << output_line;
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Warn, std::string("Command '") + cmd_str + "' exited with non-zero status: " + std::to_string(WEXITSTATUS(status)));
+                if (!output.empty()) {
+                    std::string output_msg = "  Output:\n";
+                    for (const auto& output_line : output) {
+                        output_msg += "    " + output_line + "\n";
+                    }
+                    logger->log(::LLMEngine::LogLevel::Warn, output_msg);
                 }
             }
         } else if (WIFSIGNALED(status)) {
-            std::cerr << "[WARNING] Command '" << cmd_str << "' terminated by signal: " << WTERMSIG(status) << std::endl;
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Warn, std::string("Command '") + cmd_str + "' terminated by signal: " + std::to_string(WTERMSIG(status)));
+            }
         }
 
         return output;

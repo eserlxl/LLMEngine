@@ -10,6 +10,11 @@
 #include <string_view>
 #include <vector>
 
+// Forward declaration
+namespace LLMEngine {
+    class Logger;
+}
+
 namespace Utils {
     /**
      * @brief Directory for temporary artifacts.
@@ -38,9 +43,10 @@ namespace Utils {
      * commands with space-separated arguments are supported (no shell features).
      * 
      * @param cmd Command string to execute (e.g., "ls -la /tmp") - must be trusted/validated
+     * @param logger Optional logger for error messages (nullptr to suppress)
      * @return Vector of output lines (stdout and stderr merged)
      */
-    [[nodiscard]] std::vector<std::string> execCommand(std::string_view cmd);
+    [[nodiscard]] std::vector<std::string> execCommand(std::string_view cmd, ::LLMEngine::Logger* logger = nullptr);
 
     /**
      * @brief Remove Markdown syntax from input string.

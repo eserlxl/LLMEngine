@@ -242,6 +242,12 @@ public:
      */
     [[nodiscard]] std::string getDefaultConfigPath() const;
     /**
+     * @brief Set logger for error messages (optional).
+     * @param logger Logger instance (can be nullptr to disable logging)
+     */
+    void setLogger(::LLMEngine::Logger* logger);
+    
+    /**
      * @brief Load configuration from path or default search order.
      * @param config_path Optional explicit path. If empty, uses the default path set via setDefaultConfigPath().
      * @return true if configuration loaded successfully.
@@ -268,6 +274,7 @@ private:
     nlohmann::json config_;
     bool config_loaded_ = false;
     std::string default_config_path_;  // Default config file path
+    ::LLMEngine::Logger* logger_ = nullptr;  // Optional logger (not owned)
 };
 
 } // namespace LLMEngineAPI
