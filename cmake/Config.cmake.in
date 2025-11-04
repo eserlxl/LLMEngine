@@ -13,7 +13,9 @@ find_dependency(cpr REQUIRED)
 find_dependency(nlohmann_json REQUIRED)
 
 # Include the exported targets unless they already exist (build-tree usage)
-if (NOT TARGET @PROJECT_NAME@::@PROJECT_NAME@)
+# The exported namespace is lowercase (e.g., llmengine::llmengine)
+string(TOLOWER "@PROJECT_NAME@" _llm_ns)
+if (NOT TARGET ${_llm_ns}::${_llm_ns})
   include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
 endif()
 
