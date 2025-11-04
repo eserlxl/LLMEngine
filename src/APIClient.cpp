@@ -129,11 +129,9 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
     try {
         RetrySettings rs = computeRetrySettings(params, /*exponential_default*/true);
         
-        // Merge default params with provided params
+        // Merge default params with provided params using update() for efficiency
         nlohmann::json request_params = default_params_;
-        for (auto& [key, value] : params.items()) {
-            request_params[key] = value;
-        }
+        request_params.update(params);
         
         // Prepare messages array
         nlohmann::json messages = nlohmann::json::array();
@@ -261,11 +259,9 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
     try {
         RetrySettings rs = computeRetrySettings(params, /*exponential_default*/true);
         
-        // Merge default params with provided params
+        // Merge default params with provided params using update() for efficiency
         nlohmann::json request_params = default_params_;
-        for (auto& [key, value] : params.items()) {
-            request_params[key] = value;
-        }
+        request_params.update(params);
         
         // Prepare messages array
         nlohmann::json messages = nlohmann::json::array();
@@ -373,11 +369,9 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
     try {
         RetrySettings rs = computeRetrySettings(params, /*exponential_default*/true);
         
-        // Merge default params with provided params
+        // Merge default params with provided params using update() for efficiency
         nlohmann::json request_params = default_params_;
-        for (auto& [key, value] : params.items()) {
-            request_params[key] = value;
-        }
+        request_params.update(params);
         
         // Prepare messages array
         nlohmann::json messages = nlohmann::json::array();
@@ -480,11 +474,9 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
     try {
         RetrySettings rs = computeRetrySettings(params, /*exponential_default*/false);
         
-        // Merge default params with provided params
+        // Merge default params with provided params using update() for efficiency
         nlohmann::json request_params = default_params_;
-        for (auto& [key, value] : params.items()) {
-            request_params[key] = value;
-        }
+        request_params.update(params);
         
         // Check if we should use generate mode instead of chat mode
         bool use_generate = false;
@@ -673,11 +665,9 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
     try {
         RetrySettings rs = computeRetrySettings(params, /*exponential_default*/false);
 
-        // Merge default params with provided params
+        // Merge default params with provided params using update() for efficiency
         nlohmann::json request_params = default_params_;
-        for (auto& [key, value] : params.items()) {
-            request_params[key] = value;
-        }
+        request_params.update(params);
 
         // Compose user content; prepend optional system_prompt
         std::string user_text;
