@@ -420,9 +420,13 @@ configure_package_config_file(
   INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
 # Export targets to the build tree so examples can use find_package() without install
-export(EXPORT ${PROJECT_NAME}Targets
-  NAMESPACE ${PROJECT_NAME_LOWER}::
-  FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake")
+# Only export when export set exists (when dependencies are system-provided)
+# (when fetched via FetchContent, we skip EXPORT to avoid validation errors)
+if (NOT NLOHMANN_JSON_FETCHED AND NOT CPR_FETCHED)
+  export(EXPORT ${PROJECT_NAME}Targets
+    NAMESPACE ${PROJECT_NAME_LOWER}::
+    FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake")
+endif()
 
 # Only install export and config files when dependencies are system-provided
 # (when fetched via FetchContent, we skip EXPORT to avoid validation errors)
