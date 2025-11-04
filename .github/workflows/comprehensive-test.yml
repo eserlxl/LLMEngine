@@ -118,7 +118,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: build-logs-${{ matrix.build_type }}
+          name: build-logs-${{ matrix.compiler }}-${{ matrix.build_type }}
           path: |
             build/CMakeFiles/CMakeOutput.log
             build/CMakeFiles/CMakeError.log
