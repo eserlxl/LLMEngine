@@ -26,7 +26,7 @@ Key benefits:
 - Simple model/provider switching
 - Examples and tests included
 
-## Table of Contents
+## Contents
 
 - [Overview](#overview)
 - [Features](#features)
