@@ -54,7 +54,7 @@ namespace EnvVars {
     constexpr std::string_view LOG_REQUESTS = "LLMENGINE_LOG_REQUESTS";
 } // namespace EnvVars
 
-// Debug Artifact Filenames
+// Debug Artifact Filenames (aliased for backward compatibility)
 namespace DebugFiles {
     constexpr std::string_view API_RESPONSE_JSON = "api_response.json";
     constexpr std::string_view API_RESPONSE_ERROR_JSON = "api_response_error.json";
@@ -63,6 +63,17 @@ namespace DebugFiles {
     constexpr std::string_view TXT_SUFFIX = ".txt";
     constexpr std::string_view TMP_SUFFIX = ".tmp";
 } // namespace DebugFiles
+
+// Debug Artifact constants (preferred namespace)
+namespace DebugArtifacts {
+    constexpr std::string_view API_RESPONSE_JSON = "api_response.json";
+    constexpr std::string_view API_RESPONSE_ERROR_JSON = "api_response_error.json";
+    constexpr std::string_view RESPONSE_FULL_TXT = "response_full.txt";
+    constexpr std::string_view THINK_TXT_SUFFIX = ".think.txt";
+    constexpr std::string_view CONTENT_TXT_SUFFIX = ".txt";
+    constexpr std::string_view REDACTED_REASONING_TAG_OPEN = "<think>";
+    constexpr std::string_view REDACTED_REASONING_TAG_CLOSE = "</think>";
+} // namespace DebugArtifacts
 
 // Default URLs
 namespace DefaultUrls {

@@ -8,6 +8,8 @@
 #include "LLMEngine.hpp"
 #include "LLMEngine/ITempDirProvider.hpp"
 #include "LLMEngine/PromptBuilder.hpp"
+#include "LLMEngine/DebugArtifactManager.hpp"
+#include "LLMEngine/Constants.hpp"
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -34,9 +36,6 @@ namespace LLMEngineSystem {
     namespace {
         constexpr int HTTP_STATUS_OK = 200;
         constexpr int HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
-        constexpr size_t REDACTED_REASONING_TAG_LENGTH = 20;  // "<think>" length
-        constexpr size_t REDACTED_REASONING_CLOSE_TAG_LENGTH = 21;  // "</think>" length
-        constexpr size_t MAX_FILENAME_LENGTH = 64;
     }
     struct Context {
         const nlohmann::json& model_params;
@@ -118,38 +117,30 @@ namespace LLMEngineSystem {
 
             auto api_response = ctx.api_client->sendRequest(full_prompt, input, final_params);
 
-            if (write_debug_files) {
-                // Directory already created above
-                if (!DebugArtifacts::writeJson(request_tmp_dir + "/api_response.json", api_response.raw_response, /*redactSecrets*/true)) {
-                    if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Warn, "Failed to write debug artifact: " + request_tmp_dir + "/api_response.json");
-                } else {
-                    if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Debug, std::string("API response saved to ") + (request_tmp_dir + "/api_response.json"));
-                }
+            if (write_debug_files && debug_mgr) {
+                debug_mgr->writeApiResponse(api_response, /*is_error*/false);
             }
 
             if (api_response.success) {
                 full_response = api_response.content;
             } else {
-                // Directory already created above
-                if (!DebugArtifacts::writeJson(request_tmp_dir + "/api_response_error.json", api_response.raw_response, /*redactSecrets*/true)) {
-                    if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Warn, "Failed to write debug artifact: " + request_tmp_dir + "/api_response_error.json");
+                if (write_debug_files && debug_mgr) {
+                    debug_mgr->writeApiResponse(api_response, /*is_error*/true);
                 }
-                if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Error, std::string("API error: ") + api_response.error_message);
-                if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Info, std::string("Error response saved to ") + (request_tmp_dir + "/api_response_error.json"));
+                if (ctx.logger) {
+                    ctx.logger->log(::LLMEngine::LogLevel::Error, std::string("API error: ") + api_response.error_message);
+                    if (write_debug_files && debug_mgr) {
+                        ctx.logger->log(::LLMEngine::LogLevel::Info, std::string("Error response saved to ") + request_tmp_dir + "/api_response_error.json");
+                    }
+                }
                 return ::LLMEngine::AnalysisResult{false, "", "", api_response.error_message, api_response.status_code};
             }
         } else {
             return ::LLMEngine::AnalysisResult{false, "", "", "API client not initialized", HTTP_STATUS_INTERNAL_SERVER_ERROR};
         }
 
-        if (write_debug_files) {
-            // Directory already created above
-            if (!DebugArtifacts::writeText(request_tmp_dir + "/response_full.txt", full_response, /*redactSecrets*/true)) {
-                if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Warn, "Failed to write debug artifact: " + request_tmp_dir + "/response_full.txt");
-            } else {
-                if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Debug, std::string("Full response saved to ") + (request_tmp_dir + "/response_full.txt"));
-            }
-            DebugArtifacts::cleanupOld(ctx.tmp_dir, ctx.log_retention_hours);
+        if (write_debug_files && debug_mgr) {
+            debug_mgr->writeFullResponse(full_response);
         }
 
         auto trim_copy = [](const std::string& s) -> std::string {

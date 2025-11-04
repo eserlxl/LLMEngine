@@ -1,0 +1,146 @@
+// Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// This file is part of LLMEngine and is licensed under
+// the GNU General Public License v3.0 or later.
+// See the LICENSE file in the project root for details.
+
+#include "LLMEngine/DebugArtifactManager.hpp"
+#include "LLMEngine/APIClient.hpp"
+#include "LLMEngine/Logger.hpp"
+#include "LLMEngine/Constants.hpp"
+#include "DebugArtifacts.hpp"
+#include <filesystem>
+#include <cstdlib>
+
+namespace LLMEngine {
+
+DebugArtifactManager::DebugArtifactManager(std::string request_tmp_dir,
+                                          std::string base_tmp_dir,
+                                          int log_retention_hours,
+                                          Logger* logger)
+    : request_tmp_dir_(std::move(request_tmp_dir)),
+      base_tmp_dir_(std::move(base_tmp_dir)),
+      log_retention_hours_(log_retention_hours),
+      logger_(logger),
+      directory_created_(false) {
+}
+
+bool DebugArtifactManager::ensureRequestDirectory() {
+    if (directory_created_) {
+        return true;
+    }
+    
+    try {
+        std::error_code ec;
+        std::filesystem::create_directories(request_tmp_dir_, ec);
+        if (ec) {
+            if (logger_) {
+                logger_->log(LogLevel::Warn, "Failed to create request directory: " + request_tmp_dir_);
+            }
+            return false;
+        }
+        directory_created_ = true;
+        return true;
+    } catch (...) {
+        if (logger_) {
+            logger_->log(LogLevel::Error, "Exception creating request directory: " + request_tmp_dir_);
+        }
+        return false;
+    }
+}
+
+bool DebugArtifactManager::writeApiResponse(const ::LLMEngineAPI::APIResponse& response, bool is_error) {
+    if (!ensureRequestDirectory()) {
+        return false;
+    }
+    
+    std::string filename = is_error ? 
+        std::string(Constants::DebugArtifacts::API_RESPONSE_ERROR_JSON) :
+        std::string(Constants::DebugArtifacts::API_RESPONSE_JSON);
+    
+    std::string filepath = request_tmp_dir_ + "/" + filename;
+    bool success = DebugArtifacts::writeJson(filepath, response.raw_response, /*redactSecrets*/true);
+    
+    if (!success && logger_) {
+        logger_->log(LogLevel::Warn, "Failed to write debug artifact: " + filepath);
+    } else if (success && logger_) {
+        logger_->log(LogLevel::Debug, "API response saved to " + filepath);
+    }
+    
+    return success;
+}
+
+bool DebugArtifactManager::writeFullResponse(std::string_view full_response) {
+    if (!ensureRequestDirectory()) {
+        return false;
+    }
+    
+    std::string filepath = request_tmp_dir_ + "/" + std::string(Constants::DebugArtifacts::RESPONSE_FULL_TXT);
+    bool success = DebugArtifacts::writeText(filepath, full_response, /*redactSecrets*/true);
+    
+    if (!success && logger_) {
+        logger_->log(LogLevel::Warn, "Failed to write debug artifact: " + filepath);
+    } else if (success && logger_) {
+        logger_->log(LogLevel::Debug, "Full response saved to " + filepath);
+    }
+    
+    performCleanup();
+    return success;
+}
+
+bool DebugArtifactManager::writeAnalysisArtifacts(std::string_view analysis_type,
+                                                  std::string_view think_section,
+                                                  std::string_view remaining_section) {
+    if (!ensureRequestDirectory()) {
+        return false;
+    }
+    
+    // Sanitize analysis type for filename
+    auto sanitize_name = [](std::string name) {
+        if (name.empty()) name = "analysis";
+        for (char& ch : name) {
+            if (!(std::isalnum(static_cast<unsigned char>(ch)) || ch == '-' || ch == '_' || ch == '.')) {
+                ch = '_';
+            }
+        }
+        constexpr size_t MAX_FILENAME_LENGTH = 64;
+        if (name.size() > MAX_FILENAME_LENGTH) name.resize(MAX_FILENAME_LENGTH);
+        return name;
+    };
+    
+    const std::string safe_analysis_name = sanitize_name(std::string(analysis_type));
+    
+    // Write think section
+    std::string think_filepath = request_tmp_dir_ + "/" + safe_analysis_name + 
+                                 std::string(Constants::DebugArtifacts::THINK_TXT_SUFFIX);
+    bool think_success = DebugArtifacts::writeText(think_filepath, think_section, /*redactSecrets*/true);
+    
+    if (!think_success && logger_) {
+        logger_->log(LogLevel::Warn, "Failed to write debug artifact: " + think_filepath);
+    } else if (think_success && logger_) {
+        logger_->log(LogLevel::Debug, "Wrote think section");
+    }
+    
+    // Write remaining section
+    std::string content_filepath = request_tmp_dir_ + "/" + safe_analysis_name + 
+                                   std::string(Constants::DebugArtifacts::CONTENT_TXT_SUFFIX);
+    bool content_success = DebugArtifacts::writeText(content_filepath, remaining_section, /*redactSecrets*/true);
+    
+    if (!content_success && logger_) {
+        logger_->log(LogLevel::Warn, "Failed to write debug artifact: " + content_filepath);
+    } else if (content_success && logger_) {
+        logger_->log(LogLevel::Debug, "Wrote remaining section");
+    }
+    
+    return think_success && content_success;
+}
+
+void DebugArtifactManager::performCleanup() {
+    if (log_retention_hours_ > 0) {
+        DebugArtifacts::cleanupOld(base_tmp_dir_, log_retention_hours_);
+    }
+}
+
+} // namespace LLMEngine
+
