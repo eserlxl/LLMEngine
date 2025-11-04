@@ -12,10 +12,25 @@ include(CMakeFindDependencyMacro)
 find_dependency(cpr REQUIRED)
 find_dependency(nlohmann_json REQUIRED)
 
-# Include the exported targets unless they already exist (build-tree usage)
+# Include the exported targets unless any of them already exist (build-tree usage)
 # The exported namespace is lowercase (e.g., llmengine::llmengine)
 string(TOLOWER "@PROJECT_NAME@" _llm_ns)
-if (NOT TARGET ${_llm_ns}::${_llm_ns})
+set(_llm_targets
+  ${_llm_ns}::${_llm_ns}
+  ${_llm_ns}::compile_options
+  ${_llm_ns}::cpr
+  ${_llm_ns}::nlohmann_json
+  ${_llm_ns}::@PROJECT_NAME@_compile_options)
+
+set(_need_include TRUE)
+foreach(_t IN LISTS _llm_targets)
+  if (TARGET ${_t})
+    set(_need_include FALSE)
+    break()
+  endif()
+endforeach()
+
+if (_need_include)
   include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
 endif()
 
