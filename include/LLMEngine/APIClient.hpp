@@ -290,9 +290,10 @@ public:
  * 
  * ## Ownership
  * 
- * - **Logger:** Holds a raw pointer (not owned) to allow optional logging
+ * - **Logger:** Holds a weak_ptr to avoid dangling pointer risks. If the logger
+ *   is destroyed, the singleton falls back to a thread-safe DefaultLogger.
  * - **Configuration:** Owned by the singleton instance
- * - **Thread Safety:** Logger pointer access is protected by mutex
+ * - **Thread Safety:** Logger access is protected by mutex
  * 
  * ## Usage Pattern
  * 
@@ -322,7 +323,7 @@ public:
      * @return The current default config path.
      */
     [[nodiscard]] std::string getDefaultConfigPath() const override;
-    void setLogger(::LLMEngine::Logger* logger) override;
+    void setLogger(std::shared_ptr<::LLMEngine::Logger> logger) override;
     bool loadConfig(std::string_view config_path = "") override;
     [[nodiscard]] nlohmann::json getProviderConfig(std::string_view provider_name) const override;
     [[nodiscard]] std::vector<std::string> getAvailableProviders() const override;
@@ -338,7 +339,10 @@ private:
     nlohmann::json config_;
     bool config_loaded_ = false;
     std::string default_config_path_;  // Default config file path
-    ::LLMEngine::Logger* logger_ = nullptr;  // Optional logger (not owned)
+    std::weak_ptr<::LLMEngine::Logger> logger_;  // Optional logger (weak ownership to avoid dangling pointers)
+    
+    // Helper method to safely get logger (locks weak_ptr or returns DefaultLogger)
+    std::shared_ptr<::LLMEngine::Logger> getLogger() const;
 };
 
 } // namespace LLMEngineAPI

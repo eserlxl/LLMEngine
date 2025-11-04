@@ -23,7 +23,9 @@
 #if defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
 #include <spawn.h>
 #include <sys/wait.h>
+#include <sys/poll.h>
 #include <unistd.h>
+#include <cerrno>
 #elif defined(_WIN32) || defined(_WIN64)
 #include <io.h>
 #endif
@@ -269,43 +271,112 @@ namespace Utils {
         stdout_write = PipeFD(-1);
         stderr_write = PipeFD(-1);
 
-        // Read stdout and stderr with size limits to prevent memory exhaustion
+        // Read stdout and stderr concurrently to prevent deadlock when one pipe fills up
         // SECURITY: Enforce limits to prevent resource exhaustion from user-controlled commands
-        // Note: We read both sequentially. In practice, commands typically write to one or the other,
-        // and this approach matches the original popen() behavior (which merged via 2>&1)
+        // Use poll() to read from both pipes simultaneously, avoiding blocking on one
+        // while the other fills up (which could cause the child process to block)
         std::array<char, COMMAND_BUFFER_SIZE> buffer;
-        ssize_t bytes_read;
-        size_t total_lines = 0;
-        
-        // Read stdout with size limits
         std::string stdout_buffer;
+        std::string stderr_buffer;
         size_t stdout_total_size = 0;
-        while ((bytes_read = read(stdout_read.get(), buffer.data(), buffer.size())) > 0) {
-            stdout_total_size += static_cast<size_t>(bytes_read);
-            // Limit total buffer size to prevent memory exhaustion
-            if (stdout_total_size > MAX_LINE_LENGTH * MAX_OUTPUT_LINES) {
+        size_t stderr_total_size = 0;
+        
+        // Set up poll structures for both pipes
+        struct pollfd pollfds[2];
+        pollfds[0].fd = stdout_read.get();
+        pollfds[0].events = POLLIN;
+        pollfds[1].fd = stderr_read.get();
+        pollfds[1].events = POLLIN;
+        
+        bool stdout_closed = false;
+        bool stderr_closed = false;
+        
+        // Poll and read from both pipes until both are closed
+        while (!stdout_closed || !stderr_closed) {
+            // Build poll array with only active fds
+            std::vector<struct pollfd> active_pollfds;
+            std::vector<int> fd_to_index;  // Maps active_pollfds index to original pollfds index
+            if (!stdout_closed) {
+                active_pollfds.push_back(pollfds[0]);
+                fd_to_index.push_back(0);
+            }
+            if (!stderr_closed) {
+                active_pollfds.push_back(pollfds[1]);
+                fd_to_index.push_back(1);
+            }
+            
+            if (active_pollfds.empty()) break;
+            
+            int poll_result = poll(active_pollfds.data(), active_pollfds.size(), -1);
+            if (poll_result < 0) {
+                // poll() error - break and process what we have
                 if (logger) {
-                    logger->log(::LLMEngine::LogLevel::Warn, "execCommand: Output exceeds maximum size limit, truncating");
+                    logger->log(::LLMEngine::LogLevel::Warn, "execCommand: poll() failed, terminating read");
                 }
                 break;
             }
-            stdout_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
+            
+            // Update original pollfds with revents from active_pollfds
+            for (size_t i = 0; i < active_pollfds.size(); ++i) {
+                pollfds[fd_to_index[i]].revents = active_pollfds[i].revents;
+            }
+            
+            // Read from stdout if available and not truncated
+            if (!stdout_closed && (pollfds[0].revents & POLLIN)) {
+                ssize_t bytes_read = read(stdout_read.get(), buffer.data(), buffer.size());
+                if (bytes_read > 0) {
+                    stdout_total_size += static_cast<size_t>(bytes_read);
+                    if (stdout_total_size > MAX_LINE_LENGTH * MAX_OUTPUT_LINES) {
+                        if (logger) {
+                            logger->log(::LLMEngine::LogLevel::Warn, "execCommand: Output exceeds maximum size limit, truncating");
+                        }
+                        stdout_closed = true;
+                    } else {
+                        stdout_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
+                    }
+                } else if (bytes_read == 0) {
+                    // EOF
+                    stdout_closed = true;
+                    pollfds[0].fd = -1;  // Remove from poll set
+                } else if (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+                    // Error (not just would-block)
+                    stdout_closed = true;
+                    pollfds[0].fd = -1;
+                }
+            } else if (!stdout_closed && (pollfds[0].revents & (POLLHUP | POLLERR))) {
+                stdout_closed = true;
+                pollfds[0].fd = -1;
+            }
+            
+            // Read from stderr if available and not truncated
+            if (!stderr_closed && (pollfds[1].revents & POLLIN)) {
+                ssize_t bytes_read = read(stderr_read.get(), buffer.data(), buffer.size());
+                if (bytes_read > 0) {
+                    stderr_total_size += static_cast<size_t>(bytes_read);
+                    if (stderr_total_size > MAX_LINE_LENGTH * MAX_OUTPUT_LINES) {
+                        if (logger) {
+                            logger->log(::LLMEngine::LogLevel::Warn, "execCommand: Error output exceeds maximum size limit, truncating");
+                        }
+                        stderr_closed = true;
+                    } else {
+                        stderr_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
+                    }
+                } else if (bytes_read == 0) {
+                    // EOF
+                    stderr_closed = true;
+                    pollfds[1].fd = -1;  // Remove from poll set
+                } else if (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+                    // Error (not just would-block)
+                    stderr_closed = true;
+                    pollfds[1].fd = -1;
+                }
+            } else if (!stderr_closed && (pollfds[1].revents & (POLLHUP | POLLERR))) {
+                stderr_closed = true;
+                pollfds[1].fd = -1;
+            }
         }
         
-        // Read stderr with size limits
-        std::string stderr_buffer;
-        size_t stderr_total_size = 0;
-        while ((bytes_read = read(stderr_read.get(), buffer.data(), buffer.size())) > 0) {
-            stderr_total_size += static_cast<size_t>(bytes_read);
-            // Limit total buffer size to prevent memory exhaustion
-            if (stderr_total_size > MAX_LINE_LENGTH * MAX_OUTPUT_LINES) {
-                if (logger) {
-                    logger->log(::LLMEngine::LogLevel::Warn, "execCommand: Error output exceeds maximum size limit, truncating");
-                }
-                break;
-            }
-            stderr_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
-        }
+        size_t total_lines = 0;
         
         // Process stdout line by line with limits
         std::istringstream stdout_stream(stdout_buffer);

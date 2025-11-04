@@ -15,6 +15,7 @@
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Logger.hpp"
 #include "LLMEngine/ITempDirProvider.hpp"
+#include "LLMEngine/IConfigManager.hpp"
 
 namespace LLMEngine {
 
@@ -93,8 +94,17 @@ public:
      * @param model_params Default model params.
      * @param log_retention_hours Hours to keep debug artifacts.
      * @param debug Enable response artifact logging.
+     * @param config_manager Optional configuration manager (shared ownership). If nullptr,
+     *                       uses APIConfigManager::getInstance() singleton. This parameter
+     *                       enables dependency injection for testing and custom configurations.
      */
-    LLMEngine(std::string_view provider_name, std::string_view api_key = "", std::string_view model = "", const nlohmann::json& model_params = {}, int log_retention_hours = 24, bool debug = false);
+    LLMEngine(std::string_view provider_name, 
+              std::string_view api_key = "", 
+              std::string_view model = "", 
+              const nlohmann::json& model_params = {}, 
+              int log_retention_hours = 24, 
+              bool debug = false,
+              const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager = nullptr);
     
     // Dependency injection constructor for tests and advanced usage
     /**

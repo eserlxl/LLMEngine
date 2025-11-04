@@ -60,7 +60,7 @@ public:
     
     void setDefaultConfigPath(std::string_view) override {}
     std::string getDefaultConfigPath() const override { return ""; }
-    void setLogger(Logger*) override {}
+    void setLogger(std::shared_ptr<Logger>) override {}
     bool loadConfig(std::string_view) override { config_loaded = true; return true; }
     nlohmann::json getProviderConfig(std::string_view provider_name) const override {
         if (config_json.contains("providers") && config_json["providers"].contains(std::string(provider_name))) {

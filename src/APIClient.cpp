@@ -58,7 +58,11 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_
     }
     
     // Override config API key with environment variable if available
-    const char* env_api_key = std::getenv(env_var_name.c_str());
+    // SECURITY: Guard against calling std::getenv("") which is undefined behavior
+    const char* env_api_key = nullptr;
+    if (!env_var_name.empty()) {
+        env_api_key = std::getenv(env_var_name.c_str());
+    }
     if (env_api_key && std::strlen(env_api_key) > 0) {
         api_key = env_api_key;
     } else if (!api_key.empty()) {
@@ -154,9 +158,24 @@ std::string APIConfigManager::getDefaultConfigPath() const {
     return default_config_path_;
 }
 
-void APIConfigManager::setLogger(::LLMEngine::Logger* logger) {
+void APIConfigManager::setLogger(std::shared_ptr<::LLMEngine::Logger> logger) {
     std::unique_lock<std::shared_mutex> lock(mutex_);
-    logger_ = logger;
+    if (logger) {
+        logger_ = logger;
+    } else {
+        logger_.reset();
+    }
+}
+
+std::shared_ptr<::LLMEngine::Logger> APIConfigManager::getLogger() const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    auto locked = logger_.lock();
+    if (locked) {
+        return locked;
+    }
+    // Fall back to thread-safe DefaultLogger if original logger was destroyed
+    static std::shared_ptr<::LLMEngine::DefaultLogger> default_logger = std::make_shared<::LLMEngine::DefaultLogger>();
+    return default_logger;
 }
 
 bool APIConfigManager::loadConfig(std::string_view config_path) {
@@ -178,9 +197,7 @@ bool APIConfigManager::loadConfig(std::string_view config_path) {
     try {
         std::ifstream file(path);
         if (!file.is_open()) {
-            if (logger_) {
-                logger_->log(::LLMEngine::LogLevel::Error, std::string("Could not open config file: ") + path);
-            }
+            getLogger()->log(::LLMEngine::LogLevel::Error, std::string("Could not open config file: ") + path);
             config_loaded_ = false;
             config_ = nlohmann::json{}; // Clear stale configuration
             return false;
@@ -190,9 +207,7 @@ bool APIConfigManager::loadConfig(std::string_view config_path) {
         config_loaded_ = true;
         return true;
     } catch (const std::exception& e) {
-        if (logger_) {
-            logger_->log(::LLMEngine::LogLevel::Error, std::string("Failed to load config: ") + e.what());
-        }
+        getLogger()->log(::LLMEngine::LogLevel::Error, std::string("Failed to load config: ") + e.what());
         config_loaded_ = false;
         config_ = nlohmann::json{}; // Clear stale configuration
         return false;

@@ -239,6 +239,8 @@ add_library(${PROJECT_NAME}
     src/DebugArtifacts.cpp
     src/DebugArtifactManager.cpp
     src/RequestLogger.cpp
+    src/ResponseParser.cpp
+    src/ParameterMerger.cpp
 )
 
 # Versioning for shared libraries
@@ -384,9 +386,11 @@ else()
 endif()
 
 # Install public headers
+# Namespaced headers go to include/LLMEngine/
 install(DIRECTORY include/LLMEngine/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
     FILES_MATCHING PATTERN "*.hpp")
+# Compatibility headers go to include root (so both <LLMEngine.hpp> and <LLMEngine/LLMEngine.hpp> work)
 install(FILES
     include/LLMEngine.hpp
     include/APIClient.hpp
@@ -395,7 +399,7 @@ install(FILES
     include/RequestLogger.hpp
     include/LLMOutputProcessor.hpp
     include/DebugArtifacts.hpp
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMEngineExport.hpp"
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
@@ -503,31 +507,37 @@ if (ENABLE_EXAMPLES)
 endif()
 
 # ---- Summary -----------------------------------------------------------------
-message(STATUS "========== Build Configuration ==========")
-message(STATUS "CMAKE_CXX_COMPILER       : ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
-message(STATUS "CMAKE_BUILD_TYPE         : ${CMAKE_BUILD_TYPE}")
-message(STATUS "DEBUG_MODE               : ${DEBUG_MODE}")
-message(STATUS "PERFORMANCE_BUILD        : ${PERFORMANCE_BUILD}")
-message(STATUS "WARNING_MODE             : ${WARNING_MODE}")
-message(STATUS "BUILD_SHARED_LIBS        : ${BUILD_SHARED_LIBS}")
-message(STATUS "BUILD_TESTING            : ${BUILD_TESTING}")
-message(STATUS "ENABLE_EXAMPLES          : ${ENABLE_EXAMPLES}")
-message(STATUS "ENABLE_NATIVE_OPTIMIZATION: ${ENABLE_NATIVE_OPTIMIZATION}")
-message(STATUS "ENABLE_SANITIZERS        : ${ENABLE_SANITIZERS}")
-message(STATUS "ENABLE_CLANG_TIDY        : ${ENABLE_CLANG_TIDY}")
-get_target_property(_ipo ${PROJECT_NAME} INTERPROCEDURAL_OPTIMIZATION)
-message(STATUS "IPO/LTO (${PROJECT_NAME})      : ${_ipo}")
-message(STATUS "Runtime output directory : ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
-message(STATUS "---------- Install Directories -----------")
-message(STATUS "CMAKE_INSTALL_PREFIX     : ${CMAKE_INSTALL_PREFIX}")
-message(STATUS "BIN dir                  : ${CMAKE_INSTALL_BINDIR} (full: ${CMAKE_INSTALL_FULL_BINDIR})")
-message(STATUS "LIB dir                  : ${CMAKE_INSTALL_LIBDIR} (full: ${CMAKE_INSTALL_FULL_LIBDIR})")
-message(STATUS "INCLUDE dir              : ${CMAKE_INSTALL_INCLUDEDIR} (full: ${CMAKE_INSTALL_FULL_INCLUDEDIR})")
-message(STATUS "DATA root dir            : ${CMAKE_INSTALL_DATAROOTDIR} (full: ${CMAKE_INSTALL_FULL_DATAROOTDIR})")
-message(STATUS "DATA dir                 : ${CMAKE_INSTALL_DATADIR} (full: ${CMAKE_INSTALL_FULL_DATADIR})")
-message(STATUS "LIBEXEC dir              : ${CMAKE_INSTALL_LIBEXECDIR} (full: ${CMAKE_INSTALL_FULL_LIBEXECDIR})")
-message(STATUS "SYSCONF dir              : ${CMAKE_INSTALL_SYSCONFDIR} (full: ${CMAKE_INSTALL_FULL_SYSCONFDIR})")
-message(STATUS "========================================")
+# Verbose summary output (can be disabled for CI-friendly builds)
+option(LLM_VERBOSE_CONFIG_SUMMARY "Print detailed build configuration summary" ON)
+if (LLM_VERBOSE_CONFIG_SUMMARY)
+    message(STATUS "========== Build Configuration ==========")
+    message(STATUS "CMAKE_CXX_COMPILER       : ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+    message(STATUS "CMAKE_BUILD_TYPE         : ${CMAKE_BUILD_TYPE}")
+    message(STATUS "DEBUG_MODE               : ${DEBUG_MODE}")
+    message(STATUS "PERFORMANCE_BUILD        : ${PERFORMANCE_BUILD}")
+    message(STATUS "WARNING_MODE             : ${WARNING_MODE}")
+    message(STATUS "BUILD_SHARED_LIBS        : ${BUILD_SHARED_LIBS}")
+    message(STATUS "BUILD_TESTING            : ${BUILD_TESTING}")
+    message(STATUS "ENABLE_EXAMPLES          : ${ENABLE_EXAMPLES}")
+    message(STATUS "ENABLE_NATIVE_OPTIMIZATION: ${ENABLE_NATIVE_OPTIMIZATION}")
+    message(STATUS "ENABLE_SANITIZERS        : ${ENABLE_SANITIZERS}")
+    message(STATUS "ENABLE_CLANG_TIDY        : ${ENABLE_CLANG_TIDY}")
+    get_target_property(_ipo ${PROJECT_NAME} INTERPROCEDURAL_OPTIMIZATION)
+    message(STATUS "IPO/LTO (${PROJECT_NAME})      : ${_ipo}")
+    message(STATUS "Runtime output directory : ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+    message(STATUS "---------- Install Directories -----------")
+    message(STATUS "CMAKE_INSTALL_PREFIX     : ${CMAKE_INSTALL_PREFIX}")
+    message(STATUS "BIN dir                  : ${CMAKE_INSTALL_BINDIR} (full: ${CMAKE_INSTALL_FULL_BINDIR})")
+    message(STATUS "LIB dir                  : ${CMAKE_INSTALL_LIBDIR} (full: ${CMAKE_INSTALL_FULL_LIBDIR})")
+    message(STATUS "INCLUDE dir              : ${CMAKE_INSTALL_INCLUDEDIR} (full: ${CMAKE_INSTALL_FULL_INCLUDEDIR})")
+    message(STATUS "DATA root dir            : ${CMAKE_INSTALL_DATAROOTDIR} (full: ${CMAKE_INSTALL_FULL_DATAROOTDIR})")
+    message(STATUS "DATA dir                 : ${CMAKE_INSTALL_DATADIR} (full: ${CMAKE_INSTALL_FULL_DATADIR})")
+    message(STATUS "LIBEXEC dir              : ${CMAKE_INSTALL_LIBEXECDIR} (full: ${CMAKE_INSTALL_FULL_LIBEXECDIR})")
+    message(STATUS "SYSCONF dir              : ${CMAKE_INSTALL_SYSCONFDIR} (full: ${CMAKE_INSTALL_FULL_SYSCONFDIR})")
+    message(STATUS "========================================")
+else()
+    message(STATUS "${PROJECT_NAME} ${PROJECT_VERSION}: ${CMAKE_BUILD_TYPE} build (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+endif()
 
 # ---- Doxygen (optional) -------------------------------------------------------
 if (ENABLE_DOXYGEN)

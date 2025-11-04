@@ -5,11 +5,18 @@
 // the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine.hpp"
+#include "LLMEngine/LLMEngine.hpp"
 #include "LLMEngine/ITempDirProvider.hpp"
 #include "LLMEngine/PromptBuilder.hpp"
 #include "LLMEngine/DebugArtifactManager.hpp"
 #include "LLMEngine/Constants.hpp"
+#include "LLMEngine/LLMOutputProcessor.hpp"
+#include "LLMEngine/Utils.hpp"
+#include "LLMEngine/DebugArtifacts.hpp"
+#include "LLMEngine/IConfigManager.hpp"
+#include "LLMEngine/APIClient.hpp"
+#include "LLMEngine/ResponseParser.hpp"
+#include "LLMEngine/ParameterMerger.hpp"
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -24,11 +31,8 @@
 #include <cstring>
 #include <mutex>
 #include <thread>
-#include "LLMEngine/LLMOutputProcessor.hpp"
-#include "Utils.hpp"
 #include <filesystem>
 #include <cstdlib>
-#include "DebugArtifacts.hpp"
 
 // Internal subwrapper namespace and Core orchestrator
 namespace LLMEngineSystem {
@@ -89,32 +93,9 @@ namespace LLMEngineSystem {
         }
 
         if (ctx.api_client) {
-            // Lazy merge: only copy keys that are actually overridden to avoid unnecessary allocations
-            // Start with a reference to avoid copying when no overrides are needed
-            const nlohmann::json* base_params = &ctx.model_params;
-            nlohmann::json api_params;
-            bool needs_copy = false;
-            
-            if (input.contains("max_tokens") && input["max_tokens"].is_number_integer()) {
-                int max_tokens = input["max_tokens"].get<int>();
-                if (max_tokens > 0) {
-                    if (!needs_copy) {
-                        api_params = *base_params;  // Copy only when first override is needed
-                        needs_copy = true;
-                    }
-                    api_params["max_tokens"] = max_tokens;
-                }
-            }
-            if (!std::string(mode).empty()) {
-                if (!needs_copy) {
-                    api_params = *base_params;  // Copy only when first override is needed
-                    needs_copy = true;
-                }
-                api_params["mode"] = std::string(mode);
-            }
-            
-            // Use reference if no overrides, otherwise use the modified copy
-            const nlohmann::json& final_params = needs_copy ? api_params : *base_params;
+            // Merge parameters using service
+            nlohmann::json final_params = ::LLMEngine::ParameterMerger::merge(
+                ctx.model_params, input, mode);
 
             auto api_response = ctx.api_client->sendRequest(full_prompt, input, final_params);
 
@@ -144,28 +125,7 @@ namespace LLMEngineSystem {
             debug_mgr->writeFullResponse(full_response);
         }
 
-        auto trim_copy = [](const std::string& s) -> std::string {
-            const char* ws = " \t\n\r";
-            std::string::size_type start = s.find_first_not_of(ws);
-            if (start == std::string::npos) return {};
-            std::string::size_type end = s.find_last_not_of(ws);
-            return s.substr(start, end - start + 1);
-        };
-
-        std::string think_section;
-        std::string remaining_section = full_response;
-        constexpr std::string_view tag_open = "<redacted_reasoning>";
-        constexpr std::string_view tag_close = "</redacted_reasoning>";
-        std::string::size_type open = full_response.find(tag_open);
-        std::string::size_type close = full_response.find(tag_close);
-        if (open != std::string::npos && close != std::string::npos && close > open) {
-            think_section = full_response.substr(open + tag_open.length(), close - (open + tag_open.length()));
-            std::string before = full_response.substr(0, open);
-            std::string after  = full_response.substr(close + tag_close.length());
-            remaining_section = before + after;
-        }
-        think_section     = trim_copy(think_section);
-        remaining_section = trim_copy(remaining_section);
+        auto [think_section, remaining_section] = ::LLMEngine::ResponseParser::parseResponse(full_response);
 
         if (write_debug_files && debug_mgr) {
             debug_mgr->writeAnalysisArtifacts(analysis_type, think_section, remaining_section);
@@ -219,7 +179,8 @@ LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
                      std::string_view model,
                      const nlohmann::json& model_params,
                      int log_retention_hours,
-                     bool debug)
+                     bool debug,
+                     const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager)
     : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
@@ -227,23 +188,31 @@ LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
       api_key_(std::string(api_key)) {
     logger_ = std::make_shared<::LLMEngine::DefaultLogger>();
     
+    // Use injected config manager or fall back to singleton
+    std::shared_ptr<::LLMEngineAPI::IConfigManager> config_mgr = config_manager;
+    if (!config_mgr) {
+        // Wrap singleton in shared_ptr with no-op deleter for compatibility
+        config_mgr = std::shared_ptr<::LLMEngineAPI::IConfigManager>(
+            &::LLMEngineAPI::APIConfigManager::getInstance(),
+            [](::LLMEngineAPI::IConfigManager*){});
+    }
+    
     // Load config
-    auto& config_mgr = ::LLMEngineAPI::APIConfigManager::getInstance();
-    if (!config_mgr.loadConfig()) {
+    if (!config_mgr->loadConfig()) {
         logger_->log(::LLMEngine::LogLevel::Warn, "Could not load API config, using defaults");
     }
     
     // Determine provider name (use default if empty)
     std::string resolved_provider(provider_name);
     if (resolved_provider.empty()) {
-        resolved_provider = config_mgr.getDefaultProvider();
+        resolved_provider = config_mgr->getDefaultProvider();
         if (resolved_provider.empty()) {
             resolved_provider = "ollama";
         }
     }
 
     // Get provider configuration
-    auto provider_config = config_mgr.getProviderConfig(resolved_provider);
+    auto provider_config = config_mgr->getProviderConfig(resolved_provider);
     if (provider_config.empty()) {
         logger_->log(::LLMEngine::LogLevel::Error, std::string("Provider ") + resolved_provider + " not found in config");
         throw std::runtime_error("Invalid provider name");
@@ -264,7 +233,11 @@ LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
     }
     
     // Override API key with environment variable if available
-    const char* env_api_key = std::getenv(env_var_name.c_str());
+    // SECURITY: Guard against calling std::getenv("") which is undefined behavior
+    const char* env_api_key = nullptr;
+    if (!env_var_name.empty()) {
+        env_api_key = std::getenv(env_var_name.c_str());
+    }
     if (env_api_key && strlen(env_api_key) > 0) {
         api_key_ = env_api_key;
     } else if (!std::string(api_key).empty()) {

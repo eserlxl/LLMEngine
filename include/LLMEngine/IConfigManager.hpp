@@ -9,6 +9,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <memory>
 #include <nlohmann/json.hpp>
 #include "LLMEngine/LLMEngineExport.hpp"
 
@@ -53,9 +54,9 @@ public:
     /**
      * @brief Set logger for error messages (optional).
      * 
-     * @param logger Logger instance (raw pointer, not owned, can be nullptr)
+     * @param logger Logger instance (shared ownership, can be nullptr to clear)
      */
-    virtual void setLogger(::LLMEngine::Logger* logger) = 0;
+    virtual void setLogger(std::shared_ptr<::LLMEngine::Logger> logger) = 0;
     
     /**
      * @brief Load configuration from path or default search order.
