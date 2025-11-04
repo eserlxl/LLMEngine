@@ -10,10 +10,12 @@
 class LLMENGINE_EXPORT DebugArtifacts {
 public:
     // Write JSON to path. When redactSecrets is true, common secret fields are masked.
-    static void writeJson(const std::string& path, const nlohmann::json& json, bool redactSecrets);
+    // Returns true on success, false on failure (no-throw).
+    static bool writeJson(const std::string& path, const nlohmann::json& json, bool redactSecrets);
 
     // Write text to path. When redactSecrets is true, token-like substrings are masked conservatively.
-    static void writeText(const std::string& path, std::string_view text, bool redactSecrets);
+    // Returns true on success, false on failure (no-throw).
+    static bool writeText(const std::string& path, std::string_view text, bool redactSecrets);
 
     // Remove files older than the given hours in dir. No-throw best-effort.
     static void cleanupOld(const std::string& dir, int hours);

@@ -12,7 +12,42 @@ namespace {
     constexpr size_t MIN_TOKEN_LENGTH_FOR_REDACTION = 32; // Minimum length for token redaction
 }
 
-void DebugArtifacts::writeJson(const std::string& path, const nlohmann::json& json, bool redactSecrets) {
+static bool atomic_write(const std::string& path, const std::string& data) {
+    try {
+        std::filesystem::path p(path);
+        std::filesystem::path dir_path = p.parent_path();
+        if (!dir_path.empty()) {
+            std::error_code ec;
+            std::filesystem::create_directories(dir_path, ec);
+            if (!ec) {
+                std::error_code ec_perm;
+                std::filesystem::permissions(dir_path,
+                    std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
+                    std::filesystem::perm_options::replace, ec_perm);
+            }
+        }
+        const std::string tmp = path + ".tmp";
+        {
+            std::ofstream f(tmp, std::ios::binary);
+            if (!f) return false;
+            f << data;
+            if (!f.good()) return false;
+        }
+        std::error_code ec_mv;
+        std::filesystem::rename(tmp, path, ec_mv);
+        if (ec_mv) {
+            // Cross-filesystem fallback: copy+remove
+            std::error_code ec_cp;
+            std::filesystem::copy_file(tmp, path, std::filesystem::copy_options::overwrite_existing, ec_cp);
+            std::error_code ec_rm;
+            std::filesystem::remove(tmp, ec_rm);
+            if (ec_cp) return false;
+        }
+        return true;
+    } catch (...) { return false; }
+}
+
+bool DebugArtifacts::writeJson(const std::string& path, const nlohmann::json& json, bool redactSecrets) {
     try {
         std::filesystem::path dir_path = std::filesystem::path(path).parent_path();
         if (!dir_path.empty()) {
@@ -28,14 +63,11 @@ void DebugArtifacts::writeJson(const std::string& path, const nlohmann::json& js
             }
         }
         nlohmann::json payload = redactSecrets ? redactJson(json) : json;
-        std::ofstream f(path);
-        if (!f) return;
-        f << payload.dump(2);
-    } catch (...) {  // NOLINT(bugprone-empty-catch): best-effort, swallow exceptions
-    }
+        return atomic_write(path, payload.dump(2));
+    } catch (...) { return false; }
 }
 
-void DebugArtifacts::writeText(const std::string& path, std::string_view text, bool redactSecrets) {
+bool DebugArtifacts::writeText(const std::string& path, std::string_view text, bool redactSecrets) {
     try {
         std::filesystem::path dir_path = std::filesystem::path(path).parent_path();
         if (!dir_path.empty()) {
@@ -50,16 +82,13 @@ void DebugArtifacts::writeText(const std::string& path, std::string_view text, b
                 // Best-effort: silently ignore permission errors (may fail in restricted environments)
             }
         }
-        std::ofstream f(path);
-        if (!f) return;
         if (redactSecrets) {
             std::string masked = redactText(text);
-            f << masked;
+            return atomic_write(path, masked);
         } else {
-            f << text;
+            return atomic_write(path, std::string(text));
         }
-    } catch (...) {  // NOLINT(bugprone-empty-catch): best-effort, swallow exceptions
-    }
+    } catch (...) { return false; }
 }
 
 void DebugArtifacts::cleanupOld(const std::string& dir, int hours) {
