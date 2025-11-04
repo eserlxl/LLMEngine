@@ -203,9 +203,13 @@ public:
     
     /**
      * @brief Create client by provider name from JSON config.
+     * @param provider_name Provider name (e.g., "qwen", "openai")
+     * @param config Provider configuration JSON
+     * @param logger Optional logger for warnings and errors (nullptr to suppress)
      */
     static std::unique_ptr<APIClient> createClientFromConfig(std::string_view provider_name,
-                                                             const nlohmann::json& config);
+                                                             const nlohmann::json& config,
+                                                             ::LLMEngine::Logger* logger = nullptr);
     
     /**
      * @brief Convert provider string to enum.

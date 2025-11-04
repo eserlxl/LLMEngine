@@ -373,37 +373,9 @@ void LLMEngine::LLMEngine::ensureSecureTmpDir() const {
 }
 
 void LLMEngine::LLMEngine::cleanupResponseFiles() const {
-    std::vector<std::string> basenames_to_clean = {
-        "ollama_response.json",
-        "ollama_response_full.txt",
-        "ollama_response_error.json",
-        "api_response.json",
-        "api_response_error.json",
-        "response_full.txt"
-    };
-
-    ensureSecureTmpDir();
-
-    int cleaned_count = 0;
-    const std::filesystem::path base_dir = std::filesystem::path(tmp_dir_);
-    for (const auto& basename : basenames_to_clean) {
-        const std::filesystem::path candidate = base_dir / basename;
-        std::error_code ec;
-        if (std::filesystem::exists(candidate, ec) && std::filesystem::is_regular_file(candidate, ec)) {
-            if (std::filesystem::remove(candidate, ec)) {
-                cleaned_count++;
-                if (debug_ && logger_) {
-                    logger_->log(::LLMEngine::LogLevel::Debug, std::string("Cleaned up existing file: ") + candidate.string());
-                }
-            } else if (ec && logger_) {
-                logger_->log(::LLMEngine::LogLevel::Warn, std::string("Failed to remove ") + candidate.string() + ": " + ec.message());
-            }
-        }
-    }
-
-    if (cleaned_count > 0 && debug_ && logger_) {
-        logger_->log(::LLMEngine::LogLevel::Debug, std::string("Cleaned up ") + std::to_string(cleaned_count) + " existing response file(s) in " + tmp_dir_);
-    }
+    // Legacy filename cleanup removed - we now use per-request directories
+    // Old request directories are cleaned up by DebugArtifacts::cleanupOld()
+    // This function is kept as a no-op for now to maintain the interface
 }
 
 

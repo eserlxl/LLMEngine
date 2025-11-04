@@ -6,6 +6,8 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/APIClient.hpp"
+#include "LLMEngine/Logger.hpp"
+#include "LLMEngine/Constants.hpp"
 #include <cpr/cpr.h>
 #include <fstream>
 #include <iostream>
@@ -805,23 +807,23 @@ std::unique_ptr<APIClient> APIClientFactory::createClient(ProviderType type,
 }
 
 std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_view provider_name,
-                                                                     const nlohmann::json& config) {
+                                                                     const nlohmann::json& config,
+                                                                     ::LLMEngine::Logger* logger) {
     ProviderType type = stringToProviderType(provider_name);
     if (type == ProviderType::OLLAMA) {
-        std::string base_url = config.value("base_url", "http://localhost:11434");
-        std::string model = config.value("default_model", "llama2");
+        std::string base_url = config.value(std::string(::LLMEngine::Constants::JsonKeys::BASE_URL), std::string(::LLMEngine::Constants::DefaultUrls::OLLAMA_BASE));
+        std::string model = config.value(std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_MODEL), std::string(::LLMEngine::Constants::DefaultModels::OLLAMA));
         return std::make_unique<OllamaClient>(base_url, model);
     }
     
     // SECURITY: Prefer environment variables for API keys over config file
-    // Environment variable names: QWEN_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY
-    std::string api_key = config.value("api_key", "");
+    std::string api_key = config.value(std::string(::LLMEngine::Constants::JsonKeys::API_KEY), "");
     std::string env_var_name;
     switch (type) {
-        case ProviderType::QWEN: env_var_name = "QWEN_API_KEY"; break;
-        case ProviderType::OPENAI: env_var_name = "OPENAI_API_KEY"; break;
-        case ProviderType::ANTHROPIC: env_var_name = "ANTHROPIC_API_KEY"; break;
-        case ProviderType::GEMINI: env_var_name = "GEMINI_API_KEY"; break;
+        case ProviderType::QWEN: env_var_name = std::string(::LLMEngine::Constants::EnvVars::QWEN_API_KEY); break;
+        case ProviderType::OPENAI: env_var_name = std::string(::LLMEngine::Constants::EnvVars::OPENAI_API_KEY); break;
+        case ProviderType::ANTHROPIC: env_var_name = std::string(::LLMEngine::Constants::EnvVars::ANTHROPIC_API_KEY); break;
+        case ProviderType::GEMINI: env_var_name = std::string(::LLMEngine::Constants::EnvVars::GEMINI_API_KEY); break;
         default: break;
     }
     
@@ -831,10 +833,12 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_
         api_key = env_api_key;
     } else if (!api_key.empty()) {
         // Warn if falling back to config file for credentials
-        // Note: APIClient doesn't have access to logger, so we use std::cerr
-        std::cerr << "[WARNING] Using API key from config file. For production use, "
-                  << "set the " << env_var_name << " environment variable instead. "
-                  << "Storing credentials in config files is a security risk." << std::endl;
+        if (logger) {
+            logger->log(::LLMEngine::LogLevel::Warn, 
+                std::string("Using API key from config file. For production use, ")
+                + "set the " + env_var_name + " environment variable instead. "
+                + "Storing credentials in config files is a security risk.");
+        }
     }
     
     // SECURITY: Fail fast if no credentials are available for providers that require them
@@ -842,11 +846,13 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_
     if (api_key.empty() && type != ProviderType::OLLAMA) {
         std::string error_msg = "No API key found for provider " + std::string(provider_name) + ". "
                                + "Set the " + env_var_name + " environment variable or provide it in the config file.";
-        std::cerr << "[ERROR] " << error_msg << std::endl;
+        if (logger) {
+            logger->log(::LLMEngine::LogLevel::Error, error_msg);
+        }
         throw std::runtime_error(error_msg);
     }
     
-    std::string model = config.value("default_model", "");
+    std::string model = config.value(std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_MODEL), "");
     return createClient(type, api_key, model);
 }
 

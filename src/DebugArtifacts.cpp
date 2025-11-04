@@ -6,6 +6,7 @@
 #include <fstream>
 #include <chrono>
 #include <algorithm>
+#include <vector>
 
 namespace {
     constexpr size_t REDACTED_TAG_LENGTH = 10; // "<REDACTED>"
@@ -97,14 +98,28 @@ void DebugArtifacts::cleanupOld(const std::string& dir, int hours) {
         if (!fs::exists(dir)) return;
         const auto now = std::chrono::system_clock::now();
         const auto retention = std::chrono::hours(hours);
+        
+        // Collect entries to remove (files and directories) to avoid iterator invalidation
+        std::vector<fs::path> entries_to_remove;
+        
         for (const auto& entry : fs::directory_iterator(dir)) {
-            if (!entry.is_regular_file()) continue;
             const auto ft = entry.last_write_time();
             const auto ftp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
                 ft - fs::file_time_type::clock::now() + std::chrono::system_clock::now());
             if ((now - ftp) > retention) {
-                std::error_code ec;
-                fs::remove(entry.path(), ec);
+                entries_to_remove.push_back(entry.path());
+            }
+        }
+        
+        // Remove collected entries
+        for (const auto& path : entries_to_remove) {
+            std::error_code ec;
+            if (fs::is_directory(path, ec)) {
+                // Remove directory recursively
+                fs::remove_all(path, ec);
+            } else {
+                // Remove file
+                fs::remove(path, ec);
             }
         }
     } catch (...) {  // NOLINT(bugprone-empty-catch): best-effort, swallow exceptions

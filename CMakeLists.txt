@@ -35,7 +35,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # ---- Options -----------------------------------------------------------------
 option(DEBUG_MODE                 "Enable debug build flags"                       OFF)
-option(PERFORMANCE_BUILD          "Enable performance-optimized flags"             ON)
+option(PERFORMANCE_BUILD          "Enable performance-optimized flags"             OFF)
 option(WARNING_MODE               "Enable extra warnings"                          ON)
 option(BUILD_TESTING              "Build tests and enable CTest"                   ON)
 option(ENABLE_EXAMPLES            "Build example programs"                          ON)
@@ -146,7 +146,8 @@ string(TOLOWER "${PROJECT_NAME}" _ns)
 add_library(${_ns}::compile_options ALIAS ${PROJECT_NAME}_compile_options)
 set_target_properties(${PROJECT_NAME}_compile_options PROPERTIES EXPORT_NAME compile_options)
 
-target_compile_features(${PROJECT_NAME}_compile_options INTERFACE cxx_std_20)
+# C++ standard is set on the library target, not on compile_options
+# (compile_options is linked PRIVATE, so it doesn't propagate to consumers)
 if (MSVC)
   target_compile_options(${PROJECT_NAME}_compile_options INTERFACE /permissive-)
 else()

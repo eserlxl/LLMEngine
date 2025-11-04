@@ -5,6 +5,7 @@
 #include <memory>
 #include <string_view>
 #include <iostream>
+#include <mutex>
 #include "LLMEngine/LLMEngineExport.hpp"
 
 namespace LLMEngine {
@@ -19,6 +20,7 @@ struct LLMENGINE_EXPORT Logger {
 class LLMENGINE_EXPORT DefaultLogger : public Logger {
 public:
 	void log(LogLevel level, std::string_view message) override {
+		std::lock_guard<std::mutex> lock(mutex_);
 		switch (level) {
 			case LogLevel::Debug: std::cout << "[DEBUG] " << message << '\n'; break;
 			case LogLevel::Info:  std::cout << "[INFO] "  << message << '\n'; break;
@@ -26,6 +28,9 @@ public:
 			case LogLevel::Error: std::cerr << "[ERROR] " << message << '\n'; break;
 		}
 	}
+
+private:
+	mutable std::mutex mutex_;
 };
 
 } // namespace LLMEngine
