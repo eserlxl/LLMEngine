@@ -198,23 +198,29 @@ The configuration file (`config/api_config.json`) follows this structure:
 
 ### Directory Structure
 
-All debug artifacts are stored in `Utils::TMP_DIR` (default: `/tmp/llmengine`):
+All debug artifacts are stored in `Utils::TMP_DIR` (default: `/tmp/llmengine`). Each analysis request creates a unique subdirectory to avoid conflicts in concurrent scenarios:
 
 ```
 /tmp/llmengine/
-├── api_response.json          # Redacted API response
-├── api_response_error.json    # Redacted error response
-├── response_full.txt          # Full response text
-├── {analysis_type}.think.txt  # Extracted thinking section
-└── {analysis_type}.txt        # Remaining content
+├── req_{timestamp}_{thread_id}/
+│   ├── api_response.json          # Redacted API response
+│   ├── api_response_error.json    # Redacted error response (on error)
+│   ├── response_full.txt          # Full response text
+│   ├── {analysis_type}.think.txt  # Extracted thinking section
+│   └── {analysis_type}.txt        # Remaining content
+└── ...
 ```
+
+The unique directory name format is `req_{milliseconds}_{thread_id}`, ensuring that concurrent requests from the same or different threads do not overwrite each other's artifacts.
 
 ### Security
 
 - **Directory Permissions**: 0700 (owner-only access)
+- **Symlink Protection**: Temporary directories cannot be symlinks; the library throws an exception if a symlink is detected to prevent symlink traversal attacks
 - **Secret Redaction**: API keys and sensitive tokens are automatically redacted
-- **Retention Policy**: Files older than `log_retention_hours` are automatically cleaned up
+- **Retention Policy**: Files older than `log_retention_hours` are automatically cleaned up (cleanup scans the base temp directory)
 - **Environment Control**: Set `LLMENGINE_DISABLE_DEBUG_FILES=1` to disable file generation
+- **Concurrent Safety**: Each request uses a unique subdirectory to prevent race conditions and file conflicts
 
 ### Retention Behavior
 

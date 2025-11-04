@@ -16,10 +16,14 @@
 #include <iostream>
 #include <filesystem>
 #include <map>
+#include <algorithm>
+
+// POSIX-specific includes (not available on Windows)
+#if defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
 #include <spawn.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <algorithm>
+#endif
 
 namespace Utils {
     std::string TMP_DIR = "/tmp/llmengine";
@@ -27,6 +31,8 @@ namespace Utils {
 
     // Constants
     constexpr size_t COMMAND_BUFFER_SIZE = 256;
+    constexpr size_t MAX_OUTPUT_LINES = 10000;  // Maximum number of output lines to prevent memory exhaustion
+    constexpr size_t MAX_LINE_LENGTH = 1024 * 1024;  // Maximum line length (1MB) to prevent memory exhaustion
     
     // Precompiled regex patterns
     static const std::regex SAFE_CHARS_REGEX(R"([a-zA-Z0-9_./ -]+)");
@@ -78,6 +84,13 @@ namespace Utils {
 
     std::vector<std::string> execCommand(std::string_view cmd) {
         std::vector<std::string> output;
+        
+        // Windows support: execCommand is not available on Windows due to POSIX dependencies
+#if defined(_WIN32) || defined(_WIN64)
+        std::cerr << "[ERROR] execCommand: Not available on Windows. This function requires POSIX spawn API." << std::endl;
+        return output;
+#endif
+        
         std::string cmd_str(cmd);
 
         // SECURITY: Validate command string to prevent command injection
@@ -220,35 +233,69 @@ namespace Utils {
         stdout_write = PipeFD(-1);
         stderr_write = PipeFD(-1);
 
-        // Read stdout and stderr
+        // Read stdout and stderr with size limits to prevent memory exhaustion
+        // SECURITY: Enforce limits to prevent resource exhaustion from user-controlled commands
         // Note: We read both sequentially. In practice, commands typically write to one or the other,
         // and this approach matches the original popen() behavior (which merged via 2>&1)
         std::array<char, COMMAND_BUFFER_SIZE> buffer;
         ssize_t bytes_read;
+        size_t total_lines = 0;
         
-        // Read stdout
+        // Read stdout with size limits
         std::string stdout_buffer;
+        size_t stdout_total_size = 0;
         while ((bytes_read = read(stdout_read.get(), buffer.data(), buffer.size())) > 0) {
+            stdout_total_size += static_cast<size_t>(bytes_read);
+            // Limit total buffer size to prevent memory exhaustion
+            if (stdout_total_size > MAX_LINE_LENGTH * MAX_OUTPUT_LINES) {
+                std::cerr << "[WARNING] execCommand: Output exceeds maximum size limit, truncating" << std::endl;
+                break;
+            }
             stdout_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
         }
         
-        // Read stderr
+        // Read stderr with size limits
         std::string stderr_buffer;
+        size_t stderr_total_size = 0;
         while ((bytes_read = read(stderr_read.get(), buffer.data(), buffer.size())) > 0) {
+            stderr_total_size += static_cast<size_t>(bytes_read);
+            // Limit total buffer size to prevent memory exhaustion
+            if (stderr_total_size > MAX_LINE_LENGTH * MAX_OUTPUT_LINES) {
+                std::cerr << "[WARNING] execCommand: Error output exceeds maximum size limit, truncating" << std::endl;
+                break;
+            }
             stderr_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
         }
         
-        // Process stdout line by line (return raw lines without extra newlines)
+        // Process stdout line by line with limits
         std::istringstream stdout_stream(stdout_buffer);
         std::string line;
-        while (std::getline(stdout_stream, line)) {
+        while (std::getline(stdout_stream, line) && total_lines < MAX_OUTPUT_LINES) {
+            // Limit individual line length
+            if (line.size() > MAX_LINE_LENGTH) {
+                line.resize(MAX_LINE_LENGTH);
+                std::cerr << "[WARNING] execCommand: Line truncated due to length limit" << std::endl;
+            }
             output.push_back(line);
+            total_lines++;
+        }
+        if (total_lines >= MAX_OUTPUT_LINES) {
+            std::cerr << "[WARNING] execCommand: Output truncated at " << MAX_OUTPUT_LINES << " lines" << std::endl;
         }
         
-        // Process stderr line by line and append (return raw lines without extra newlines)
+        // Process stderr line by line with limits
         std::istringstream stderr_stream(stderr_buffer);
-        while (std::getline(stderr_stream, line)) {
+        while (std::getline(stderr_stream, line) && total_lines < MAX_OUTPUT_LINES) {
+            // Limit individual line length
+            if (line.size() > MAX_LINE_LENGTH) {
+                line.resize(MAX_LINE_LENGTH);
+                std::cerr << "[WARNING] execCommand: Error line truncated due to length limit" << std::endl;
+            }
             output.push_back(line);
+            total_lines++;
+        }
+        if (total_lines >= MAX_OUTPUT_LINES) {
+            std::cerr << "[WARNING] execCommand: Total output truncated at " << MAX_OUTPUT_LINES << " lines" << std::endl;
         }
 
         // Pipes are automatically closed by RAII wrappers

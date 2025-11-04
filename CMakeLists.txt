@@ -110,11 +110,16 @@ if (NOT cpr_FOUND)
     set(_HAD_BUILD_SHARED_LIBS FALSE)
   endif()
   set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-  # Ensure _GNU_SOURCE is defined for curl's build (needed for memrchr and other GNU extensions)
-  if(UNIX AND NOT APPLE)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
-  endif()
   FetchContent_MakeAvailable(cpr)
+  # Ensure _GNU_SOURCE is defined for curl's build (needed for memrchr and other GNU extensions)
+  # Apply only to cpr target, not globally
+  if(UNIX AND NOT APPLE)
+    if (TARGET cpr)
+      target_compile_definitions(cpr INTERFACE _GNU_SOURCE)
+    elseif (TARGET cpr::cpr)
+      target_compile_definitions(cpr::cpr INTERFACE _GNU_SOURCE)
+    endif()
+  endif()
   # Restore previous BUILD_SHARED_LIBS cache value to avoid leaking into other dependencies
   if (_HAD_BUILD_SHARED_LIBS)
     set(BUILD_SHARED_LIBS ${_SAVED_BUILD_SHARED_LIBS} CACHE BOOL "" FORCE)
@@ -249,10 +254,12 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 target_link_libraries(${PROJECT_NAME} PRIVATE
   cpr::cpr)
 
-# Propagate common compile options to consumers
-target_link_libraries(${PROJECT_NAME} PUBLIC ${PROJECT_NAME}_compile_options)
+# Propagate common compile options to library only (not to consumers)
+# Keep compile options PRIVATE to avoid leaking build policy decisions to consumers
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_compile_options)
 
 # Include directories (needed by consumers)
+# Use original include/ directory structure - no need to copy headers
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated_include>
@@ -328,15 +335,9 @@ if (ENABLE_COVERAGE AND NOT MSVC)
   endif()
 endif()
 
-# Provide build-time "LLMEngine/" include prefix by copying headers into a generated include tree
+# Only generate the export header that requires build-time generation
+# Rely on target_include_directories to use the original include/ directory
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine")
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/include/LLMEngine/LLMEngine.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMEngine.hpp" COPYONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/include/LLMEngine/APIClient.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/APIClient.hpp" COPYONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/include/LLMEngine/LLMOutputProcessor.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMOutputProcessor.hpp" COPYONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/include/LLMEngine/Utils.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/Utils.hpp" COPYONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/include/LLMEngine/Logger.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/Logger.hpp" COPYONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/include/LLMEngine/DebugArtifacts.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/DebugArtifacts.hpp" COPYONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/include/LLMEngine/RequestLogger.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/RequestLogger.hpp" COPYONLY)
 
 # ---- Export header (visibility) ----------------------------------------------
 include(GenerateExportHeader)
@@ -406,14 +407,10 @@ install(DIRECTORY scripts/ DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME_L
 install(DIRECTORY prompts/ DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME_LOWER}/prompts OPTIONAL)
 install(DIRECTORY reports/ DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME_LOWER}/reports OPTIONAL)
 
-# Define default reports and prompts path as compile-time constants
-set(REPORTS_INSTALL_PATH "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME_LOWER}/reports")
-target_compile_definitions(${PROJECT_NAME} PUBLIC
-  DEFAULT_REPORTS_PATH="${REPORTS_INSTALL_PATH}")
-
-set(PROMPTS_INSTALL_PATH "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME_LOWER}/prompts")
-target_compile_definitions(${PROJECT_NAME} PUBLIC
-  DEFAULT_PROMPTS_PATH="${PROMPTS_INSTALL_PATH}")
+# Note: DEFAULT_REPORTS_PATH and DEFAULT_PROMPTS_PATH should be computed at runtime
+# to avoid hardcoding absolute paths from the build machine. Consumers should use
+# runtime helpers or configuration files to determine these paths relative to
+# installation location or current working directory.
 
 # Provide a namespaced alias and set exported imported name (lowercase)
 create_namespaced_alias(${PROJECT_NAME})

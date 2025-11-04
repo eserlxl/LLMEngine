@@ -19,6 +19,8 @@
 #include <cctype>
 #include <cstring>
 #include <mutex>
+#include <thread>
+#include <sstream>
 #include "LLMOutputProcessor.hpp"
 #include "Utils.hpp"
 #include <filesystem>
@@ -39,33 +41,23 @@ namespace LLMEngineSystem {
         const nlohmann::json& model_params;
         int log_retention_hours;
         bool debug;
-        std::string& tmp_dir;
-        std::unique_ptr<::LLMEngineAPI::APIClient>& api_client;
-        ::LLMEngineAPI::ProviderType& provider_type;
-        std::shared_ptr<Logger>& logger;
-        std::string& model;
+        const std::string& tmp_dir;
+        const ::LLMEngineAPI::APIClient* api_client;
+        ::LLMEngineAPI::ProviderType provider_type;
+        const std::shared_ptr<Logger>& logger;
+        const std::string& model;
     };
 
-    class Core {
-    public:
-        static AnalysisResult run(Context& ctx,
-                                  std::string_view prompt,
-                                  const nlohmann::json& input,
-                                  std::string_view analysis_type,
-                                  std::string_view mode,
-                                  bool prepend_terse_instruction,
-                                  const std::function<void()>& cleanupResponseFiles,
-                                  const std::function<void()>& ensureSecureTmpDir);
-    };
-
-    AnalysisResult Core::run(Context& ctx,
+    // Free function instead of class with static method to avoid unnecessary allocation
+    AnalysisResult runAnalysis(Context& ctx,
                              std::string_view prompt,
                              const nlohmann::json& input,
                              std::string_view analysis_type,
                              std::string_view mode,
                              bool prepend_terse_instruction,
                              const std::function<void()>& cleanupResponseFiles,
-                             const std::function<void()>& ensureSecureTmpDir) {
+                             const std::function<void()>& ensureSecureTmpDir,
+                             const std::function<std::string()>& getUniqueTmpDir) {
         cleanupResponseFiles();
 
         std::string full_prompt;
@@ -81,34 +73,59 @@ namespace LLMEngineSystem {
 
         std::string full_response;
         const bool write_debug_files = ctx.debug && (std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") == nullptr);
+        
+        // Get unique temp directory for this request to avoid conflicts in concurrent scenarios
+        const std::string request_tmp_dir = getUniqueTmpDir();
 
         if (ctx.api_client) {
-            nlohmann::json api_params = ctx.model_params;
+            // Lazy merge: only copy keys that are actually overridden to avoid unnecessary allocations
+            // Start with a reference to avoid copying when no overrides are needed
+            const nlohmann::json* base_params = &ctx.model_params;
+            nlohmann::json api_params;
+            bool needs_copy = false;
+            
             if (input.contains("max_tokens") && input["max_tokens"].is_number_integer()) {
                 int max_tokens = input["max_tokens"].get<int>();
                 if (max_tokens > 0) {
+                    if (!needs_copy) {
+                        api_params = *base_params;  // Copy only when first override is needed
+                        needs_copy = true;
+                    }
                     api_params["max_tokens"] = max_tokens;
                 }
             }
             if (!std::string(mode).empty()) {
+                if (!needs_copy) {
+                    api_params = *base_params;  // Copy only when first override is needed
+                    needs_copy = true;
+                }
                 api_params["mode"] = std::string(mode);
             }
+            
+            // Use reference if no overrides, otherwise use the modified copy
+            const nlohmann::json& final_params = needs_copy ? api_params : *base_params;
 
-            auto api_response = ctx.api_client->sendRequest(full_prompt, input, api_params);
+            auto api_response = ctx.api_client->sendRequest(full_prompt, input, final_params);
 
             if (write_debug_files) {
                 ensureSecureTmpDir();
-                DebugArtifacts::writeJson(ctx.tmp_dir + "/api_response.json", api_response.raw_response, /*redactSecrets*/true);
-                if (ctx.logger) ctx.logger->log(LogLevel::Debug, std::string("API response saved to ") + (ctx.tmp_dir + "/api_response.json"));
+                // Create unique directory for this request
+                std::error_code ec_dir;
+                std::filesystem::create_directories(request_tmp_dir, ec_dir);
+                DebugArtifacts::writeJson(request_tmp_dir + "/api_response.json", api_response.raw_response, /*redactSecrets*/true);
+                if (ctx.logger) ctx.logger->log(LogLevel::Debug, std::string("API response saved to ") + (request_tmp_dir + "/api_response.json"));
             }
 
             if (api_response.success) {
                 full_response = api_response.content;
             } else {
                 ensureSecureTmpDir();
-                DebugArtifacts::writeJson(ctx.tmp_dir + "/api_response_error.json", api_response.raw_response, /*redactSecrets*/true);
+                // Create unique directory for this request
+                std::error_code ec_dir;
+                std::filesystem::create_directories(request_tmp_dir, ec_dir);
+                DebugArtifacts::writeJson(request_tmp_dir + "/api_response_error.json", api_response.raw_response, /*redactSecrets*/true);
                 if (ctx.logger) ctx.logger->log(LogLevel::Error, std::string("API error: ") + api_response.error_message);
-                if (ctx.logger) ctx.logger->log(LogLevel::Info, std::string("Error response saved to ") + (ctx.tmp_dir + "/api_response_error.json"));
+                if (ctx.logger) ctx.logger->log(LogLevel::Info, std::string("Error response saved to ") + (request_tmp_dir + "/api_response_error.json"));
                 return AnalysisResult{false, "", "", api_response.error_message, api_response.status_code};
             }
         } else {
@@ -117,8 +134,11 @@ namespace LLMEngineSystem {
 
         if (write_debug_files) {
             ensureSecureTmpDir();
-            DebugArtifacts::writeText(ctx.tmp_dir + "/response_full.txt", full_response, /*redactSecrets*/true);
-            if (ctx.logger) ctx.logger->log(LogLevel::Debug, std::string("Full response saved to ") + (ctx.tmp_dir + "/response_full.txt"));
+            // Create unique directory for this request
+            std::error_code ec_dir;
+            std::filesystem::create_directories(request_tmp_dir, ec_dir);
+            DebugArtifacts::writeText(request_tmp_dir + "/response_full.txt", full_response, /*redactSecrets*/true);
+            if (ctx.logger) ctx.logger->log(LogLevel::Debug, std::string("Full response saved to ") + (request_tmp_dir + "/response_full.txt"));
             DebugArtifacts::cleanupOld(ctx.tmp_dir, ctx.log_retention_hours);
         }
 
@@ -156,9 +176,12 @@ namespace LLMEngineSystem {
         const std::string safe_analysis_name = sanitize_name(std::string(analysis_type));
         if (write_debug_files) {
             ensureSecureTmpDir();
-            DebugArtifacts::writeText(ctx.tmp_dir + "/" + safe_analysis_name + ".think.txt", think_section, /*redactSecrets*/true);
+            // Create unique directory for this request (if not already created)
+            std::error_code ec_dir;
+            std::filesystem::create_directories(request_tmp_dir, ec_dir);
+            DebugArtifacts::writeText(request_tmp_dir + "/" + safe_analysis_name + ".think.txt", think_section, /*redactSecrets*/true);
             if (ctx.logger) ctx.logger->log(LogLevel::Debug, "Wrote think section");
-            DebugArtifacts::writeText(ctx.tmp_dir + "/" + safe_analysis_name + ".txt", remaining_section, /*redactSecrets*/true);
+            DebugArtifacts::writeText(request_tmp_dir + "/" + safe_analysis_name + ".txt", remaining_section, /*redactSecrets*/true);
             if (ctx.logger) ctx.logger->log(LogLevel::Debug, "Wrote remaining section");
         }
 
@@ -183,7 +206,6 @@ LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
         throw std::runtime_error("API client must not be null");
     }
     provider_type_ = api_client_->getProviderType();
-    core_ = std::make_unique<LLMEngineSystem::Core>();
 }
 
 // New constructor for API-based providers
@@ -202,7 +224,6 @@ LLMEngine::LLMEngine(::LLMEngineAPI::ProviderType provider_type,
       api_key_(std::string(api_key)) {
     logger_ = std::make_shared<DefaultLogger>();
     initializeAPIClient();
-    core_ = std::make_unique<LLMEngineSystem::Core>();
 }
 
 // Constructor using config file
@@ -285,7 +306,6 @@ LLMEngine::LLMEngine(std::string_view provider_name,
     }
     
     initializeAPIClient();
-    core_ = std::make_unique<LLMEngineSystem::Core>();
 }
 
 void LLMEngine::initializeAPIClient() {
@@ -306,16 +326,27 @@ void LLMEngine::initializeAPIClient() {
 
 void LLMEngine::ensureSecureTmpDir() const {
     std::error_code ec;
-    std::filesystem::create_directories(tmp_dir_, ec);
-    // Security: avoid symlink traversal for tmp directory
-    std::error_code ec_symlink;
-    if (std::filesystem::is_symlink(tmp_dir_, ec_symlink)) {
-        if (logger_) {
-            logger_->log(LogLevel::Error, std::string("Temporary directory is a symlink: ") + tmp_dir_);
+    // Security: Check for symlink before creating directories
+    // If the path exists and is a symlink, reject it to prevent symlink traversal attacks
+    if (std::filesystem::exists(tmp_dir_, ec)) {
+        std::error_code ec_symlink;
+        if (std::filesystem::is_symlink(tmp_dir_, ec_symlink)) {
+            if (logger_) {
+                logger_->log(LogLevel::Error, std::string("Temporary directory is a symlink: ") + tmp_dir_);
+            }
+            throw std::runtime_error("Temporary directory cannot be a symlink for security reasons: " + tmp_dir_);
         }
-        return;
     }
-    if (!ec && std::filesystem::exists(tmp_dir_)) {
+    
+    std::filesystem::create_directories(tmp_dir_, ec);
+    if (ec) {
+        if (logger_) {
+            logger_->log(LogLevel::Error, std::string("Failed to create temporary directory: ") + tmp_dir_ + ": " + ec.message());
+        }
+        throw std::runtime_error("Failed to create temporary directory: " + tmp_dir_);
+    }
+    
+    if (std::filesystem::exists(tmp_dir_)) {
         std::error_code ec_perm;
         std::filesystem::permissions(tmp_dir_, 
             std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
@@ -366,10 +397,29 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                   std::string_view analysis_type, 
                                   std::string_view mode,
                                   bool prepend_terse_instruction) const {
-    LLMEngineSystem::Context ctx{model_params_, log_retention_hours_, debug_, const_cast<std::string&>(tmp_dir_), const_cast<std::unique_ptr<::LLMEngineAPI::APIClient>&>(api_client_), const_cast<::LLMEngineAPI::ProviderType&>(provider_type_), const_cast<std::shared_ptr<Logger>&>(logger_), const_cast<std::string&>(model_)};
-    return core_->run(ctx, prompt, input, analysis_type, mode, prepend_terse_instruction,
+    // Create unique temp directory for this request to avoid conflicts in concurrent scenarios
+    const auto now = std::chrono::system_clock::now();
+    const auto time_since_epoch = now.time_since_epoch();
+    const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(time_since_epoch).count();
+    const auto thread_id = std::this_thread::get_id();
+    std::ostringstream oss;
+    oss << tmp_dir_ << "/req_" << milliseconds << "_" << thread_id;
+    const std::string request_tmp_dir = oss.str();
+    
+    LLMEngineSystem::Context ctx{
+        model_params_, 
+        log_retention_hours_, 
+        debug_, 
+        tmp_dir_,  // Base tmp dir for cleanup
+        api_client_.get(),  // Pass raw pointer since we only need const access
+        provider_type_, 
+        logger_, 
+        model_
+    };
+    return LLMEngineSystem::runAnalysis(ctx, prompt, input, analysis_type, mode, prepend_terse_instruction,
                       [this]{ this->cleanupResponseFiles(); },
-                      [this]{ this->ensureSecureTmpDir(); });
+                      [this]{ this->ensureSecureTmpDir(); },
+                      [request_tmp_dir]{ return request_tmp_dir; });
 }
 
 std::string LLMEngine::getProviderName() const {

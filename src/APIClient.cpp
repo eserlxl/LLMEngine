@@ -827,6 +827,15 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_
                   << "Storing credentials in config files is a security risk." << std::endl;
     }
     
+    // SECURITY: Fail fast if no credentials are available for providers that require them
+    // This prevents silent failures in headless or hardened deployments
+    if (api_key.empty() && type != ProviderType::OLLAMA) {
+        std::string error_msg = "No API key found for provider " + std::string(provider_name) + ". "
+                               + "Set the " + env_var_name + " environment variable or provide it in the config file.";
+        std::cerr << "[ERROR] " << error_msg << std::endl;
+        throw std::runtime_error(error_msg);
+    }
+    
     std::string model = config.value("default_model", "");
     return createClient(type, api_key, model);
 }

@@ -17,13 +17,16 @@ export OPENAI_API_KEY="sk-your-openai-key"
 
 - Never commit API keys to version control. `config/api_config.json` must only contain non-secret defaults.
 - Environment variables take precedence over config file values.
-- If a key is not found in env or constructor parameters and the library falls back to `api_config.json`, a warning is emitted to stderr. For production, ensure keys are provided via environment variables to avoid this fallback.
+- **Fail-fast behavior**: If no API key is found for a provider that requires one (all except Ollama), the library throws a `std::runtime_error` instead of proceeding silently. This prevents silent failures in headless or hardened deployments.
+- If a key is found in `api_config.json` but not in environment variables, a warning is emitted to stderr. For production, ensure keys are provided via environment variables to avoid this fallback.
 
 ## Debug Mode and Sensitive Data
 
 When debug mode is enabled (`debug=true`), LLMEngine writes response artifacts to `/tmp/llmengine`.
 
+- **Unique directories per request**: Each analysis request creates a unique timestamped subdirectory (e.g., `req_{milliseconds}_{thread_id}/`) to prevent concurrent requests from overwriting each other's artifacts.
 - Debug files are automatically sanitized: API keys and other sensitive fields are redacted before writing to disk.
+- **Symlink protection**: The library throws an exception if the temporary directory is a symlink to prevent symlink traversal attacks.
 - Log retention is enforced: files older than `log_retention_hours` are automatically cleaned up.
 - Disable debug files in production with `LLMENGINE_DISABLE_DEBUG_FILES=1`.
 - Debug artifact directories are created with 0700 permissions to prevent cross-user access on shared hosts.
@@ -40,15 +43,18 @@ setenv("LLMENGINE_DISABLE_DEBUG_FILES", "1", 1);
 
 `Utils::execCommand()` uses `posix_spawn()` and does not route through a shell, eliminating shell injection risks:
 
+- **Platform-specific**: This function is only available on POSIX systems (Linux, macOS). On Windows, it returns an empty vector and logs an error.
 - No shell involvement: commands are executed via `posix_spawn()` with explicit argv vectors.
 - Control characters are rejected: newlines, tabs, carriage returns, and all control characters are blocked.
 - Shell metacharacters are rejected: `|`, `&`, `;`, `$`, `` ` ``, `<`, `>`, parentheses, brackets, and wildcards are blocked.
 - Whitelist approach: only alphanumeric, single spaces, hyphens, underscores, dots, and slashes are allowed.
 - Multiple consecutive spaces are rejected to prevent obfuscation.
+- **Output size limits**: To prevent memory exhaustion from user-controlled commands, output is limited to 10,000 lines with a maximum line length of 1MB per line.
 
 Security benefits:
 - Bypasses shell interpretation entirely.
 - Validation is enforced as defense-in-depth.
+- Resource limits protect against denial-of-service attacks.
 - Only trusted commands should be passed to this function.
 
 ## Provider Selection Safety
