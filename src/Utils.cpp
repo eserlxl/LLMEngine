@@ -30,8 +30,7 @@
 #include <io.h>
 #endif
 
-namespace LLMEngine {
-namespace Utils {
+namespace LLMEngine::Utils {
     namespace fs = std::filesystem;
 
     // Constants
@@ -446,5 +445,4 @@ namespace Utils {
         output = std::regex_replace(output, MARKDOWN_HEADER_REGEX, "");
         return output;
     }
-} // namespace Utils
-} // namespace LLMEngine 
+} // namespace LLMEngine::Utils 

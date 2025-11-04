@@ -58,10 +58,9 @@ namespace LLMEngineSystem {
         if (prepend_terse_instruction) {
             ::LLMEngine::TersePromptBuilder builder;
             return builder.buildPrompt(prompt);
-        } else {
-            ::LLMEngine::PassthroughPromptBuilder builder;
-            return builder.buildPrompt(prompt);
         }
+        ::LLMEngine::PassthroughPromptBuilder builder;
+        return builder.buildPrompt(prompt);
     }
 
     // Collaborator: Request Executor
@@ -466,12 +465,11 @@ bool LLMEngine::LLMEngine::setTempDirectory(const std::string& tmp_dir) {
         if (is_within) {
             tmp_dir_ = requested.string();
             return true;
-        } else {
-            if (logger_) {
-                logger_->log(::LLMEngine::LogLevel::Warn, std::string("Rejected temp directory outside allowed root: ") + requested.string());
-            }
-            return false;
         }
+        if (logger_) {
+            logger_->log(::LLMEngine::LogLevel::Warn, std::string("Rejected temp directory outside allowed root: ") + requested.string());
+        }
+        return false;
     } catch (...) {
         if (logger_) {
             logger_->log(::LLMEngine::LogLevel::Error, std::string("Failed to set temp directory due to path error: ") + tmp_dir);
