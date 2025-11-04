@@ -207,11 +207,12 @@ namespace LLMEngineSystem {
 LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
                      const nlohmann::json& model_params,
                      int log_retention_hours,
-                     bool debug)
+                     bool debug,
+                     std::shared_ptr<::LLMEngine::ITempDirProvider> temp_dir_provider)
     : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
-      tmp_dir_(Utils::TMP_DIR),
+      tmp_dir_(temp_dir_provider ? temp_dir_provider->getTempDir() : ::LLMEngine::DefaultTempDirProvider().getTempDir()),
       api_client_(std::move(client)) {
     logger_ = std::make_shared<::LLMEngine::DefaultLogger>();
     if (!api_client_) {
@@ -231,7 +232,7 @@ LLMEngine::LLMEngine::LLMEngine(::LLMEngineAPI::ProviderType provider_type,
       model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
-      tmp_dir_(Utils::TMP_DIR),
+      tmp_dir_(::LLMEngine::DefaultTempDirProvider().getTempDir()),
       provider_type_(provider_type),
       api_key_(std::string(api_key)) {
     logger_ = std::make_shared<::LLMEngine::DefaultLogger>();
@@ -248,7 +249,7 @@ LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
     : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
-      tmp_dir_(Utils::TMP_DIR),
+      tmp_dir_(::LLMEngine::DefaultTempDirProvider().getTempDir()),
       api_key_(std::string(api_key)) {
     logger_ = std::make_shared<::LLMEngine::DefaultLogger>();
     

@@ -14,6 +14,7 @@
 #include "LLMEngine/LLMEngineExport.hpp"
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Logger.hpp"
+#include "LLMEngine/ITempDirProvider.hpp"
 
 namespace LLMEngine {
 
@@ -57,11 +58,17 @@ public:
     // Dependency injection constructor for tests and advanced usage
     /**
      * @brief Construct with a custom API client (testing/advanced scenarios).
+     * @param client Custom API client instance
+     * @param model_params Default model params
+     * @param log_retention_hours Hours to keep debug artifacts
+     * @param debug Enable response artifact logging
+     * @param temp_dir_provider Optional temporary directory provider (defaults to DefaultTempDirProvider)
      */
     LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
               const nlohmann::json& model_params = {},
               int log_retention_hours = 24,
-              bool debug = false);
+              bool debug = false,
+              std::shared_ptr<ITempDirProvider> temp_dir_provider = nullptr);
     
     /**
      * @brief Run an analysis request.
