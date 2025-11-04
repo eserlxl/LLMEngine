@@ -98,9 +98,11 @@ Its configuration-driven design allows rapid experimentation and reliable runtim
 
 ### Prerequisites
 
-- C++20 compiler (e.g., GCC 11+, Clang 14+, MSVC 2022)  
+- C++20 compiler (e.g., GCC 11+, Clang 14+)  
 - CMake 3.20+  
 - Dependencies: **OpenSSL**, **nlohmann_json**, **cpr**
+
+**Note:** Windows is not officially supported. While the codebase includes partial MSVC support in the build system, Windows has known limitations including hardcoded Unix-style temporary directory paths and disabled `execCommand()` functionality.
 
 ### Minimal Example
 
