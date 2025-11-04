@@ -13,18 +13,8 @@ project(LLMEngine
   DESCRIPTION "A C++ library for interacting with Large Language Models"
   LANGUAGES CXX)
 
-# Ensure _GNU_SOURCE is defined globally for curl and other dependencies that need GNU extensions
-# This must be set early, before any dependencies are processed, so subprojects inherit it
-# _GNU_SOURCE is a feature test macro that enables GNU/Linux extensions and is safe to define on Linux
-if(UNIX AND NOT APPLE)
-  if (NOT CMAKE_C_FLAGS MATCHES "-D_GNU_SOURCE")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE" CACHE STRING "Flags used by the C compiler" FORCE)
-  endif()
-  # Also set CMAKE_C_FLAGS_INIT to ensure subprojects inherit this
-  if (NOT CMAKE_C_FLAGS_INIT MATCHES "-D_GNU_SOURCE")
-    set(CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT} -D_GNU_SOURCE")
-  endif()
-endif()
+# _GNU_SOURCE will be applied via target_compile_definitions only to targets that need it
+# This avoids mutating global flags that affect all dependencies and consumers
 
 # Default build type when not specified (for single-config generators and IDEs)
 if (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
@@ -70,8 +60,9 @@ if(DEBUG_MODE AND PERFORMANCE_BUILD)
 endif()
 
 # ---- Dependencies ------------------------------------------------------------
-# cpr's CMake config may reference OpenSSL targets; ensure they're available locally
-find_package(OpenSSL REQUIRED)
+# Note: OpenSSL is not directly required by this library, but cpr depends on it.
+# If cpr is fetched via FetchContent, it will handle its own OpenSSL dependency.
+# If cpr is provided by the system, we need to find OpenSSL to satisfy cpr's interface requirements.
 
 # Prefer system-provided nlohmann_json via config; fall back to FetchContent
 find_package(nlohmann_json CONFIG QUIET)
@@ -99,7 +90,10 @@ endif()
 # Prefer system-provided cpr via config; fall back to FetchContent
 find_package(cpr CONFIG QUIET)
 set(CPR_FETCHED FALSE)
-if (NOT cpr_FOUND)
+if (cpr_FOUND)
+  # System-provided cpr requires OpenSSL to be found for its interface dependencies
+  find_package(OpenSSL REQUIRED)
+else()
   if (LLM_DISABLE_FETCHCONTENT)
     message(FATAL_ERROR "cpr not found and LLM_DISABLE_FETCHCONTENT=ON")
   endif()
@@ -124,14 +118,6 @@ if (NOT cpr_FOUND)
   endif()
   set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(cpr)
-  # Also apply to cpr target for consistency (ensures cpr headers see _GNU_SOURCE)
-  if(UNIX AND NOT APPLE)
-    if (TARGET cpr)
-      target_compile_definitions(cpr INTERFACE _GNU_SOURCE)
-    elseif (TARGET cpr::cpr)
-      target_compile_definitions(cpr::cpr INTERFACE _GNU_SOURCE)
-    endif()
-  endif()
   # Restore previous BUILD_SHARED_LIBS cache value to avoid leaking into other dependencies
   if (_HAD_BUILD_SHARED_LIBS)
     set(BUILD_SHARED_LIBS ${_SAVED_BUILD_SHARED_LIBS} CACHE BOOL "" FORCE)
@@ -277,7 +263,14 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated_include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 
+# Apply _GNU_SOURCE only to our target if needed (for POSIX extensions)
+# This is applied via target_compile_definitions instead of global flags
+if(UNIX AND NOT APPLE)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
+endif()
+
 # Build-time configuration is applied directly to the target (avoid exporting helpers)
+# Note: Hardening and warning flags are already applied via ${PROJECT_NAME}_compile_options
 if (MSVC)
   if (DEBUG_MODE)
     target_compile_options(${PROJECT_NAME} PRIVATE /Od /Z7)
@@ -290,9 +283,6 @@ if (MSVC)
   endif()
 else()
   # Visibility flags are disabled until an export header is introduced for shared builds
-  # Hardening
-  target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong)
-  target_link_options(${PROJECT_NAME} PRIVATE -Wl,-z,relro,-z,now)
   # Modes
   if (DEBUG_MODE)
     target_compile_options(${PROJECT_NAME} PRIVATE -O0 -g -fno-omit-frame-pointer)
@@ -356,41 +346,17 @@ include(GenerateExportHeader)
 generate_export_header(${PROJECT_NAME}
   EXPORT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMEngineExport.hpp")
 
-# Warnings configuration (build-time only)
-if (WARNING_MODE)
-  if (MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /permissive-)
-  else()
-    target_compile_options(${PROJECT_NAME} PRIVATE
-      -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wnon-virtual-dtor
-      -Wold-style-cast -Woverloaded-virtual -Wnull-dereference -Wformat=2 -Wimplicit-fallthrough)
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-      target_compile_options(${PROJECT_NAME} PRIVATE -Wduplicated-cond -Wlogical-op -Wuseless-cast)
-    endif()
-    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      target_compile_options(${PROJECT_NAME} PRIVATE -Wextra-semi -Wno-c99-extensions)
-    endif()
-  endif()
-endif()
+# Note: Warnings and hardening flags are already applied via ${PROJECT_NAME}_compile_options interface target
+# This avoids duplication and ensures a single source of truth for compile options
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 
 # ---- Install ------------------------------------------------------------------
 # Install library (handles both static and shared) and export targets
-# If dependencies were fetched via FetchContent, include them in the same export set
-# to satisfy CMake's export validation (required for PUBLIC dependencies)
-set(_targets_to_install ${PROJECT_NAME})
-if (NLOHMANN_JSON_NEEDS_EXPORT)
-  if (TARGET nlohmann_json)
-    list(APPEND _targets_to_install nlohmann_json)
-  elseif (TARGET nlohmann_json::nlohmann_json)
-    list(APPEND _targets_to_install nlohmann_json::nlohmann_json)
-  endif()
-endif()
-if (CPR_NEEDS_EXPORT AND TARGET cpr)
-  list(APPEND _targets_to_install cpr)
-endif()
-install(TARGETS ${_targets_to_install} ${PROJECT_NAME}_compile_options
+# Note: We do NOT export third-party dependencies (cpr, nlohmann_json) even when fetched via FetchContent.
+# Consumers should provide these dependencies themselves to avoid leaking build-system details
+# and potential conflicts with system-provided packages.
+install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_compile_options
   EXPORT ${PROJECT_NAME}Targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

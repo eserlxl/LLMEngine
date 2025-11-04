@@ -1,4 +1,4 @@
-#include "../src/LLMOutputProcessor.hpp"
+#include "LLMEngine/LLMOutputProcessor.hpp"
 #include <cassert>
 #include <iostream>
 

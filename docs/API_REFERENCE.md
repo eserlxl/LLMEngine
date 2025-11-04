@@ -26,12 +26,39 @@ xdg-open build/docs/html/index.html
 
 If the environment does not define a `docs` target, Doxygen can be run manually using the provided `docs/Doxyfile`.
 
-## Public Headers (reference points)
+## Public Headers
 
-- `src/LLMEngine.hpp` — Main entry point; constructors, analyze method, provider info, `AnalysisResult`
-- `src/APIClient.hpp` — Interface and concrete clients for providers
-- `src/LLMOutputProcessor.hpp` — Output parsing/normalization helpers
-- `src/Utils.hpp` — Utility helpers used across the library
+### Preferred Include Paths
+
+The library uses a namespaced include structure under `LLMEngine/`. **These are the recommended include paths:**
+
+```cpp
+#include "LLMEngine/LLMEngine.hpp"          // Main entry point
+#include "LLMEngine/APIClient.hpp"          // Provider interface and clients
+#include "LLMEngine/LLMOutputProcessor.hpp" // Output parsing helpers
+#include "LLMEngine/Utils.hpp"              // Utility functions
+#include "LLMEngine/DebugArtifacts.hpp"     // Debug artifact helpers
+```
+
+**Additional headers:**
+```cpp
+#include "LLMEngine/Logger.hpp"             // Logger interface
+#include "LLMEngine/RequestLogger.hpp"      // Request logging utilities
+```
+
+### Legacy Compatibility Headers
+
+The following compatibility headers are provided in the root `include/` directory for backward compatibility but are **deprecated** and may be removed in a future version:
+
+- `include/LLMEngine.hpp` → redirects to `LLMEngine/LLMEngine.hpp`
+- `include/APIClient.hpp` → redirects to `LLMEngine/APIClient.hpp`
+- `include/LLMOutputProcessor.hpp` → redirects to `LLMEngine/LLMOutputProcessor.hpp`
+- `include/Utils.hpp` → redirects to `LLMEngine/Utils.hpp`
+- `include/Logger.hpp` → redirects to `LLMEngine/Logger.hpp`
+- `include/RequestLogger.hpp` → redirects to `LLMEngine/RequestLogger.hpp`
+- `include/DebugArtifacts.hpp` → redirects to `LLMEngine/DebugArtifacts.hpp`
+
+**Migration:** New code should use the `LLMEngine/` prefixed paths. Existing code using the compatibility headers will continue to work, but migration to the preferred paths is recommended.
 
 For configuration details, see [docs/CONFIGURATION.md](CONFIGURATION.md) and `config/api_config.json`.
 

@@ -20,7 +20,7 @@
 #include <cstring>
 #include <mutex>
 #include <thread>
-#include "LLMOutputProcessor.hpp"
+#include "LLMEngine/LLMOutputProcessor.hpp"
 #include "Utils.hpp"
 #include <filesystem>
 #include <cstdlib>
@@ -48,15 +48,17 @@ namespace LLMEngineSystem {
     };
 
     // Free function instead of class with static method to avoid unnecessary allocation
+    // Use templates for callable parameters to avoid std::function heap allocations
+    template <typename CleanupFunc, typename EnsureSecureFunc, typename GetUniqueTmpDirFunc>
     AnalysisResult runAnalysis(Context& ctx,
                              std::string_view prompt,
                              const nlohmann::json& input,
                              std::string_view analysis_type,
                              std::string_view mode,
                              bool prepend_terse_instruction,
-                             const std::function<void()>& cleanupResponseFiles,
-                             const std::function<void()>& ensureSecureTmpDir,
-                             const std::function<std::string()>& getUniqueTmpDir) {
+                             CleanupFunc&& cleanupResponseFiles,
+                             EnsureSecureFunc&& ensureSecureTmpDir,
+                             GetUniqueTmpDirFunc&& getUniqueTmpDir) {
         cleanupResponseFiles();
 
         std::string full_prompt;
@@ -111,8 +113,11 @@ namespace LLMEngineSystem {
                 // Create unique directory for this request
                 std::error_code ec_dir;
                 std::filesystem::create_directories(request_tmp_dir, ec_dir);
-                DebugArtifacts::writeJson(request_tmp_dir + "/api_response.json", api_response.raw_response, /*redactSecrets*/true);
-                if (ctx.logger) ctx.logger->log(LogLevel::Debug, std::string("API response saved to ") + (request_tmp_dir + "/api_response.json"));
+                if (!DebugArtifacts::writeJson(request_tmp_dir + "/api_response.json", api_response.raw_response, /*redactSecrets*/true)) {
+                    if (ctx.logger) ctx.logger->log(LogLevel::Warn, "Failed to write debug artifact: " + request_tmp_dir + "/api_response.json");
+                } else {
+                    if (ctx.logger) ctx.logger->log(LogLevel::Debug, std::string("API response saved to ") + (request_tmp_dir + "/api_response.json"));
+                }
             }
 
             if (api_response.success) {
@@ -122,7 +127,9 @@ namespace LLMEngineSystem {
                 // Create unique directory for this request
                 std::error_code ec_dir;
                 std::filesystem::create_directories(request_tmp_dir, ec_dir);
-                DebugArtifacts::writeJson(request_tmp_dir + "/api_response_error.json", api_response.raw_response, /*redactSecrets*/true);
+                if (!DebugArtifacts::writeJson(request_tmp_dir + "/api_response_error.json", api_response.raw_response, /*redactSecrets*/true)) {
+                    if (ctx.logger) ctx.logger->log(LogLevel::Warn, "Failed to write debug artifact: " + request_tmp_dir + "/api_response_error.json");
+                }
                 if (ctx.logger) ctx.logger->log(LogLevel::Error, std::string("API error: ") + api_response.error_message);
                 if (ctx.logger) ctx.logger->log(LogLevel::Info, std::string("Error response saved to ") + (request_tmp_dir + "/api_response_error.json"));
                 return AnalysisResult{false, "", "", api_response.error_message, api_response.status_code};
@@ -136,8 +143,11 @@ namespace LLMEngineSystem {
             // Create unique directory for this request
             std::error_code ec_dir;
             std::filesystem::create_directories(request_tmp_dir, ec_dir);
-            DebugArtifacts::writeText(request_tmp_dir + "/response_full.txt", full_response, /*redactSecrets*/true);
-            if (ctx.logger) ctx.logger->log(LogLevel::Debug, std::string("Full response saved to ") + (request_tmp_dir + "/response_full.txt"));
+            if (!DebugArtifacts::writeText(request_tmp_dir + "/response_full.txt", full_response, /*redactSecrets*/true)) {
+                if (ctx.logger) ctx.logger->log(LogLevel::Warn, "Failed to write debug artifact: " + request_tmp_dir + "/response_full.txt");
+            } else {
+                if (ctx.logger) ctx.logger->log(LogLevel::Debug, std::string("Full response saved to ") + (request_tmp_dir + "/response_full.txt"));
+            }
             DebugArtifacts::cleanupOld(ctx.tmp_dir, ctx.log_retention_hours);
         }
 
@@ -178,10 +188,16 @@ namespace LLMEngineSystem {
             // Create unique directory for this request (if not already created)
             std::error_code ec_dir;
             std::filesystem::create_directories(request_tmp_dir, ec_dir);
-            DebugArtifacts::writeText(request_tmp_dir + "/" + safe_analysis_name + ".think.txt", think_section, /*redactSecrets*/true);
-            if (ctx.logger) ctx.logger->log(LogLevel::Debug, "Wrote think section");
-            DebugArtifacts::writeText(request_tmp_dir + "/" + safe_analysis_name + ".txt", remaining_section, /*redactSecrets*/true);
-            if (ctx.logger) ctx.logger->log(LogLevel::Debug, "Wrote remaining section");
+            if (!DebugArtifacts::writeText(request_tmp_dir + "/" + safe_analysis_name + ".think.txt", think_section, /*redactSecrets*/true)) {
+                if (ctx.logger) ctx.logger->log(LogLevel::Warn, "Failed to write debug artifact: " + request_tmp_dir + "/" + safe_analysis_name + ".think.txt");
+            } else {
+                if (ctx.logger) ctx.logger->log(LogLevel::Debug, "Wrote think section");
+            }
+            if (!DebugArtifacts::writeText(request_tmp_dir + "/" + safe_analysis_name + ".txt", remaining_section, /*redactSecrets*/true)) {
+                if (ctx.logger) ctx.logger->log(LogLevel::Warn, "Failed to write debug artifact: " + request_tmp_dir + "/" + safe_analysis_name + ".txt");
+            } else {
+                if (ctx.logger) ctx.logger->log(LogLevel::Debug, "Wrote remaining section");
+            }
         }
 
         return AnalysisResult{true, think_section, remaining_section, "", HTTP_STATUS_OK};
@@ -397,13 +413,29 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                   std::string_view mode,
                                   bool prepend_terse_instruction) const {
     // Create unique temp directory for this request to avoid conflicts in concurrent scenarios
+    // Use efficient string building instead of ostringstream for better performance
     const auto now = std::chrono::system_clock::now();
     const auto time_since_epoch = now.time_since_epoch();
     const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(time_since_epoch).count();
+    
+    // Hash thread ID to hex string for efficient formatting (avoids locale-sensitive formatting)
     const auto thread_id = std::this_thread::get_id();
-    std::ostringstream oss;
-    oss << tmp_dir_ << "/req_" << milliseconds << "_" << thread_id;
-    std::string request_tmp_dir = oss.str();
+    std::hash<std::thread::id> hasher;
+    const uint64_t thread_hash = static_cast<uint64_t>(hasher(thread_id));
+    
+    // Pre-allocate string with estimated size
+    std::string request_tmp_dir;
+    request_tmp_dir.reserve(tmp_dir_.size() + 32); // Reserve space for "/req_" + milliseconds + "_" + hex hash
+    request_tmp_dir = tmp_dir_;
+    request_tmp_dir += "/req_";
+    request_tmp_dir += std::to_string(milliseconds);
+    request_tmp_dir += "_";
+    
+    // Convert thread hash to hex string
+    constexpr const char* hex_digits = "0123456789abcdef";
+    for (int i = 60; i >= 0; i -= 4) {
+        request_tmp_dir += hex_digits[(thread_hash >> i) & 0xF];
+    }
     
     LLMEngineSystem::Context ctx{
         model_params_, 

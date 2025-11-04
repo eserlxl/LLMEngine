@@ -23,6 +23,8 @@
 #include <spawn.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#elif defined(_WIN32) || defined(_WIN64)
+#include <io.h>
 #endif
 
 namespace Utils {
@@ -39,13 +41,24 @@ namespace Utils {
     static const std::regex MARKDOWN_BOLD_REGEX(R"(\*\*)");
     static const std::regex MARKDOWN_HEADER_REGEX(R"(#+\s*)");
     
+    // Platform-specific close helper
+    namespace {
+        void close_fd(int fd) {
+#if defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
+            close(fd);
+#elif defined(_WIN32) || defined(_WIN64)
+            _close(fd);
+#endif
+        }
+    }
+
     // RAII wrapper for pipe file descriptors
     class PipeFD {
     public:
         explicit PipeFD(int fd) : fd_(fd) {}
         ~PipeFD() {
             if (fd_ >= 0) {
-                close(fd_);
+                close_fd(fd_);
             }
         }
         PipeFD(const PipeFD&) = delete;
@@ -55,7 +68,7 @@ namespace Utils {
         }
         PipeFD& operator=(PipeFD&& other) noexcept {
             if (this != &other) {
-                if (fd_ >= 0) close(fd_);
+                if (fd_ >= 0) close_fd(fd_);
                 fd_ = other.fd_;
                 other.fd_ = -1;
             }

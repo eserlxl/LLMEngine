@@ -15,6 +15,7 @@
 #include <chrono>
 #include <cstring>
 #include <random>
+#include <memory>
 #include "Backoff.hpp"
 #include "RequestLogger.hpp"
 
@@ -69,7 +70,11 @@ namespace {
     cpr::Response sendWithRetries(const RetrySettings& rs, RequestFunc&& doRequest) {
         cpr::Response resp;
         BackoffConfig bcfg{rs.base_delay_ms, rs.max_delay_ms};
-        std::mt19937_64 rng(rs.jitter_seed);
+        // Lazily construct RNG only when jitter is needed (jitter_seed != 0)
+        std::unique_ptr<std::mt19937_64> rng;
+        if (rs.jitter_seed != 0 && rs.exponential) {
+            rng = std::make_unique<std::mt19937_64>(rs.jitter_seed);
+        }
         for (int attempt = 1; attempt <= rs.max_attempts; ++attempt) {
             resp = doRequest();
             if (resp.status_code == HTTP_STATUS_OK && !resp.text.empty()) break;
@@ -77,7 +82,12 @@ namespace {
                 int delay = 0;
                 if (rs.exponential) {
                     const uint64_t cap = computeBackoffCapMs(bcfg, attempt);
-                    delay = jitterDelayMs(rng, cap);
+                    if (rng) {
+                        delay = jitterDelayMs(*rng, cap);
+                    } else {
+                        // No jitter when jitter_seed == 0, use deterministic delay
+                        delay = static_cast<int>(cap);
+                    }
                 } else {
                     delay = rs.base_delay_ms * attempt;
                 }
@@ -928,6 +938,8 @@ bool APIConfigManager::loadConfig(std::string_view config_path) {
         std::ifstream file(path);
         if (!file.is_open()) {
             std::cerr << "[ERROR] Could not open config file: " << path << std::endl;
+            config_loaded_ = false;
+            config_ = nlohmann::json{}; // Clear stale configuration
             return false;
         }
         
@@ -936,6 +948,8 @@ bool APIConfigManager::loadConfig(std::string_view config_path) {
         return true;
     } catch (const std::exception& e) {
         std::cerr << "[ERROR] Failed to load config: " << e.what() << std::endl;
+        config_loaded_ = false;
+        config_ = nlohmann::json{}; // Clear stale configuration
         return false;
     }
 }

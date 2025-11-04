@@ -159,6 +159,10 @@ endif()
 # ---- Link directories --------------------------------------------------------
 # Not needed with imported targets
 
+# ---- Dependencies ------------------------------------------------------------
+# Examples explicitly link to OpenSSL, so we need to find it
+find_package(OpenSSL REQUIRED)
+
 # ---- Executables -------------------------------------------------------------
 add_executable(chatbot chatbot.cpp)
 target_link_libraries(chatbot

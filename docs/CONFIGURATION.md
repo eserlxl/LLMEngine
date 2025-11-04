@@ -39,20 +39,40 @@ Environment overrides: when both config and environment variables are present, t
 
 ## Authentication
 
-Environment variables must be used for API keys. Keys must not be hardcoded in application code.
+### Required Environment Variables
 
+**API keys default to environment variables** for security. The library will automatically check for these environment variables before using any keys provided via constructor parameters or configuration files.
+
+**Required environment variables by provider:**
+
+| Provider | Environment Variable | Required |
+|----------|---------------------|----------|
+| Qwen (DashScope) | `QWEN_API_KEY` | Yes (for Qwen) |
+| OpenAI | `OPENAI_API_KEY` | Yes (for OpenAI) |
+| Anthropic | `ANTHROPIC_API_KEY` | Yes (for Anthropic) |
+| Gemini | `GEMINI_API_KEY` | Yes (for Gemini) |
+| Ollama | None | No (local only) |
+
+**Example setup:**
 ```bash
 export QWEN_API_KEY="sk-..."
 export OPENAI_API_KEY="sk-..."
 export ANTHROPIC_API_KEY="sk-..."
+export GEMINI_API_KEY="..."
 ```
 
-In code:
-```cpp
-const char* apiKey = std::getenv("QWEN_API_KEY");
-```
+**Security Best Practices:**
+- API keys must **never** be hardcoded in application code
+- Keys must **never** be committed to version control
+- Use environment variables or secret managers (e.g., Kubernetes secrets, AWS Secrets Manager) for production deployments
+- The library will log a warning if API keys are read from configuration files instead of environment variables
 
-If an expected key is missing, the environment variable must be set before initializing the engine.
+**Priority order for API keys:**
+1. Environment variables (highest priority, most secure)
+2. Constructor parameters (for testing/development only)
+3. Configuration file (not recommended, will log warnings)
+
+If an expected key is missing for a provider that requires authentication, the library will fail fast with a clear error message.
 
 ## Provider Endpoints (defaults)
 
@@ -184,16 +204,66 @@ Expanded example with multiple providers:
 
 ## Logging and Debugging
 
-Debug mode can be enabled to write response artifacts for troubleshooting purposes.
+### Logging Behavior
 
+The library uses a pluggable `Logger` interface for all diagnostic output. By default, a `DefaultLogger` is used that writes to `std::cerr`. Applications can provide a custom logger implementation to integrate with their logging infrastructure.
+
+**Setting a custom logger:**
 ```cpp
-LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, apiKey, "qwen-flash", {}, 24, true);
+#include "LLMEngine.hpp"
+#include "Logger.hpp"
+
+class MyLogger : public Logger {
+public:
+    void log(LogLevel level, const std::string& message) override {
+        // Integrate with your logging system
+        my_logging_system.log(level, message);
+    }
+};
+
+// Set custom logger
+auto logger = std::make_shared<MyLogger>();
+LLMEngine engine(...);
+engine.setLogger(logger);
 ```
 
-Artifacts:
-- `api_response.json`
-- `api_response_error.json`
-- `response_full.txt`
+**Log levels:**
+- `LogLevel::Debug`: Detailed diagnostic information (debug artifacts, request/response details)
+- `LogLevel::Info`: General informational messages
+- `LogLevel::Warn`: Warning messages (e.g., failed artifact writes, API key from config file)
+- `LogLevel::Error`: Error messages (e.g., API failures, configuration errors)
+
+**Environment variable for request logging:**
+Set `LLMENGINE_LOG_REQUESTS=1` to enable detailed HTTP request logging (useful for debugging network issues).
+
+### Debug Artifacts
+
+Debug mode can be enabled to write response artifacts for troubleshooting purposes. Artifacts are written to a unique temporary directory per request to avoid conflicts in concurrent scenarios.
+
+**Enabling debug mode:**
+```cpp
+LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, apiKey, "qwen-flash", {}, 24, true);
+//                                                                                        ^^^^
+//                                                                                    debug = true
+```
+
+**Artifact locations:**
+- Base directory: `/tmp/llmengine` (configurable via `Utils::TMP_DIR`)
+- Per-request directory: `/tmp/llmengine/req_<timestamp>_<thread_hash>`
+- Artifact files:
+  - `api_response.json`: Full API response (secrets redacted)
+  - `api_response_error.json`: Error response (secrets redacted)
+  - `response_full.txt`: Full response text (secrets redacted)
+  - `<analysis_type>.think.txt`: Extracted reasoning section
+  - `<analysis_type>.txt`: Remaining content after reasoning extraction
+
+**Artifact retention:**
+- Artifacts are automatically cleaned up after `log_retention_hours` (default: 24 hours)
+- Set `LLMENGINE_DISABLE_DEBUG_FILES=1` to disable debug file writing even when debug mode is enabled
+
+**Error handling:**
+- Failed artifact writes are logged as warnings but do not fail the request
+- Operators can check logs to identify when artifacts are missing (e.g., due to permissions)
 
 ## Security Notes
 

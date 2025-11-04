@@ -23,11 +23,10 @@ find_dependency(nlohmann_json REQUIRED)
 
 # Include the exported targets unless any of them already exist (build-tree usage)
 # The exported namespace is lowercase (e.g., llmengine::llmengine)
+# Note: Third-party dependencies (cpr, nlohmann_json) are not exported; consumers must provide them
 set(_llm_targets
   ${_llm_ns}::${_llm_ns}
   ${_llm_ns}::compile_options
-  ${_llm_ns}::cpr
-  ${_llm_ns}::nlohmann_json
   ${_llm_ns}::@PROJECT_NAME@_compile_options)
 
 set(_need_include TRUE)

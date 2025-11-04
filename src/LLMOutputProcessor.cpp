@@ -5,7 +5,7 @@
 // the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMOutputProcessor.hpp"
+#include "LLMEngine/LLMOutputProcessor.hpp"
 #include <regex>
 #include <sstream>
 #include <nlohmann/json.hpp>
