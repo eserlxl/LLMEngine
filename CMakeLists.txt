@@ -13,6 +13,19 @@ project(LLMEngine
   DESCRIPTION "A C++ library for interacting with Large Language Models"
   LANGUAGES CXX)
 
+# Ensure _GNU_SOURCE is defined globally for curl and other dependencies that need GNU extensions
+# This must be set early, before any dependencies are processed, so subprojects inherit it
+# _GNU_SOURCE is a feature test macro that enables GNU/Linux extensions and is safe to define on Linux
+if(UNIX AND NOT APPLE)
+  if (NOT CMAKE_C_FLAGS MATCHES "-D_GNU_SOURCE")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE" CACHE STRING "Flags used by the C compiler" FORCE)
+  endif()
+  # Also set CMAKE_C_FLAGS_INIT to ensure subprojects inherit this
+  if (NOT CMAKE_C_FLAGS_INIT MATCHES "-D_GNU_SOURCE")
+    set(CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT} -D_GNU_SOURCE")
+  endif()
+endif()
+
 # Default build type when not specified (for single-config generators and IDEs)
 if (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type")
@@ -111,8 +124,7 @@ if (NOT cpr_FOUND)
   endif()
   set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(cpr)
-  # Ensure _GNU_SOURCE is defined for curl's build (needed for memrchr and other GNU extensions)
-  # Apply only to cpr target, not globally
+  # Also apply to cpr target for consistency (ensures cpr headers see _GNU_SOURCE)
   if(UNIX AND NOT APPLE)
     if (TARGET cpr)
       target_compile_definitions(cpr INTERFACE _GNU_SOURCE)
