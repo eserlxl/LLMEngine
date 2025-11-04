@@ -171,6 +171,14 @@ void LLMEngine::initializeAPIClient() {
 void LLMEngine::ensureSecureTmpDir() const {
     std::error_code ec;
     std::filesystem::create_directories(tmp_dir_, ec);
+    // Security: avoid symlink traversal for tmp directory
+    std::error_code ec_symlink;
+    if (std::filesystem::is_symlink(tmp_dir_, ec_symlink)) {
+        if (logger_) {
+            logger_->log(LogLevel::Error, std::string("Temporary directory is a symlink: ") + tmp_dir_);
+        }
+        return;
+    }
     if (!ec && std::filesystem::exists(tmp_dir_)) {
         std::error_code ec_perm;
         std::filesystem::permissions(tmp_dir_, 
