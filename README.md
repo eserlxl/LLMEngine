@@ -34,7 +34,7 @@ It supports both local and cloud-based backends — **Ollama**, **Qwen (DashScop
 
 ---
 
-## 📖 Table of Contents
+## 📖 Contents
 
 - [Overview](#overview)
 - [Features](#features)
@@ -48,7 +48,7 @@ It supports both local and cloud-based backends — **Ollama**, **Qwen (DashScop
 - [Documentation](#documentation)
 - [License](#license)
 
-## 🧩 Overview
+## 🧩 Overview {#overview}
 
 LLMEngine abstracts away the differences between major LLM providers, offering a **unified C++ API** for text generation, reasoning, and analysis.  
 Its configuration-driven design allows rapid experimentation and reliable runtime switching between providers.
@@ -64,7 +64,7 @@ Its configuration-driven design allows rapid experimentation and reliable runtim
 
 ---
 
-## ⚙️ Features
+## ⚙️ Features {#features}
 
 ### Core
 
@@ -92,7 +92,7 @@ Its configuration-driven design allows rapid experimentation and reliable runtim
 
 ---
 
-## ⚡ Quick Start
+## ⚡ Quick Start {#quick-start}
 
 ### Prerequisites
 
@@ -134,7 +134,7 @@ bash examples/build_examples.sh
 
 ---
 
-## 🧱 Installation
+## 🧱 Installation {#installation}
 
 ### From Source
 
@@ -166,7 +166,7 @@ brew install cmake openssl nlohmann-json cpr
 
 ---
 
-## 🧰 Build Presets
+## 🧰 Build Presets {#build-presets}
 
 The repo includes a `CMakePresets.json` file with ready-to-use presets:
 
@@ -196,7 +196,7 @@ A consumer example using `find_package(LLMEngine)` exists in `examples/consumer`
 
 ---
 
-## 💻 Usage
+## 💻 Usage {#usage}
 
 ### Provider Initialization
 
@@ -230,7 +230,7 @@ LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-plus", param
 
 ---
 
-## 🧩 Configuration
+## 🧩 Configuration {#configuration}
 
 The default config file defines provider endpoints and defaults:
 
@@ -283,7 +283,7 @@ config_mgr.loadConfig("/another/path/config.json");  // Uses explicit path
 
 ---
 
-## 🔑 API Keys
+## 🔑 API Keys {#api-keys}
 
 ```bash
 export QWEN_API_KEY="sk-your-qwen-key"
@@ -296,7 +296,7 @@ export GEMINI_API_KEY="your-gemini-api-key"
 
 ---
 
-## 🧠 Running Analysis Requests
+## 🧠 Running Analysis Requests {#running-analysis-requests}
 
 The `analyze()` method is the primary interface for making LLM requests:
 
@@ -329,7 +329,7 @@ This option is useful when you need precise control over prompts for evaluation 
 
 ---
 
-## 📚 Documentation
+## 📚 Documentation {#documentation}
 
 | File | Description |
 |------|--------------|
@@ -349,7 +349,7 @@ This option is useful when you need precise control over prompts for evaluation 
 
 ---
 
-## 📜 License
+## 📜 License {#license}
 
 This project is licensed under the **GNU General Public License v3.0**.  
 See the [LICENSE](LICENSE) file for full details.
