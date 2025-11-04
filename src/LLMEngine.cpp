@@ -24,6 +24,7 @@
 #include <filesystem>
 #include <cstdlib>
 #include "DebugArtifacts.hpp"
+#include "LLMEngine/Result.hpp"
 
 // Constants
 namespace {
@@ -256,6 +257,9 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         }
         
         auto api_response = api_client_->sendRequest(full_prompt, input, api_params);
+        auto content_or_error = api_response.success
+          ? Result<std::string, std::string>::ok(api_response.content)
+          : Result<std::string, std::string>::err(api_response.error_message);
         
         if (write_debug_files) {
             ensureSecureTmpDir();
@@ -264,15 +268,15 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
             logger_->log(LogLevel::Debug, std::string("API response saved to ") + (tmp_dir_ + "/api_response.json"));
         }
         
-        if (api_response.success) {
-            full_response = api_response.content;
+        if (content_or_error) {
+            full_response = content_or_error.value();
         } else {
             ensureSecureTmpDir();
             
             DebugArtifacts::writeJson(tmp_dir_ + "/api_response_error.json", api_response.raw_response, /*redactSecrets*/true);
-            logger_->log(LogLevel::Error, std::string("API error: ") + api_response.error_message);
+            logger_->log(LogLevel::Error, std::string("API error: ") + content_or_error.error());
             logger_->log(LogLevel::Info, std::string("Error response saved to ") + (tmp_dir_ + "/api_response_error.json"));
-            return AnalysisResult{false, "", "", api_response.error_message, api_response.status_code};
+            return AnalysisResult{false, "", "", content_or_error.error(), api_response.status_code};
         }
     } else {
         return AnalysisResult{false, "", "", "API client not initialized", HTTP_STATUS_INTERNAL_SERVER_ERROR};
