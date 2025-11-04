@@ -7,6 +7,7 @@
 
 #include "LLMEngine/APIClient.hpp"
 #include "APIClientCommon.hpp"
+#include "ChatCompletionRequestHelper.hpp"
 #include "LLMEngine/Constants.hpp"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -27,119 +28,57 @@ QwenClient::QwenClient(const std::string& api_key, const std::string& model)
 APIResponse QwenClient::sendRequest(std::string_view prompt, 
                                     const nlohmann::json& input,
                                     const nlohmann::json& params) const {
-    APIResponse response;
-    response.success = false;
-    response.error_code = APIResponse::APIError::Unknown;
+    // Build messages array using shared helper
+    const nlohmann::json messages = ChatMessageBuilder::buildMessages(prompt, input);
     
-    try {
-        RetrySettings rs = computeRetrySettings(params, /*exponential_default*/true);
-        
-        // Merge default params with provided params using update() for efficiency
-        nlohmann::json request_params = default_params_;
-        request_params.update(params);
-        
-        // Prepare messages array
-        nlohmann::json messages = nlohmann::json::array();
-        
-        // Add system message if input contains system prompt
-        if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))) {
-            messages.push_back({
-                {"role", "system"},
-                {"content", input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)].get<std::string>()}
-            });
-        }
-        
-        // Add user message
-        messages.push_back({
-            {"role", "user"},
-            {"content", prompt}
-        });
-        
-        // Prepare request payload
-        nlohmann::json payload = {
-            {"model", model_},
-            {"messages", messages},
-            {"temperature", request_params["temperature"]},
-            {"max_tokens", request_params["max_tokens"]},
-            {"top_p", request_params["top_p"]},
-            {"frequency_penalty", request_params["frequency_penalty"]},
-            {"presence_penalty", request_params["presence_penalty"]}
-        };
-        
-        // Get timeout from params or use config default
-        int timeout_seconds = 0;
-        if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
-            timeout_seconds = params[std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)].get<int>();
-        } else {
-            timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
-        }
-        
-        const std::string url = base_url_ + "/chat/completions";
-        std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}, {"Authorization", "Bearer " + api_key_}};
-        maybeLogRequest("POST", url, hdr);
-        cpr::Response cpr_response = sendWithRetries(rs, [&](){
-            return cpr::Post(
-                cpr::Url{url},
-                cpr::Header{hdr.begin(), hdr.end()},
-                cpr::Body{payload.dump()},
-                cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
-            );
-        });
-        
-        response.status_code = static_cast<int>(cpr_response.status_code);
-        
-        if (cpr_response.status_code == HTTP_STATUS_OK) {
-            // Only parse JSON for successful responses
-            try {
-                response.raw_response = nlohmann::json::parse(cpr_response.text);
+    // Use shared request helper for common lifecycle (Qwen uses OpenAI-compatible format)
+    return ChatCompletionRequestHelper::execute(
+        default_params_,
+        params,
+        // Build payload
+        [&](const nlohmann::json& request_params) {
+            return nlohmann::json{
+                {"model", model_},
+                {"messages", messages},
+                {"temperature", request_params["temperature"]},
+                {"max_tokens", request_params["max_tokens"]},
+                {"top_p", request_params["top_p"]},
+                {"frequency_penalty", request_params["frequency_penalty"]},
+                {"presence_penalty", request_params["presence_penalty"]}
+            };
+        },
+        // Build URL
+        [&]() {
+            return base_url_ + "/chat/completions";
+        },
+        // Build headers
+        [&]() {
+            return std::map<std::string, std::string>{
+                {"Content-Type", "application/json"},
+                {"Authorization", "Bearer " + api_key_}
+            };
+        },
+        // Parse response (OpenAI-compatible format)
+        [](APIResponse& response, const std::string&) {
+            if (response.raw_response.contains("choices") && 
+                response.raw_response["choices"].is_array() && 
+                !response.raw_response["choices"].empty()) {
                 
-                if (response.raw_response.contains("choices") && 
-                    response.raw_response["choices"].is_array() && 
-                    !response.raw_response["choices"].empty()) {
-                    
-                    auto choice = response.raw_response["choices"][0];
-                    if (choice.contains("message") && choice["message"].contains("content")) {
-                        response.content = choice["message"]["content"].get<std::string>();
-                        response.success = true;
-                    } else {
-                        response.error_message = "No content in response";
-                        response.error_code = APIResponse::APIError::InvalidResponse;
-                    }
+                auto choice = response.raw_response["choices"][0];
+                if (choice.contains("message") && choice["message"].contains("content")) {
+                    response.content = choice["message"]["content"].get<std::string>();
+                    response.success = true;
                 } else {
-                    response.error_message = "Invalid response format";
+                    response.error_message = "No content in response";
                     response.error_code = APIResponse::APIError::InvalidResponse;
                 }
-            } catch (const nlohmann::json::parse_error& e) {
-                response.error_message = "JSON parse error in successful response: " + std::string(e.what());
+            } else {
+                response.error_message = "Invalid response format";
                 response.error_code = APIResponse::APIError::InvalidResponse;
             }
-        } else {
-            // For error responses, attempt to parse JSON but don't fail if it's not JSON
-            response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
-            if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
-                response.error_code = APIResponse::APIError::Auth;
-            } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
-                response.error_code = APIResponse::APIError::RateLimited;
-            } else {
-                response.error_code = APIResponse::APIError::Server;
-            }
-            
-            // Attempt to parse error response JSON if available
-            if (!cpr_response.text.empty()) {
-                try {
-                    response.raw_response = nlohmann::json::parse(cpr_response.text);
-                } catch (const nlohmann::json::parse_error&) {  // NOLINT(bugprone-empty-catch)
-                    // Non-JSON error response is acceptable
-                }
-            }
-        }
-        
-    } catch (const std::exception& e) {
-        response.error_message = "Exception: " + std::string(e.what());
-        response.error_code = APIResponse::APIError::Network;
-    }
-    
-    return response;
+        },
+        /*exponential_retry*/ true
+    );
 }
 
 } // namespace LLMEngineAPI
