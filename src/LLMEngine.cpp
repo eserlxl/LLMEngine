@@ -7,6 +7,7 @@
 
 #include "LLMEngine.hpp"
 #include "LLMEngine/ITempDirProvider.hpp"
+#include "LLMEngine/PromptBuilder.hpp"
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -62,15 +63,14 @@ namespace LLMEngineSystem {
                              GetUniqueTmpDirFunc&& getUniqueTmpDir) {
         cleanupResponseFiles();
 
+        // Build prompt using strategy pattern
         std::string full_prompt;
         if (prepend_terse_instruction) {
-            std::string system_instruction =
-                "Please respond directly to the previous message, engaging with its content. "
-                "Try to be brief and concise and complete your response in one or two sentences, "
-                "mostly one sentence.\n";
-            full_prompt = system_instruction + std::string(prompt);
+            ::LLMEngine::TersePromptBuilder builder;
+            full_prompt = builder.buildPrompt(prompt);
         } else {
-            full_prompt = std::string(prompt);
+            ::LLMEngine::PassthroughPromptBuilder builder;
+            full_prompt = builder.buildPrompt(prompt);
         }
 
         std::string full_response;
