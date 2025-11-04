@@ -1,6 +1,27 @@
 # Build Guide
 
-This document provides comprehensive information about building LLMEngine, including CMake presets and build options.
+This document provides comprehensive information about building LLMEngine, including dependencies, CMake presets, and build options.
+
+## 📦 Install Dependencies
+
+Before building, install the required dependencies for your platform:
+
+**Ubuntu/Debian**
+```bash
+sudo apt install build-essential cmake libssl-dev nlohmann-json3-dev libcpr-dev
+```
+
+**Arch Linux**
+```bash
+sudo pacman -S base-devel cmake openssl nlohmann-json cpr
+```
+
+**macOS (Homebrew)**
+```bash
+brew install cmake openssl nlohmann-json cpr
+```
+
+---
 
 ## 🧰 Build Presets
 
@@ -143,6 +164,29 @@ Use presets with:
 cmake --preset debug
 cmake --build build
 ```
+
+---
+
+## 🧪 Build and Test
+
+Build the project using CMake:
+
+```bash
+cmake -S . -B build
+cmake --build build --config Release -j$(nproc)
+ctest --test-dir build --output-on-failure
+```
+
+### Run Examples
+
+Build and run example programs:
+
+```bash
+bash examples/build_examples.sh
+./examples/build_examples/chatbot
+```
+
+---
 
 For more details on build options and their interactions, see [CMakeLists.txt](../CMakeLists.txt) and [docs/CI_CD_GUIDE.md](CI_CD_GUIDE.md).
 

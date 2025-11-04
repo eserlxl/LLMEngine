@@ -119,21 +119,6 @@ int main() {
 }
 ```
 
-### Build and Test
-
-```bash
-cmake -S . -B build
-cmake --build build --config Release -j$(nproc)
-ctest --test-dir build --output-on-failure
-```
-
-Example execution:
-
-```bash
-bash examples/build_examples.sh
-./examples/build_examples/chatbot
-```
-
 [↑ Back to top](#llmengine)
 
 ---
@@ -141,9 +126,7 @@ bash examples/build_examples.sh
 <a id="installation"></a>
 ## 🧱 Installation
 
-### From Source
-
-Clone repository and use the provided `build.sh` script:
+Clone the repository and build:
 
 ```bash
 git clone https://github.com/eserlxl/LLMEngine
@@ -151,24 +134,7 @@ cd LLMEngine
 ./build.sh
 ```
 
-For detailed information about the `build.sh` script options, see [docs/BUILD.md](docs/BUILD.md).
-
-### Install Dependencies
-
-**Ubuntu/Debian**
-```bash
-sudo apt install build-essential cmake libssl-dev nlohmann-json3-dev libcpr-dev
-```
-
-**Arch Linux**
-```bash
-sudo pacman -S base-devel cmake openssl nlohmann-json cpr
-```
-
-**macOS (Homebrew)**
-```bash
-brew install cmake openssl nlohmann-json cpr
-```
+For detailed build instructions, dependencies, and build options, see [docs/BUILD.md](docs/BUILD.md).
 
 [↑ Back to top](#llmengine)
 
