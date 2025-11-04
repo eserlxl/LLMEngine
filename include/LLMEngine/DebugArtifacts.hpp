@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 #include <nlohmann/json.hpp>
-#include "LLMEngineExport.hpp"
+#include "LLMEngine/LLMEngineExport.hpp"
 
 class LLMENGINE_EXPORT DebugArtifacts {
 public:

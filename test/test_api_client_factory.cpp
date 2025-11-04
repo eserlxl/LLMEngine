@@ -5,7 +5,7 @@
 // licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "APIClient.hpp"
+#include "LLMEngine/APIClient.hpp"
 #include <cassert>
 #include <iostream>
 

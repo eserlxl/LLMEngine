@@ -10,7 +10,7 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 #include "LLMEngine.hpp"
-#include "APIClient.hpp"
+#include "LLMEngine/APIClient.hpp"
 #include "LLMOutputProcessor.hpp"
 #include "Utils.hpp"
 

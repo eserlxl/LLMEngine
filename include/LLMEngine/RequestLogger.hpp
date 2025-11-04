@@ -10,7 +10,7 @@
 #include <string_view>
 #include <map>
 #include <vector>
-#include "LLMEngineExport.hpp"
+#include "LLMEngine/LLMEngineExport.hpp"
 
 /**
  * @brief Centralized request logging utility with automatic redaction of sensitive data.

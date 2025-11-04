@@ -24,16 +24,149 @@
 #include <filesystem>
 #include <cstdlib>
 #include "DebugArtifacts.hpp"
-#include "LLMEngine/Result.hpp"
 
-// Constants
-namespace {
-    constexpr int HTTP_STATUS_OK = 200;
-    constexpr int HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
-    constexpr size_t REDACTED_REASONING_TAG_LENGTH = 20;  // "<think>" length
-    constexpr size_t REDACTED_REASONING_CLOSE_TAG_LENGTH = 21;  // "</think>" length
-    constexpr size_t MAX_FILENAME_LENGTH = 64;
+// Internal subwrapper namespace and Core orchestrator
+namespace LLMEngineSystem {
+    // Constants used by Core orchestration
+    namespace {
+        constexpr int HTTP_STATUS_OK = 200;
+        constexpr int HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
+        constexpr size_t REDACTED_REASONING_TAG_LENGTH = 20;  // "<think>" length
+        constexpr size_t REDACTED_REASONING_CLOSE_TAG_LENGTH = 21;  // "</think>" length
+        constexpr size_t MAX_FILENAME_LENGTH = 64;
+    }
+    struct Context {
+        const nlohmann::json& model_params;
+        int log_retention_hours;
+        bool debug;
+        std::string& tmp_dir;
+        std::unique_ptr<::LLMEngineAPI::APIClient>& api_client;
+        ::LLMEngineAPI::ProviderType& provider_type;
+        std::shared_ptr<Logger>& logger;
+        std::string& model;
+    };
+
+    class Core {
+    public:
+        AnalysisResult run(Context& ctx,
+                           std::string_view prompt,
+                           const nlohmann::json& input,
+                           std::string_view analysis_type,
+                           std::string_view mode,
+                           bool prepend_terse_instruction,
+                           std::function<void()> cleanupResponseFiles,
+                           std::function<void()> ensureSecureTmpDir) const;
+    };
+
+    AnalysisResult Core::run(Context& ctx,
+                             std::string_view prompt,
+                             const nlohmann::json& input,
+                             std::string_view analysis_type,
+                             std::string_view mode,
+                             bool prepend_terse_instruction,
+                             std::function<void()> cleanupResponseFiles,
+                             std::function<void()> ensureSecureTmpDir) const {
+        cleanupResponseFiles();
+
+        std::string full_prompt;
+        if (prepend_terse_instruction) {
+            std::string system_instruction =
+                "Please respond directly to the previous message, engaging with its content. "
+                "Try to be brief and concise and complete your response in one or two sentences, "
+                "mostly one sentence.\n";
+            full_prompt = system_instruction + std::string(prompt);
+        } else {
+            full_prompt = std::string(prompt);
+        }
+
+        std::string full_response;
+        const bool write_debug_files = ctx.debug && (std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") == nullptr);
+
+        if (ctx.api_client) {
+            nlohmann::json api_params = ctx.model_params;
+            if (input.contains("max_tokens") && input["max_tokens"].is_number_integer()) {
+                int max_tokens = input["max_tokens"].get<int>();
+                if (max_tokens > 0) {
+                    api_params["max_tokens"] = max_tokens;
+                }
+            }
+            if (!std::string(mode).empty()) {
+                api_params["mode"] = std::string(mode);
+            }
+
+            auto api_response = ctx.api_client->sendRequest(full_prompt, input, api_params);
+
+            if (write_debug_files) {
+                ensureSecureTmpDir();
+                DebugArtifacts::writeJson(ctx.tmp_dir + "/api_response.json", api_response.raw_response, /*redactSecrets*/true);
+                if (ctx.logger) ctx.logger->log(LogLevel::Debug, std::string("API response saved to ") + (ctx.tmp_dir + "/api_response.json"));
+            }
+
+            if (api_response.success) {
+                full_response = api_response.content;
+            } else {
+                ensureSecureTmpDir();
+                DebugArtifacts::writeJson(ctx.tmp_dir + "/api_response_error.json", api_response.raw_response, /*redactSecrets*/true);
+                if (ctx.logger) ctx.logger->log(LogLevel::Error, std::string("API error: ") + api_response.error_message);
+                if (ctx.logger) ctx.logger->log(LogLevel::Info, std::string("Error response saved to ") + (ctx.tmp_dir + "/api_response_error.json"));
+                return AnalysisResult{false, "", "", api_response.error_message, api_response.status_code};
+            }
+        } else {
+            return AnalysisResult{false, "", "", "API client not initialized", HTTP_STATUS_INTERNAL_SERVER_ERROR};
+        }
+
+        if (write_debug_files) {
+            ensureSecureTmpDir();
+            DebugArtifacts::writeText(ctx.tmp_dir + "/response_full.txt", full_response, /*redactSecrets*/true);
+            if (ctx.logger) ctx.logger->log(LogLevel::Debug, std::string("Full response saved to ") + (ctx.tmp_dir + "/response_full.txt"));
+            DebugArtifacts::cleanupOld(ctx.tmp_dir, ctx.log_retention_hours);
+        }
+
+        auto trim_copy = [](const std::string& s) -> std::string {
+            const char* ws = " \t\n\r";
+            std::string::size_type start = s.find_first_not_of(ws);
+            if (start == std::string::npos) return {};
+            std::string::size_type end = s.find_last_not_of(ws);
+            return s.substr(start, end - start + 1);
+        };
+
+        std::string think_section;
+        std::string remaining_section = full_response;
+        std::string::size_type open = full_response.find("<redacted_reasoning>");
+        std::string::size_type close = full_response.find("</redacted_reasoning>");
+        if (open != std::string::npos && close != std::string::npos && close > open) {
+            think_section = full_response.substr(open + REDACTED_REASONING_TAG_LENGTH, close - (open + REDACTED_REASONING_TAG_LENGTH));
+            std::string before = full_response.substr(0, open);
+            std::string after  = full_response.substr(close + REDACTED_REASONING_CLOSE_TAG_LENGTH);
+            remaining_section = before + after;
+        }
+        think_section     = trim_copy(think_section);
+        remaining_section = trim_copy(remaining_section);
+
+        auto sanitize_name = [](std::string name) {
+            if (name.empty()) name = "analysis";
+            for (char& ch : name) {
+                if (!(std::isalnum(static_cast<unsigned char>(ch)) || ch == '-' || ch == '_' || ch == '.')) {
+                    ch = '_';
+                }
+            }
+            if (name.size() > MAX_FILENAME_LENGTH) name.resize(MAX_FILENAME_LENGTH);
+            return name;
+        };
+        const std::string safe_analysis_name = sanitize_name(std::string(analysis_type));
+        if (write_debug_files) {
+            ensureSecureTmpDir();
+            DebugArtifacts::writeText(ctx.tmp_dir + "/" + safe_analysis_name + ".think.txt", think_section, /*redactSecrets*/true);
+            if (ctx.logger) ctx.logger->log(LogLevel::Debug, "Wrote think section");
+            DebugArtifacts::writeText(ctx.tmp_dir + "/" + safe_analysis_name + ".txt", remaining_section, /*redactSecrets*/true);
+            if (ctx.logger) ctx.logger->log(LogLevel::Debug, "Wrote remaining section");
+        }
+
+        return AnalysisResult{true, think_section, remaining_section, "", HTTP_STATUS_OK};
+    }
 }
+
+// (constants are defined within LLMEngineSystem above)
 
 // Dependency injection constructor
 LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
@@ -50,6 +183,7 @@ LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
         throw std::runtime_error("API client must not be null");
     }
     provider_type_ = api_client_->getProviderType();
+    core_ = std::make_unique<LLMEngineSystem::Core>();
 }
 
 // New constructor for API-based providers
@@ -68,6 +202,7 @@ LLMEngine::LLMEngine(::LLMEngineAPI::ProviderType provider_type,
       api_key_(std::string(api_key)) {
     logger_ = std::make_shared<DefaultLogger>();
     initializeAPIClient();
+    core_ = std::make_unique<LLMEngineSystem::Core>();
 }
 
 // Constructor using config file
@@ -150,6 +285,7 @@ LLMEngine::LLMEngine(std::string_view provider_name,
     }
     
     initializeAPIClient();
+    core_ = std::make_unique<LLMEngineSystem::Core>();
 }
 
 void LLMEngine::initializeAPIClient() {
@@ -191,29 +327,30 @@ void LLMEngine::ensureSecureTmpDir() const {
 }
 
 void LLMEngine::cleanupResponseFiles() const {
-    std::vector<std::string> files_to_clean = {
-        "/ollama_response.json",
-        "/ollama_response_full.txt",
-        "/ollama_response_error.json",
-        "/api_response.json",
-        "/api_response_error.json",
-        "/response_full.txt"
+    std::vector<std::string> basenames_to_clean = {
+        "ollama_response.json",
+        "ollama_response_full.txt",
+        "ollama_response_error.json",
+        "api_response.json",
+        "api_response_error.json",
+        "response_full.txt"
     };
 
     ensureSecureTmpDir();
 
     int cleaned_count = 0;
-    for (const auto& suffix : files_to_clean) {
-        const std::string path = tmp_dir_ + suffix;
+    const std::filesystem::path base_dir = std::filesystem::path(tmp_dir_);
+    for (const auto& basename : basenames_to_clean) {
+        const std::filesystem::path candidate = base_dir / basename;
         std::error_code ec;
-        if (std::filesystem::exists(path, ec) && std::filesystem::is_regular_file(path, ec)) {
-            if (std::filesystem::remove(path, ec)) {
+        if (std::filesystem::exists(candidate, ec) && std::filesystem::is_regular_file(candidate, ec)) {
+            if (std::filesystem::remove(candidate, ec)) {
                 cleaned_count++;
                 if (debug_ && logger_) {
-                    logger_->log(LogLevel::Debug, std::string("Cleaned up existing file: ") + path);
+                    logger_->log(LogLevel::Debug, std::string("Cleaned up existing file: ") + candidate.string());
                 }
             } else if (ec && logger_) {
-                logger_->log(LogLevel::Warn, std::string("Failed to remove ") + path + ": " + ec.message());
+                logger_->log(LogLevel::Warn, std::string("Failed to remove ") + candidate.string() + ": " + ec.message());
             }
         }
     }
@@ -229,124 +366,10 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                   std::string_view analysis_type, 
                                   std::string_view mode,
                                   bool prepend_terse_instruction) const {
-    // Clean up existing response files
-    cleanupResponseFiles();
-    
-    // Optionally prepend short-answer instruction
-    std::string full_prompt;
-    if (prepend_terse_instruction) {
-        std::string system_instruction = 
-            "Please respond directly to the previous message, engaging with its content. "
-            "Try to be brief and concise and complete your response in one or two sentences, "
-            "mostly one sentence.\n";
-        full_prompt = system_instruction + std::string(prompt);
-    } else {
-        full_prompt = std::string(prompt);
-    }
-    
-    std::string full_response;
-    
-    const bool write_debug_files = debug_ && (std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") == nullptr);
-
-    if (api_client_) {
-        // Use API client
-        nlohmann::json api_params = model_params_;
-        
-        // Get max_tokens from input payload if provided
-        if (input.contains("max_tokens") && input["max_tokens"].is_number_integer()) {
-            int max_tokens = input["max_tokens"].get<int>();
-            if (max_tokens > 0) {
-                api_params["max_tokens"] = max_tokens;
-            }
-        }
-        
-    if (!std::string(mode).empty()) {
-            api_params["mode"] = std::string(mode);
-        }
-        
-        auto api_response = api_client_->sendRequest(full_prompt, input, api_params);
-        auto content_or_error = api_response.success
-          ? Result<std::string, std::string>::ok(api_response.content)
-          : Result<std::string, std::string>::err(api_response.error_message);
-        
-        if (write_debug_files) {
-            ensureSecureTmpDir();
-            
-            DebugArtifacts::writeJson(tmp_dir_ + "/api_response.json", api_response.raw_response, /*redactSecrets*/true);
-            logger_->log(LogLevel::Debug, std::string("API response saved to ") + (tmp_dir_ + "/api_response.json"));
-        }
-        
-        if (content_or_error) {
-            full_response = content_or_error.value();
-        } else {
-            ensureSecureTmpDir();
-            
-            DebugArtifacts::writeJson(tmp_dir_ + "/api_response_error.json", api_response.raw_response, /*redactSecrets*/true);
-            logger_->log(LogLevel::Error, std::string("API error: ") + content_or_error.error());
-            logger_->log(LogLevel::Info, std::string("Error response saved to ") + (tmp_dir_ + "/api_response_error.json"));
-            return AnalysisResult{false, "", "", content_or_error.error(), api_response.status_code};
-        }
-    } else {
-        return AnalysisResult{false, "", "", "API client not initialized", HTTP_STATUS_INTERNAL_SERVER_ERROR};
-    }
-    
-    if (write_debug_files) {
-        ensureSecureTmpDir();
-        
-        DebugArtifacts::writeText(tmp_dir_ + "/response_full.txt", full_response, /*redactSecrets*/true);
-        logger_->log(LogLevel::Debug, std::string("Full response saved to ") + (tmp_dir_ + "/response_full.txt"));
-        
-        // Clean up old debug files based on retention policy
-        DebugArtifacts::cleanupOld(tmp_dir_, log_retention_hours_);
-    }
-    
-    // Extract THINK section
-    auto trim_copy = [](const std::string& s) -> std::string {
-        const char* ws = " \t\n\r";
-        std::string::size_type start = s.find_first_not_of(ws);
-        if (start == std::string::npos) return {};
-        std::string::size_type end = s.find_last_not_of(ws);
-        return s.substr(start, end - start + 1);
-    };
-    
-    std::string think_section;
-    std::string remaining_section = full_response;
-    
-    std::string::size_type open = full_response.find("<redacted_reasoning>");
-    std::string::size_type close = full_response.find("</redacted_reasoning>");
-    
-    if (open != std::string::npos && close != std::string::npos && close > open) {
-        think_section = full_response.substr(open + REDACTED_REASONING_TAG_LENGTH, close - (open + REDACTED_REASONING_TAG_LENGTH));
-        std::string before = full_response.substr(0, open);
-        std::string after  = full_response.substr(close + REDACTED_REASONING_CLOSE_TAG_LENGTH);
-        remaining_section = before + after;
-    }
-    
-    think_section     = trim_copy(think_section);
-    remaining_section = trim_copy(remaining_section);
-    
-    
-    // Write files
-    auto sanitize_name = [](std::string name) {
-        if (name.empty()) name = "analysis";
-        // Replace path separators and whitespace with underscore; keep simple ascii
-        for (char& ch : name) {
-            if (!(std::isalnum(static_cast<unsigned char>(ch)) || ch == '-' || ch == '_' || ch == '.')) {
-                ch = '_';
-            }
-        }
-        // Trim excessive length
-        if (name.size() > MAX_FILENAME_LENGTH) name.resize(MAX_FILENAME_LENGTH);
-        return name;
-    };
-    const std::string safe_analysis_name = sanitize_name(std::string(analysis_type));
-    DebugArtifacts::writeText(tmp_dir_ + "/" + safe_analysis_name + ".think.txt", think_section, /*redactSecrets*/true);
-    if (debug_) logger_->log(LogLevel::Debug, "Wrote think section");
-    
-    DebugArtifacts::writeText(tmp_dir_ + "/" + safe_analysis_name + ".txt", remaining_section, /*redactSecrets*/true);
-    if (debug_) logger_->log(LogLevel::Debug, "Wrote remaining section");
-    
-    return AnalysisResult{true, think_section, remaining_section, "", HTTP_STATUS_OK};
+    LLMEngineSystem::Context ctx{model_params_, log_retention_hours_, debug_, const_cast<std::string&>(tmp_dir_), const_cast<std::unique_ptr<::LLMEngineAPI::APIClient>&>(api_client_), const_cast<::LLMEngineAPI::ProviderType&>(provider_type_), const_cast<std::shared_ptr<Logger>&>(logger_), const_cast<std::string&>(model_)};
+    return core_->run(ctx, prompt, input, analysis_type, mode, prepend_terse_instruction,
+                      [this]{ this->cleanupResponseFiles(); },
+                      [this]{ this->ensureSecureTmpDir(); });
 }
 
 std::string LLMEngine::getProviderName() const {
@@ -375,7 +398,27 @@ void LLMEngine::setLogger(std::shared_ptr<Logger> logger) {
 }
 
 void LLMEngine::setTempDirectory(const std::string& tmp_dir) {
-    tmp_dir_ = tmp_dir;
+    // Only accept directories within the default root to avoid accidental deletion elsewhere
+    try {
+        const std::filesystem::path default_root = std::filesystem::path(Utils::TMP_DIR).lexically_normal();
+        const std::filesystem::path requested    = std::filesystem::path(tmp_dir).lexically_normal();
+        // Check prefix match: requested path must begin with default_root components
+        auto it_def = default_root.begin();
+        auto it_req = requested.begin();
+        bool is_within = true;
+        for (; it_def != default_root.end(); ++it_def, ++it_req) {
+            if (it_req == requested.end() || *it_def != *it_req) { is_within = false; break; }
+        }
+        if (is_within) {
+            tmp_dir_ = requested.string();
+        } else if (logger_) {
+            logger_->log(LogLevel::Warn, std::string("Rejected temp directory outside allowed root: ") + requested.string());
+        }
+    } catch (...) {
+        if (logger_) {
+            logger_->log(LogLevel::Error, std::string("Failed to set temp directory due to path error: ") + tmp_dir);
+        }
+    }
 }
 
 std::string LLMEngine::getTempDirectory() const {

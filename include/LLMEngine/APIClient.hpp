@@ -15,7 +15,7 @@
 #include <shared_mutex>
 
 // Ensure export macros are available
-#include "LLMEngineExport.hpp"
+#include "LLMEngine/LLMEngineExport.hpp"
 
 namespace LLMEngineAPI {
 

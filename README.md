@@ -46,8 +46,8 @@ LLMEngine abstracts away provider-specific details and exposes a consistent API 
 
 - **Project**: LLMEngine 0.1.0
 - **Language/Std**: C++20
-- **Build System**: CMake 3.16+
-- **Platforms**: Linux, macOS, Windows
+- **Build System**: CMake 3.20+
+- **Platforms**: Linux, macOS
 
 [↑ Back to top](#llmengine)
 
@@ -76,7 +76,7 @@ LLMEngine abstracts away provider-specific details and exposes a consistent API 
 
 ### Prerequisites
 - C++20-compatible compiler
-- CMake 3.16+
+- CMake 3.20+
 - Dependencies: OpenSSL, nlohmann_json, cpr
 
 ### Minimal Example (Qwen)

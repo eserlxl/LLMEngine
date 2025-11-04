@@ -184,13 +184,24 @@ namespace Utils {
 
         // Set up file actions for posix_spawn
         posix_spawn_file_actions_t file_actions;
-        posix_spawn_file_actions_init(&file_actions);
-        posix_spawn_file_actions_addclose(&file_actions, stdout_read.get());
-        posix_spawn_file_actions_addclose(&file_actions, stderr_read.get());
-        posix_spawn_file_actions_adddup2(&file_actions, stdout_write.get(), STDOUT_FILENO);
-        posix_spawn_file_actions_adddup2(&file_actions, stderr_write.get(), STDERR_FILENO);
-        posix_spawn_file_actions_addclose(&file_actions, stdout_write.get());
-        posix_spawn_file_actions_addclose(&file_actions, stderr_write.get());
+        if (posix_spawn_file_actions_init(&file_actions) != 0) {
+            std::cerr << "[ERROR] execCommand: posix_spawn_file_actions_init failed" << std::endl;
+            return output;
+        }
+        auto add_action = [&](int rc, const char* what) -> bool {
+            if (rc != 0) {
+                std::cerr << "[ERROR] execCommand: " << what << " failed (" << rc << ")" << std::endl;
+                posix_spawn_file_actions_destroy(&file_actions);
+                return false;
+            }
+            return true;
+        };
+        if (!add_action(posix_spawn_file_actions_addclose(&file_actions, stdout_read.get()), "addclose stdout_read")) return output;
+        if (!add_action(posix_spawn_file_actions_addclose(&file_actions, stderr_read.get()), "addclose stderr_read")) return output;
+        if (!add_action(posix_spawn_file_actions_adddup2(&file_actions, stdout_write.get(), STDOUT_FILENO), "adddup2 stdout")) return output;
+        if (!add_action(posix_spawn_file_actions_adddup2(&file_actions, stderr_write.get(), STDERR_FILENO), "adddup2 stderr")) return output;
+        if (!add_action(posix_spawn_file_actions_addclose(&file_actions, stdout_write.get()), "addclose stdout_write")) return output;
+        if (!add_action(posix_spawn_file_actions_addclose(&file_actions, stderr_write.get()), "addclose stderr_write")) return output;
 
         // Spawn the process
         pid_t pid;

@@ -13,7 +13,7 @@
 #include <vector>
 #include <unordered_map>
 #include <nlohmann/json.hpp>
-#include "LLMEngineExport.hpp"
+#include "LLMEngine/LLMEngineExport.hpp"
 
 /**
  * @brief Parses and queries structured LLM outputs.

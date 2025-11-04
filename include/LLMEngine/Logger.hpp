@@ -5,7 +5,7 @@
 #include <memory>
 #include <string_view>
 #include <iostream>
-#include "LLMEngineExport.hpp"
+#include "LLMEngine/LLMEngineExport.hpp"
 
 enum class LogLevel { Debug, Info, Warn, Error };
 

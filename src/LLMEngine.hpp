@@ -11,8 +11,10 @@
 #include <nlohmann/json.hpp>
 #include <vector>
 #include <memory>
-#include "APIClient.hpp"
+#include "LLMEngine/APIClient.hpp"
 #include "Logger.hpp"
+
+namespace LLMEngineSystem { class Core; }
 
 struct AnalysisResult {
     bool success;
@@ -113,4 +115,5 @@ private:
     std::string api_key_;
     std::string ollama_url_;  // Only used when provider_type is OLLAMA
     std::shared_ptr<Logger> logger_;
+    std::unique_ptr<LLMEngineSystem::Core> core_;
 };

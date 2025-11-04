@@ -40,12 +40,7 @@ if (NOT DEFINED ENABLE_CLANG_TIDY)
   option(ENABLE_CLANG_TIDY          "Run clang-tidy if available"                     OFF)
 endif()
 
-# Put built binaries under <build>/bin (and per-config subdirs)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-foreach(cfg IN ITEMS Debug Release RelWithDebInfo MinSizeRel)
-  string(TOUPPER "${cfg}" CFG_UP)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CFG_UP} "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${cfg}")
-endforeach()
+# Use default generator directories; avoid overriding global runtime output dir
 
 # ---- Dependencies ------------------------------------------------------------
 # Prefer consuming the build-tree package export if the root was built
