@@ -157,37 +157,18 @@ namespace LLMEngineSystem {
         std::string::size_type open = full_response.find("<redacted_reasoning>");
         std::string::size_type close = full_response.find("</redacted_reasoning>");
         if (open != std::string::npos && close != std::string::npos && close > open) {
-            think_section = full_response.substr(open + REDACTED_REASONING_TAG_LENGTH, close - (open + REDACTED_REASONING_TAG_LENGTH));
+            const std::string tag_open = std::string(::LLMEngine::Constants::DebugArtifacts::REDACTED_REASONING_TAG_OPEN);
+            const std::string tag_close = std::string(::LLMEngine::Constants::DebugArtifacts::REDACTED_REASONING_TAG_CLOSE);
+            think_section = full_response.substr(open + tag_open.length(), close - (open + tag_open.length()));
             std::string before = full_response.substr(0, open);
-            std::string after  = full_response.substr(close + REDACTED_REASONING_CLOSE_TAG_LENGTH);
+            std::string after  = full_response.substr(close + tag_close.length());
             remaining_section = before + after;
         }
         think_section     = trim_copy(think_section);
         remaining_section = trim_copy(remaining_section);
 
-        auto sanitize_name = [](std::string name) {
-            if (name.empty()) name = "analysis";
-            for (char& ch : name) {
-                if (!(std::isalnum(static_cast<unsigned char>(ch)) || ch == '-' || ch == '_' || ch == '.')) {
-                    ch = '_';
-                }
-            }
-            if (name.size() > MAX_FILENAME_LENGTH) name.resize(MAX_FILENAME_LENGTH);
-            return name;
-        };
-        const std::string safe_analysis_name = sanitize_name(std::string(analysis_type));
-        if (write_debug_files) {
-            // Directory already created above
-            if (!DebugArtifacts::writeText(request_tmp_dir + "/" + safe_analysis_name + ".think.txt", think_section, /*redactSecrets*/true)) {
-                if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Warn, "Failed to write debug artifact: " + request_tmp_dir + "/" + safe_analysis_name + ".think.txt");
-            } else {
-                if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Debug, "Wrote think section");
-            }
-            if (!DebugArtifacts::writeText(request_tmp_dir + "/" + safe_analysis_name + ".txt", remaining_section, /*redactSecrets*/true)) {
-                if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Warn, "Failed to write debug artifact: " + request_tmp_dir + "/" + safe_analysis_name + ".txt");
-            } else {
-                if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Debug, "Wrote remaining section");
-            }
+        if (write_debug_files && debug_mgr) {
+            debug_mgr->writeAnalysisArtifacts(analysis_type, think_section, remaining_section);
         }
 
         return ::LLMEngine::AnalysisResult{true, think_section, remaining_section, "", HTTP_STATUS_OK};
