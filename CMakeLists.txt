@@ -243,7 +243,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC ${PROJECT_NAME}_compile_options)
 
 # Include directories (needed by consumers)
 target_include_directories(${PROJECT_NAME} PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated_include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 
@@ -319,13 +319,13 @@ endif()
 
 # Provide build-time "LLMEngine/" include prefix by copying headers into a generated include tree
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine")
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/LLMEngine.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMEngine.hpp" COPYONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/APIClient.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/APIClient.hpp" COPYONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/LLMOutputProcessor.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMOutputProcessor.hpp" COPYONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/Utils.hpp" COPYONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/Logger.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/Logger.hpp" COPYONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/DebugArtifacts.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/DebugArtifacts.hpp" COPYONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/RequestLogger.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/RequestLogger.hpp" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/include/LLMEngine/LLMEngine.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMEngine.hpp" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/include/LLMEngine/APIClient.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/APIClient.hpp" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/include/LLMEngine/LLMOutputProcessor.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMOutputProcessor.hpp" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/include/LLMEngine/Utils.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/Utils.hpp" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/include/LLMEngine/Logger.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/Logger.hpp" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/include/LLMEngine/DebugArtifacts.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/DebugArtifacts.hpp" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/include/LLMEngine/RequestLogger.hpp" "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/RequestLogger.hpp" COPYONLY)
 
 # ---- Export header (visibility) ----------------------------------------------
 include(GenerateExportHeader)
@@ -374,14 +374,10 @@ install(TARGETS ${_targets_to_install} ${PROJECT_NAME}_compile_options
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # Install public headers
+install(DIRECTORY include/LLMEngine/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
+    FILES_MATCHING PATTERN "*.hpp")
 install(FILES
-    src/LLMEngine.hpp
-    src/LLMOutputProcessor.hpp
-    src/Utils.hpp
-    src/APIClient.hpp
-    src/Logger.hpp
-    src/DebugArtifacts.hpp
-    src/RequestLogger.hpp
     "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMEngineExport.hpp"
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 
