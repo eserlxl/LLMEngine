@@ -67,6 +67,7 @@ namespace Utils {
 
     std::vector<std::string> readLines(std::string_view filepath, size_t max_lines) {
         std::vector<std::string> lines;
+        lines.reserve(max_lines);
         std::ifstream file{std::string(filepath)};
         std::string line;
         while (std::getline(file, line) && lines.size() < max_lines) {

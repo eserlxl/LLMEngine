@@ -10,7 +10,7 @@ struct BackoffConfig {
     int maxDelayMs;       // cap per attempt in ms
 };
 
-inline uint64_t computeBackoffCapMs(const BackoffConfig& cfg, int attempt) {
+constexpr inline uint64_t computeBackoffCapMs(const BackoffConfig& cfg, int attempt) {
     // attempt is 1-based
     const uint64_t factor = 1ULL << (attempt - 1);
     const uint64_t cap = static_cast<uint64_t>(cfg.baseDelayMs) * factor;
