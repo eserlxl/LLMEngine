@@ -203,6 +203,9 @@ Artifacts:
 
 ## See Also
 
-- `docs/PROVIDERS.md`
-- `docs/API_REFERENCE.md`
-- `config/README.md`
+- [docs/PROVIDERS.md](PROVIDERS.md) - Provider details and model information
+- [docs/API_REFERENCE.md](API_REFERENCE.md) - API documentation
+- [docs/SECURITY.md](SECURITY.md) - Security best practices
+- [docs/PERFORMANCE.md](PERFORMANCE.md) - Performance optimization
+- [QUICKSTART.md](../QUICKSTART.md) - Quick start guide
+- [README.md](../README.md) - Main documentation

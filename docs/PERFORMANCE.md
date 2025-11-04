@@ -24,4 +24,11 @@ if (!result.success) {
 - Prefer streaming (if/when supported in your integration) to start processing partial results earlier.
 - Use sensible defaults from `config/api_config.json`, overriding only when necessary for your workload.
 
+## See Also
+
+- [docs/CONFIGURATION.md](CONFIGURATION.md) - Configuration and parameter tuning
+- [docs/PROVIDERS.md](PROVIDERS.md) - Provider selection and model recommendations
+- [docs/FAQ.md](FAQ.md) - Performance-related questions
+- [QUICKSTART.md](../QUICKSTART.md) - Quick start with performance tips
+- [README.md](../README.md) - Main documentation
 

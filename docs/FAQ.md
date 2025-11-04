@@ -37,7 +37,7 @@ Verify the daemon is running at `http://localhost:11434` and model is pulled.
 - Most capable: `qwen-max`
 
 ## Where the configuration is loaded from
-See search order in `docs/CONFIGURATION.md` and `config/README.md`.
+See search order in [docs/CONFIGURATION.md](CONFIGURATION.md).
 
 ## How to generate API documentation
 If the build exposes a docs target:
@@ -45,7 +45,7 @@ If the build exposes a docs target:
 cmake -S . -B build
 cmake --build build --target docs
 ```
-Open `build/docs/html/index.html` afterwards. See `docs/API_REFERENCE.md`.
+Open `build/docs/html/index.html` afterwards. See [docs/API_REFERENCE.md](API_REFERENCE.md) for details.
 
 ## Does LLMEngine support offline mode?
 Yes, via `ollama` when running a local Ollama daemon. Online providers require internet access and API keys.
@@ -54,5 +54,14 @@ Yes, via `ollama` when running a local Ollama daemon. Online providers require i
 Debug mode can be enabled in the constructor to write artifacts like `api_response.json` and `response_full.txt`. File permissions in the working directory should be verified.
 
 ## Where the config file is loaded from
-See search order in `docs/CONFIGURATION.md` and `config/README.md`.
+See search order in [docs/CONFIGURATION.md](CONFIGURATION.md).
+
+## See Also
+
+- [docs/CONFIGURATION.md](CONFIGURATION.md) - Configuration details
+- [docs/API_REFERENCE.md](API_REFERENCE.md) - API documentation
+- [docs/SECURITY.md](SECURITY.md) - Security best practices
+- [docs/PERFORMANCE.md](PERFORMANCE.md) - Performance tips
+- [QUICKSTART.md](../QUICKSTART.md) - Getting started guide
+- [README.md](../README.md) - Main documentation
 

@@ -1,6 +1,6 @@
 # LLMEngine Quick Start
 
-This guide shows the minimal steps to build the library, configure a provider, and run a request. For details, see `docs/CONFIGURATION.md`, `docs/PROVIDERS.md`, and `docs/API_REFERENCE.md`.
+This guide shows the minimal steps to build the library, configure a provider, and run a request. For details, see [docs/CONFIGURATION.md](docs/CONFIGURATION.md), [docs/PROVIDERS.md](docs/PROVIDERS.md), and [docs/API_REFERENCE.md](docs/API_REFERENCE.md).
 
 ## 1. Minimal Example (Qwen)
 
@@ -154,7 +154,7 @@ auto& config_mgr = ::LLMEngineAPI::APIConfigManager::getInstance();
 config_mgr.setDefaultConfigPath("/custom/path/api_config.json");
 config_mgr.loadConfig();  // Uses the custom path
 ```
-See `docs/CONFIGURATION.md` for more details.
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for more details.
 
 Example:
 ```json
@@ -313,7 +313,12 @@ export QWEN_API_KEY="sk-your-key"
 
 ## 12. More Information
 
-- **Full Documentation**: `config/README.md`
+- **Full Documentation**: See [README.md](README.md) for overview and [docs/API_REFERENCE.md](docs/API_REFERENCE.md) for API details
+- **Configuration**: See [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
+- **Providers**: See [docs/PROVIDERS.md](docs/PROVIDERS.md)
+- **Security**: See [docs/SECURITY.md](docs/SECURITY.md)
+- **Performance**: See [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
+- **Examples**: See [examples/README.md](examples/README.md)
 - **Test Examples**: `test/test_api.cpp`
 - **Qwen Documentation**: https://help.aliyun.com/zh/dashscope/
 
@@ -366,7 +371,7 @@ std::cout << "Analysis: " << result.content << std::endl;
 
 ## 14. Contributing
 
-Found a bug or have a feature request? Please check the project's main README for contribution guidelines.
+Found a bug or have a feature request? Please check the [main README](README.md) and [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) for contribution guidelines.
 
 ## 15. License
 

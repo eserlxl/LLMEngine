@@ -401,9 +401,12 @@ Debug files created:
 
 ## 📚 Learning Resources
 
-- **Main Library**: See `../README.md` for detailed documentation
-- **Configuration**: See `../config/README.md`
-- **Quick Start**: See `../QUICKSTART.md`
+- **Main Library**: See [README.md](../README.md) for detailed documentation
+- **Configuration**: See [docs/CONFIGURATION.md](../docs/CONFIGURATION.md)
+- **Quick Start**: See [QUICKSTART.md](../QUICKSTART.md)
+- **API Reference**: See [docs/API_REFERENCE.md](../docs/API_REFERENCE.md)
+- **Providers**: See [docs/PROVIDERS.md](../docs/PROVIDERS.md)
+- **FAQ**: See [docs/FAQ.md](../docs/FAQ.md)
 
 ## 🤝 Contributing
 

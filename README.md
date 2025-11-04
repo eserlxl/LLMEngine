@@ -42,8 +42,10 @@ It supports both local and cloud-based backends — **Ollama**, **Qwen (DashScop
 - [Installation](#installation)
 - [Build Presets](#build-presets)
 - [Usage](#usage)
+- [Configuration](#configuration)
+- [API Keys](#api-keys)
+- [Running Analysis Requests](#running-analysis-requests)
 - [Documentation](#documentation)
-- [Contributing](#contributing)
 - [License](#license)
 
 ## 🧩 Overview
@@ -57,6 +59,8 @@ Its configuration-driven design allows rapid experimentation and reliable runtim
 | **Language** | C++20 |
 | **Build System** | CMake 3.20+ |
 | **Supported Platforms** | Linux, macOS |
+
+[↑ Back to top](#llmengine)
 
 ---
 
@@ -83,6 +87,8 @@ Its configuration-driven design allows rapid experimentation and reliable runtim
 | **Anthropic** | Claude 3 series |
 | **Gemini (AI Studio)** | gemini-1.5-flash, gemini-1.5-pro |
 | **Ollama (Local)** | Any locally hosted model |
+
+[↑ Back to top](#llmengine)
 
 ---
 
@@ -124,6 +130,8 @@ bash examples/build_examples.sh
 ./examples/build_examples/chatbot
 ```
 
+[↑ Back to top](#llmengine)
+
 ---
 
 ## 🧱 Installation
@@ -154,6 +162,8 @@ sudo pacman -S base-devel cmake openssl nlohmann-json cpr
 brew install cmake openssl nlohmann-json cpr
 ```
 
+[↑ Back to top](#llmengine)
+
 ---
 
 ## 🧰 Build Presets
@@ -181,6 +191,8 @@ cmake --preset debug -DENABLE_COVERAGE=ON
 ```
 
 A consumer example using `find_package(LLMEngine)` exists in `examples/consumer`.
+
+[↑ Back to top](#llmengine)
 
 ---
 
@@ -267,6 +279,8 @@ config_mgr.loadConfig();  // Uses "/custom/path/api_config.json"
 config_mgr.loadConfig("/another/path/config.json");  // Uses explicit path
 ```
 
+[↑ Back to top](#llmengine)
+
 ---
 
 ## 🔑 API Keys
@@ -277,6 +291,8 @@ export OPENAI_API_KEY="sk-your-openai-key"
 export ANTHROPIC_API_KEY="sk-your-anthropic-key"
 export GEMINI_API_KEY="your-gemini-api-key"
 ```
+
+[↑ Back to top](#llmengine)
 
 ---
 
@@ -309,21 +325,27 @@ auto result = engine.analyze(
 
 This option is useful when you need precise control over prompts for evaluation or when integrating with downstream agents that require exact prompt matching.
 
+[↑ Back to top](#llmengine)
+
 ---
 
 ## 📚 Documentation
 
 | File | Description |
 |------|--------------|
-| `QUICKSTART.md` | Getting started guide |
-| `docs/CONFIGURATION.md` | Configuration structure |
-| `docs/PROVIDERS.md` | Provider details |
-| `docs/API_REFERENCE.md` | Generated Doxygen API |
-| `docs/FAQ.md` | Frequently Asked Questions |
-| `docs/SECURITY.md` | Security notes |
-| `docs/PERFORMANCE.md` | Optimization tips |
-| `.github/CONTRIBUTING.md` | Contribution guidelines |
-| `examples/README.md` | Example usage guide |
+| [QUICKSTART.md](QUICKSTART.md) | Getting started guide |
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Configuration structure |
+| [docs/PROVIDERS.md](docs/PROVIDERS.md) | Provider details |
+| [docs/API_REFERENCE.md](docs/API_REFERENCE.md) | Generated Doxygen API |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture overview |
+| [docs/FAQ.md](docs/FAQ.md) | Frequently Asked Questions |
+| [docs/SECURITY.md](docs/SECURITY.md) | Security notes |
+| [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | Optimization tips |
+| [docs/CI_CD_GUIDE.md](docs/CI_CD_GUIDE.md) | CI/CD and testing guide |
+| [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) | Contribution guidelines |
+| [examples/README.md](examples/README.md) | Example usage guide |
+
+[↑ Back to top](#llmengine)
 
 ---
 

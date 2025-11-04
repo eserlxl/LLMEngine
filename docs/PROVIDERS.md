@@ -66,5 +66,10 @@ LLMEngine fromConfig("qwen", apiKey); // uses default_model
 - Model availability may change; consult provider docs.
 - Local Ollama requires the daemon running on `http://localhost:11434` by default.
 
-See also: `docs/CONFIGURATION.md` for provider defaults and parameters.
+## See Also
+
+- [docs/CONFIGURATION.md](CONFIGURATION.md) - Provider defaults and parameters
+- [docs/API_REFERENCE.md](API_REFERENCE.md) - API usage examples
+- [QUICKSTART.md](../QUICKSTART.md) - Getting started with providers
+- [README.md](../README.md) - Main documentation
 
