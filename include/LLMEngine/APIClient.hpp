@@ -316,12 +316,12 @@ public:
      * @brief Set the default configuration file path.
      * @param config_path The path to use as default when loadConfig() is called without arguments.
      */
-    void setDefaultConfigPath(std::string_view config_path);
+    void setDefaultConfigPath(std::string_view config_path) override;
     /**
      * @brief Get the current default configuration file path.
      * @return The current default config path.
      */
-    [[nodiscard]] std::string getDefaultConfigPath() const;
+    [[nodiscard]] std::string getDefaultConfigPath() const override;
     void setLogger(::LLMEngine::Logger* logger) override;
     bool loadConfig(std::string_view config_path = "") override;
     [[nodiscard]] nlohmann::json getProviderConfig(std::string_view provider_name) const override;

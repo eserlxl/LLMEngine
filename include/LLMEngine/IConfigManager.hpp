@@ -14,7 +14,7 @@
 
 // Forward declaration
 namespace LLMEngine {
-    class Logger;
+    struct Logger;
 }
 
 namespace LLMEngineAPI {

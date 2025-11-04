@@ -14,7 +14,7 @@
 
 // Forward declarations
 namespace LLMEngine {
-    class Logger;
+    struct Logger;
     enum class LogLevel;
 }
 
