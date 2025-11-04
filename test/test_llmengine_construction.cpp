@@ -5,7 +5,7 @@
 // and is licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine.hpp"
+#include "LLMEngine/LLMEngine.hpp"
 #include "support/FakeAPIClient.hpp"
 #include <cassert>
 #include <iostream>

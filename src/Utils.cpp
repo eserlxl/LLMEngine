@@ -194,8 +194,7 @@ namespace Utils {
 
         // Spawn the process
         pid_t pid;
-        extern char** environ;  // Use current environment
-        int spawn_result = posix_spawnp(&pid, argv[0], &file_actions, nullptr, argv.data(), environ);
+        int spawn_result = posix_spawnp(&pid, argv[0], &file_actions, nullptr, argv.data(), ::environ);
 
         // Clean up file actions
         posix_spawn_file_actions_destroy(&file_actions);

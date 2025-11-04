@@ -48,27 +48,48 @@ foreach(cfg IN ITEMS Debug Release RelWithDebInfo MinSizeRel)
 endforeach()
 
 # ---- Dependencies ------------------------------------------------------------
-find_package(OpenSSL REQUIRED)
-find_package(nlohmann_json REQUIRED)
-find_package(cpr REQUIRED)
-
-# Try to consume LLMEngine target if available (when included from the root build)
-# Otherwise, provide a local imported target pointing to the sibling build output
-if (NOT TARGET LLMEngine)
-  # First try a package (if installed system-wide)
-  find_package(LLMEngine QUIET)
+# Prefer consuming the build-tree package export if the root was built
+if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../build/${CMAKE_PROJECT_NAME}Targets.cmake" OR
+    EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../build/LLMEngineTargets.cmake")
+  list(PREPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../build")
 endif()
 
-if (NOT TARGET LLMEngine)
-  # Fallback to sibling build artifact for standalone test builds
+# Try to consume LLMEngine package first (from build tree or system install)
+find_package(LLMEngine CONFIG QUIET)
+
+if (TARGET LLMEngine)
+  # Transitive deps propagate; no extra package lookups needed here.
+else()
+  # Standalone fallback: require headers/libs used directly in tests
+  find_package(OpenSSL REQUIRED)
+  find_package(nlohmann_json REQUIRED)
+  if (NOT TARGET cpr::cpr AND NOT TARGET cpr)
+    find_package(cpr REQUIRED)
+  endif()
+  if (NOT TARGET cpr::cpr AND TARGET cpr)
+    add_library(cpr::cpr ALIAS cpr)
+  endif()
+
+  # Provide a local imported LLMEngine target from sibling build output
   set(_LLMENGINE_LIB_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../build/libLLMEngine.a")
   if (EXISTS "${_LLMENGINE_LIB_PATH}")
     add_library(LLMEngine STATIC IMPORTED)
-    set_target_properties(LLMEngine PROPERTIES
-      IMPORTED_LOCATION "${_LLMENGINE_LIB_PATH}")
+    set_target_properties(LLMEngine PROPERTIES IMPORTED_LOCATION "${_LLMENGINE_LIB_PATH}")
     target_include_directories(LLMEngine INTERFACE
-      "${CMAKE_CURRENT_SOURCE_DIR}/../src"
-      "${CMAKE_CURRENT_SOURCE_DIR}/../build/generated_include")
+      "${CMAKE_CURRENT_SOURCE_DIR}/../include"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../build/generated_include"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../build/generated_include/LLMEngine")
+    # Propagate required link dependencies when consuming the imported static lib
+    set_target_properties(LLMEngine PROPERTIES
+      INTERFACE_LINK_LIBRARIES "cpr::cpr;nlohmann_json::nlohmann_json")
+    # Provide a local interface target for compile options to satisfy link lines
+    add_library(llmengine_compile_options INTERFACE)
+    add_library(llmengine::compile_options ALIAS llmengine_compile_options)
+    # Expose nlohmann_json headers if fetched by the root
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../build/_deps/nlohmann_json-src/single_include")
+      target_include_directories(LLMEngine INTERFACE
+        "${CMAKE_CURRENT_SOURCE_DIR}/../build/_deps/nlohmann_json-src/single_include")
+    endif()
   else()
     message(FATAL_ERROR "LLMEngine target not found. Build the root project first or install LLMEngine.")
   endif()

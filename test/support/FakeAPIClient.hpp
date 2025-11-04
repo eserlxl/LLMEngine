@@ -6,7 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #pragma once
-#include "APIClient.hpp"
+#include "LLMEngine/APIClient.hpp"
 
 namespace LLMEngineAPI {
 

@@ -4,8 +4,8 @@
 
 static std::string build_streaming_json() {
     std::string out;
-    out += std::string("{") + "\"response\": \"## Summary\\nAll good.\\n\"}"\n";
-    out += std::string("{") + "\"response\": \"## Conclusion\\nShip it.\\n\"}"\n";
+    out += std::string("{") + "\"response\": \"## Summary\\nAll good.\\n\"}";
+    out += std::string("{") + "\"response\": \"## Conclusion\\nShip it.\\n\"}";
     return out;
 }
 
