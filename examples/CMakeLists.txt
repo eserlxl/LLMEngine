@@ -48,14 +48,15 @@ foreach(cfg IN ITEMS Debug Release RelWithDebInfo MinSizeRel)
 endforeach()
 
 # ---- Dependencies ------------------------------------------------------------
-# Prefer consuming the build-tree package export if the root was built
-if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../build/${CMAKE_PROJECT_NAME}Targets.cmake" OR
-    EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../build/LLMEngineTargets.cmake")
+# If building within the same source tree, prefer existing core target directly
+if (TARGET llmengine::llmengine)
+  add_library(LLMEngine ALIAS llmengine::llmengine)
+elseif (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../build/${CMAKE_PROJECT_NAME}Targets.cmake" OR
+        EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../build/LLMEngineTargets.cmake")
   list(PREPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../build")
+  # Try to consume LLMEngine package first (from build tree or system install)
+  find_package(LLMEngine CONFIG QUIET)
 endif()
-
-# Try to consume LLMEngine package first (from build tree or system install)
-find_package(LLMEngine CONFIG QUIET)
 
 if (TARGET LLMEngine)
   # When consuming the exported target, its PUBLIC deps (nlohmann_json, etc.)
