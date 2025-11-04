@@ -108,6 +108,7 @@ namespace FilePaths {
 // Default Values
 namespace DefaultValues {
     constexpr int TIMEOUT_SECONDS = 30;
+    constexpr int OLLAMA_TIMEOUT_SECONDS = 300;  // 5 minutes for Ollama
     constexpr int RETRY_ATTEMPTS = 3;
     constexpr int RETRY_DELAY_MS = 1000;
     constexpr int MAX_BACKOFF_DELAY_MS = 30000;

@@ -134,7 +134,7 @@ std::string APIClientFactory::providerTypeToString(ProviderType type) {
 }
 
 // APIConfigManager Implementation
-APIConfigManager::APIConfigManager() : default_config_path_(std::string(::LLMEngine::Constants::FilePaths::DEFAULT_CONFIG_PATH)), logger_(nullptr) {
+APIConfigManager::APIConfigManager() : default_config_path_(std::string(::LLMEngine::Constants::FilePaths::DEFAULT_CONFIG_PATH)) {
 }
 
 APIConfigManager& APIConfigManager::getInstance() {
@@ -254,7 +254,7 @@ int APIConfigManager::getTimeoutSeconds(std::string_view provider_name) const {
     if (!config_loaded_) {
         // Provider-specific defaults
         if (provider_name == "ollama") {
-            return 300; // 5 minutes for Ollama
+            return ::LLMEngine::Constants::DefaultValues::OLLAMA_TIMEOUT_SECONDS;
         }
         return default_timeout;
     }
@@ -277,7 +277,7 @@ int APIConfigManager::getTimeoutSeconds(std::string_view provider_name) const {
     
     // Provider-specific defaults if not in config
     if (provider_name == "ollama") {
-        return 300; // 5 minutes for Ollama
+        return ::LLMEngine::Constants::DefaultValues::OLLAMA_TIMEOUT_SECONDS;
     }
     
     return default_timeout;

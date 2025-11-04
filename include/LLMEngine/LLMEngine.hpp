@@ -119,7 +119,7 @@ public:
               const nlohmann::json& model_params = {},
               int log_retention_hours = 24,
               bool debug = false,
-              std::shared_ptr<ITempDirProvider> temp_dir_provider = nullptr);
+              const std::shared_ptr<ITempDirProvider>& temp_dir_provider = nullptr);
     
     /**
      * @brief Run an analysis request.

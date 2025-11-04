@@ -182,7 +182,7 @@ LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> clien
                      const nlohmann::json& model_params,
                      int log_retention_hours,
                      bool debug,
-                     std::shared_ptr<::LLMEngine::ITempDirProvider> temp_dir_provider)
+                     const std::shared_ptr<::LLMEngine::ITempDirProvider>& temp_dir_provider)
     : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
