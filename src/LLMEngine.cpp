@@ -77,6 +77,15 @@ namespace LLMEngineSystem {
         
         // Get unique temp directory for this request to avoid conflicts in concurrent scenarios
         const std::string request_tmp_dir = getUniqueTmpDir();
+        
+        // Create request directory once at the start if debug files will be written
+        bool request_dir_created = false;
+        if (write_debug_files) {
+            ensureSecureTmpDir();
+            std::error_code ec_dir;
+            std::filesystem::create_directories(request_tmp_dir, ec_dir);
+            request_dir_created = true;
+        }
 
         if (ctx.api_client) {
             // Lazy merge: only copy keys that are actually overridden to avoid unnecessary allocations
@@ -109,10 +118,7 @@ namespace LLMEngineSystem {
             auto api_response = ctx.api_client->sendRequest(full_prompt, input, final_params);
 
             if (write_debug_files) {
-                ensureSecureTmpDir();
-                // Create unique directory for this request
-                std::error_code ec_dir;
-                std::filesystem::create_directories(request_tmp_dir, ec_dir);
+                // Directory already created above
                 if (!DebugArtifacts::writeJson(request_tmp_dir + "/api_response.json", api_response.raw_response, /*redactSecrets*/true)) {
                     if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Warn, "Failed to write debug artifact: " + request_tmp_dir + "/api_response.json");
                 } else {
@@ -123,10 +129,7 @@ namespace LLMEngineSystem {
             if (api_response.success) {
                 full_response = api_response.content;
             } else {
-                ensureSecureTmpDir();
-                // Create unique directory for this request
-                std::error_code ec_dir;
-                std::filesystem::create_directories(request_tmp_dir, ec_dir);
+                // Directory already created above
                 if (!DebugArtifacts::writeJson(request_tmp_dir + "/api_response_error.json", api_response.raw_response, /*redactSecrets*/true)) {
                     if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Warn, "Failed to write debug artifact: " + request_tmp_dir + "/api_response_error.json");
                 }
@@ -139,10 +142,7 @@ namespace LLMEngineSystem {
         }
 
         if (write_debug_files) {
-            ensureSecureTmpDir();
-            // Create unique directory for this request
-            std::error_code ec_dir;
-            std::filesystem::create_directories(request_tmp_dir, ec_dir);
+            // Directory already created above
             if (!DebugArtifacts::writeText(request_tmp_dir + "/response_full.txt", full_response, /*redactSecrets*/true)) {
                 if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Warn, "Failed to write debug artifact: " + request_tmp_dir + "/response_full.txt");
             } else {
@@ -184,10 +184,7 @@ namespace LLMEngineSystem {
         };
         const std::string safe_analysis_name = sanitize_name(std::string(analysis_type));
         if (write_debug_files) {
-            ensureSecureTmpDir();
-            // Create unique directory for this request (if not already created)
-            std::error_code ec_dir;
-            std::filesystem::create_directories(request_tmp_dir, ec_dir);
+            // Directory already created above
             if (!DebugArtifacts::writeText(request_tmp_dir + "/" + safe_analysis_name + ".think.txt", think_section, /*redactSecrets*/true)) {
                 if (ctx.logger) ctx.logger->log(::LLMEngine::LogLevel::Warn, "Failed to write debug artifact: " + request_tmp_dir + "/" + safe_analysis_name + ".think.txt");
             } else {

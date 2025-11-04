@@ -18,13 +18,17 @@ static bool atomic_write(const std::string& path, const std::string& data) {
         std::filesystem::path p(path);
         std::filesystem::path dir_path = p.parent_path();
         if (!dir_path.empty()) {
-            std::error_code ec;
-            std::filesystem::create_directories(dir_path, ec);
-            if (!ec) {
-                std::error_code ec_perm;
-                std::filesystem::permissions(dir_path,
-                    std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
-                    std::filesystem::perm_options::replace, ec_perm);
+            // Check if directory exists before creating (optimization)
+            std::error_code ec_exists;
+            if (!std::filesystem::exists(dir_path, ec_exists)) {
+                std::error_code ec;
+                std::filesystem::create_directories(dir_path, ec);
+                if (!ec) {
+                    std::error_code ec_perm;
+                    std::filesystem::permissions(dir_path,
+                        std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
+                        std::filesystem::perm_options::replace, ec_perm);
+                }
             }
         }
         const std::string tmp = path + ".tmp";
@@ -52,15 +56,19 @@ bool DebugArtifacts::writeJson(const std::string& path, const nlohmann::json& js
     try {
         std::filesystem::path dir_path = std::filesystem::path(path).parent_path();
         if (!dir_path.empty()) {
-            std::error_code ec;
-            std::filesystem::create_directories(dir_path, ec);
-            // Set directory permissions to 0700 (owner-only read/write/execute) for security
-            if (!ec) {
-                std::error_code ec_perm;
-                std::filesystem::permissions(dir_path, 
-                    std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
-                    std::filesystem::perm_options::replace, ec_perm);
-                // Best-effort: silently ignore permission errors (may fail in restricted environments)
+            // Check if directory exists before creating (optimization)
+            std::error_code ec_exists;
+            if (!std::filesystem::exists(dir_path, ec_exists)) {
+                std::error_code ec;
+                std::filesystem::create_directories(dir_path, ec);
+                // Set directory permissions to 0700 (owner-only read/write/execute) for security
+                if (!ec) {
+                    std::error_code ec_perm;
+                    std::filesystem::permissions(dir_path, 
+                        std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
+                        std::filesystem::perm_options::replace, ec_perm);
+                    // Best-effort: silently ignore permission errors (may fail in restricted environments)
+                }
             }
         }
         nlohmann::json payload = redactSecrets ? redactJson(json) : json;
@@ -72,15 +80,19 @@ bool DebugArtifacts::writeText(const std::string& path, std::string_view text, b
     try {
         std::filesystem::path dir_path = std::filesystem::path(path).parent_path();
         if (!dir_path.empty()) {
-            std::error_code ec;
-            std::filesystem::create_directories(dir_path, ec);
-            // Set directory permissions to 0700 (owner-only read/write/execute) for security
-            if (!ec) {
-                std::error_code ec_perm;
-                std::filesystem::permissions(dir_path, 
-                    std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
-                    std::filesystem::perm_options::replace, ec_perm);
-                // Best-effort: silently ignore permission errors (may fail in restricted environments)
+            // Check if directory exists before creating (optimization)
+            std::error_code ec_exists;
+            if (!std::filesystem::exists(dir_path, ec_exists)) {
+                std::error_code ec;
+                std::filesystem::create_directories(dir_path, ec);
+                // Set directory permissions to 0700 (owner-only read/write/execute) for security
+                if (!ec) {
+                    std::error_code ec_perm;
+                    std::filesystem::permissions(dir_path, 
+                        std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
+                        std::filesystem::perm_options::replace, ec_perm);
+                    // Best-effort: silently ignore permission errors (may fail in restricted environments)
+                }
             }
         }
         if (redactSecrets) {
