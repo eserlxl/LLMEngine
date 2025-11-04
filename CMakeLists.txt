@@ -356,11 +356,21 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 # Note: We do NOT export third-party dependencies (cpr, nlohmann_json) even when fetched via FetchContent.
 # Consumers should provide these dependencies themselves to avoid leaking build-system details
 # and potential conflicts with system-provided packages.
-install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_compile_options
-  EXPORT ${PROJECT_NAME}Targets
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+# When dependencies are fetched via FetchContent, we cannot export them, so we skip EXPORT to avoid CMake errors.
+if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
+  # Dependencies fetched via FetchContent - skip EXPORT to avoid export validation errors
+  install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_compile_options
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+else()
+  # System-provided dependencies - safe to export
+  install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_compile_options
+    EXPORT ${PROJECT_NAME}Targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
 
 # Install public headers
 install(DIRECTORY include/LLMEngine/
@@ -414,15 +424,19 @@ export(EXPORT ${PROJECT_NAME}Targets
   NAMESPACE ${PROJECT_NAME_LOWER}::
   FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake")
 
-install(EXPORT ${PROJECT_NAME}Targets
-  NAMESPACE ${PROJECT_NAME_LOWER}::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+# Only install export and config files when dependencies are system-provided
+# (when fetched via FetchContent, we skip EXPORT to avoid validation errors)
+if (NOT NLOHMANN_JSON_FETCHED AND NOT CPR_FETCHED)
+  install(EXPORT ${PROJECT_NAME}Targets
+    NAMESPACE ${PROJECT_NAME_LOWER}::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
-# Install config files
-install(FILES
-  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+  # Install config files
+  install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+endif()
 
 # ---- pkg-config ---------------------------------------------------------------
 configure_file(
