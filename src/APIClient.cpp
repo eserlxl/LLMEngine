@@ -16,6 +16,7 @@
 #include <cstring>
 #include <random>
 #include "Backoff.hpp"
+#include "RequestLogger.hpp"
 
 namespace LLMEngineAPI {
 
@@ -39,6 +40,61 @@ namespace {
     constexpr int DEFAULT_MAX_BACKOFF_DELAY_MS = 30000; // maximum cap for backoff delays in milliseconds
 }
 
+// Shared helpers to reduce duplication across provider clients
+namespace {
+    struct RetrySettings {
+        int max_attempts;
+        int base_delay_ms;
+        int max_delay_ms;
+        uint64_t jitter_seed;
+        bool exponential;
+    };
+
+    inline RetrySettings computeRetrySettings(const nlohmann::json& params, bool exponential_default = true) {
+        RetrySettings rs{};
+        rs.max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
+        rs.base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
+        rs.max_delay_ms = DEFAULT_MAX_BACKOFF_DELAY_MS;
+        rs.jitter_seed = 0;
+        rs.exponential = exponential_default;
+        if (params.contains("retry_attempts")) rs.max_attempts = std::max(1, params["retry_attempts"].get<int>());
+        if (params.contains("retry_base_delay_ms")) rs.base_delay_ms = std::max(0, params["retry_base_delay_ms"].get<int>());
+        if (params.contains("retry_max_delay_ms")) rs.max_delay_ms = std::max(0, params["retry_max_delay_ms"].get<int>());
+        if (params.contains("jitter_seed")) rs.jitter_seed = params["jitter_seed"].get<uint64_t>();
+        if (params.contains("retry_exponential")) rs.exponential = params["retry_exponential"].get<bool>();
+        return rs;
+    }
+
+    template <typename RequestFunc>
+    cpr::Response sendWithRetries(const RetrySettings& rs, RequestFunc&& doRequest) {
+        cpr::Response resp;
+        BackoffConfig bcfg{rs.base_delay_ms, rs.max_delay_ms};
+        std::mt19937_64 rng(rs.jitter_seed);
+        for (int attempt = 1; attempt <= rs.max_attempts; ++attempt) {
+            resp = doRequest();
+            if (resp.status_code == HTTP_STATUS_OK && !resp.text.empty()) break;
+            if (attempt < rs.max_attempts) {
+                int delay = 0;
+                if (rs.exponential) {
+                    const uint64_t cap = computeBackoffCapMs(bcfg, attempt);
+                    delay = jitterDelayMs(rng, cap);
+                } else {
+                    delay = rs.base_delay_ms * attempt;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+            }
+        }
+        return resp;
+    }
+
+    inline void maybeLogRequest(std::string_view method, std::string_view url,
+                                const std::map<std::string, std::string>& headers) {
+        if (std::getenv("LLMENGINE_LOG_REQUESTS") != nullptr) {
+            std::cerr << RequestLogger::formatRequest(method, url, headers);
+        }
+    }
+}
+
 // QwenClient Implementation
 QwenClient::QwenClient(const std::string& api_key, const std::string& model)
     : api_key_(api_key), model_(model), base_url_("https://dashscope-intl.aliyuncs.com/compatible-mode/v1") {
@@ -59,16 +115,7 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
     response.error_code = APIResponse::APIError::Unknown;
     
     try {
-        int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
-        int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
-        int max_delay_ms = DEFAULT_MAX_BACKOFF_DELAY_MS;
-        uint64_t jitter_seed = 0;
-        if (params.contains("retry_attempts")) max_attempts = std::max(1, params["retry_attempts"].get<int>());
-        if (params.contains("retry_base_delay_ms")) base_delay_ms = std::max(0, params["retry_base_delay_ms"].get<int>());
-        if (params.contains("retry_max_delay_ms")) max_delay_ms = std::max(0, params["retry_max_delay_ms"].get<int>());
-        if (params.contains("jitter_seed")) jitter_seed = params["jitter_seed"].get<uint64_t>();
-        BackoffConfig bcfg{base_delay_ms, max_delay_ms};
-        std::mt19937_64 rng(jitter_seed);
+        RetrySettings rs = computeRetrySettings(params, /*exponential_default*/true);
         
         // Merge default params with provided params
         nlohmann::json request_params = default_params_;
@@ -112,21 +159,17 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
             timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
         }
         
-        cpr::Response cpr_response;
-        for (int attempt = 1; attempt <= max_attempts; ++attempt) {
-            cpr_response = cpr::Post(
-                cpr::Url{base_url_ + "/chat/completions"},
-                cpr::Header{{"Content-Type", "application/json"}, {"Authorization", "Bearer " + api_key_}},
+        const std::string url = base_url_ + "/chat/completions";
+        std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}, {"Authorization", "Bearer " + api_key_}};
+        maybeLogRequest("POST", url, hdr);
+        cpr::Response cpr_response = sendWithRetries(rs, [&](){
+            return cpr::Post(
+                cpr::Url{url},
+                cpr::Header{hdr.begin(), hdr.end()},
                 cpr::Body{payload.dump()},
                 cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
             );
-            if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
-            if (attempt < max_attempts) {
-                const uint64_t cap = computeBackoffCapMs(bcfg, attempt);
-                const int delay = jitterDelayMs(rng, cap);
-                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-            }
-        }
+        });
         
         response.status_code = static_cast<int>(cpr_response.status_code);
         
@@ -204,16 +247,7 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
     response.success = false;
     
     try {
-        int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
-        int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
-        int max_delay_ms = DEFAULT_MAX_BACKOFF_DELAY_MS;
-        uint64_t jitter_seed = 0;
-        if (params.contains("retry_attempts")) max_attempts = std::max(1, params["retry_attempts"].get<int>());
-        if (params.contains("retry_base_delay_ms")) base_delay_ms = std::max(0, params["retry_base_delay_ms"].get<int>());
-        if (params.contains("retry_max_delay_ms")) max_delay_ms = std::max(0, params["retry_max_delay_ms"].get<int>());
-        if (params.contains("jitter_seed")) jitter_seed = params["jitter_seed"].get<uint64_t>();
-        BackoffConfig bcfg{base_delay_ms, max_delay_ms};
-        std::mt19937_64 rng(jitter_seed);
+        RetrySettings rs = computeRetrySettings(params, /*exponential_default*/true);
         
         // Merge default params with provided params
         nlohmann::json request_params = default_params_;
@@ -257,21 +291,17 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
             timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
         }
         
-        cpr::Response cpr_response;
-        for (int attempt = 1; attempt <= max_attempts; ++attempt) {
-            cpr_response = cpr::Post(
-                cpr::Url{base_url_ + "/chat/completions"},
-                cpr::Header{{"Content-Type", "application/json"}, {"Authorization", "Bearer " + api_key_}},
+        const std::string url = base_url_ + "/chat/completions";
+        std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}, {"Authorization", "Bearer " + api_key_}};
+        maybeLogRequest("POST", url, hdr);
+        cpr::Response cpr_response = sendWithRetries(rs, [&](){
+            return cpr::Post(
+                cpr::Url{url},
+                cpr::Header{hdr.begin(), hdr.end()},
                 cpr::Body{payload.dump()},
                 cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
             );
-            if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
-            if (attempt < max_attempts) {
-                const uint64_t cap = computeBackoffCapMs(bcfg, attempt);
-                const int delay = jitterDelayMs(rng, cap);
-                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-            }
-        }
+        });
         
         response.status_code = static_cast<int>(cpr_response.status_code);
         response.raw_response = nlohmann::json::parse(cpr_response.text);
@@ -329,16 +359,7 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
     response.success = false;
     
     try {
-        int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
-        int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
-        int max_delay_ms = DEFAULT_MAX_BACKOFF_DELAY_MS;
-        uint64_t jitter_seed = 0;
-        if (params.contains("retry_attempts")) max_attempts = std::max(1, params["retry_attempts"].get<int>());
-        if (params.contains("retry_base_delay_ms")) base_delay_ms = std::max(0, params["retry_base_delay_ms"].get<int>());
-        if (params.contains("retry_max_delay_ms")) max_delay_ms = std::max(0, params["retry_max_delay_ms"].get<int>());
-        if (params.contains("jitter_seed")) jitter_seed = params["jitter_seed"].get<uint64_t>();
-        BackoffConfig bcfg{base_delay_ms, max_delay_ms};
-        std::mt19937_64 rng(jitter_seed);
+        RetrySettings rs = computeRetrySettings(params, /*exponential_default*/true);
         
         // Merge default params with provided params
         nlohmann::json request_params = default_params_;
@@ -376,21 +397,17 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
         }
         
         // Send request with retries
-        cpr::Response cpr_response;
-        for (int attempt = 1; attempt <= max_attempts; ++attempt) {
-            cpr_response = cpr::Post(
-                cpr::Url{base_url_ + "/messages"},
-                cpr::Header{{"Content-Type", "application/json"}, {"x-api-key", api_key_}, {"anthropic-version", "2023-06-01"}},
+        const std::string url = base_url_ + "/messages";
+        std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}, {"x-api-key", api_key_}, {"anthropic-version", "2023-06-01"}};
+        maybeLogRequest("POST", url, hdr);
+        cpr::Response cpr_response = sendWithRetries(rs, [&](){
+            return cpr::Post(
+                cpr::Url{url},
+                cpr::Header{hdr.begin(), hdr.end()},
                 cpr::Body{payload.dump()},
                 cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
             );
-            if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
-            if (attempt < max_attempts) {
-                const uint64_t cap = computeBackoffCapMs(bcfg, attempt);
-                const int delay = jitterDelayMs(rng, cap);
-                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-            }
-        }
+        });
         
         response.status_code = static_cast<int>(cpr_response.status_code);
         response.raw_response = nlohmann::json::parse(cpr_response.text);
@@ -449,16 +466,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
     response.success = false;
     
     try {
-        int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
-        int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
-        int max_delay_ms = DEFAULT_MAX_BACKOFF_DELAY_MS;
-        uint64_t jitter_seed = 0;
-        if (params.contains("retry_attempts")) max_attempts = std::max(1, params["retry_attempts"].get<int>());
-        if (params.contains("retry_base_delay_ms")) base_delay_ms = std::max(0, params["retry_base_delay_ms"].get<int>());
-        if (params.contains("retry_max_delay_ms")) max_delay_ms = std::max(0, params["retry_max_delay_ms"].get<int>());
-        if (params.contains("jitter_seed")) jitter_seed = params["jitter_seed"].get<uint64_t>();
-        BackoffConfig bcfg{base_delay_ms, max_delay_ms};
-        std::mt19937_64 rng(jitter_seed);
+        RetrySettings rs = computeRetrySettings(params, /*exponential_default*/false);
         
         // Merge default params with provided params
         nlohmann::json request_params = default_params_;
@@ -496,20 +504,17 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                 timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds("ollama");
             }
             
-            cpr::Response cpr_response;
-            for (int attempt = 1; attempt <= max_attempts; ++attempt) {
-                cpr_response = cpr::Post(
-                    cpr::Url{base_url_ + "/api/generate"},
-                    cpr::Header{{"Content-Type", "application/json"}},
+            const std::string url = base_url_ + "/api/generate";
+            std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}};
+            maybeLogRequest("POST", url, hdr);
+            cpr::Response cpr_response = sendWithRetries(rs, [&](){
+                return cpr::Post(
+                    cpr::Url{url},
+                    cpr::Header{hdr.begin(), hdr.end()},
                     cpr::Body{payload.dump()},
                     cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
                 );
-                if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
-                if (attempt < max_attempts) {
-                    int delay = base_delay_ms * attempt;
-                    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-                }
-            }
+            });
             
             response.status_code = static_cast<int>(cpr_response.status_code);
             
@@ -583,21 +588,17 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds("ollama");
         }
         
-        cpr::Response cpr_response;
-        for (int attempt = 1; attempt <= max_attempts; ++attempt) {
-            cpr_response = cpr::Post(
-                cpr::Url{base_url_ + "/api/chat"},
-                cpr::Header{{"Content-Type", "application/json"}},
+        const std::string url = base_url_ + "/api/chat";
+        std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}};
+        maybeLogRequest("POST", url, hdr);
+        cpr::Response cpr_response = sendWithRetries(rs, [&](){
+            return cpr::Post(
+                cpr::Url{url},
+                cpr::Header{hdr.begin(), hdr.end()},
                 cpr::Body{payload.dump()},
                 cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
             );
-            if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
-            if (attempt < max_attempts) {
-                const uint64_t cap = computeBackoffCapMs(bcfg, attempt);
-                const int delay = jitterDelayMs(rng, cap);
-                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-            }
-        }
+        });
         
         response.status_code = static_cast<int>(cpr_response.status_code);
         
@@ -658,8 +659,7 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
     response.success = false;
 
     try {
-        const int max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
-        const int base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
+        RetrySettings rs = computeRetrySettings(params, /*exponential_default*/false);
 
         // Merge default params with provided params
         nlohmann::json request_params = default_params_;
@@ -700,20 +700,16 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
         // to prevent API key leakage through logs, proxies, or analytics layers
         const std::string url = base_url_ + "/models/" + model_ + ":generateContent";
 
-        cpr::Response cpr_response;
-        for (int attempt = 1; attempt <= max_attempts; ++attempt) {
-            cpr_response = cpr::Post(
+        std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}, {"x-goog-api-key", api_key_}};
+        maybeLogRequest("POST", url, hdr);
+        cpr::Response cpr_response = sendWithRetries(rs, [&](){
+            return cpr::Post(
                 cpr::Url{url},
-                cpr::Header{{"Content-Type", "application/json"}, {"x-goog-api-key", api_key_}},
+                cpr::Header{hdr.begin(), hdr.end()},
                 cpr::Body{payload.dump()},
                 cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
             );
-            if (cpr_response.status_code == HTTP_STATUS_OK && !cpr_response.text.empty()) break;
-            if (attempt < max_attempts) {
-                int delay = base_delay_ms * attempt;
-                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-            }
-        }
+        });
 
         response.status_code = static_cast<int>(cpr_response.status_code);
 
