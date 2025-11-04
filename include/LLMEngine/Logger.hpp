@@ -12,8 +12,33 @@ namespace LLMEngine {
 
 enum class LogLevel { Debug, Info, Warn, Error };
 
+/**
+ * @brief Abstract logging interface.
+ * 
+ * ## Thread Safety Requirements
+ * 
+ * **Logger implementations MUST be thread-safe** if they will be shared across
+ * multiple threads or used concurrently. The log() method may be called from
+ * multiple threads simultaneously.
+ * 
+ * ## Ownership
+ * 
+ * Loggers are typically owned via shared_ptr to allow sharing across multiple
+ * components. The lifetime is managed by the owner(s).
+ */
 struct LLMENGINE_EXPORT Logger {
 	virtual ~Logger() = default;
+	
+	/**
+	 * @brief Log a message at the specified level.
+	 * 
+	 * **Thread Safety:** This method MUST be thread-safe if the logger will be
+	 * used from multiple threads. Implementations should use appropriate
+	 * synchronization (mutexes, atomic operations, etc.).
+	 * 
+	 * @param level Log level (Debug, Info, Warn, Error)
+	 * @param message Message to log
+	 */
 	virtual void log(LogLevel level, std::string_view message) = 0;
 };
 

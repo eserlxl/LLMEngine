@@ -62,6 +62,28 @@ struct APIResponse {
 
 /**
  * @brief Abstract client interface implemented by all providers.
+ * 
+ * ## Thread Safety
+ * 
+ * **APIClient implementations are thread-safe.** They are stateless (except for
+ * configuration set during construction) and can be called concurrently from
+ * multiple threads. However, each instance should be used with a single provider
+ * configuration.
+ * 
+ * ## Lifecycle and Ownership
+ * 
+ * - **Construction:** Clients are created via APIClientFactory
+ * - **Ownership:** Typically owned by LLMEngine via unique_ptr
+ * - **Lifetime:** Clients live as long as the owning LLMEngine instance
+ * - **Thread Safety:** Stateless design allows concurrent sendRequest() calls
+ * 
+ * ## Implementation Requirements
+ * 
+ * Derived classes must:
+ * - Be thread-safe (stateless or properly synchronized)
+ * - Handle errors gracefully and return appropriate APIResponse
+ * - Implement retry logic or rely on shared retry helpers
+ * - Provide thread-safe access to configuration
  */
 class LLMENGINE_EXPORT APIClient {
 public:
@@ -199,6 +221,23 @@ private:
 
 /**
  * @brief Factory for creating provider clients.
+ * 
+ * ## Thread Safety
+ * 
+ * **All factory methods are thread-safe.** They are stateless and can be called
+ * concurrently from multiple threads.
+ * 
+ * ## Ownership
+ * 
+ * Factory methods return unique_ptr, transferring ownership to the caller.
+ * The caller is responsible for managing the lifetime of the created client.
+ * 
+ * ## Credential Resolution
+ * 
+ * Credentials are resolved in the following order:
+ * 1. Environment variables (highest priority)
+ * 2. Configuration file (with security warning)
+ * 3. Exception if required and not found
  */
 class LLMENGINE_EXPORT APIClientFactory {
 public:

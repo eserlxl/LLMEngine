@@ -15,7 +15,23 @@ namespace LLMEngine {
  * @brief Interface for providing temporary directory paths.
  * 
  * This interface allows injection of temporary directory providers for
- * thread-safety and testability. Implementations must be thread-safe.
+ * thread-safety and testability.
+ * 
+ * ## Thread Safety Requirements
+ * 
+ * **Implementations MUST be thread-safe.** The getTempDir() method may be
+ * called concurrently from multiple threads.
+ * 
+ * ## Ownership
+ * 
+ * Implementations are typically owned via shared_ptr to allow sharing across
+ * multiple LLMEngine instances. The lifetime is managed by the owner(s).
+ * 
+ * ## Use Cases
+ * 
+ * - Dependency injection for testing (mock temp directories)
+ * - Per-tenant isolation in multi-tenant systems
+ * - Custom cleanup policies
  */
 class LLMENGINE_EXPORT ITempDirProvider {
 public:
@@ -23,10 +39,11 @@ public:
     
     /**
      * @brief Get the base temporary directory path.
-     * @return The base temporary directory path (e.g., "/tmp/llmengine")
      * 
-     * This method must be thread-safe and can be called concurrently
-     * from multiple threads.
+     * **Thread Safety:** This method MUST be thread-safe and can be called
+     * concurrently from multiple threads.
+     * 
+     * @return The base temporary directory path (e.g., "/tmp/llmengine")
      */
     [[nodiscard]] virtual std::string getTempDir() const = 0;
 };
