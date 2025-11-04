@@ -85,9 +85,8 @@ bool DebugArtifacts::writeText(const std::string& path, std::string_view text, b
         if (redactSecrets) {
             std::string masked = redactText(text);
             return atomic_write(path, masked);
-        } else {
-            return atomic_write(path, std::string(text));
         }
+        return atomic_write(path, std::string(text));
     } catch (...) { return false; }
 }
 
