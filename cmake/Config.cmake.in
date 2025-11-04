@@ -7,6 +7,15 @@
 
 @PACKAGE_INIT@
 
+# Build-tree guard: if core target already exists (we're inside the source build),
+# do not include exported targets to avoid partial redefinition. Let consumers
+# use the already-defined build targets.
+string(TOLOWER "@PROJECT_NAME@" _llm_ns)
+if (TARGET ${_llm_ns}::${_llm_ns} OR TARGET @PROJECT_NAME@)
+  # Skip dependency discovery and target imports in build-tree usage
+  return()
+endif()
+
 # Verify required dependencies are available first
 include(CMakeFindDependencyMacro)
 find_dependency(cpr REQUIRED)
@@ -14,7 +23,6 @@ find_dependency(nlohmann_json REQUIRED)
 
 # Include the exported targets unless any of them already exist (build-tree usage)
 # The exported namespace is lowercase (e.g., llmengine::llmengine)
-string(TOLOWER "@PROJECT_NAME@" _llm_ns)
 set(_llm_targets
   ${_llm_ns}::${_llm_ns}
   ${_llm_ns}::compile_options
