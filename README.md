@@ -158,6 +158,12 @@ cmake --preset relwithdebinfo
 cmake --preset release
 ```
 
+Build with make:
+
+```bash
+cmake --build build -j20
+```
+
 Granular toggles (examples):
 
 ```bash
