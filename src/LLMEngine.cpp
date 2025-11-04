@@ -48,14 +48,14 @@ namespace LLMEngineSystem {
 
     class Core {
     public:
-        AnalysisResult run(Context& ctx,
-                           std::string_view prompt,
-                           const nlohmann::json& input,
-                           std::string_view analysis_type,
-                           std::string_view mode,
-                           bool prepend_terse_instruction,
-                           std::function<void()> cleanupResponseFiles,
-                           std::function<void()> ensureSecureTmpDir) const;
+        static AnalysisResult run(Context& ctx,
+                                  std::string_view prompt,
+                                  const nlohmann::json& input,
+                                  std::string_view analysis_type,
+                                  std::string_view mode,
+                                  bool prepend_terse_instruction,
+                                  const std::function<void()>& cleanupResponseFiles,
+                                  const std::function<void()>& ensureSecureTmpDir);
     };
 
     AnalysisResult Core::run(Context& ctx,
@@ -64,8 +64,8 @@ namespace LLMEngineSystem {
                              std::string_view analysis_type,
                              std::string_view mode,
                              bool prepend_terse_instruction,
-                             std::function<void()> cleanupResponseFiles,
-                             std::function<void()> ensureSecureTmpDir) const {
+                             const std::function<void()>& cleanupResponseFiles,
+                             const std::function<void()>& ensureSecureTmpDir) {
         cleanupResponseFiles();
 
         std::string full_prompt;
