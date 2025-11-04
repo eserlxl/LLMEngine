@@ -352,22 +352,9 @@ endif()
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 
 # ---- Install ------------------------------------------------------------------
-# Install library (handles both static and shared) and export targets
-# If dependencies were fetched via FetchContent, include them in the same export set
-# to satisfy CMake's export validation (required for PUBLIC dependencies)
-set(_targets_to_install ${PROJECT_NAME})
-if (NLOHMANN_JSON_NEEDS_EXPORT)
-  # Check for the actual target name (may be namespaced or not depending on FetchContent)
-  if (TARGET nlohmann_json)
-    list(APPEND _targets_to_install nlohmann_json)
-  elseif (TARGET nlohmann_json::nlohmann_json)
-    list(APPEND _targets_to_install nlohmann_json::nlohmann_json)
-  endif()
-endif()
-if (CPR_NEEDS_EXPORT AND TARGET cpr)
-  list(APPEND _targets_to_install cpr)
-endif()
-install(TARGETS ${_targets_to_install} ${PROJECT_NAME}_compile_options
+# Install only our project targets. Do not export third-party dependency targets;
+# they are resolved for consumers via find_dependency() in the package config.
+install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_compile_options
   EXPORT ${PROJECT_NAME}Targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

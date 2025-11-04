@@ -7,13 +7,15 @@
 
 @PACKAGE_INIT@
 
-# Include the exported targets
-include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
-
-# Verify required dependencies are available
+# Verify required dependencies are available first
 include(CMakeFindDependencyMacro)
 find_dependency(cpr REQUIRED)
 find_dependency(nlohmann_json REQUIRED)
+
+# Include the exported targets unless they already exist (build-tree usage)
+if (NOT TARGET @PROJECT_NAME@::@PROJECT_NAME@)
+  include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+endif()
 
 # Verify the imported target exists
 check_required_components(@PROJECT_NAME@)
