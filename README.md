@@ -34,8 +34,6 @@ Key benefits:
 - [Installation](#installation)
 - [Build Presets](#build-presets)
 - [Usage](#usage)
-- [Security](#security)
-- [Performance](#performance)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
 - [License](#license)
@@ -300,18 +298,6 @@ This option is useful when you need precise control over prompts for evaluation 
 
 [↑ Back to top](#llmengine)
 
-## Security
-
-See the dedicated guide: [docs/SECURITY.md](docs/SECURITY.md)
-
-[↑ Back to top](#llmengine)
-
-## Performance
-
-See tips and examples: [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
-
-[↑ Back to top](#llmengine)
-
 ## Documentation
 
  - Quick start: [QUICKSTART.md](QUICKSTART.md)
@@ -319,8 +305,8 @@ See tips and examples: [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
  - Providers: [docs/PROVIDERS.md](docs/PROVIDERS.md)
  - API reference: [docs/API_REFERENCE.md](docs/API_REFERENCE.md) (links to generated Doxygen)
  - FAQ: [docs/FAQ.md](docs/FAQ.md)
-- Security: [docs/SECURITY.md](docs/SECURITY.md)
-- Performance: [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
+ - Security: [docs/SECURITY.md](docs/SECURITY.md)
+ - Performance: [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
  - Examples: [examples/README.md](examples/README.md)
 
 [↑ Back to top](#llmengine)
