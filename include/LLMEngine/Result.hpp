@@ -41,6 +41,7 @@ private:
     Result(const Result&) = delete;
     Result& operator=(const Result&) = delete;
 
+public:
     ~Result() {
         if (which_ == 0) {
             v_.value.~T();
