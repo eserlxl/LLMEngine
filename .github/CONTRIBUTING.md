@@ -16,6 +16,17 @@ Thank you for your interest in contributing! We welcome bug reports, feature req
   - `ctest --test-dir build --output-on-failure`
   - Or use scripts in `test/` (e.g., `./test/build_test.sh`, `./test/run_api_tests.sh`).
 
+### Typical workflow
+
+```bash
+git checkout -b feature/name
+cd test
+./run_api_tests.sh
+git add -A
+git commit -m "feat: add feature/name"
+git push origin feature/name
+```
+
 ### Pull Request Checklist
 
 Before submitting, please confirm:

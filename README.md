@@ -307,22 +307,10 @@ This option is useful when you need precise control over prompts for evaluation 
  - FAQ: [docs/FAQ.md](docs/FAQ.md)
  - Security: [docs/SECURITY.md](docs/SECURITY.md)
  - Performance: [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
+ - Contributing: [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md)
  - Examples: [examples/README.md](examples/README.md)
 
 [↑ Back to top](#llmengine)
-
-## Contributing
-
-Contributions are welcome! Typical workflow:
-
-```bash
-git checkout -b feature/name
-cd test
-./run_api_tests.sh
-git add -A
-git commit -m "feat: add feature/name"
-git push origin feature/name
-```
 
 [↑ Back to top](#llmengine)
 
