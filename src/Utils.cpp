@@ -55,7 +55,7 @@ namespace Utils {
             }
             return *this;
         }
-        int get() const { return fd_; }
+        [[nodiscard]] int get() const { return fd_; }
         int release() {
             int fd = fd_;
             fd_ = -1;

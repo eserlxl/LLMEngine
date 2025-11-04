@@ -28,6 +28,7 @@
 // Constants
 namespace {
     constexpr int HTTP_STATUS_OK = 200;
+    constexpr int HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
     constexpr size_t REDACTED_REASONING_TAG_LENGTH = 20;  // "<think>" length
     constexpr size_t REDACTED_REASONING_CLOSE_TAG_LENGTH = 21;  // "</think>" length
     constexpr size_t MAX_FILENAME_LENGTH = 64;
@@ -274,7 +275,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
             return AnalysisResult{false, "", "", api_response.error_message, api_response.status_code};
         }
     } else {
-        return AnalysisResult{false, "", "", "API client not initialized", 500};
+        return AnalysisResult{false, "", "", "API client not initialized", HTTP_STATUS_INTERNAL_SERVER_ERROR};
     }
     
     if (write_debug_files) {
