@@ -16,11 +16,7 @@
 
 // Ensure export macros are available
 #include "LLMEngine/LLMEngineExport.hpp"
-
-// Forward declaration for Logger
-namespace LLMEngine {
-    class Logger;
-}
+#include "LLMEngine/Logger.hpp"
 
 namespace LLMEngineAPI {
 
