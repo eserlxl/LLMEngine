@@ -30,6 +30,26 @@ A consumer example using `find_package(LLMEngine)` exists in `examples/consumer`
 
 ---
 
+## 🛠️ Build Script
+
+The repository includes a convenient `build.sh` script that simplifies the build process:
+
+```bash
+./build.sh
+```
+
+The `build.sh` script supports the following options:
+
+- **performance**: Enable performance optimizations (mutually exclusive with debug)
+- **warnings**: Enable extra compiler warnings
+- **debug**: Enable debug mode (mutually exclusive with performance)
+- **clean**: Remove build directory and reconfigure
+- **tests**: Build and run tests (uses ctest if available)
+- **-j, --jobs N**: Parallel build jobs (default: auto-detected)
+- **--build-dir DIR**: Custom build directory (default: `build`)
+
+---
+
 ## 🔧 Build Options
 
 LLMEngine supports various CMake options to customize the build configuration. These options control compiler flags, optimization levels, sanitizers, and other build-time features.

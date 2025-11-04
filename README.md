@@ -151,14 +151,7 @@ cd LLMEngine
 ./build.sh
 ```
 
-The `build.sh` script supports:
-- **performance**: Enable performance optimizations (mutually exclusive with debug)
-- **warnings**: Enable extra compiler warnings
-- **debug**: Enable debug mode (mutually exclusive with performance)
-- **clean**: Remove build directory and reconfigure
-- **tests**: Build and run tests (uses ctest if available)
-- **-j, --jobs N**: Parallel build jobs (default: auto-detected)
-- **--build-dir DIR**: Custom build directory (default: `build`)
+For detailed information about the `build.sh` script options, see [docs/BUILD.md](docs/BUILD.md).
 
 ### Install Dependencies
 
