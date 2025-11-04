@@ -307,8 +307,12 @@ else()
     endif()
     if (_san_list)
       string(REPLACE ";" "," _san_flags "${_san_list}")
-      target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=${_san_flags} -fno-omit-frame-pointer)
-      target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=${_san_flags})
+      # Only apply sanitizer flags on compilers that support them (GCC/Clang, not MSVC)
+      target_compile_options(${PROJECT_NAME} PRIVATE
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-fsanitize=${_san_flags}>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-fno-omit-frame-pointer>)
+      target_link_options(${PROJECT_NAME} PRIVATE
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-fsanitize=${_san_flags}>)
     endif()
   elseif (PERFORMANCE_BUILD)
     target_compile_options(${PROJECT_NAME} PRIVATE -O3)
@@ -414,7 +418,8 @@ write_basic_package_version_file(
   VERSION ${PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion)
 
-# Generate config file from template
+# Always generate config file (even when dependencies are fetched)
+# This allows find_package() to work in build-tree scenarios
 configure_package_config_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in"
   "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
@@ -427,19 +432,27 @@ if (NOT NLOHMANN_JSON_FETCHED AND NOT CPR_FETCHED)
   export(EXPORT ${PROJECT_NAME}Targets
     NAMESPACE ${PROJECT_NAME_LOWER}::
     FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake")
+else()
+  # When dependencies are fetched, generate a thin Config.cmake that documents requirements
+  # and warns about missing export set
+  message(WARNING "LLMEngine dependencies were fetched via FetchContent. "
+                  "The generated Config.cmake file requires consumers to provide "
+                  "nlohmann_json and cpr dependencies themselves. "
+                  "For build-tree usage, targets are available directly.")
 endif()
 
-# Only install export and config files when dependencies are system-provided
+# Always install config files (even when dependencies are fetched)
+# The Config.cmake will document dependency requirements
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+
+# Only install export set when dependencies are system-provided
 # (when fetched via FetchContent, we skip EXPORT to avoid validation errors)
 if (NOT NLOHMANN_JSON_FETCHED AND NOT CPR_FETCHED)
   install(EXPORT ${PROJECT_NAME}Targets
     NAMESPACE ${PROJECT_NAME_LOWER}::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
-
-  # Install config files
-  install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 endif()
 

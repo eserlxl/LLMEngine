@@ -17,6 +17,10 @@ if (TARGET ${_llm_ns}::${_llm_ns} OR TARGET @PROJECT_NAME@)
 endif()
 
 # Verify required dependencies are available first
+# Note: LLMEngine requires nlohmann_json and cpr. These must be provided by the consumer
+# when using find_package(LLMEngine). If dependencies were fetched via FetchContent
+# during LLMEngine's build, the Targets.cmake file may not exist, and consumers should
+# link directly to the LLMEngine target or provide dependencies themselves.
 include(CMakeFindDependencyMacro)
 find_dependency(cpr REQUIRED)
 find_dependency(nlohmann_json REQUIRED)
@@ -38,7 +42,16 @@ foreach(_t IN LISTS _llm_targets)
 endforeach()
 
 if (_need_include)
-  include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+  # Check if Targets.cmake exists (it may not if dependencies were fetched via FetchContent)
+  if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+  else()
+    # Targets.cmake not available - this happens when dependencies were fetched via FetchContent
+    # Consumers should link directly to @PROJECT_NAME@ target or ensure dependencies are provided
+    message(WARNING "LLMEngine Targets.cmake not found. "
+                    "This may occur when dependencies were fetched via FetchContent. "
+                    "Ensure dependencies (nlohmann_json, cpr) are available and link to the LLMEngine target.")
+  endif()
 endif()
 
 # Verify the imported target exists
