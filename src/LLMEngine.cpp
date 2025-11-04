@@ -20,7 +20,6 @@
 #include <cstring>
 #include <mutex>
 #include <thread>
-#include <sstream>
 #include "LLMOutputProcessor.hpp"
 #include "Utils.hpp"
 #include <filesystem>
@@ -404,7 +403,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
     const auto thread_id = std::this_thread::get_id();
     std::ostringstream oss;
     oss << tmp_dir_ << "/req_" << milliseconds << "_" << thread_id;
-    const std::string request_tmp_dir = oss.str();
+    std::string request_tmp_dir = oss.str();
     
     LLMEngineSystem::Context ctx{
         model_params_, 
@@ -419,7 +418,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
     return LLMEngineSystem::runAnalysis(ctx, prompt, input, analysis_type, mode, prepend_terse_instruction,
                       [this]{ this->cleanupResponseFiles(); },
                       [this]{ this->ensureSecureTmpDir(); },
-                      [request_tmp_dir]{ return request_tmp_dir; });
+                      [request_tmp_dir = std::move(request_tmp_dir)]{ return request_tmp_dir; });
 }
 
 std::string LLMEngine::getProviderName() const {

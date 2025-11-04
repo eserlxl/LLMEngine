@@ -32,7 +32,7 @@ namespace Utils {
     // Constants
     constexpr size_t COMMAND_BUFFER_SIZE = 256;
     constexpr size_t MAX_OUTPUT_LINES = 10000;  // Maximum number of output lines to prevent memory exhaustion
-    constexpr size_t MAX_LINE_LENGTH = 1024 * 1024;  // Maximum line length (1MB) to prevent memory exhaustion
+    constexpr size_t MAX_LINE_LENGTH = static_cast<size_t>(1024) * 1024;  // Maximum line length (1MB) to prevent memory exhaustion
     
     // Precompiled regex patterns
     static const std::regex SAFE_CHARS_REGEX(R"([a-zA-Z0-9_./ -]+)");
