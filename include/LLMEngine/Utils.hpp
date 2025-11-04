@@ -15,11 +15,15 @@ namespace LLMEngine {
     struct Logger;
 }
 
+namespace LLMEngine {
 namespace Utils {
     /**
-     * @brief Directory for temporary artifacts.
+     * @brief Default directory for temporary artifacts.
+     * 
+     * @deprecated Use LLMEngine::ITempDirProvider for thread-safe temporary directory management.
+     * This constant is provided for backwards compatibility only.
      */
-    extern std::string TMP_DIR;
+    constexpr const char* TMP_DIR = "/tmp/llmengine";
 
     /**
      * @brief Read up to max_lines from a file.
@@ -52,6 +56,7 @@ namespace Utils {
      * @brief Remove Markdown syntax from input string.
      */
     [[nodiscard]] std::string stripMarkdown(std::string_view input);
-}
+} // namespace Utils
+} // namespace LLMEngine
 
 

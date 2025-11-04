@@ -5,7 +5,7 @@
 // the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "RequestLogger.hpp"
+#include "LLMEngine/RequestLogger.hpp"
 #include <algorithm>
 #include <ranges>
 #include <sstream>
@@ -39,6 +39,8 @@ namespace {
         return result;
     }
 }
+
+namespace LLMEngine {
 
 std::string RequestLogger::redactUrl(std::string_view url) {
     std::string result(url);
@@ -140,3 +142,4 @@ bool RequestLogger::isSensitiveHeader(std::string_view header_name) {
         });
 }
 
+} // namespace LLMEngine

@@ -53,9 +53,9 @@ public:
  * 
  * ## Thread Safety
  * 
- * **DefaultTempDirProvider is thread-safe.** Uses a constexpr string_view
- * (or stored string), so no synchronization is needed. Multiple threads can
- * call getTempDir() concurrently without issues.
+ * **DefaultTempDirProvider is thread-safe.** Uses an owning std::string,
+ * so no synchronization is needed. Multiple threads can call getTempDir()
+ * concurrently without issues.
  * 
  * ## Ownership
  * 
@@ -64,15 +64,15 @@ public:
  */
 class LLMENGINE_EXPORT DefaultTempDirProvider : public ITempDirProvider {
 public:
-    DefaultTempDirProvider() = default;
+    DefaultTempDirProvider() : base_path_("/tmp/llmengine") {}
     explicit DefaultTempDirProvider(std::string_view base_path) : base_path_(base_path) {}
     
     [[nodiscard]] std::string getTempDir() const override {
-        return std::string(base_path_);
+        return base_path_;
     }
 
 private:
-    std::string_view base_path_ = "/tmp/llmengine";
+    std::string base_path_;
 };
 
 } // namespace LLMEngine

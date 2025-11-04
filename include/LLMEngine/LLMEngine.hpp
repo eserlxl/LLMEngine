@@ -172,8 +172,9 @@ public:
      * accidental deletion of system directories.
      * 
      * @param tmp_dir Temporary directory path (must be within default root)
+     * @return true if the directory was set successfully, false if it was rejected or an error occurred
      */
-    void setTempDirectory(const std::string& tmp_dir);
+    [[nodiscard]] bool setTempDirectory(const std::string& tmp_dir);
     
     /**
      * @brief Get the current temporary directory path.

@@ -85,9 +85,16 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
         });
         
         response.status_code = static_cast<int>(cpr_response.status_code);
-        response.raw_response = nlohmann::json::parse(cpr_response.text);
         
         if (cpr_response.status_code == HTTP_STATUS_OK) {
+            // Only parse JSON for successful responses
+            try {
+                response.raw_response = nlohmann::json::parse(cpr_response.text);
+            } catch (const nlohmann::json::parse_error& e) {
+                response.error_message = "JSON parse error in successful response: " + std::string(e.what());
+                response.error_code = APIResponse::APIError::InvalidResponse;
+                return response;
+            }
             if (response.raw_response.contains("choices") && 
                 response.raw_response["choices"].is_array() && 
                 !response.raw_response["choices"].empty()) {
@@ -105,6 +112,7 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
                 response.error_code = APIResponse::APIError::InvalidResponse;
             }
         } else {
+            // For error responses, attempt to parse JSON but don't fail if it's not JSON
             response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
             if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
                 response.error_code = APIResponse::APIError::Auth;
@@ -113,8 +121,20 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
             } else {
                 response.error_code = APIResponse::APIError::Server;
             }
+            
+            // Attempt to parse error response JSON if available
+            if (!cpr_response.text.empty()) {
+                try {
+                    response.raw_response = nlohmann::json::parse(cpr_response.text);
+                } catch (const nlohmann::json::parse_error&) {  // NOLINT(bugprone-empty-catch)
+                    // Non-JSON error response is acceptable
+                }
+            }
         }
         
+    } catch (const nlohmann::json::parse_error& e) {
+        response.error_message = "JSON parse error: " + std::string(e.what());
+        response.error_code = APIResponse::APIError::InvalidResponse;
     } catch (const std::exception& e) {
         response.error_message = "Exception: " + std::string(e.what());
         response.error_code = APIResponse::APIError::Network;

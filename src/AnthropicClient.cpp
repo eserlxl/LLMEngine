@@ -107,8 +107,12 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
             }
         }
         
+    } catch (const nlohmann::json::parse_error& e) {
+        response.error_message = "JSON parse error: " + std::string(e.what());
+        response.error_code = APIResponse::APIError::InvalidResponse;
     } catch (const std::exception& e) {
         response.error_message = "Exception: " + std::string(e.what());
+        response.error_code = APIResponse::APIError::Network;
     }
     
     return response;

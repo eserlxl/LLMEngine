@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "../src/DebugArtifacts.hpp"
-#include "../src/Utils.hpp"
+#include "LLMEngine/Utils.hpp"
 #include <cassert>
 #include <fstream>
 #include <iostream>
@@ -19,7 +19,7 @@ static std::string readAll(const std::string& path) {
 
 int main() {
     namespace fs = std::filesystem;
-    const std::string baseDir = Utils::TMP_DIR + std::string("/llmengine_test_debug");
+    const std::string baseDir = std::string(LLMEngine::Utils::TMP_DIR) + std::string("/llmengine_test_debug");
     std::error_code ec;
     fs::create_directories(baseDir, ec);
 

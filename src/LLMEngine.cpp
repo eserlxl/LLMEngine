@@ -399,7 +399,7 @@ void LLMEngine::LLMEngine::setLogger(std::shared_ptr<::LLMEngine::Logger> logger
     }
 }
 
-void LLMEngine::LLMEngine::setTempDirectory(const std::string& tmp_dir) {
+bool LLMEngine::LLMEngine::setTempDirectory(const std::string& tmp_dir) {
     // Only accept directories within the default root to avoid accidental deletion elsewhere
     try {
         const std::filesystem::path default_root = std::filesystem::path(::LLMEngine::DefaultTempDirProvider().getTempDir()).lexically_normal();
@@ -413,13 +413,18 @@ void LLMEngine::LLMEngine::setTempDirectory(const std::string& tmp_dir) {
         }
         if (is_within) {
             tmp_dir_ = requested.string();
-        } else if (logger_) {
-            logger_->log(::LLMEngine::LogLevel::Warn, std::string("Rejected temp directory outside allowed root: ") + requested.string());
+            return true;
+        } else {
+            if (logger_) {
+                logger_->log(::LLMEngine::LogLevel::Warn, std::string("Rejected temp directory outside allowed root: ") + requested.string());
+            }
+            return false;
         }
     } catch (...) {
         if (logger_) {
             logger_->log(::LLMEngine::LogLevel::Error, std::string("Failed to set temp directory due to path error: ") + tmp_dir);
         }
+        return false;
     }
 }
 

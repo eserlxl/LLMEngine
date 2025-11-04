@@ -30,8 +30,7 @@ find_dependency(nlohmann_json REQUIRED)
 # Note: Third-party dependencies (cpr, nlohmann_json) are not exported; consumers must provide them
 set(_llm_targets
   ${_llm_ns}::${_llm_ns}
-  ${_llm_ns}::compile_options
-  ${_llm_ns}::@PROJECT_NAME@_compile_options)
+  ${_llm_ns}::compile_options)
 
 set(_need_include TRUE)
 foreach(_t IN LISTS _llm_targets)
@@ -46,11 +45,12 @@ if (_need_include)
   if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
     include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
   else()
-    # Targets.cmake not available - this happens when dependencies were fetched via FetchContent
-    # Consumers should link directly to @PROJECT_NAME@ target or ensure dependencies are provided
-    message(WARNING "LLMEngine Targets.cmake not found. "
-                    "This may occur when dependencies were fetched via FetchContent. "
-                    "Ensure dependencies (nlohmann_json, cpr) are available and link to the LLMEngine target.")
+    # Targets.cmake not available - fail fast to avoid link-time errors
+    # This happens when dependencies were fetched via FetchContent and export was skipped
+    message(FATAL_ERROR "LLMEngine Targets.cmake not found at ${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake. "
+                        "This may occur when dependencies were fetched via FetchContent. "
+                        "Ensure dependencies (nlohmann_json, cpr) are available and link to the LLMEngine target, "
+                        "or rebuild LLMEngine with system-provided dependencies to generate the export set.")
   endif()
 endif()
 

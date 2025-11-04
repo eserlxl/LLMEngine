@@ -5,7 +5,7 @@
 // the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "Utils.hpp"
+#include "LLMEngine/Utils.hpp"
 #include "LLMEngine/Logger.hpp"
 #include <fstream>
 #include <sstream>
@@ -30,8 +30,8 @@
 #include <io.h>
 #endif
 
+namespace LLMEngine {
 namespace Utils {
-    std::string TMP_DIR = "/tmp/llmengine";
     namespace fs = std::filesystem;
 
     // Constants
@@ -446,4 +446,5 @@ namespace Utils {
         output = std::regex_replace(output, MARKDOWN_HEADER_REGEX, "");
         return output;
     }
-} 
+} // namespace Utils
+} // namespace LLMEngine 

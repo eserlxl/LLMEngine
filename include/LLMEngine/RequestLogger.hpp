@@ -12,6 +12,8 @@
 #include <vector>
 #include "LLMEngine/LLMEngineExport.hpp"
 
+namespace LLMEngine {
+
 /**
  * @brief Centralized request logging utility with automatic redaction of sensitive data.
  * 
@@ -68,4 +70,5 @@ private:
     static bool isSensitiveHeader(std::string_view header_name);
 };
 
+} // namespace LLMEngine
 

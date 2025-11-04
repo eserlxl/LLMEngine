@@ -151,14 +151,20 @@ set_target_properties(${PROJECT_NAME}_compile_options PROPERTIES EXPORT_NAME com
 if (MSVC)
   target_compile_options(${PROJECT_NAME}_compile_options INTERFACE /permissive-)
 else()
-  target_compile_options(${PROJECT_NAME}_compile_options INTERFACE -fstack-protector-strong)
+  # Use generator expressions to scope flags to specific compilers
+  # -fstack-protector-strong and -Wformat=2 may not be supported on all compilers (e.g., Apple Clang)
+  target_compile_options(${PROJECT_NAME}_compile_options INTERFACE
+    $<$<AND:$<COMPILE_LANG_AND_ID:CXX,GNU>,$<NOT:$<PLATFORM_ID:Darwin>>>:-fstack-protector-strong>
+    $<$<AND:$<COMPILE_LANG_AND_ID:CXX,Clang>,$<NOT:$<PLATFORM_ID:Darwin>>>:-fstack-protector-strong>)
   if (UNIX AND NOT APPLE)
     target_link_options(${PROJECT_NAME}_compile_options INTERFACE -Wl,-z,relro,-z,now)
   endif()
   if (WARNING_MODE)
     target_compile_options(${PROJECT_NAME}_compile_options INTERFACE
       -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wnon-virtual-dtor
-      -Wold-style-cast -Woverloaded-virtual -Wnull-dereference -Wformat=2 -Wimplicit-fallthrough)
+      -Wold-style-cast -Woverloaded-virtual -Wnull-dereference -Wimplicit-fallthrough
+      $<$<AND:$<COMPILE_LANG_AND_ID:CXX,GNU>,$<NOT:$<PLATFORM_ID:Darwin>>>:-Wformat=2>
+      $<$<AND:$<COMPILE_LANG_AND_ID:CXX,Clang>,$<NOT:$<PLATFORM_ID:Darwin>>>:-Wformat=2>)
     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       target_compile_options(${PROJECT_NAME}_compile_options INTERFACE -Wduplicated-cond -Wlogical-op -Wuseless-cast)
     endif()
@@ -270,6 +276,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_compile_options)
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated_include>
+  $<INSTALL_INTERFACE:include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 
 # Apply _GNU_SOURCE only to our target if needed (for POSIX extensions)

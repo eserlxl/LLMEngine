@@ -122,12 +122,12 @@ int main() {
         
         // Test stripMarkdown function
         std::string markdown_text = "**Bold text** and *italic text*";
-        std::string stripped = Utils::stripMarkdown(markdown_text);
+        std::string stripped = LLMEngine::Utils::stripMarkdown(markdown_text);
         std::cout << "Original: " << markdown_text << std::endl;
         std::cout << "Stripped: " << stripped << std::endl;
         
         // Test TMP_DIR
-        std::cout << "Temporary directory: " << Utils::TMP_DIR << std::endl;
+        std::cout << "Temporary directory: " << LLMEngine::Utils::TMP_DIR << std::endl;
         
         std::cout << "\n=== All tests completed successfully! ===" << std::endl;
         

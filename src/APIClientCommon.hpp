@@ -7,8 +7,8 @@
 
 #pragma once
 #include "LLMEngine/APIClient.hpp"
+#include "LLMEngine/RequestLogger.hpp"
 #include "Backoff.hpp"
-#include "RequestLogger.hpp"
 #include <cpr/cpr.h>
 #include <iostream>
 #include <thread>
@@ -96,7 +96,7 @@ namespace {
     inline void maybeLogRequest(std::string_view method, std::string_view url,
                                 const std::map<std::string, std::string>& headers) {
         if (std::getenv("LLMENGINE_LOG_REQUESTS") != nullptr) {
-            std::cerr << RequestLogger::formatRequest(method, url, headers);
+            std::cerr << LLMEngine::RequestLogger::formatRequest(method, url, headers);
         }
     }
 }
