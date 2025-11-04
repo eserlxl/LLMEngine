@@ -154,8 +154,10 @@ namespace LLMEngineSystem {
 
         std::string think_section;
         std::string remaining_section = full_response;
-        std::string::size_type open = full_response.find("<redacted_reasoning>");
-        std::string::size_type close = full_response.find("</redacted_reasoning>");
+        constexpr std::string_view tag_open = "<redacted_reasoning>";
+        constexpr std::string_view tag_close = "</redacted_reasoning>";
+        std::string::size_type open = full_response.find(tag_open);
+        std::string::size_type close = full_response.find(tag_close);
         if (open != std::string::npos && close != std::string::npos && close > open) {
             think_section = full_response.substr(open + tag_open.length(), close - (open + tag_open.length()));
             std::string before = full_response.substr(0, open);
