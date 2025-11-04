@@ -1,0 +1,118 @@
+// Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// This file is part of LLMEngine and is licensed under
+// the GNU General Public License v3.0 or later.
+// See the LICENSE file in the project root for details.
+
+#include "LLMEngine/APIClient.hpp"
+#include "APIClientCommon.hpp"
+#include "LLMEngine/Constants.hpp"
+#include <nlohmann/json.hpp>
+
+namespace LLMEngineAPI {
+
+AnthropicClient::AnthropicClient(const std::string& api_key, const std::string& model)
+    : api_key_(api_key), model_(model), base_url_(std::string(::LLMEngine::Constants::DefaultUrls::ANTHROPIC_BASE)) {
+    default_params_ = {
+        {"max_tokens", DEFAULT_MAX_TOKENS},
+        {"temperature", DEFAULT_TEMPERATURE},
+        {"top_p", DEFAULT_TOP_P}
+    };
+}
+
+APIResponse AnthropicClient::sendRequest(std::string_view prompt, 
+                                        const nlohmann::json& input,
+                                        const nlohmann::json& params) const {
+    APIResponse response;
+    response.success = false;
+    
+    try {
+        RetrySettings rs = computeRetrySettings(params, /*exponential_default*/true);
+        
+        // Merge default params with provided params using update() for efficiency
+        nlohmann::json request_params = default_params_;
+        request_params.update(params);
+        
+        // Prepare messages array
+        nlohmann::json messages = nlohmann::json::array();
+        messages.push_back({
+            {"role", "user"},
+            {"content", prompt}
+        });
+        
+        // Prepare request payload
+        nlohmann::json payload = {
+            {"model", model_},
+            {"max_tokens", request_params["max_tokens"]},
+            {"temperature", request_params["temperature"]},
+            {"top_p", request_params["top_p"]},
+            {"messages", messages}
+        };
+        
+        // Add system prompt if provided
+        if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))) {
+            payload["system"] = input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)].get<std::string>();
+        }
+        
+        // Get timeout from params or use config default
+        int timeout_seconds = 0;
+        if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
+            timeout_seconds = params[std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)].get<int>();
+        } else {
+            timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
+        }
+        
+        // Send request with retries
+        const std::string url = base_url_ + "/messages";
+        std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}, {"x-api-key", api_key_}, {"anthropic-version", "2023-06-01"}};
+        maybeLogRequest("POST", url, hdr);
+        cpr::Response cpr_response = sendWithRetries(rs, [&](){
+            return cpr::Post(
+                cpr::Url{url},
+                cpr::Header{hdr.begin(), hdr.end()},
+                cpr::Body{payload.dump()},
+                cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
+            );
+        });
+        
+        response.status_code = static_cast<int>(cpr_response.status_code);
+        response.raw_response = nlohmann::json::parse(cpr_response.text);
+        
+        if (cpr_response.status_code == HTTP_STATUS_OK) {
+            if (response.raw_response.contains("content") && 
+                response.raw_response["content"].is_array() && 
+                !response.raw_response["content"].empty()) {
+                
+                auto content = response.raw_response["content"][0];
+                if (content.contains("text")) {
+                    response.content = content["text"].get<std::string>();
+                    response.success = true;
+                } else {
+                    response.error_message = "No text content in response";
+                }
+            } else {
+                response.error_message = "Invalid response format";
+            }
+        } else {
+            response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
+            if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
+                response.error_code = APIResponse::APIError::Auth;
+            } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
+                response.error_code = APIResponse::APIError::RateLimited;
+            } else if (cpr_response.status_code >= HTTP_STATUS_SERVER_ERROR_MIN) {
+                response.error_code = APIResponse::APIError::Server;
+            } else {
+                response.error_code = APIResponse::APIError::Unknown;
+            }
+        }
+        
+    } catch (const std::exception& e) {
+        response.error_message = "Exception: " + std::string(e.what());
+    }
+    
+    return response;
+}
+
+} // namespace LLMEngineAPI
+

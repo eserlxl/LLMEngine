@@ -231,6 +231,11 @@ add_library(${PROJECT_NAME}
     src/LLMOutputProcessor.cpp
     src/Utils.cpp
     src/APIClient.cpp
+  src/QwenClient.cpp
+  src/OpenAIClient.cpp
+  src/AnthropicClient.cpp
+  src/OllamaClient.cpp
+  src/GeminiClient.cpp
     src/DebugArtifacts.cpp
     src/RequestLogger.cpp
 )
