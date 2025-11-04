@@ -125,7 +125,7 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
             }
             try {
                 response.raw_response = nlohmann::json::parse(cpr_response.text);
-            } catch (const std::exception&) {
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
                 // keep raw_response default, ignore parse errors
             }
         }
