@@ -292,6 +292,29 @@ This option is useful when you need precise control over prompts for evaluation 
 
 ---
 
+## 🧵 Concurrency Model
+
+- LLMEngine instances are not thread-safe; use one instance per thread.
+- Provider clients are stateless and thread-safe, but are owned by each LLMEngine instance.
+- If sharing a logger across threads, ensure the logger implementation is thread-safe.
+
+[↑ Back to top](#llmengine)
+
+---
+
+## 🛡️ Production Considerations
+
+- Credentials: provide via environment variables (e.g., `QWEN_API_KEY`, `OPENAI_API_KEY`), not config files.
+- Debug artifacts: disable in production by setting `LLMENGINE_DISABLE_DEBUG_FILES` or inject a policy via `setDebugFilesPolicy`.
+- Temporary files: default under `/tmp/llmengine`; directories are secured (no symlinks, owner-only perms). Use an `ITempDirProvider` to customize.
+- Retries: use a capped retry policy with jitter for transient errors; avoid retrying on auth/4xx.
+- Build: enable warnings and hardening flags; for shared builds, consider hidden symbol visibility.
+- CI: run sanitizer-enabled Debug builds and optimized Release builds; exercise Linux GCC/Clang (and optionally macOS).
+
+[↑ Back to top](#llmengine)
+
+---
+
 ## 🧪 Testing
 
 Tests are enabled by default when `BUILD_TESTING=ON`.
