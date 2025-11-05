@@ -165,6 +165,9 @@ target_link_libraries(test_tempdir_hardening PRIVATE LLMEngine llmengine::compil
 add_executable(test_request_logger test_request_logger.cpp)
 target_link_libraries(test_request_logger PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 
+add_executable(test_retry_policy test_retry_policy.cpp)
+target_link_libraries(test_retry_policy PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+
 # ---- Fuzz Testing (optional) -------------------------------------------------
 if (ENABLE_FUZZ)
   # Check if compiler supports libFuzzer
@@ -200,6 +203,7 @@ if (BUILD_TESTING)
   add_test(NAME test_provider_mapping_extended COMMAND test_provider_mapping_extended)
   add_test(NAME test_tempdir_hardening COMMAND test_tempdir_hardening)
   add_test(NAME test_request_logger COMMAND test_request_logger)
+  add_test(NAME test_retry_policy COMMAND test_retry_policy)
 endif()
 
 # ---- Target properties --------------------------------------------------------
