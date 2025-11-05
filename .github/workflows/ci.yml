@@ -159,6 +159,8 @@ jobs:
         run: |
           unset GIT_WORK_TREE
           unset GIT_DIR
+          # Remove build directory to ensure clean configuration
+          rm -rf build
           # Verify compiler environment variables are set
           echo "Using CC=$CC"
           echo "Using CXX=$CXX"
@@ -181,8 +183,7 @@ jobs:
             -DBUILD_TESTING=ON \
             -DENABLE_EXAMPLES=ON \
             -DWARNING_MODE=ON \
-            -DWERROR=ON \
-            --fresh
+            -DWERROR=ON
           # Verify CMake selected the correct compiler
           echo "CMake detected compiler:"
           grep "CMAKE_CXX_COMPILER" build/CMakeCache.txt || true
