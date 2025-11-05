@@ -545,50 +545,56 @@ if (_filter_interface_libs)
   if (_original_interface_libs)
     set(_filtered_libs "")
     foreach(_lib IN LISTS _original_interface_libs)
-      # Skip generator expressions - they're not direct target references
+      set(_should_filter FALSE)
+      set(_lib_to_check "${_lib}")
+      
+      # Handle generator expressions like $<LINK_ONLY:target> or $<...>
       if (_lib MATCHES "^\\$<")
-        list(APPEND _filtered_libs "${_lib}")
-      else()
-        # Check if this is a FetchContent dependency that's not installable
-        set(_should_filter FALSE)
-        
-        # Check if it's a target and if it's one of our FetchContent dependencies
-        if (TARGET "${_lib}")
-          # Get the target type to check if it's an alias
-          get_target_property(_lib_type "${_lib}" TYPE)
-          
-          # If it's an alias, resolve it to check the underlying target
-          set(_lib_to_check "${_lib}")
-          if (_lib_type STREQUAL "ALIAS")
-            get_target_property(_aliased_target "${_lib}" ALIASED_TARGET)
-            if (_aliased_target)
-              set(_lib_to_check "${_aliased_target}")
-            endif()
-          endif()
-          
-          # Check if this is one of our FetchContent dependencies
-          # Always filter FetchContent dependencies from export - consumers will provide them
-          if (NLOHMANN_JSON_FETCHED)
-            if (_lib STREQUAL "nlohmann_json::nlohmann_json" OR _lib STREQUAL "nlohmann_json" OR
-                _lib_to_check STREQUAL "nlohmann_json::nlohmann_json" OR _lib_to_check STREQUAL "nlohmann_json")
-              set(_should_filter TRUE)
-            endif()
-          endif()
-          if (CPR_FETCHED)
-            if (_lib STREQUAL "cpr::cpr" OR _lib STREQUAL "cpr" OR
-                _lib_to_check STREQUAL "cpr::cpr" OR _lib_to_check STREQUAL "cpr")
-              set(_should_filter TRUE)
-            endif()
-          endif()
-        endif()
-        
-        if (_should_filter)
-          # Filter out non-installable FetchContent dependencies
-          message(STATUS "Filtering non-installable FetchContent dependency from INTERFACE: ${_lib}")
+        # Extract target from $<LINK_ONLY:target> or similar patterns
+        if (_lib MATCHES "\\$<LINK_ONLY:([^>]+)>")
+          set(_lib_to_check "${CMAKE_MATCH_1}")
+        elseif (_lib MATCHES "\\$<[^:]+:([^>]+)>")
+          set(_lib_to_check "${CMAKE_MATCH_1}")
         else()
-          # Keep all other dependencies
+          # Complex generator expression we can't parse - keep it
           list(APPEND _filtered_libs "${_lib}")
+          continue()
         endif()
+      endif()
+      
+      # Check if this is a FetchContent dependency that should be filtered
+      if (TARGET "${_lib_to_check}")
+        # Get the target type to check if it's an alias
+        get_target_property(_lib_type "${_lib_to_check}" TYPE)
+        
+        # If it's an alias, resolve it to check the underlying target
+        if (_lib_type STREQUAL "ALIAS")
+          get_target_property(_aliased_target "${_lib_to_check}" ALIASED_TARGET)
+          if (_aliased_target)
+            set(_lib_to_check "${_aliased_target}")
+          endif()
+        endif()
+        
+        # Check if this is one of our FetchContent dependencies
+        # Always filter FetchContent dependencies from export - consumers will provide them
+        if (NLOHMANN_JSON_FETCHED)
+          if (_lib_to_check STREQUAL "nlohmann_json::nlohmann_json" OR _lib_to_check STREQUAL "nlohmann_json")
+            set(_should_filter TRUE)
+          endif()
+        endif()
+        if (CPR_FETCHED)
+          if (_lib_to_check STREQUAL "cpr::cpr" OR _lib_to_check STREQUAL "cpr")
+            set(_should_filter TRUE)
+          endif()
+        endif()
+      endif()
+      
+      if (_should_filter)
+        # Filter out non-installable FetchContent dependencies
+        message(STATUS "Filtering non-installable FetchContent dependency from INTERFACE: ${_lib}")
+      else()
+        # Keep all other dependencies
+        list(APPEND _filtered_libs "${_lib}")
       endif()
     endforeach()
     # Set filtered libraries for export
