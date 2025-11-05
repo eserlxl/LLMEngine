@@ -24,8 +24,6 @@ namespace LLMEngineAPI {
 // Internal constants (not exposed in public header)
 namespace {
     constexpr int MILLISECONDS_PER_SECOND = 1000;
-    // Use typed HTTP status constants from HttpStatus namespace
-    using ::LLMEngine::HttpStatus;
 }
 
 // Shared helpers for provider clients
@@ -72,14 +70,14 @@ namespace {
         for (int attempt = 1; attempt <= rs.max_attempts; ++attempt) {
             resp = doRequest();
             const int code = static_cast<int>(resp.status_code);
-            const bool is_success = HttpStatus::isSuccess(code);
+            const bool is_success = ::LLMEngine::HttpStatus::isSuccess(code);
             if (is_success) {
                 if (log_backoff && attempt > 1) {
                     std::cerr << "[BACKOFF] Request succeeded after " << attempt << " attempt(s)\n";
                 }
                 break;
             }
-            const bool is_non_retriable = HttpStatus::isClientError(code) && !HttpStatus::isRetriable(code);
+            const bool is_non_retriable = ::LLMEngine::HttpStatus::isClientError(code) && !::LLMEngine::HttpStatus::isRetriable(code);
             if (attempt < rs.max_attempts && !is_non_retriable) {
                 int delay = 0;
                 if (rs.exponential) {

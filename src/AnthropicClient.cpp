@@ -129,7 +129,7 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
                 response.error_code = APIResponse::APIError::Auth;
             } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
                 response.error_code = APIResponse::APIError::RateLimited;
-            } else if (::LLMEngine::HttpStatus::isServerError(cpr_response.status_code)) {
+            } else if (::LLMEngine::HttpStatus::isServerError(static_cast<int>(cpr_response.status_code))) {
                 response.error_code = APIResponse::APIError::Server;
             } else {
                 response.error_code = APIResponse::APIError::Unknown;

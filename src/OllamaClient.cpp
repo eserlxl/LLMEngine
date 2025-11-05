@@ -73,7 +73,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                 out.error_code = APIResponse::APIError::Auth;
             } else if (r.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
                 out.error_code = APIResponse::APIError::RateLimited;
-            } else if (::LLMEngine::HttpStatus::isServerError(r.status_code)) {
+            } else if (::LLMEngine::HttpStatus::isServerError(static_cast<int>(r.status_code))) {
                 out.error_code = APIResponse::APIError::Server;
             } else {
                 out.error_code = APIResponse::APIError::Unknown;

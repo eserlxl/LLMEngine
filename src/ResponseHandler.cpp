@@ -53,7 +53,7 @@ static AnalysisErrorCode mapErrorCode(::LLMEngineAPI::APIResponse::APIError api_
 AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_response,
                                        DebugArtifactManager* debug_mgr,
                                        const std::string& request_tmp_dir,
-                                       std::string_view analysis_type,
+                                       std::string_view /*analysis_type*/,
                                        bool write_debug_files,
                                        Logger* logger) {
 

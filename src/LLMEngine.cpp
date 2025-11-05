@@ -175,6 +175,7 @@ void LLMEngine::LLMEngine::initializeAPIClient() {
 void LLMEngine::LLMEngine::ensureSecureTmpDir() const {
     // Security: Check for symlink before creating directories
     // If the path exists and is a symlink, reject it to prevent symlink traversal attacks
+    std::error_code ec;
     if (std::filesystem::exists(tmp_dir_, ec)) {
         std::error_code ec_symlink;
         if (std::filesystem::is_symlink(tmp_dir_, ec_symlink)) {
