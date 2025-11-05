@@ -531,82 +531,14 @@ endfunction()
 # - If they're not installable (IMPORTED INTERFACE, aliases), filter them from INTERFACE_LINK_LIBRARIES
 # This prevents CMake export validation errors
 set(_targets_to_install ${PROJECT_NAME} ${PROJECT_NAME}_compile_options)
+# Always filter FetchContent dependencies from INTERFACE_LINK_LIBRARIES
+# The Config.cmake will require consumers to provide them via find_dependency()
 set(_filter_interface_libs FALSE)
 
-if (NLOHMANN_JSON_FETCHED)
-  # Check if nlohmann_json is installable - try both namespaced and non-namespaced
-  set(_json_actual_target "")
-  if (TARGET nlohmann_json::nlohmann_json)
-    _is_target_installable("nlohmann_json::nlohmann_json" _json_installable)
-    if (_json_installable)
-      _get_actual_target_name("nlohmann_json::nlohmann_json" _json_actual_target)
-    endif()
-  endif()
-  # If namespaced version isn't installable or doesn't exist, try non-namespaced
-  if (NOT _json_actual_target AND TARGET nlohmann_json)
-    _is_target_installable("nlohmann_json" _json_installable)
-    if (_json_installable)
-      _get_actual_target_name("nlohmann_json" _json_actual_target)
-    endif()
-  endif()
-  
-  if (_json_actual_target AND TARGET "${_json_actual_target}")
-    # Verify it's still installable after resolving and not an alias
-    get_target_property(_resolved_type "${_json_actual_target}" TYPE)
-    if (NOT _resolved_type STREQUAL "ALIAS")
-      _is_target_installable("${_json_actual_target}" _json_installable)
-      if (_json_installable)
-        list(APPEND _targets_to_install "${_json_actual_target}")
-      else()
-        # Resolved target is not installable, filter from interface
-        set(_filter_interface_libs TRUE)
-      endif()
-    else()
-      # Resolved to an alias, skip it and filter from interface
-      set(_filter_interface_libs TRUE)
-    endif()
-  else()
-    # Not installable, we need to filter it from INTERFACE_LINK_LIBRARIES
-    set(_filter_interface_libs TRUE)
-  endif()
-endif()
-
-if (CPR_FETCHED)
-  # Check if cpr is installable - try both namespaced and non-namespaced
-  set(_cpr_actual_target "")
-  if (TARGET cpr::cpr)
-    _is_target_installable("cpr::cpr" _cpr_installable)
-    if (_cpr_installable)
-      _get_actual_target_name("cpr::cpr" _cpr_actual_target)
-    endif()
-  endif()
-  # If namespaced version isn't installable or doesn't exist, try non-namespaced
-  if (NOT _cpr_actual_target AND TARGET cpr)
-    _is_target_installable("cpr" _cpr_installable)
-    if (_cpr_installable)
-      _get_actual_target_name("cpr" _cpr_actual_target)
-    endif()
-  endif()
-  
-  if (_cpr_actual_target AND TARGET "${_cpr_actual_target}")
-    # Verify it's still installable after resolving and not an alias
-    get_target_property(_resolved_type "${_cpr_actual_target}" TYPE)
-    if (NOT _resolved_type STREQUAL "ALIAS")
-      _is_target_installable("${_cpr_actual_target}" _cpr_installable)
-      if (_cpr_installable)
-        list(APPEND _targets_to_install "${_cpr_actual_target}")
-      else()
-        # Resolved target is not installable, filter from interface
-        set(_filter_interface_libs TRUE)
-      endif()
-    else()
-      # Resolved to an alias, skip it and filter from interface
-      set(_filter_interface_libs TRUE)
-    endif()
-  else()
-    # Not installable, we need to filter it from INTERFACE_LINK_LIBRARIES
-    set(_filter_interface_libs TRUE)
-  endif()
+if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
+  # For FetchContent dependencies, always filter from INTERFACE_LINK_LIBRARIES
+  # to avoid export validation errors with non-installable alias targets
+  set(_filter_interface_libs TRUE)
 endif()
 
 # Filter non-installable FetchContent dependencies from INTERFACE_LINK_LIBRARIES if needed
@@ -641,22 +573,17 @@ if (_filter_interface_libs)
           endif()
           
           # Check if this is one of our FetchContent dependencies
+          # Always filter FetchContent dependencies from export - consumers will provide them
           if (NLOHMANN_JSON_FETCHED)
             if (_lib STREQUAL "nlohmann_json::nlohmann_json" OR _lib STREQUAL "nlohmann_json" OR
                 _lib_to_check STREQUAL "nlohmann_json::nlohmann_json" OR _lib_to_check STREQUAL "nlohmann_json")
-              _is_target_installable("${_lib_to_check}" _installable)
-              if (NOT _installable)
-                set(_should_filter TRUE)
-              endif()
+              set(_should_filter TRUE)
             endif()
           endif()
           if (CPR_FETCHED)
             if (_lib STREQUAL "cpr::cpr" OR _lib STREQUAL "cpr" OR
                 _lib_to_check STREQUAL "cpr::cpr" OR _lib_to_check STREQUAL "cpr")
-              _is_target_installable("${_lib_to_check}" _installable)
-              if (NOT _installable)
-                set(_should_filter TRUE)
-              endif()
+              set(_should_filter TRUE)
             endif()
           endif()
         endif()
