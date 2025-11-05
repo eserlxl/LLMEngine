@@ -55,29 +55,92 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
+          # For GCC 12 on Ubuntu 22.04, we may need the toolchain PPA
+          if [ "${{ matrix.compiler }}" = "gcc" ] && [ "${{ matrix.compiler_version }}" = "12" ]; then
+            sudo apt-get install -y software-properties-common
+            sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+            sudo apt-get update
+          fi
+          # Install base build tools first (but not build-essential which pulls in default GCC)
           sudo apt-get install -y \
             git \
-            build-essential \
+            make \
+            cmake \
             libssl-dev \
-            nlohmann-json3-dev \
-            ${{ matrix.compiler }}-${{ matrix.compiler_version }}
+            nlohmann-json3-dev
+          # Install the specific compiler version we need
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            sudo apt-get install -y \
+              gcc-${{ matrix.compiler_version }} \
+              g++-${{ matrix.compiler_version }} \
+              gcc-${{ matrix.compiler_version }}-base \
+              libstdc++-${{ matrix.compiler_version }}-dev
+          else
+            sudo apt-get install -y \
+              ${{ matrix.compiler }}-${{ matrix.compiler_version }} \
+              ${{ matrix.compiler }}-${{ matrix.compiler_version }}-base
+          fi
+          # Verify the requested compiler version is installed
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            if ! dpkg -l | grep -q "^ii.*gcc-${{ matrix.compiler_version }}"; then
+              echo "Error: gcc-${{ matrix.compiler_version }} package not found"
+              echo "Available GCC packages:"
+              dpkg -l | grep "^ii.*gcc-" || true
+              exit 1
+            fi
+            echo "Installed GCC packages:"
+            dpkg -l | grep "^ii.*gcc-${{ matrix.compiler_version }}" || true
+          fi
 
       - name: Set up compiler
         run: |
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
-            # Verify the specific GCC version is installed and available
-            if ! command -v gcc-${{ matrix.compiler_version }} &> /dev/null; then
-              echo "Error: gcc-${{ matrix.compiler_version }} not found"
+            # On Ubuntu 22.04, GCC 11 is the default, so it might be 'gcc' without version suffix
+            if [ "${{ matrix.compiler_version }}" = "11" ]; then
+              # Try versioned first, then fall back to unversioned
+              if command -v gcc-11 &> /dev/null; then
+                GCC_CMD="gcc-11"
+                GXX_CMD="g++-11"
+              elif command -v gcc &> /dev/null && [ "$(gcc -dumpversion | cut -d. -f1)" = "11" ]; then
+                GCC_CMD="gcc"
+                GXX_CMD="g++"
+                echo "Using default GCC (which is version 11)"
+              else
+                echo "Error: GCC 11 not found"
+                exit 1
+              fi
+            else
+              # For GCC 12+, use versioned commands
+              GCC_CMD="gcc-${{ matrix.compiler_version }}"
+              GXX_CMD="g++-${{ matrix.compiler_version }}"
+              if ! command -v $GCC_CMD &> /dev/null; then
+                echo "Error: $GCC_CMD not found"
+                echo "Available GCC versions:"
+                dpkg -l | grep "^ii.*gcc-" || true
+                exit 1
+              fi
+            fi
+            if ! command -v $GXX_CMD &> /dev/null; then
+              echo "Error: $GXX_CMD not found"
               exit 1
             fi
-            if ! command -v g++-${{ matrix.compiler_version }} &> /dev/null; then
-              echo "Error: g++-${{ matrix.compiler_version }} not found"
-              exit 1
+            # Use full paths to ensure we get the right compiler
+            GCC_PATH=$(which $GCC_CMD)
+            GXX_PATH=$(which $GXX_CMD)
+            echo "Found GCC at: $GCC_PATH"
+            echo "Found G++ at: $GXX_PATH"
+            echo "CC=$GCC_PATH" >> "$GITHUB_ENV"
+            echo "CXX=$GXX_PATH" >> "$GITHUB_ENV"
+            # Verify we're using the correct version and check which libstdc++ it uses
+            $GCC_CMD --version
+            ACTUAL_VERSION=$($GCC_CMD -dumpversion | cut -d. -f1)
+            echo "Actual GCC major version: $ACTUAL_VERSION"
+            if [ "$ACTUAL_VERSION" != "${{ matrix.compiler_version }}" ]; then
+              echo "Warning: GCC version mismatch. Expected ${{ matrix.compiler_version }}, got $ACTUAL_VERSION"
             fi
-            echo "CC=gcc-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
-            echo "CXX=g++-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
-            # Verify we're using the correct version
-            gcc-${{ matrix.compiler_version }} --version
+            $GCC_CMD -print-file-name=libstdc++.so
+            echo "GCC version details:"
+            $GCC_CMD -v 2>&1 | tail -5
           else
             echo "CC=clang-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
             echo "CXX=clang++-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
@@ -100,6 +163,14 @@ jobs:
           echo "Using CXX=$CXX"
           $CC --version
           $CXX --version
+          # Verify which GCC version is actually being used (for GCC builds)
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            echo "Verifying GCC version in use:"
+            $CC -dumpversion
+            $CC -dumpmachine
+            echo "GCC include paths:"
+            $CC -E -x c++ - -v < /dev/null 2>&1 | grep "^ /" | head -10
+          fi
           cmake -S . -B build \
             -G "Unix Makefiles" \
             -DCMAKE_C_COMPILER="$CC" \
@@ -109,11 +180,15 @@ jobs:
             -DBUILD_TESTING=ON \
             -DENABLE_EXAMPLES=ON \
             -DWARNING_MODE=ON \
-            -DWERROR=ON
+            -DWERROR=ON \
+            --fresh
           # Verify CMake selected the correct compiler
           echo "CMake detected compiler:"
-          cmake --build build --target help 2>&1 | head -20 || true
-          grep -A 5 "CMAKE_CXX_COMPILER" build/CMakeCache.txt || true
+          grep "CMAKE_CXX_COMPILER" build/CMakeCache.txt || true
+          grep "CMAKE_CXX_COMPILER_VERSION" build/CMakeCache.txt || true
+          echo "Testing compiler directly:"
+          echo 'int main(){}' | $CXX -x c++ - -o /tmp/test_compile && echo "Compilation test successful" || echo "Compilation test failed"
+          rm -f /tmp/test_compile
 
       - name: Build
         run: cmake --build build -j20
