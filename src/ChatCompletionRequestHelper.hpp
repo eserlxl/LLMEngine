@@ -7,6 +7,7 @@
 
 #pragma once
 #include "LLMEngine/APIClient.hpp"
+#include "LLMEngine/HttpStatus.hpp"
 #include "APIClientCommon.hpp"
 #include "LLMEngine/Constants.hpp"
 #include <nlohmann/json.hpp>
@@ -152,7 +153,7 @@ struct ChatCompletionRequestHelper {
             response.status_code = static_cast<int>(cpr_response.status_code);
             
             // Parse response using provider-specific parser
-            if (response.status_code >= 200 && response.status_code < 300) {
+            if (::LLMEngine::HttpStatus::isSuccess(response.status_code)) {
                 // Only parse JSON for successful responses
                 try {
                     response.raw_response = nlohmann::json::parse(cpr_response.text);
@@ -164,9 +165,10 @@ struct ChatCompletionRequestHelper {
             } else {
                 // For error responses, attempt to parse JSON but don't fail if it's not JSON
                 response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
-                if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
+                if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED || 
+                    cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
                     response.error_code = APIResponse::APIError::Auth;
-                } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
+                } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
                     response.error_code = APIResponse::APIError::RateLimited;
                 } else {
                     response.error_code = APIResponse::APIError::Server;

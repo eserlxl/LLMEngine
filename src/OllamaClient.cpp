@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/APIClient.hpp"
+#include "LLMEngine/HttpStatus.hpp"
 #include "APIClientCommon.hpp"
 #include "LLMEngine/Constants.hpp"
 #include <nlohmann/json.hpp>
@@ -67,11 +68,12 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
 
         auto set_error_from_http = [&](APIResponse& out, const cpr::Response& r){
             out.error_message = "HTTP " + std::to_string(r.status_code) + ": " + r.text;
-            if (r.status_code == HTTP_STATUS_UNAUTHORIZED || r.status_code == HTTP_STATUS_FORBIDDEN) {
+            if (r.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED || 
+                r.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
                 out.error_code = APIResponse::APIError::Auth;
-            } else if (r.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
+            } else if (r.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
                 out.error_code = APIResponse::APIError::RateLimited;
-            } else if (r.status_code >= HTTP_STATUS_SERVER_ERROR_MIN) {
+            } else if (::LLMEngine::HttpStatus::isServerError(r.status_code)) {
                 out.error_code = APIResponse::APIError::Server;
             } else {
                 out.error_code = APIResponse::APIError::Unknown;
@@ -106,7 +108,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             
             response.status_code = static_cast<int>(cpr_response.status_code);
             
-            if (cpr_response.status_code == HTTP_STATUS_OK) {
+            if (cpr_response.status_code == ::LLMEngine::HttpStatus::OK) {
                 if (cpr_response.text.empty()) {
                     response.error_message = "Empty response from server";
                 } else {
@@ -165,7 +167,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             
             response.status_code = static_cast<int>(cpr_response.status_code);
             
-            if (cpr_response.status_code == HTTP_STATUS_OK) {
+            if (cpr_response.status_code == ::LLMEngine::HttpStatus::OK) {
                 if (cpr_response.text.empty()) {
                     response.error_message = "Empty response from server";
                 } else {

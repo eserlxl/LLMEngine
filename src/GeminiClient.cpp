@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/APIClient.hpp"
+#include "LLMEngine/HttpStatus.hpp"
 #include "APIClientCommon.hpp"
 #include "LLMEngine/Constants.hpp"
 #include <nlohmann/json.hpp>
@@ -89,7 +90,7 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
 
         response.status_code = static_cast<int>(cpr_response.status_code);
 
-        if (cpr_response.status_code == HTTP_STATUS_OK) {
+        if (cpr_response.status_code == ::LLMEngine::HttpStatus::OK) {
             if (cpr_response.text.empty()) {
                 response.error_message = "Empty response from server";
                 response.error_code = APIResponse::APIError::InvalidResponse;
@@ -126,9 +127,10 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
             }
         } else {
             response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
-            if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
+            if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED || 
+                cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
                 response.error_code = APIResponse::APIError::Auth;
-            } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
+            } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
                 response.error_code = APIResponse::APIError::RateLimited;
             } else {
                 response.error_code = APIResponse::APIError::Server;

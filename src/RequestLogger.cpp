@@ -10,36 +10,41 @@
 #include <ranges>
 #include <sstream>
 #include <cctype>
+#include <unordered_set>
 #include "LLMEngine/SensitiveFields.hpp"
 
 namespace {
-    const std::vector<std::string>& getSensitiveQueryParamsImpl() {
-        static const std::vector<std::string> params = []{
-            std::vector<std::string> v;
-            v.reserve(LLMEngine::Security::SENSITIVE_QUERY_PARAMS.size());
-            for (auto s : LLMEngine::Security::SENSITIVE_QUERY_PARAMS) v.emplace_back(s);
-            return v;
-        }();
+    // Helper to convert string_view array to lowercase unordered_set for O(1) lookup
+    template<size_t N>
+    std::unordered_set<std::string> makeLowercaseSet(const std::array<std::string_view, N>& arr) {
+        std::unordered_set<std::string> result;
+        result.reserve(N);
+        for (auto s : arr) {
+            std::string lower;
+            lower.reserve(s.size());
+            for (char c : s) {
+                lower += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            }
+            result.insert(std::move(lower));
+        }
+        return result;
+    }
+
+    const std::unordered_set<std::string>& getSensitiveQueryParamsImpl() {
+        static const std::unordered_set<std::string> params = 
+            makeLowercaseSet(LLMEngine::Security::SENSITIVE_QUERY_PARAMS);
         return params;
     }
 
-    const std::vector<std::string>& getSensitiveHeaderNamesImpl() {
-        static const std::vector<std::string> headers = []{
-            std::vector<std::string> v;
-            v.reserve(LLMEngine::Security::SENSITIVE_HEADER_NAMES.size());
-            for (auto s : LLMEngine::Security::SENSITIVE_HEADER_NAMES) v.emplace_back(s);
-            return v;
-        }();
+    const std::unordered_set<std::string>& getSensitiveHeaderNamesImpl() {
+        static const std::unordered_set<std::string> headers = 
+            makeLowercaseSet(LLMEngine::Security::SENSITIVE_HEADER_NAMES);
         return headers;
     }
 
-    const std::vector<std::string>& getAllowedLogHeaderNamesImpl() {
-        static const std::vector<std::string> headers = []{
-            std::vector<std::string> v;
-            v.reserve(LLMEngine::Security::ALLOWED_LOG_HEADER_NAMES.size());
-            for (auto s : LLMEngine::Security::ALLOWED_LOG_HEADER_NAMES) v.emplace_back(s);
-            return v;
-        }();
+    const std::unordered_set<std::string>& getAllowedLogHeaderNamesImpl() {
+        static const std::unordered_set<std::string> headers = 
+            makeLowercaseSet(LLMEngine::Security::ALLOWED_LOG_HEADER_NAMES);
         return headers;
     }
 
@@ -58,10 +63,18 @@ namespace LLMEngine {
 std::string RequestLogger::redactUrl(std::string_view url) {
     std::string result(url);
     
-    // Find the query string start
+    // Find the query string start (before fragment)
     size_t query_start = result.find('?');
     if (query_start == std::string::npos) {
         return result;  // No query parameters
+    }
+    
+    // Find fragment start (if any) to preserve it
+    size_t fragment_start = result.find('#', query_start);
+    std::string fragment;
+    if (fragment_start != std::string::npos) {
+        fragment = result.substr(fragment_start);
+        result = result.substr(0, fragment_start);
     }
     
     // Extract base URL and query string
@@ -69,42 +82,93 @@ std::string RequestLogger::redactUrl(std::string_view url) {
     std::string query_string = result.substr(query_start + 1);
     
     // Parse and redact query parameters
-    std::istringstream query_stream(query_string);
-    std::string param_pair;
+    // Handle both '&' and ';' as parameter separators (RFC 1866)
     std::vector<std::string> safe_params;
+    size_t start = 0;
     
-    while (std::getline(query_stream, param_pair, '&')) {
-        size_t equals_pos = param_pair.find('=');
-        if (equals_pos == std::string::npos) {
-            // Parameter without value, keep as-is
-            safe_params.push_back(param_pair);
+    while (start < query_string.size()) {
+        // Find next delimiter (& or ;)
+        size_t next_delim = query_string.find_first_of("&;", start);
+        size_t param_end = (next_delim == std::string::npos) ? query_string.size() : next_delim;
+        
+        std::string param_pair = query_string.substr(start, param_end - start);
+        
+        // Skip empty parameters
+        if (param_pair.empty()) {
+            start = param_end + 1;
             continue;
         }
         
-        std::string param_name = param_pair.substr(0, equals_pos);
+        // Find equals sign (handle URL-encoded = as %3D)
+        size_t equals_pos = param_pair.find('=');
         
-        // Check if this is a sensitive parameter
-        std::string lower_name = toLower(param_name);
-        bool is_sensitive = std::ranges::any_of(getSensitiveQueryParamsImpl(),
-            [&lower_name](const std::string& sensitive) {
-                return lower_name == sensitive;
-            });
-        
-        if (is_sensitive) {
-            // Redact the value
-            safe_params.push_back(param_name + "=<REDACTED>");
-        } else {
-            // Keep the original parameter
-            safe_params.push_back(param_pair);
+        // If no '=', check for URL-encoded '=' (%3D)
+        if (equals_pos == std::string::npos) {
+            size_t encoded_equals = param_pair.find("%3D");
+            if (encoded_equals != std::string::npos) {
+                // For simplicity, treat %3D as delimiter if it appears early in param
+                // (real URL decoding would require full URL decoder)
+                equals_pos = encoded_equals;
+                // Note: We don't decode here, just check if it's a delimiter
+                // Full URL decoding would require a proper URL decoder library
+            }
         }
+        
+        if (equals_pos == std::string::npos) {
+            // Parameter without value, keep as-is
+            safe_params.push_back(param_pair);
+        } else {
+            std::string param_name = param_pair.substr(0, equals_pos);
+            
+            // Basic URL decoding for parameter name (handle %26 for &, %3D for =)
+            // Note: This is a simplified decoder; full decoding would need a proper library
+            // For now, we handle the common case of %26 and %3D in names
+            std::string decoded_name;
+            decoded_name.reserve(param_name.size());
+            for (size_t i = 0; i < param_name.size(); ++i) {
+                if (param_name[i] == '%' && i + 2 < param_name.size()) {
+                    if (param_name.substr(i, 3) == "%26") {
+                        decoded_name += '&';
+                        i += 2;
+                    } else if (param_name.substr(i, 3) == "%3D") {
+                        decoded_name += '=';
+                        i += 2;
+                    } else {
+                        decoded_name += param_name[i];
+                    }
+                } else {
+                    decoded_name += param_name[i];
+                }
+            }
+            
+            // Check if this is a sensitive parameter (O(1) hash lookup)
+            std::string lower_name = toLower(decoded_name);
+            bool is_sensitive = getSensitiveQueryParamsImpl().contains(lower_name);
+            
+            if (is_sensitive) {
+                // Redact the value (preserve original param name encoding)
+                safe_params.push_back(param_name + "=<REDACTED>");
+            } else {
+                // Keep the original parameter
+                safe_params.push_back(param_pair);
+            }
+        }
+        
+        start = param_end + 1;
     }
     
     // Reconstruct URL
     result = base_url;
     for (size_t i = 0; i < safe_params.size(); ++i) {
-        if (i > 0) result += "&";
+        if (i > 0) {
+            // Use '&' as separator (standard, though ';' is also valid)
+            result += "&";
+        }
         result += safe_params[i];
     }
+    
+    // Append fragment if present
+    result += fragment;
     
     return result;
 }
@@ -114,16 +178,15 @@ std::map<std::string, std::string> RequestLogger::redactHeaders(
     std::map<std::string, std::string> redacted;
     
     // Default-deny header logging: only include headers on the allowlist.
+    // Cache lowercased header names to avoid repeated toLower calls
     for (const auto& [name, value] : headers) {
         const std::string lower_name = toLower(name);
-        const bool allowed = std::ranges::any_of(getAllowedLogHeaderNamesImpl(),
-            [&lower_name](const std::string& allowed_name) {
-                return lower_name == allowed_name;
-            });
-        if (!allowed) {
+        // O(1) hash lookup for allowlist check
+        if (!getAllowedLogHeaderNamesImpl().contains(lower_name)) {
             continue; // omit non-allowed headers entirely
         }
-        if (isSensitiveHeader(lower_name)) {
+        // O(1) hash lookup for sensitive header check
+        if (getSensitiveHeaderNamesImpl().contains(lower_name)) {
             redacted[name] = "<REDACTED>";
         } else {
             redacted[name] = value;
@@ -148,20 +211,20 @@ std::string RequestLogger::formatRequest(std::string_view method,
     return oss.str();
 }
 
-const std::vector<std::string>& RequestLogger::getSensitiveQueryParams() {
-    return getSensitiveQueryParamsImpl();
+const std::vector<std::string> RequestLogger::getSensitiveQueryParams() {
+    const auto& set = getSensitiveQueryParamsImpl();
+    return std::vector<std::string>(set.begin(), set.end());
 }
 
-const std::vector<std::string>& RequestLogger::getSensitiveHeaderNames() {
-    return getSensitiveHeaderNamesImpl();
+const std::vector<std::string> RequestLogger::getSensitiveHeaderNames() {
+    const auto& set = getSensitiveHeaderNamesImpl();
+    return std::vector<std::string>(set.begin(), set.end());
 }
 
 bool RequestLogger::isSensitiveHeader(std::string_view header_name) {
     std::string lower_name = toLower(header_name);
-    return std::ranges::any_of(getSensitiveHeaderNamesImpl(),
-        [&lower_name](const std::string& sensitive) {
-            return lower_name == sensitive;
-        });
+    // O(1) hash lookup instead of O(n) linear search
+    return getSensitiveHeaderNamesImpl().contains(lower_name);
 }
 
 std::string RequestLogger::redactText(std::string_view text) {

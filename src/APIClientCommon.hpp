@@ -8,6 +8,7 @@
 #pragma once
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/RequestLogger.hpp"
+#include "LLMEngine/HttpStatus.hpp"
 #include "Backoff.hpp"
 #include "LLMEngine/Constants.hpp"
 #include <cpr/cpr.h>
@@ -23,11 +24,8 @@ namespace LLMEngineAPI {
 // Internal constants (not exposed in public header)
 namespace {
     constexpr int MILLISECONDS_PER_SECOND = 1000;
-    constexpr int HTTP_STATUS_OK = 200;
-    constexpr int HTTP_STATUS_UNAUTHORIZED = 401;
-    constexpr int HTTP_STATUS_FORBIDDEN = 403;
-    constexpr int HTTP_STATUS_TOO_MANY_REQUESTS = 429;
-    constexpr int HTTP_STATUS_SERVER_ERROR_MIN = 500;
+    // Use typed HTTP status constants from HttpStatus namespace
+    using ::LLMEngine::HttpStatus;
 }
 
 // Shared helpers for provider clients
@@ -71,9 +69,9 @@ namespace {
         for (int attempt = 1; attempt <= rs.max_attempts; ++attempt) {
             resp = doRequest();
             const int code = static_cast<int>(resp.status_code);
-            const bool is_success = (code >= 200 && code < 300);
+            const bool is_success = HttpStatus::isSuccess(code);
             if (is_success) break;
-            const bool is_non_retriable = (code >= 400 && code < 500) && (code != HTTP_STATUS_TOO_MANY_REQUESTS);
+            const bool is_non_retriable = HttpStatus::isClientError(code) && !HttpStatus::isRetriable(code);
             if (attempt < rs.max_attempts && !is_non_retriable) {
                 int delay = 0;
                 if (rs.exponential) {

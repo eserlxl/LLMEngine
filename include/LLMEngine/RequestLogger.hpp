@@ -69,14 +69,21 @@ public:
      */
     static std::string redactText(std::string_view text);
  
+    /**
+     * @brief Get list of sensitive query parameter names (for testing/external use).
+     * @return Vector of sensitive parameter names (lowercase)
+     */
+    static const std::vector<std::string> getSensitiveQueryParams();
+    
+    /**
+     * @brief Get list of sensitive header names (for testing/external use).
+     * @return Vector of sensitive header names (lowercase)
+     */
+    static const std::vector<std::string> getSensitiveHeaderNames();
+    
 private:
-    // List of sensitive query parameter names to redact
-    static const std::vector<std::string>& getSensitiveQueryParams();
-    
-    // List of sensitive header names to redact
-    static const std::vector<std::string>& getSensitiveHeaderNames();
-    
     // Check if a header name is sensitive (case-insensitive)
+    // Uses O(1) hash lookup internally
     static bool isSensitiveHeader(std::string_view header_name);
 };
 

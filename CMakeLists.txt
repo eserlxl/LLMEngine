@@ -746,6 +746,7 @@ install(TARGETS ${_targets_to_install}
 install(DIRECTORY include/LLMEngine/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
     FILES_MATCHING PATTERN "*.hpp")
+# HttpStatus.hpp is included in the directory install above
 # Compatibility headers go to include root (so both <LLMEngine.hpp> and <LLMEngine/LLMEngine.hpp> work)
 install(FILES
     include/LLMEngine.hpp

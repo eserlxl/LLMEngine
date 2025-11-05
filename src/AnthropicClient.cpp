@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/APIClient.hpp"
+#include "LLMEngine/HttpStatus.hpp"
 #include "APIClientCommon.hpp"
 #include "LLMEngine/Constants.hpp"
 #include <nlohmann/json.hpp>
@@ -88,7 +89,7 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
         
         response.status_code = static_cast<int>(cpr_response.status_code);
         
-        if (cpr_response.status_code == HTTP_STATUS_OK) {
+        if (cpr_response.status_code == ::LLMEngine::HttpStatus::OK) {
             // Parse JSON only after confirming HTTP success
             try {
                 response.raw_response = nlohmann::json::parse(cpr_response.text);
@@ -123,11 +124,12 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
             }
             
             // Classify error based on HTTP status code
-            if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
+            if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED || 
+                cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
                 response.error_code = APIResponse::APIError::Auth;
-            } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
+            } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
                 response.error_code = APIResponse::APIError::RateLimited;
-            } else if (cpr_response.status_code >= HTTP_STATUS_SERVER_ERROR_MIN) {
+            } else if (::LLMEngine::HttpStatus::isServerError(cpr_response.status_code)) {
                 response.error_code = APIResponse::APIError::Server;
             } else {
                 response.error_code = APIResponse::APIError::Unknown;
