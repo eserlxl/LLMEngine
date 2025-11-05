@@ -403,7 +403,9 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 # Install library (handles both static and shared) and export targets.
 # We always export our own targets; consumers are responsible for providing
 # third-party dependencies (cpr, nlohmann_json) discovered via find_dependency().
-# Note: FetchContent dependencies are not installed as they are build-time only.
+# Note: FetchContent dependencies are installed into the export set to make them
+# exportable and prevent CMake validation errors, but consumers should still use
+# find_dependency() to get them via Config.cmake.
 
 # Helper function to check if a target is exportable
 function(_is_target_exportable target_name result_var)
@@ -521,12 +523,40 @@ function(_get_actual_target_name target_name result_var)
 endfunction()
 
 # Before installing, handle FetchContent dependencies:
-# - If they're installable, include them in the export set
-# - If they're not installable (IMPORTED INTERFACE, aliases), filter them from INTERFACE_LINK_LIBRARIES
-# This prevents CMake export validation errors
+# - Install FetchContent targets into the export set so they're exportable
+# - This prevents CMake export validation errors
+# - Consumers can still provide their own dependencies via find_dependency()
 set(_targets_to_install ${PROJECT_NAME} ${PROJECT_NAME}_compile_options)
-# Always filter FetchContent dependencies from INTERFACE_LINK_LIBRARIES
-# The Config.cmake will require consumers to provide them via find_dependency()
+
+# Add FetchContent targets to export set if they're installable
+# This makes them exportable and prevents CMake validation errors
+# Resolve aliases to actual targets before adding to install list
+if (NLOHMANN_JSON_FETCHED)
+  # Try to resolve and add nlohmann_json targets to export set
+  foreach(_target_name nlohmann_json::nlohmann_json nlohmann_json)
+    if (TARGET "${_target_name}")
+      _get_actual_target_name("${_target_name}" _actual_target)
+      if (_actual_target AND _actual_target NOT IN_LIST _targets_to_install)
+        list(APPEND _targets_to_install "${_actual_target}")
+      endif()
+    endif()
+  endforeach()
+endif()
+
+if (CPR_FETCHED)
+  # Try to resolve and add cpr targets to export set
+  foreach(_target_name cpr::cpr cpr)
+    if (TARGET "${_target_name}")
+      _get_actual_target_name("${_target_name}" _actual_target)
+      if (_actual_target AND _actual_target NOT IN_LIST _targets_to_install)
+        list(APPEND _targets_to_install "${_actual_target}")
+      endif()
+    endif()
+  endforeach()
+endif()
+
+# Filter FetchContent dependencies from INTERFACE_LINK_LIBRARIES only if they're not installable
+# The Config.cmake will still require consumers to provide them via find_dependency()
 set(_filter_interface_libs FALSE)
 
 if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
