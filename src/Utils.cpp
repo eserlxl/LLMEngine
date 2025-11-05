@@ -297,7 +297,7 @@ namespace LLMEngine::Utils {
             
             // Update original pollfds with revents from active_pollfds
             for (size_t i = 0; i < active_pollfds.size(); ++i) {
-                pollfds[fd_to_index[i]].revents = active_pollfds[i].revents;
+                pollfds[static_cast<size_t>(fd_to_index[i])].revents = active_pollfds[i].revents;
             }
             
             // Read from stdout if available and not truncated

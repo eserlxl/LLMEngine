@@ -36,6 +36,13 @@
 
 // (orchestration helpers removed; analyze now directly coordinates collaborators)
 
+namespace {
+// Number of hexadecimal characters reserved when encoding thread hash
+constexpr int kThreadHexReserve = 16;
+// HTTP status code for OK responses
+constexpr int kHttpStatusOk = 200;
+}
+
 // Dependency injection constructor
 LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
                      const nlohmann::json& model_params,
@@ -249,7 +256,7 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
     constexpr int kHexStartBit = 60;
     constexpr uint64_t kHexDigitMask = 0xF;
     std::string thread_hex;
-    thread_hex.reserve(16);
+    thread_hex.reserve(kThreadHexReserve);
     for (int i = kHexStartBit; i >= 0; i -= kHexBitsPerDigit) {
         thread_hex += hex_digits[(thread_hash >> i) & kHexDigitMask];
     }
@@ -316,7 +323,7 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
     const auto [think_section, remaining_section] = ::LLMEngine::ResponseParser::parseResponse(full_response);
     if (debug_mgr) { debug_mgr->writeAnalysisArtifacts(analysis_type, think_section, remaining_section); }
 
-    return ::LLMEngine::AnalysisResult{true, think_section, remaining_section, "", 200};
+    return ::LLMEngine::AnalysisResult{true, think_section, remaining_section, "", kHttpStatusOk};
 }
 
 std::string LLMEngine::LLMEngine::getProviderName() const {
