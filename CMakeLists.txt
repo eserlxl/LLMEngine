@@ -248,6 +248,8 @@ add_library(${PROJECT_NAME}
     src/RequestLogger.cpp
     src/ResponseParser.cpp
     src/ParameterMerger.cpp
+    src/RequestContextBuilder.cpp
+    src/ResponseHandler.cpp
 )
 
 # Versioning for shared libraries

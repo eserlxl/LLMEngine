@@ -231,6 +231,8 @@ private:
     void cleanupResponseFiles() const;
     void initializeAPIClient();
     void ensureSecureTmpDir() const;
+    friend class RequestContextBuilder;
+    friend class ResponseHandler;
     
     std::string model_;
     nlohmann::json model_params_;

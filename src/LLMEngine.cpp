@@ -18,6 +18,8 @@
 #include "LLMEngine/ResponseParser.hpp"
 #include "LLMEngine/RequestLogger.hpp"
 #include "LLMEngine/ParameterMerger.hpp"
+#include "LLMEngine/RequestContextBuilder.hpp"
+#include "LLMEngine/ResponseHandler.hpp"
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -243,63 +245,15 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
                                   std::string_view analysis_type, 
                                   std::string_view mode,
                                   bool prepend_terse_instruction) const {
-    // Unique request directory inputs
-    const auto now = std::chrono::system_clock::now();
-    const auto time_since_epoch = now.time_since_epoch();
-    const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(time_since_epoch).count();
-    const auto thread_id = std::this_thread::get_id();
-    std::hash<std::thread::id> hasher;
-    uint64_t thread_hash = hasher(thread_id);
-
-    // Build unique request directory path
-    std::filesystem::path base = std::filesystem::path(tmp_dir_).lexically_normal();
-    std::filesystem::path request_dir = base / (std::string("req_") + std::to_string(milliseconds) + "_");
-    // Encode thread hash using native-width hex to avoid assumptions
-    std::stringstream ss;
-    ss << std::hex << thread_hash;
-    request_dir += ss.str();
-    const std::string request_tmp_dir = request_dir.string();
-
-    // Cleanup any legacy files (no-op) and ensure tmp base if needed
     cleanupResponseFiles();
 
-    // Build prompt using injected builders
-    std::string full_prompt;
-    if (prepend_terse_instruction && terse_prompt_builder_) {
-        full_prompt = terse_prompt_builder_->buildPrompt(prompt);
-    } else if (passthrough_prompt_builder_) {
-        full_prompt = passthrough_prompt_builder_->buildPrompt(prompt);
-    } else {
-        ::LLMEngine::PassthroughPromptBuilder fallback;
-        full_prompt = fallback.buildPrompt(prompt);
-    }
-
-    // Determine whether to write debug artifacts (cache env to avoid repeated getenv and thread-safety concerns)
-    const bool write_debug_files = debug_ && !disable_debug_files_env_cached_;
-
-    // Create debug artifact manager if needed
-    std::unique_ptr<::LLMEngine::DebugArtifactManager> debug_mgr;
-    if (write_debug_files) {
-        ensureSecureTmpDir();
-        if (artifact_sink_) {
-            debug_mgr = artifact_sink_->create(request_tmp_dir, tmp_dir_, log_retention_hours_, logger_ ? logger_.get() : nullptr);
-            if (debug_mgr) {
-                debug_mgr->ensureRequestDirectory();
-            }
-        }
-    }
-
-    // Merge parameters with zero-copy fast path
-    nlohmann::json merged_params;
-    const nlohmann::json* final_params_ptr = &model_params_;
-    if (::LLMEngine::ParameterMerger::mergeInto(model_params_, input, mode, merged_params)) {
-        final_params_ptr = &merged_params;
-    }
+    // Build request context
+    RequestContext ctx = RequestContextBuilder::build(*this, prompt, input, analysis_type, mode, prepend_terse_instruction);
 
     // Execute request via injected executor
     ::LLMEngineAPI::APIResponse api_response;
     if (request_executor_) {
-        api_response = request_executor_->execute(api_client_.get(), full_prompt, input, *final_params_ptr);
+        api_response = request_executor_->execute(api_client_.get(), ctx.fullPrompt, input, ctx.finalParams);
     } else {
         if (logger_) {
             logger_->log(::LLMEngine::LogLevel::Error, "Request executor not configured");
@@ -307,30 +261,13 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
         return ::LLMEngine::AnalysisResult{false, "", "", "Request executor not configured", kHttpStatusInternalServerError};
     }
 
-    // Write API response artifact
-    if (artifact_sink_) {
-        artifact_sink_->writeApiResponse(debug_mgr.get(), api_response, !api_response.success);
-    }
-
-    // Handle error result
-    if (!api_response.success) {
-        if (logger_) {
-            const std::string redacted_err = ::LLMEngine::RequestLogger::redactText(api_response.error_message);
-            logger_->log(::LLMEngine::LogLevel::Error, std::string("API error: ") + redacted_err);
-            if (write_debug_files && debug_mgr) {
-                logger_->log(::LLMEngine::LogLevel::Info, std::string("Error response saved to ") + request_tmp_dir + "/api_response_error.json");
-            }
-        }
-        return ::LLMEngine::AnalysisResult{false, "", "", api_response.error_message, api_response.status_code};
-    }
-
-    // Success: record full response and parse
-    const std::string& full_response = api_response.content;
-    if (debug_mgr) { debug_mgr->writeFullResponse(full_response); }
-    const auto [think_section, remaining_section] = ::LLMEngine::ResponseParser::parseResponse(full_response);
-    if (debug_mgr) { debug_mgr->writeAnalysisArtifacts(analysis_type, think_section, remaining_section); }
-
-    return ::LLMEngine::AnalysisResult{true, think_section, remaining_section, "", api_response.status_code};
+    // Delegate response handling
+    return ResponseHandler::handle(api_response,
+                                   ctx.debugManager.get(),
+                                   ctx.requestTmpDir,
+                                   analysis_type,
+                                   ctx.writeDebugFiles,
+                                   logger_ ? static_cast<void*>(logger_.get()) : nullptr);
 }
 
 std::string LLMEngine::LLMEngine::getProviderName() const {
