@@ -150,6 +150,9 @@ jobs:
 
       - name: Pre-fetch dependencies
         run: |
+          # Remove build directory first to ensure clean state
+          rm -rf build
+          # Create build directory and pre-fetch dependencies
           mkdir -p build/_deps
           if [ ! -d "build/_deps/cpr-src" ]; then
             git clone --depth 1 --branch 1.10.5 https://github.com/libcpr/cpr.git build/_deps/cpr-src
@@ -159,8 +162,6 @@ jobs:
         run: |
           unset GIT_WORK_TREE
           unset GIT_DIR
-          # Remove build directory to ensure clean configuration
-          rm -rf build
           # Verify compiler environment variables are set
           echo "Using CC=$CC"
           echo "Using CXX=$CXX"
