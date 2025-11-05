@@ -252,7 +252,9 @@ private:
     std::string api_key_;
     std::string ollama_url_;  // Only used when provider_type is OLLAMA
     std::shared_ptr<Logger> logger_;
-    // Cached at construction to avoid repeated getenv calls per request
+    // Cached at construction to avoid repeated getenv calls per request.
+    // Note: Read-once semantics; changes to the environment after construction
+    // are not reflected in this instance. For dynamic toggling, inject a config object.
     bool disable_debug_files_env_cached_ { std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") != nullptr };
 };
 

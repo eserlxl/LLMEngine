@@ -26,27 +26,42 @@ bool ParameterMerger::mergeInto(
     const nlohmann::json& input,
     std::string_view mode,
     nlohmann::json& out) {
-    bool needs_merge = false;
-    if (input.contains("max_tokens") && input["max_tokens"].is_number_integer()) {
-        const int max_tokens = input["max_tokens"].get<int>();
-        if (max_tokens > 0) {
-            needs_merge = true;
+    // Allow-list of overridable keys and expected types
+    static const std::vector<std::pair<const char*, nlohmann::json::value_t>> allowed_keys = {
+        {"max_tokens", nlohmann::json::value_t::number_integer},
+        {"temperature", nlohmann::json::value_t::number_float},
+        {"top_p", nlohmann::json::value_t::number_float},
+        {"top_k", nlohmann::json::value_t::number_integer},
+        {"min_p", nlohmann::json::value_t::number_float},
+        {"presence_penalty", nlohmann::json::value_t::number_float},
+        {"frequency_penalty", nlohmann::json::value_t::number_float},
+        {"timeout_seconds", nlohmann::json::value_t::number_integer}
+    };
+
+    bool changed = false;
+    // Fast check: mode or any allowed key present
+    if (!mode.empty()) changed = true;
+    if (!changed) {
+        for (const auto& [key, _] : allowed_keys) {
+            auto it = input.find(key);
+            if (it != input.end()) { changed = true; break; }
         }
     }
-    if (!mode.empty()) {
-        needs_merge = true;
-    }
-
-    if (!needs_merge) {
-        return false;
-    }
+    if (!changed) return false;
 
     out = base_params;
 
-    if (input.contains("max_tokens") && input["max_tokens"].is_number_integer()) {
-        const int max_tokens = input["max_tokens"].get<int>();
-        if (max_tokens > 0) {
-            out["max_tokens"] = max_tokens;
+    for (const auto& [key, expected] : allowed_keys) {
+        auto it = input.find(key);
+        if (it == input.end()) continue;
+        const nlohmann::json& val = *it;
+        // Accept integer where float expected if convertible
+        if (expected == nlohmann::json::value_t::number_float && (val.is_number_float() || val.is_number_integer())) {
+            out[key] = val.get<double>();
+            continue;
+        }
+        if (val.type() == expected) {
+            out[key] = val;
         }
     }
 

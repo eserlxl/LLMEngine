@@ -333,10 +333,10 @@ else()
   elseif (PERFORMANCE_BUILD)
     target_compile_options(${PROJECT_NAME} PRIVATE -O3)
     if (ENABLE_NATIVE_OPTIMIZATION)
-      # Apply native tuning safely based on compiler and platform
+      # Apply native tuning safely based on compiler and platform; disable when cross-compiling
       target_compile_options(${PROJECT_NAME} PRIVATE
-        $<$<AND:$<COMPILE_LANG_AND_ID:CXX,GNU>>:-march=native -mtune=native>
-        $<$<AND:$<COMPILE_LANG_AND_ID:CXX,Clang>,$<NOT:$<PLATFORM_ID:Darwin>>>:-march=native>
+        $<$<AND:$<COMPILE_LANG_AND_ID:CXX,GNU>,$<NOT:$<BOOL:CMAKE_CROSSCOMPILING>>>:-march=native -mtune=native>
+        $<$<AND:$<COMPILE_LANG_AND_ID:CXX,Clang>,$<NOT:$<PLATFORM_ID:Darwin>>,$<NOT:$<BOOL:CMAKE_CROSSCOMPILING>>>:-march=native>
       )
     endif()
     target_compile_definitions(${PROJECT_NAME} PRIVATE NDEBUG _FORTIFY_SOURCE=2)
