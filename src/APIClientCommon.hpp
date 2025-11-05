@@ -60,6 +60,9 @@ namespace {
 
     template <typename RequestFunc>
     cpr::Response sendWithRetries(const RetrySettings& rs, RequestFunc&& doRequest) {
+        // Optional trace logging for backoff schedule (only when explicitly enabled)
+        const bool log_backoff = std::getenv("LLMENGINE_LOG_BACKOFF") != nullptr;
+        
         cpr::Response resp;
         ::LLMEngine::BackoffConfig bcfg{rs.base_delay_ms, rs.max_delay_ms};
         std::unique_ptr<std::mt19937_64> rng;
@@ -70,7 +73,12 @@ namespace {
             resp = doRequest();
             const int code = static_cast<int>(resp.status_code);
             const bool is_success = HttpStatus::isSuccess(code);
-            if (is_success) break;
+            if (is_success) {
+                if (log_backoff && attempt > 1) {
+                    std::cerr << "[BACKOFF] Request succeeded after " << attempt << " attempt(s)\n";
+                }
+                break;
+            }
             const bool is_non_retriable = HttpStatus::isClientError(code) && !HttpStatus::isRetriable(code);
             if (attempt < rs.max_attempts && !is_non_retriable) {
                 int delay = 0;
@@ -84,8 +92,29 @@ namespace {
                 } else {
                     delay = rs.base_delay_ms * attempt;
                 }
+                
+                if (log_backoff) {
+                    std::cerr << "[BACKOFF] Attempt " << attempt << " failed (HTTP " << code 
+                              << "), retrying after " << delay << "ms";
+                    if (rs.exponential) {
+                        std::cerr << " (exponential backoff, cap=" << (rng ? "jittered" : std::to_string(delay)) << "ms)";
+                    } else {
+                        std::cerr << " (linear backoff)";
+                    }
+                    std::cerr << "\n";
+                }
+                
                 std::this_thread::sleep_for(std::chrono::milliseconds(delay));
             } else {
+                if (log_backoff) {
+                    std::cerr << "[BACKOFF] Request failed after " << attempt << " attempt(s)";
+                    if (is_non_retriable) {
+                        std::cerr << " (non-retriable error: HTTP " << code << ")";
+                    } else {
+                        std::cerr << " (max attempts reached)";
+                    }
+                    std::cerr << "\n";
+                }
                 break;
             }
         }
@@ -105,12 +134,26 @@ namespace {
         if (std::getenv("LLMENGINE_LOG_REQUESTS") == nullptr) return;
         std::cerr << LLMEngine::RequestLogger::formatRequest(method, url, headers);
         // Optional capped, redacted body logging when explicitly enabled
+        // SECURITY: Body logging is opt-in only and strictly limited to prevent credential leakage
         if (std::getenv("LLMENGINE_LOG_REQUESTS_BODY") != nullptr) {
-            constexpr size_t kMaxBytes = 512;
+            constexpr size_t kMaxBytes = 512;  // Strict cap to prevent excessive logging
+            constexpr size_t kMinSizeForWarning = 10000;  // Warn if body is very large
             const size_t n = std::min(kMaxBytes, body.size());
+            
+            // Warn if body exceeds safe size (potential for credential leakage)
+            if (body.size() > kMinSizeForWarning) {
+                std::cerr << "[WARNING] Request body size (" << body.size() 
+                          << " bytes) exceeds safe logging threshold. Only first " 
+                          << kMaxBytes << " bytes will be logged.\n";
+            }
+            
             const std::string prefix(body.substr(0, n));
             const std::string redacted = LLMEngine::RequestLogger::redactText(prefix);
-            std::cerr << "Body (first " << n << " bytes, redacted):\n" << redacted << "\n";
+            std::cerr << "Body (first " << n << " bytes, redacted";
+            if (body.size() > n) {
+                std::cerr << ", truncated from " << body.size() << " bytes";
+            }
+            std::cerr << "):\n" << redacted << "\n";
         }
     }
 }

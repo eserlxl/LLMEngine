@@ -39,6 +39,36 @@ LLMEngine engine(provider_type, api_key, model, params, 24, true);
 setenv("LLMENGINE_DISABLE_DEBUG_FILES", "1", 1);
 ```
 
+#### Debug Files Environment Variable Caching Strategy
+
+LLMEngine uses a hybrid approach for checking `LLMENGINE_DISABLE_DEBUG_FILES`:
+
+**Caching Behavior:**
+- The environment variable is read once at `LLMEngine` construction time and cached in `disable_debug_files_env_cached_`
+- Per-request checks (`areDebugFilesEnabled()`) also check the environment variable if no policy is injected
+- This provides a balance between performance and runtime flexibility
+
+**Tradeoffs:**
+- **Cached at construction**: Fast checks without repeated `getenv()` calls
+- **Per-request fallback**: If no policy is set, each request checks the environment variable, allowing runtime toggling
+- **Policy injection**: For long-lived services, inject a policy via `setDebugFilesPolicy()` to avoid per-request environment checks
+
+**Recommendations:**
+- **For tests**: Use `setDebugFilesPolicy()` to control behavior without environment variable dependencies
+- **For long-lived services**: Inject a policy to avoid repeated environment checks
+- **For runtime toggling**: The per-request check allows operators to disable debug files without restarting the service
+
+**Example:**
+```cpp
+// Long-lived service: inject policy to avoid per-request env checks
+auto debug_policy = []() { return std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") == nullptr; };
+engine.setDebugFilesPolicy(debug_policy);
+
+// Or use a configuration-based policy
+auto config_policy = [&config]() { return config->shouldWriteDebugFiles(); };
+engine.setDebugFilesPolicy(config_policy);
+```
+
 ## Command Execution Safety
 
 `Utils::execCommand()` uses `posix_spawn()` and does not route through a shell, eliminating shell injection risks:

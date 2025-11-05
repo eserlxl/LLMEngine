@@ -288,6 +288,25 @@ struct Logger {
 3. Add `ProviderType` enum value
 4. Update `APIClientFactory::createClient()` to handle new type
 5. Update `APIClientFactory::stringToProviderType()` for string mapping
+
+#### Design Rationale: Interface vs Concepts
+
+LLMEngine uses a traditional abstract base class (`APIClient`) rather than C++20 concepts for provider abstraction:
+
+**Benefits of current approach:**
+- Runtime polymorphism: Enables dynamic provider selection via factory pattern
+- Type erasure: `LLMEngine` can hold providers via `unique_ptr<APIClient>` without templates
+- Backward compatibility: Works with C++20 compilers without requiring concepts support
+- Clear ownership semantics: Virtual destructor ensures proper cleanup
+
+**Alternative (concepts) consideration:**
+- C++20 concepts would provide compile-time polymorphism and better type safety
+- However, concepts require template-based design, which would complicate the factory pattern
+- Current approach provides better runtime flexibility for configuration-driven provider selection
+
+**Future enhancement:**
+If compile-time polymorphism becomes a priority, we could add concept-based provider traits alongside the existing interface, allowing both approaches to coexist.
+
 6. Add configuration entry in `config/api_config.json`
 
 ### Custom Logging

@@ -23,12 +23,55 @@
 
 namespace LLMEngine {
 
+/**
+ * @brief Error codes for AnalysisResult.
+ * 
+ * Provides structured error classification for better error handling
+ * and programmatic error detection.
+ */
+enum class AnalysisErrorCode {
+    None,           ///< No error (success)
+    Network,        ///< Network connection error
+    Timeout,        ///< Request timeout
+    InvalidResponse,///< Invalid or unparseable response
+    Auth,           ///< Authentication/authorization error
+    RateLimited,    ///< Rate limit exceeded
+    Server,         ///< Server error (5xx)
+    Client,         ///< Client error (4xx, non-auth)
+    Unknown         ///< Unknown or unclassified error
+};
+
 struct LLMENGINE_EXPORT AnalysisResult {
     bool success;
     std::string think;
     std::string content;
     std::string errorMessage;
     int statusCode;
+    
+    /**
+     * @brief Structured error code for programmatic error handling.
+     * 
+     * Use this instead of parsing errorMessage for error classification.
+     * Only valid when success == false.
+     */
+    AnalysisErrorCode errorCode = AnalysisErrorCode::None;
+    
+    /**
+     * @brief Check if the result represents a specific error type.
+     */
+    [[nodiscard]] bool hasError(AnalysisErrorCode code) const {
+        return !success && errorCode == code;
+    }
+    
+    /**
+     * @brief Check if the result is a retriable error (network, timeout, server, rate limit).
+     */
+    [[nodiscard]] bool isRetriableError() const {
+        return !success && (errorCode == AnalysisErrorCode::Network ||
+                           errorCode == AnalysisErrorCode::Timeout ||
+                           errorCode == AnalysisErrorCode::Server ||
+                           errorCode == AnalysisErrorCode::RateLimited);
+    }
 };
 
 /**

@@ -8,6 +8,7 @@
 #include "LLMEngine/LLMEngine.hpp"
 #include "LLMEngine/ITempDirProvider.hpp"
 #include "LLMEngine/Constants.hpp"
+#include "LLMEngine/HttpStatus.hpp"
 #include "LLMEngine/IConfigManager.hpp"
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/RequestContextBuilder.hpp"
@@ -15,13 +16,9 @@
 #include <filesystem>
 #include <cstdlib>
 #include <stdexcept>
+#include <system_error>
 
 // (orchestration helpers removed; analyze now directly coordinates collaborators)
-
-namespace {
-// HTTP status code for Internal Server Error responses
-constexpr int kHttpStatusInternalServerError = 500;
-}
 
 // Dependency injection constructor
 LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
@@ -176,7 +173,6 @@ void LLMEngine::LLMEngine::initializeAPIClient() {
 // Redaction and debug file I/O moved to DebugArtifacts
 
 void LLMEngine::LLMEngine::ensureSecureTmpDir() const {
-    std::error_code ec;
     // Security: Check for symlink before creating directories
     // If the path exists and is a symlink, reject it to prevent symlink traversal attacks
     if (std::filesystem::exists(tmp_dir_, ec)) {
@@ -227,7 +223,9 @@ void LLMEngine::LLMEngine::ensureSecureTmpDir() const {
         if (logger_) {
             logger_->log(::LLMEngine::LogLevel::Error, "Request executor not configured");
         }
-        return ::LLMEngine::AnalysisResult{false, "", "", "Request executor not configured", kHttpStatusInternalServerError};
+        ::LLMEngine::AnalysisResult result{false, "", "", "Request executor not configured", HttpStatus::INTERNAL_SERVER_ERROR};
+        result.errorCode = AnalysisErrorCode::Unknown;
+        return result;
     }
 
     // Delegate response handling
