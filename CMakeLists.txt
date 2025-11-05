@@ -335,7 +335,8 @@ else()
     if (ENABLE_NATIVE_OPTIMIZATION)
       # Apply native tuning safely based on compiler and platform; disable when cross-compiling
       target_compile_options(${PROJECT_NAME} PRIVATE
-        $<$<AND:$<COMPILE_LANG_AND_ID:CXX,GNU>,$<NOT:$<BOOL:CMAKE_CROSSCOMPILING>>>:-march=native -mtune=native>
+        $<$<AND:$<COMPILE_LANG_AND_ID:CXX,GNU>,$<NOT:$<BOOL:CMAKE_CROSSCOMPILING>>>:-march=native>
+        $<$<AND:$<COMPILE_LANG_AND_ID:CXX,GNU>,$<NOT:$<BOOL:CMAKE_CROSSCOMPILING>>>:-mtune=native>
         $<$<AND:$<COMPILE_LANG_AND_ID:CXX,Clang>,$<NOT:$<PLATFORM_ID:Darwin>>,$<NOT:$<BOOL:CMAKE_CROSSCOMPILING>>>:-march=native>
       )
     endif()
