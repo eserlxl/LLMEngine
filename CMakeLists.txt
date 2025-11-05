@@ -66,6 +66,12 @@ if(DEBUG_MODE AND PERFORMANCE_BUILD)
   message(FATAL_ERROR "DEBUG_MODE and PERFORMANCE_BUILD cannot both be ON.")
 endif()
 
+# Configure FetchContent base directory to ensure it's set before any FetchContent_Declare calls
+# This fixes issues with empty work tree paths in CI environments
+if(NOT DEFINED FETCHCONTENT_BASE_DIR)
+  set(FETCHCONTENT_BASE_DIR "${CMAKE_BINARY_DIR}/_deps" CACHE PATH "Base directory for FetchContent dependencies")
+endif()
+
 # ---- Dependencies ------------------------------------------------------------
 # Note: OpenSSL is not directly required by this library, but cpr depends on it.
 # If cpr is fetched via FetchContent, it will handle its own OpenSSL dependency.
