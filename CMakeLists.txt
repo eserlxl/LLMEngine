@@ -390,12 +390,20 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 # We always export our own targets; consumers are responsible for providing
 # third-party dependencies (cpr, nlohmann_json) discovered via find_dependency().
 # Note: FetchContent dependencies are not installed as they are build-time only.
+
+# Note: FetchContent dependencies are handled before export/install commands
+# to prevent export errors. The filtered INTERFACE_LINK_LIBRARIES will be
+# used for both export() and install(EXPORT), and restored after install.
+
 install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_compile_options
   EXPORT ${PROJECT_NAME}Targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+# Note: INTERFACE_LINK_LIBRARIES restoration happens after install(EXPORT)
+# to ensure export files are generated with filtered dependencies
 
 # Install public headers
 # Namespaced headers go to include/LLMEngine/
@@ -446,6 +454,32 @@ configure_package_config_file(
   "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
   INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
+# Before exporting, handle FetchContent dependencies that are not exportable
+# Save original INTERFACE_LINK_LIBRARIES if we need to filter
+# FetchContent targets are not in any export set, so they cannot be part of
+# the exported target's INTERFACE_LINK_LIBRARIES. Consumers will discover
+# these dependencies via find_dependency() calls in Config.cmake.
+if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
+  get_target_property(_original_interface_libs ${PROJECT_NAME} INTERFACE_LINK_LIBRARIES)
+  if (_original_interface_libs)
+    set(_filtered_libs "")
+    foreach(_lib IN LISTS _original_interface_libs)
+      # Filter out FetchContent dependencies that are not exportable
+      # Keep generator expressions and other dependencies
+      if (NLOHMANN_JSON_FETCHED AND (_lib STREQUAL "nlohmann_json::nlohmann_json" OR _lib STREQUAL "nlohmann_json"))
+        # Skip - not exportable when fetched
+      elseif (CPR_FETCHED AND (_lib STREQUAL "cpr::cpr" OR _lib STREQUAL "cpr"))
+        # Skip - not exportable when fetched
+      else()
+        # Keep all other dependencies (including generator expressions)
+        list(APPEND _filtered_libs "${_lib}")
+      endif()
+    endforeach()
+    # Set filtered libraries for export (both export() and install(EXPORT) will use this)
+    set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_LINK_LIBRARIES "${_filtered_libs}")
+  endif()
+endif()
+
 # Export targets to the build tree so examples can use find_package() without install
 export(EXPORT ${PROJECT_NAME}Targets
   NAMESPACE ${PROJECT_NAME_LOWER}::
@@ -459,9 +493,20 @@ install(FILES
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
 # Always install export set for our own targets
+# Note: install(EXPORT) also generates export files at configure time,
+# so INTERFACE_LINK_LIBRARIES must still be filtered at this point
 install(EXPORT ${PROJECT_NAME}Targets
   NAMESPACE ${PROJECT_NAME_LOWER}::
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+
+# Restore original INTERFACE_LINK_LIBRARIES after all export operations
+# (both export() and install(EXPORT) are processed at configure time)
+if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
+  if (DEFINED _original_interface_libs AND _original_interface_libs)
+    # Restore only if property had a value (not empty and not NOTFOUND)
+    set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_LINK_LIBRARIES "${_original_interface_libs}")
+  endif()
+endif()
 
 # ---- pkg-config ---------------------------------------------------------------
 configure_file(
