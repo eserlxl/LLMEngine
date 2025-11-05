@@ -76,9 +76,10 @@ jobs:
               gcc-${{ matrix.compiler_version }}-base \
               libstdc++-${{ matrix.compiler_version }}-dev
           else
+            # Clang doesn't have a -base package, just install the compiler directly
             sudo apt-get install -y \
-              ${{ matrix.compiler }}-${{ matrix.compiler_version }} \
-              ${{ matrix.compiler }}-${{ matrix.compiler_version }}-base
+              clang-${{ matrix.compiler_version }} \
+              clang++-${{ matrix.compiler_version }}
           fi
           # Verify the requested compiler version is installed
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
