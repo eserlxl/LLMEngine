@@ -24,7 +24,6 @@ endif()
 include(CMakeFindDependencyMacro)
 find_dependency(cpr REQUIRED)
 find_dependency(nlohmann_json REQUIRED)
-find_dependency(OpenSSL REQUIRED)
 
 # Include the exported targets unless any of them already exist (build-tree usage)
 # The exported namespace is lowercase with original target name (e.g., llmengine::LLMEngine)
@@ -66,4 +65,9 @@ endif()
 
 # Verify the imported target exists
 check_required_components(@PROJECT_NAME@)
+
+# Ensure compile options interface target exists for consumers even when export set is absent
+if (NOT TARGET ${_llm_ns}::compile_options)
+  add_library(${_llm_ns}::compile_options INTERFACE IMPORTED)
+endif()
 

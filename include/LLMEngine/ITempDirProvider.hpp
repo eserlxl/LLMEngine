@@ -7,6 +7,7 @@
 
 #pragma once
 #include <string>
+#include <filesystem>
 #include "LLMEngine/LLMEngineExport.hpp"
 
 namespace LLMEngine {
@@ -64,15 +65,26 @@ public:
  */
 class LLMENGINE_EXPORT DefaultTempDirProvider : public ITempDirProvider {
 public:
-    DefaultTempDirProvider() : base_path_("/tmp/llmengine") {}
+    DefaultTempDirProvider() {
+        std::error_code ec;
+        const auto base = std::filesystem::temp_directory_path(ec);
+        base_path_ = (ec ? std::filesystem::path{"/tmp"} : base) / "llmengine";
+        base_path_ = std::filesystem::weakly_canonical(base_path_, ec);
+        if (ec) {
+            // If canonicalization fails, fall back to generic form
+            base_path_ = base_path_.lexically_normal();
+        }
+        base_path_str_ = base_path_.string();
+    }
     explicit DefaultTempDirProvider(std::string_view base_path) : base_path_(base_path) {}
     
     [[nodiscard]] std::string getTempDir() const override {
-        return base_path_;
+        return base_path_str_;
     }
 
 private:
-    std::string base_path_;
+    std::filesystem::path base_path_;
+    std::string base_path_str_;
 };
 
 } // namespace LLMEngine

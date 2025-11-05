@@ -35,6 +35,20 @@ public:
         const nlohmann::json& base_params,
         const nlohmann::json& input,
         std::string_view mode);
+
+    /**
+     * @brief Merge into an output object to avoid copies when unchanged.
+     * @param base_params Base parameters (unchanged)
+     * @param input Input overrides
+     * @param mode Optional mode override
+     * @param out Output object receiving merged params when changes are needed
+     * @return true if changes were applied and 'out' was written, false if no changes were needed
+     */
+    static bool mergeInto(
+        const nlohmann::json& base_params,
+        const nlohmann::json& input,
+        std::string_view mode,
+        nlohmann::json& out);
 };
 
 } // namespace LLMEngine

@@ -13,7 +13,19 @@ nlohmann::json ParameterMerger::merge(
     const nlohmann::json& base_params,
     const nlohmann::json& input,
     std::string_view mode) {
-    
+    nlohmann::json out;
+    const bool changed = mergeInto(base_params, input, mode, out);
+    if (!changed) {
+        return base_params;
+    }
+    return out;
+}
+
+bool ParameterMerger::mergeInto(
+    const nlohmann::json& base_params,
+    const nlohmann::json& input,
+    std::string_view mode,
+    nlohmann::json& out) {
     bool needs_merge = false;
     if (input.contains("max_tokens") && input["max_tokens"].is_number_integer()) {
         const int max_tokens = input["max_tokens"].get<int>();
@@ -26,23 +38,23 @@ nlohmann::json ParameterMerger::merge(
     }
 
     if (!needs_merge) {
-        return base_params;
+        return false;
     }
 
-    nlohmann::json merged = base_params;
+    out = base_params;
 
     if (input.contains("max_tokens") && input["max_tokens"].is_number_integer()) {
         const int max_tokens = input["max_tokens"].get<int>();
         if (max_tokens > 0) {
-            merged["max_tokens"] = max_tokens;
+            out["max_tokens"] = max_tokens;
         }
     }
 
     if (!mode.empty()) {
-        merged["mode"] = std::string(mode);
+        out["mode"] = std::string(mode);
     }
 
-    return merged;
+    return true;
 }
 
 } // namespace LLMEngine

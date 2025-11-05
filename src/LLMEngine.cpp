@@ -251,16 +251,10 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
     // Build unique request directory path
     std::filesystem::path base = std::filesystem::path(tmp_dir_).lexically_normal();
     std::filesystem::path request_dir = base / (std::string("req_") + std::to_string(milliseconds) + "_");
-    constexpr const char* hex_digits = "0123456789abcdef";
-    constexpr int kHexBitsPerDigit = 4;
-    constexpr int kHexStartBit = 60;
-    constexpr uint64_t kHexDigitMask = 0xF;
-    std::string thread_hex;
-    thread_hex.reserve(kThreadHexReserve);
-    for (int i = kHexStartBit; i >= 0; i -= kHexBitsPerDigit) {
-        thread_hex += hex_digits[(thread_hash >> i) & kHexDigitMask];
-    }
-    request_dir += thread_hex;
+    // Encode thread hash using native-width hex to avoid assumptions
+    std::stringstream ss;
+    ss << std::hex << thread_hash;
+    request_dir += ss.str();
     const std::string request_tmp_dir = request_dir.string();
 
     // Cleanup any legacy files (no-op) and ensure tmp base if needed
@@ -292,13 +286,22 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
         }
     }
 
-    // Merge parameters
-    const nlohmann::json final_params = ::LLMEngine::ParameterMerger::merge(model_params_, input, mode);
+    // Merge parameters with zero-copy fast path
+    nlohmann::json merged_params;
+    const nlohmann::json* final_params_ptr = &model_params_;
+    if (::LLMEngine::ParameterMerger::mergeInto(model_params_, input, mode, merged_params)) {
+        final_params_ptr = &merged_params;
+    }
 
     // Execute request via injected executor
     ::LLMEngineAPI::APIResponse api_response;
     if (request_executor_) {
-        api_response = request_executor_->execute(api_client_.get(), full_prompt, input, final_params);
+        api_response = request_executor_->execute(api_client_.get(), full_prompt, input, *final_params_ptr);
+    } else {
+        if (logger_) {
+            logger_->log(::LLMEngine::LogLevel::Error, "Request executor not configured");
+        }
+        return ::LLMEngine::AnalysisResult{false, "", "", "Request executor not configured", 500};
     }
 
     // Write API response artifact
@@ -323,7 +326,7 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
     const auto [think_section, remaining_section] = ::LLMEngine::ResponseParser::parseResponse(full_response);
     if (debug_mgr) { debug_mgr->writeAnalysisArtifacts(analysis_type, think_section, remaining_section); }
 
-    return ::LLMEngine::AnalysisResult{true, think_section, remaining_section, "", kHttpStatusOk};
+    return ::LLMEngine::AnalysisResult{true, think_section, remaining_section, "", api_response.status_code};
 }
 
 std::string LLMEngine::LLMEngine::getProviderName() const {

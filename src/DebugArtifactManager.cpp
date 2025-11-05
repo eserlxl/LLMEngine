@@ -96,14 +96,20 @@ bool DebugArtifactManager::writeAnalysisArtifacts(std::string_view analysis_type
         return false;
     }
     
-    // Sanitize analysis type for filename
+    // Sanitize analysis type for filename (no traversal, no leading dots)
     auto sanitize_name = [](std::string name) {
         if (name.empty()) name = "analysis";
+        // Remove any path separators outright
         for (char& ch : name) {
             if (!(std::isalnum(static_cast<unsigned char>(ch)) || ch == '-' || ch == '_' || ch == '.')) {
                 ch = '_';
             }
         }
+        // Strip leading dots to avoid hidden files and parent traversal tokens like ".."
+        while (!name.empty() && name.front() == '.') {
+            name.erase(name.begin());
+        }
+        if (name.empty()) name = "analysis";
         constexpr size_t MAX_FILENAME_LENGTH = 64;
         if (name.size() > MAX_FILENAME_LENGTH) name.resize(MAX_FILENAME_LENGTH);
         return name;

@@ -15,10 +15,7 @@ project(LLMEngineExamples
 # Build system quality-of-life
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# C++ standard (no compiler extensions) - align with library requirement
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+# Do not set global C++ standard; set per-target features instead
 
 # ---- Options (inherit from root if present; otherwise define defaults) ---------
 if (NOT DEFINED DEBUG_MODE)
@@ -160,8 +157,7 @@ endif()
 # Not needed with imported targets
 
 # ---- Dependencies ------------------------------------------------------------
-# Examples explicitly link to OpenSSL, so we need to find it
-find_package(OpenSSL REQUIRED)
+# Do not require OpenSSL directly; rely on transitive requirements via cpr
 
 # ---- Executables -------------------------------------------------------------
 add_executable(chatbot chatbot.cpp)
@@ -170,9 +166,8 @@ target_link_libraries(chatbot
     LLMEngine
     llmengine::compile_options
     cpr::cpr
-    nlohmann_json::nlohmann_json
-    OpenSSL::SSL
-    OpenSSL::Crypto)
+    nlohmann_json::nlohmann_json)
+target_compile_features(chatbot PRIVATE cxx_std_20)
 apply_common_build_flags(chatbot)
 
 add_executable(code_analyzer code_analyzer.cpp)
@@ -181,9 +176,8 @@ target_link_libraries(code_analyzer
     LLMEngine
     llmengine::compile_options
     cpr::cpr
-    nlohmann_json::nlohmann_json
-    OpenSSL::SSL
-    OpenSSL::Crypto)
+    nlohmann_json::nlohmann_json)
+target_compile_features(code_analyzer PRIVATE cxx_std_20)
 apply_common_build_flags(code_analyzer)
 
 add_executable(text_processor text_processor.cpp)
@@ -192,9 +186,8 @@ target_link_libraries(text_processor
     LLMEngine
     llmengine::compile_options
     cpr::cpr
-    nlohmann_json::nlohmann_json
-    OpenSSL::SSL
-    OpenSSL::Crypto)
+    nlohmann_json::nlohmann_json)
+target_compile_features(text_processor PRIVATE cxx_std_20)
 apply_common_build_flags(text_processor)
 
 add_executable(file_analyzer file_analyzer.cpp)
@@ -203,9 +196,8 @@ target_link_libraries(file_analyzer
     LLMEngine
     llmengine::compile_options
     cpr::cpr
-    nlohmann_json::nlohmann_json
-    OpenSSL::SSL
-    OpenSSL::Crypto)
+    nlohmann_json::nlohmann_json)
+target_compile_features(file_analyzer PRIVATE cxx_std_20)
 apply_common_build_flags(file_analyzer)
 
 add_executable(translator translator.cpp)
@@ -214,9 +206,8 @@ target_link_libraries(translator
     LLMEngine
     llmengine::compile_options
     cpr::cpr
-    nlohmann_json::nlohmann_json
-    OpenSSL::SSL
-    OpenSSL::Crypto)
+    nlohmann_json::nlohmann_json)
+target_compile_features(translator PRIVATE cxx_std_20)
 apply_common_build_flags(translator)
 
 add_executable(logo_generator logo_generator.cpp)
@@ -225,9 +216,8 @@ target_link_libraries(logo_generator
     LLMEngine
     llmengine::compile_options
     cpr::cpr
-    nlohmann_json::nlohmann_json
-    OpenSSL::SSL
-    OpenSSL::Crypto)
+    nlohmann_json::nlohmann_json)
+target_compile_features(logo_generator PRIVATE cxx_std_20)
 apply_common_build_flags(logo_generator)
 
 add_executable(image_generator image_generator.cpp)
@@ -236,9 +226,8 @@ target_link_libraries(image_generator
     LLMEngine
     llmengine::compile_options
     cpr::cpr
-    nlohmann_json::nlohmann_json
-    OpenSSL::SSL
-    OpenSSL::Crypto)
+    nlohmann_json::nlohmann_json)
+target_compile_features(image_generator PRIVATE cxx_std_20)
 apply_common_build_flags(image_generator)
 
 add_executable(readme_chatbot readme_chatbot.cpp)
@@ -247,9 +236,8 @@ target_link_libraries(readme_chatbot
     LLMEngine
     llmengine::compile_options
     cpr::cpr
-    nlohmann_json::nlohmann_json
-    OpenSSL::SSL
-    OpenSSL::Crypto)
+    nlohmann_json::nlohmann_json)
+target_compile_features(readme_chatbot PRIVATE cxx_std_20)
 apply_common_build_flags(readme_chatbot)
 
 # ---- Summary -----------------------------------------------------------------

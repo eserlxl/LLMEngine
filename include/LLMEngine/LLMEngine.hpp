@@ -203,6 +203,30 @@ public:
      */
     void setLogger(std::shared_ptr<Logger> logger);
     
+    // Dependency injection setters
+    /** @brief Replace the request executor strategy. */
+    void setRequestExecutor(std::shared_ptr<IRequestExecutor> executor) {
+        if (executor) {
+            request_executor_ = std::move(executor);
+        }
+    }
+    /** @brief Replace the artifact sink strategy. */
+    void setArtifactSink(std::shared_ptr<IArtifactSink> sink) {
+        if (sink) {
+            artifact_sink_ = std::move(sink);
+        }
+    }
+    /** @brief Replace prompt builders. Null keeps existing. */
+    void setPromptBuilders(std::shared_ptr<IPromptBuilder> terse,
+                           std::shared_ptr<IPromptBuilder> passthrough) {
+        if (terse) {
+            terse_prompt_builder_ = std::move(terse);
+        }
+        if (passthrough) {
+            passthrough_prompt_builder_ = std::move(passthrough);
+        }
+    }
+    
 private:
     void cleanupResponseFiles() const;
     void initializeAPIClient();
