@@ -17,7 +17,7 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
 
     // Write API response artifact
     if (debug_mgr) {
-        debug_mgr->writeApiResponse(nullptr, api_response, !api_response.success);
+        debug_mgr->writeApiResponse(api_response, !api_response.success);
     }
 
     // Error path

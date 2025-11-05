@@ -16,6 +16,7 @@ RequestContext RequestContextBuilder::build(const LLMEngine& engine,
                                             std::string_view analysis_type,
                                             std::string_view mode,
                                             bool prepend_terse_instruction) {
+    (void)analysis_type;
     RequestContext ctx;
 
     // Unique request directory name
