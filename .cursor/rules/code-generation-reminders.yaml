@@ -1,0 +1,41 @@
+rules:
+  # See RULES.md for comprehensive documentation
+  # This rule provides reminders during code generation to ensure quality gates
+  - id: code-generation-reminders
+    match: "(?i)\\b(generate|create|add|implement|write).*\\b(code|feature|class|function|module)\\b"
+    actions:
+      - enforce: false  # Reminders, not hard enforcement
+      - instruction: |
+          When generating or modifying C++ code, remember to:
+          
+          1. **CMake First**: Update CMakeLists.txt before writing code
+             - Add source files to target_sources()
+             - Update target_link_libraries() if needed
+             - See 50-cmake.md for CMake guidelines
+          
+          2. **Tests Required**: Add or update tests for new/changed code
+             - New features require new tests
+             - Bug fixes require regression tests
+             - See 60-tests.md for testing guidelines
+          
+          3. **Public API Documentation**: Document all public APIs with Doxygen
+             - Use /** */ comments for public classes/functions
+             - Document parameters, return values, exceptions
+             - See 95-docs.md for documentation guidelines
+          
+          4. **Error Handling**: Follow error handling patterns
+             - Use RAII for resource management
+             - Prefer std::expected or status objects for expected failures
+             - See 20-error-handling.md for error handling guidelines
+          
+          5. **Code Style**: Follow naming conventions and structure
+             - PascalCase for classes, snake_case for functions
+             - One class per file
+             - See 10-cpp-style.md for style guidelines
+          
+          6. **Formatting**: Code will be formatted automatically, but ensure it's readable
+             - See 80-formatting.md for formatting rules
+          
+          These are reminders - the build rule (cxx-strict-build-before-commit.yaml) will enforce
+          that code compiles, tests pass, and formatting is correct before commit.
+
