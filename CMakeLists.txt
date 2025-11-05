@@ -511,20 +511,30 @@ set(_targets_to_install ${PROJECT_NAME} ${PROJECT_NAME}_compile_options)
 set(_filter_interface_libs FALSE)
 
 if (NLOHMANN_JSON_FETCHED)
-  # Check if nlohmann_json is installable
-  _is_target_installable("nlohmann_json::nlohmann_json" _json_installable)
-  if (NOT _json_installable AND TARGET nlohmann_json)
-    _is_target_installable("nlohmann_json" _json_installable)
+  # Check if nlohmann_json is installable - try both namespaced and non-namespaced
+  set(_json_actual_target "")
+  if (TARGET nlohmann_json::nlohmann_json)
+    _is_target_installable("nlohmann_json::nlohmann_json" _json_installable)
+    if (_json_installable)
+      _get_actual_target_name("nlohmann_json::nlohmann_json" _json_actual_target)
+    endif()
   endif()
-  
-  if (_json_installable)
-    # It's installable, find the actual target and add it to install list
-    _get_actual_target_name("nlohmann_json::nlohmann_json" _json_actual_target)
-    if (NOT _json_actual_target AND TARGET nlohmann_json)
+  # If namespaced version isn't installable or doesn't exist, try non-namespaced
+  if (NOT _json_actual_target AND TARGET nlohmann_json)
+    _is_target_installable("nlohmann_json" _json_installable)
+    if (_json_installable)
       _get_actual_target_name("nlohmann_json" _json_actual_target)
     endif()
-    if (_json_actual_target AND TARGET "${_json_actual_target}")
+  endif()
+  
+  if (_json_actual_target AND TARGET "${_json_actual_target}")
+    # Verify it's still installable after resolving
+    _is_target_installable("${_json_actual_target}" _json_installable)
+    if (_json_installable)
       list(APPEND _targets_to_install "${_json_actual_target}")
+    else()
+      # Resolved target is not installable, filter from interface
+      set(_filter_interface_libs TRUE)
     endif()
   else()
     # Not installable, we need to filter it from INTERFACE_LINK_LIBRARIES
@@ -533,20 +543,30 @@ if (NLOHMANN_JSON_FETCHED)
 endif()
 
 if (CPR_FETCHED)
-  # Check if cpr is installable
-  _is_target_installable("cpr::cpr" _cpr_installable)
-  if (NOT _cpr_installable AND TARGET cpr)
-    _is_target_installable("cpr" _cpr_installable)
+  # Check if cpr is installable - try both namespaced and non-namespaced
+  set(_cpr_actual_target "")
+  if (TARGET cpr::cpr)
+    _is_target_installable("cpr::cpr" _cpr_installable)
+    if (_cpr_installable)
+      _get_actual_target_name("cpr::cpr" _cpr_actual_target)
+    endif()
   endif()
-  
-  if (_cpr_installable)
-    # It's installable, find the actual target and add it to install list
-    _get_actual_target_name("cpr::cpr" _cpr_actual_target)
-    if (NOT _cpr_actual_target AND TARGET cpr)
+  # If namespaced version isn't installable or doesn't exist, try non-namespaced
+  if (NOT _cpr_actual_target AND TARGET cpr)
+    _is_target_installable("cpr" _cpr_installable)
+    if (_cpr_installable)
       _get_actual_target_name("cpr" _cpr_actual_target)
     endif()
-    if (_cpr_actual_target AND TARGET "${_cpr_actual_target}")
+  endif()
+  
+  if (_cpr_actual_target AND TARGET "${_cpr_actual_target}")
+    # Verify it's still installable after resolving
+    _is_target_installable("${_cpr_actual_target}" _cpr_installable)
+    if (_cpr_installable)
       list(APPEND _targets_to_install "${_cpr_actual_target}")
+    else()
+      # Resolved target is not installable, filter from interface
+      set(_filter_interface_libs TRUE)
     endif()
   else()
     # Not installable, we need to filter it from INTERFACE_LINK_LIBRARIES
@@ -598,6 +618,29 @@ if (_filter_interface_libs)
     set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_LINK_LIBRARIES "${_filtered_libs}")
   endif()
 endif()
+
+# Final safety check: remove any alias targets from install list
+set(_filtered_targets_to_install "")
+foreach(_target IN LISTS _targets_to_install)
+  if (TARGET "${_target}")
+    get_target_property(_target_type "${_target}" TYPE)
+    if (NOT _target_type STREQUAL "ALIAS")
+      # Verify it's installable one more time
+      _is_target_installable("${_target}" _installable)
+      if (_installable)
+        list(APPEND _filtered_targets_to_install "${_target}")
+      else()
+        message(WARNING "Skipping non-installable target in install list: ${_target}")
+      endif()
+    else()
+      message(WARNING "Skipping alias target in install list: ${_target}")
+    endif()
+  else()
+    # Not a target, keep it (might be a generator expression or library file)
+    list(APPEND _filtered_targets_to_install "${_target}")
+  endif()
+endforeach()
+set(_targets_to_install ${_filtered_targets_to_install})
 
 install(TARGETS ${_targets_to_install}
   EXPORT ${PROJECT_NAME}Targets
