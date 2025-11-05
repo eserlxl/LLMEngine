@@ -162,6 +162,8 @@ jobs:
         run: |
           unset GIT_WORK_TREE
           unset GIT_DIR
+          # Ensure build directory exists (needed for FETCHCONTENT_BASE_DIR)
+          mkdir -p build
           # Verify compiler environment variables are set
           echo "Using CC=$CC"
           echo "Using CXX=$CXX"
