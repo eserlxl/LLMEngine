@@ -9,7 +9,8 @@
 
 namespace LLMEngine::Security {
 
-// Query parameter names to redact (case-insensitive match; substring allowed)
+// Query parameter names to redact (case-insensitive exact match via hash lookup)
+// Implementation uses O(1) hash-based lookup for precise matching to reduce false positives
 inline constexpr std::array<std::string_view, 14> SENSITIVE_QUERY_PARAMS = {
     "key", "api_key", "apikey", "x-api-key", "xapikey",
     "token", "access_token", "accesstoken",
@@ -17,7 +18,8 @@ inline constexpr std::array<std::string_view, 14> SENSITIVE_QUERY_PARAMS = {
     "credential", "authorization"
 };
 
-// Header names to redact (case-insensitive match; substring allowed)
+// Header names to redact (case-insensitive exact match via hash lookup)
+// Implementation uses O(1) hash-based lookup for precise matching to reduce false positives
 inline constexpr std::array<std::string_view, 14> SENSITIVE_HEADER_NAMES = {
     "authorization", "proxy-authorization", "x-authorization",
     "x-api-key", "xapikey", "api-key", "x-goog-api-key",
