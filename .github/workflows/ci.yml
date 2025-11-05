@@ -52,6 +52,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            git \
             ninja-build \
             build-essential \
             libssl-dev \
@@ -102,6 +103,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            git \
             ninja-build \
             build-essential \
             libssl-dev \
