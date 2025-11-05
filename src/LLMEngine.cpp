@@ -50,20 +50,26 @@ namespace LLMEngineSystem {
         ::LLMEngineAPI::ProviderType provider_type;
         const std::shared_ptr<::LLMEngine::Logger>& logger;
         const std::string& model;
+        // Injected collaborators
+        const ::LLMEngine::IRequestExecutor* request_executor;
+        const ::LLMEngine::IArtifactSink* artifact_sink;
+        const ::LLMEngine::IPromptBuilder* terse_builder;
+        const ::LLMEngine::IPromptBuilder* passthrough_builder;
     };
 
     // Collaborator: Prompt Strategy
     // Encapsulates prompt building logic to allow easy swapping of strategies
     // Caches prompt builders to avoid repeated allocations
-    inline std::string buildPrompt(std::string_view prompt, bool prepend_terse_instruction) {
-        if (prepend_terse_instruction) {
-            // Cache the builder instance to avoid repeated construction
-            static const ::LLMEngine::TersePromptBuilder builder;
-            return builder.buildPrompt(prompt);
+    inline std::string buildPrompt(const Context& ctx, std::string_view prompt, bool prepend_terse_instruction) {
+        if (prepend_terse_instruction && ctx.terse_builder) {
+            return ctx.terse_builder->buildPrompt(prompt);
         }
-        // Cache the builder instance to avoid repeated construction
-        static const ::LLMEngine::PassthroughPromptBuilder builder;
-        return builder.buildPrompt(prompt);
+        if (ctx.passthrough_builder) {
+            return ctx.passthrough_builder->buildPrompt(prompt);
+        }
+        // Fallback to a local default if not provided
+        ::LLMEngine::PassthroughPromptBuilder fallback;
+        return fallback.buildPrompt(prompt);
     }
 
     // Collaborator: Request Executor
@@ -140,7 +146,7 @@ namespace LLMEngineSystem {
         cleanupResponseFiles();
 
         // Build prompt using strategy pattern
-        const std::string full_prompt = buildPrompt(prompt, prepend_terse_instruction);
+        const std::string full_prompt = buildPrompt(ctx, prompt, prepend_terse_instruction);
 
         const bool write_debug_files = ctx.debug && (std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") == nullptr);
         const std::string request_tmp_dir = getUniqueTmpDir();
@@ -149,9 +155,11 @@ namespace LLMEngineSystem {
         std::unique_ptr<::LLMEngine::DebugArtifactManager> debug_mgr;
         if (write_debug_files) {
             ensureSecureTmpDir();
-            debug_mgr = ArtifactSink::create(request_tmp_dir, ctx.tmp_dir, 
+            if (ctx.artifact_sink) {
+                debug_mgr = ctx.artifact_sink->create(request_tmp_dir, ctx.tmp_dir, 
                                             ctx.log_retention_hours,
                                             ctx.logger ? ctx.logger.get() : nullptr);
+            }
         }
 
         // Merge parameters and execute request
@@ -159,11 +167,14 @@ namespace LLMEngineSystem {
         const nlohmann::json& merged_params_ref = ::LLMEngine::ParameterMerger::merge(
             ctx.model_params, input, mode);
         const nlohmann::json final_params = merged_params_ref;
-        const auto api_response = RequestExecutor::execute(
-            ctx.api_client, full_prompt, input, final_params);
+        const auto api_response = ctx.request_executor
+            ? ctx.request_executor->execute(ctx.api_client, full_prompt, input, final_params)
+            : ::LLMEngineAPI::APIResponse{};
 
         // Write API response artifact
-        ArtifactSink::writeApiResponse(debug_mgr.get(), api_response, !api_response.success);
+        if (ctx.artifact_sink) {
+            ctx.artifact_sink->writeApiResponse(debug_mgr.get(), api_response, !api_response.success);
+        }
 
         // Handle API response
         if (!api_response.success) {
@@ -181,11 +192,11 @@ namespace LLMEngineSystem {
         const std::string& full_response = api_response.content;
 
         // Write full response artifact
-        ArtifactSink::writeFullResponse(debug_mgr.get(), full_response);
+        if (debug_mgr) { debug_mgr->writeFullResponse(full_response); }
 
         // Parse and write analysis artifacts
         const auto [think_section, remaining_section] = ::LLMEngine::ResponseParser::parseResponse(full_response);
-        ArtifactSink::writeAnalysisArtifacts(debug_mgr.get(), analysis_type, think_section, remaining_section);
+        if (debug_mgr) { debug_mgr->writeAnalysisArtifacts(analysis_type, think_section, remaining_section); }
 
         return ::LLMEngine::AnalysisResult{true, think_section, remaining_section, "", HTTP_STATUS_OK};
     }
@@ -425,7 +436,11 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
         api_client_.get(),  // Pass raw pointer since we only need const access
         provider_type_, 
         logger_, 
-        model_
+        model_,
+        request_executor_.get(),
+        artifact_sink_.get(),
+        terse_prompt_builder_.get(),
+        passthrough_prompt_builder_.get()
     };
     return LLMEngineSystem::runAnalysis(ctx, prompt, input, analysis_type, mode, prepend_terse_instruction,
                       [this]{ this->cleanupResponseFiles(); },

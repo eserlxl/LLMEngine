@@ -16,6 +16,9 @@
 #include "LLMEngine/Logger.hpp"
 #include "LLMEngine/ITempDirProvider.hpp"
 #include "LLMEngine/IConfigManager.hpp"
+#include "LLMEngine/PromptBuilder.hpp"
+#include "LLMEngine/IRequestExecutor.hpp"
+#include "LLMEngine/IArtifactSink.hpp"
 
 namespace LLMEngine {
 
@@ -214,6 +217,12 @@ private:
     
     // API client support
     std::unique_ptr<::LLMEngineAPI::APIClient> api_client_;
+
+    // Collaborators (injectable)
+    std::shared_ptr<IPromptBuilder> terse_prompt_builder_ { std::make_shared<TersePromptBuilder>() };
+    std::shared_ptr<IPromptBuilder> passthrough_prompt_builder_ { std::make_shared<PassthroughPromptBuilder>() };
+    std::shared_ptr<IRequestExecutor> request_executor_ { std::make_shared<DefaultRequestExecutor>() };
+    std::shared_ptr<IArtifactSink> artifact_sink_ { std::make_shared<DefaultArtifactSink>() };
     ::LLMEngineAPI::ProviderType provider_type_;
     std::string api_key_;
     std::string ollama_url_;  // Only used when provider_type is OLLAMA
