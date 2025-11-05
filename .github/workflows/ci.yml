@@ -60,19 +60,19 @@ jobs:
       - name: Set up compiler
         run: |
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
-            echo "CC=gcc-${{ matrix.compiler_version }}" >> $GITHUB_ENV
-            echo "CXX=g++-${{ matrix.compiler_version }}" >> $GITHUB_ENV
+            echo "CC=gcc-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
+            echo "CXX=g++-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
           else
-            echo "CC=clang-${{ matrix.compiler_version }}" >> $GITHUB_ENV
-            echo "CXX=clang++-${{ matrix.compiler_version }}" >> $GITHUB_ENV
+            echo "CC=clang-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
+            echo "CXX=clang++-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
           fi
 
       - name: Configure
         run: |
           cmake -S . -B build \
             -G Ninja \
-            -DCMAKE_C_COMPILER=$CC \
-            -DCMAKE_CXX_COMPILER=$CXX \
+            -DCMAKE_C_COMPILER="$CC" \
+            -DCMAKE_CXX_COMPILER="$CXX" \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             ${{ matrix.cmake_options }} \
             -DBUILD_TESTING=ON \
