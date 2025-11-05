@@ -56,6 +56,7 @@ jobs:
             ninja-build \
             build-essential \
             libssl-dev \
+            nlohmann-json3-dev \
             ${{ matrix.compiler }}-${{ matrix.compiler_version }}
 
       - name: Set up compiler
@@ -70,13 +71,11 @@ jobs:
 
       - name: Configure
         run: |
-          mkdir -p build/_deps
           cmake -S . -B build \
             -G Ninja \
             -DCMAKE_C_COMPILER="$CC" \
             -DCMAKE_CXX_COMPILER="$CXX" \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DFETCHCONTENT_BASE_DIR="${{ github.workspace }}/build/_deps" \
             ${{ matrix.cmake_options }} \
             -DBUILD_TESTING=ON \
             -DENABLE_EXAMPLES=ON \
@@ -109,15 +108,14 @@ jobs:
             ninja-build \
             build-essential \
             libssl-dev \
+            nlohmann-json3-dev \
             clang-tidy
 
       - name: Configure with clang-tidy
         run: |
-          mkdir -p build/_deps
           cmake -S . -B build \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DFETCHCONTENT_BASE_DIR="${{ github.workspace }}/build/_deps" \
             -DENABLE_CLANG_TIDY=ON \
             -DBUILD_TESTING=ON
 
