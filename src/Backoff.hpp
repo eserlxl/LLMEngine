@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <random>
 
+namespace LLMEngine {
+
 struct BackoffConfig {
     int baseDelayMs;      // base delay in ms
     int maxDelayMs;       // cap per attempt in ms
@@ -22,5 +24,7 @@ inline int jitterDelayMs(std::mt19937_64& rng, uint64_t capMs) {
     std::uniform_int_distribution<uint64_t> dist(0, capMs);
     return static_cast<int>(dist(rng));
 }
+
+} // namespace LLMEngine
 
 

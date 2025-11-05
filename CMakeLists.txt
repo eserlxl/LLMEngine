@@ -217,18 +217,19 @@ function(apply_clang_tidy_to_target target_name)
 endfunction()
 
 # ---- Helper macros for reusable patterns ------------------------------------
-# Creates a namespaced alias for a library target (e.g., mylib::mylib)
+# Creates a namespaced alias for a library target (e.g., llmengine::LLMEngine)
 # Usage: create_namespaced_alias(${PROJECT_NAME})
+# Preserves original target name after :: for clarity
 macro(create_namespaced_alias target_name)
   string(TOLOWER "${target_name}" namespace)
-  add_library(${namespace}::${namespace} ALIAS ${target_name})
+  add_library(${namespace}::${target_name} ALIAS ${target_name})
 endmacro()
 
-# Sets the exported imported target name to lowercase for consumers
-# Usage: set_lowercase_export_name(${PROJECT_NAME})
-macro(set_lowercase_export_name target_name)
-  string(TOLOWER "${target_name}" _lower)
-  set_target_properties(${target_name} PROPERTIES EXPORT_NAME ${_lower})
+# Sets the exported imported target name to preserve original target name
+# Usage: set_export_name(${PROJECT_NAME})
+# Keeps original target name for clarity (e.g., llmengine::LLMEngine)
+macro(set_export_name target_name)
+  set_target_properties(${target_name} PROPERTIES EXPORT_NAME ${target_name})
 endmacro()
 
 # ---- Library ---------------------------------------------------------------
@@ -422,9 +423,9 @@ install(DIRECTORY reports/ DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME_L
 # runtime helpers or configuration files to determine these paths relative to
 # installation location or current working directory.
 
-# Provide a namespaced alias and set exported imported name (lowercase)
+# Provide a namespaced alias and set exported imported name (preserve original target name)
 create_namespaced_alias(${PROJECT_NAME})
-set_lowercase_export_name(${PROJECT_NAME})
+set_export_name(${PROJECT_NAME})
 
 # ---- Package config (find_package support) -----------------------------------
 include(CMakePackageConfigHelpers)

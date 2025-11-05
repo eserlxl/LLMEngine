@@ -210,6 +210,7 @@ private:
     int log_retention_hours_;
     bool debug_;
     std::string tmp_dir_;  // Configurable temporary directory (defaults to Utils::TMP_DIR)
+    std::shared_ptr<ITempDirProvider> temp_dir_provider_;  // Store provider for validation
     
     // API client support
     std::unique_ptr<::LLMEngineAPI::APIClient> api_client_;

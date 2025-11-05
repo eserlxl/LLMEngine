@@ -97,7 +97,9 @@ namespace LLMEngine::Utils {
         return lines;
     }
 
-    std::vector<std::string> execCommand(std::string_view cmd, ::LLMEngine::Logger* logger) {
+    // Internal helper function to execute command with pre-parsed arguments
+    // This is shared by both execCommand overloads - no validation is performed here
+    std::vector<std::string> execCommandImpl(const std::vector<std::string>& args, ::LLMEngine::Logger* logger, const std::string& cmd_str_for_logging) {
         std::vector<std::string> output;
         
         // Windows support: execCommand is not available on Windows due to POSIX dependencies
@@ -107,16 +109,8 @@ namespace LLMEngine::Utils {
         }
         return output;
 #endif
-        
-        std::string cmd_str(cmd);
 
-        // SECURITY: Validate command string to prevent command injection
-        // This function uses posix_spawn() which does NOT route through a shell,
-        // eliminating shell injection risks. However, we still validate input to ensure
-        // only safe command strings are accepted.
-        // Only allow alphanumeric, single spaces (not newlines/tabs), hyphens, underscores, dots, slashes
-        
-        if (cmd_str.empty()) {
+        if (args.empty()) {
             if (logger) {
                 logger->log(::LLMEngine::LogLevel::Error, "execCommand: Empty command string");
             }
@@ -197,7 +191,7 @@ namespace LLMEngine::Utils {
         
         if (args.empty()) {
             if (logger) {
-                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: No command found in: ") + cmd_str);
+                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: No command found in: ") + cmd_str_for_logging);
             }
             return output;
         }
@@ -215,7 +209,7 @@ namespace LLMEngine::Utils {
         std::array<int, 2> stderr_pipe;
         if (pipe(stdout_pipe.data()) != 0 || pipe(stderr_pipe.data()) != 0) {
             if (logger) {
-                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: Failed to create pipes for command: ") + cmd_str);
+                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: Failed to create pipes for command: ") + cmd_str_for_logging);
             }
             return output;
         }
@@ -260,7 +254,7 @@ namespace LLMEngine::Utils {
 
         if (spawn_result != 0) {
             if (logger) {
-                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: posix_spawnp() failed for command: ") + cmd_str + " (error: " + std::to_string(spawn_result) + ")");
+                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: posix_spawnp() failed for command: ") + cmd_str_for_logging + " (error: " + std::to_string(spawn_result) + ")");
             }
             // Pipes are automatically closed by RAII wrappers
             return output;
@@ -414,14 +408,14 @@ namespace LLMEngine::Utils {
         int status;
         if (waitpid(pid, &status, 0) == -1) {
             if (logger) {
-                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: waitpid() failed for command: ") + cmd_str);
+                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: waitpid() failed for command: ") + cmd_str_for_logging);
             }
             return output;
         }
 
         if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
             if (logger) {
-                logger->log(::LLMEngine::LogLevel::Warn, std::string("Command '") + cmd_str + "' exited with non-zero status: " + std::to_string(WEXITSTATUS(status)));
+                logger->log(::LLMEngine::LogLevel::Warn, std::string("Command '") + cmd_str_for_logging + "' exited with non-zero status: " + std::to_string(WEXITSTATUS(status)));
                 if (!output.empty()) {
                     std::string output_msg = "  Output:\n";
                     for (const auto& output_line : output) {
@@ -432,11 +426,126 @@ namespace LLMEngine::Utils {
             }
         } else if (WIFSIGNALED(status)) {
             if (logger) {
-                logger->log(::LLMEngine::LogLevel::Warn, std::string("Command '") + cmd_str + "' terminated by signal: " + std::to_string(WTERMSIG(status)));
+                logger->log(::LLMEngine::LogLevel::Warn, std::string("Command '") + cmd_str_for_logging + "' terminated by signal: " + std::to_string(WTERMSIG(status)));
             }
         }
 
         return output;
+    }
+
+    std::vector<std::string> execCommand(std::string_view cmd, ::LLMEngine::Logger* logger) {
+        std::vector<std::string> output;
+        
+        // Windows support: execCommand is not available on Windows due to POSIX dependencies
+#if defined(_WIN32) || defined(_WIN64)
+        if (logger) {
+            logger->log(::LLMEngine::LogLevel::Error, "execCommand: Not available on Windows. This function requires POSIX spawn API.");
+        }
+        return output;
+#endif
+        
+        std::string cmd_str(cmd);
+
+        // SECURITY: Validate command string to prevent command injection
+        // This function uses posix_spawn() which does NOT route through a shell,
+        // eliminating shell injection risks. However, we still validate input to ensure
+        // only safe command strings are accepted.
+        // Only allow alphanumeric, single spaces (not newlines/tabs), hyphens, underscores, dots, slashes
+        
+        if (cmd_str.empty()) {
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, "execCommand: Empty command string");
+            }
+            return output;
+        }
+        
+        // Explicitly reject control characters including newlines, tabs, carriage returns
+        // These can be used for command injection even with metacharacter checks
+        for (char c : cmd_str) {
+            if (std::iscntrl(static_cast<unsigned char>(c))) {
+                if (logger) {
+                    logger->log(::LLMEngine::LogLevel::Error, "execCommand: Command contains control characters (newlines, tabs, etc.) - rejected for security");
+                }
+                return output;
+            }
+        }
+        
+        // Explicitly check for newlines and tabs (redundant but defensive)
+        if (cmd_str.find('\n') != std::string::npos ||
+            cmd_str.find('\r') != std::string::npos ||
+            cmd_str.find('\t') != std::string::npos) {
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, "execCommand: Command contains newlines, carriage returns, or tabs - rejected for security");
+            }
+            return output;
+        }
+        
+        // Check if command matches whitelist pattern (no \s, only explicit space)
+        if (!std::regex_match(cmd_str, SAFE_CHARS_REGEX)) {
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: Command contains potentially unsafe characters: ") + cmd_str);
+                logger->log(::LLMEngine::LogLevel::Error, "Only alphanumeric, single spaces, hyphens, underscores, dots, and slashes are allowed");
+                logger->log(::LLMEngine::LogLevel::Error, "For security reasons, shell metacharacters and control characters are not permitted");
+            }
+            return output;
+        }
+        
+        // Additional check: prevent command chaining attempts via shell metacharacters
+        if (cmd_str.find('|') != std::string::npos ||
+            cmd_str.find('&') != std::string::npos ||
+            cmd_str.find(';') != std::string::npos ||
+            cmd_str.find('$') != std::string::npos ||
+            cmd_str.find('`') != std::string::npos ||
+            cmd_str.find('(') != std::string::npos ||
+            cmd_str.find(')') != std::string::npos ||
+            cmd_str.find('<') != std::string::npos ||
+            cmd_str.find('>') != std::string::npos ||
+            cmd_str.find('{') != std::string::npos ||
+            cmd_str.find('}') != std::string::npos ||
+            cmd_str.find('[') != std::string::npos ||
+            cmd_str.find(']') != std::string::npos ||
+            cmd_str.find('*') != std::string::npos ||
+            cmd_str.find('?') != std::string::npos ||
+            cmd_str.find('!') != std::string::npos ||
+            cmd_str.find('#') != std::string::npos ||
+            cmd_str.find('~') != std::string::npos) {
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, "execCommand: Command contains shell metacharacters - rejected for security");
+            }
+            return output;
+        }
+        
+        // Prevent multiple consecutive spaces (could be used to hide malicious content)
+        if (cmd_str.find("  ") != std::string::npos) {
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, "execCommand: Command contains multiple consecutive spaces - rejected for security");
+            }
+            return output;
+        }
+        
+        // Parse command string into argv array (split on spaces)
+        std::vector<std::string> args;
+        std::istringstream iss(cmd_str);
+        std::string arg;
+        while (iss >> arg) {
+            args.push_back(arg);
+        }
+        
+        // Call the implementation with pre-parsed arguments
+        return execCommandImpl(args, logger, cmd_str);
+    }
+
+    std::vector<std::string> execCommand(const std::vector<std::string>& args, ::LLMEngine::Logger* logger) {
+        // Build command string for logging purposes
+        std::string cmd_str_for_logging;
+        if (!args.empty()) {
+            cmd_str_for_logging = args[0];
+            for (size_t i = 1; i < args.size(); ++i) {
+                cmd_str_for_logging += " " + args[i];
+            }
+        }
+        // Call implementation directly without validation (trusted input)
+        return execCommandImpl(args, logger, cmd_str_for_logging);
     }
 
     std::string stripMarkdown(std::string_view input) {

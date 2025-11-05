@@ -77,25 +77,42 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
         });
         
         response.status_code = static_cast<int>(cpr_response.status_code);
-        response.raw_response = nlohmann::json::parse(cpr_response.text);
         
         if (cpr_response.status_code == HTTP_STATUS_OK) {
-            if (response.raw_response.contains("content") && 
-                response.raw_response["content"].is_array() && 
-                !response.raw_response["content"].empty()) {
-                
-                auto content = response.raw_response["content"][0];
-                if (content.contains("text")) {
-                    response.content = content["text"].get<std::string>();
-                    response.success = true;
+            // Parse JSON only after confirming HTTP success
+            try {
+                response.raw_response = nlohmann::json::parse(cpr_response.text);
+                if (response.raw_response.contains("content") && 
+                    response.raw_response["content"].is_array() && 
+                    !response.raw_response["content"].empty()) {
+                    
+                    auto content = response.raw_response["content"][0];
+                    if (content.contains("text")) {
+                        response.content = content["text"].get<std::string>();
+                        response.success = true;
+                    } else {
+                        response.error_message = "No text content in response";
+                        response.error_code = APIResponse::APIError::InvalidResponse;
+                    }
                 } else {
-                    response.error_message = "No text content in response";
+                    response.error_message = "Invalid response format";
+                    response.error_code = APIResponse::APIError::InvalidResponse;
                 }
-            } else {
-                response.error_message = "Invalid response format";
+            } catch (const nlohmann::json::parse_error& e) {
+                response.error_message = "JSON parse error: " + std::string(e.what());
+                response.error_code = APIResponse::APIError::InvalidResponse;
             }
         } else {
+            // Handle error responses - try to parse JSON for structured error messages
             response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
+            try {
+                response.raw_response = nlohmann::json::parse(cpr_response.text);
+            } catch (const nlohmann::json::parse_error&) {
+                // Non-JSON error response (e.g., HTML error page) - keep text error message
+                response.raw_response = nlohmann::json::object();
+            }
+            
+            // Classify error based on HTTP status code
             if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
                 response.error_code = APIResponse::APIError::Auth;
             } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
@@ -108,6 +125,7 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
         }
         
     } catch (const nlohmann::json::parse_error& e) {
+        // This catch block should rarely be reached now, but kept for safety
         response.error_message = "JSON parse error: " + std::string(e.what());
         response.error_code = APIResponse::APIError::InvalidResponse;
     } catch (const std::exception& e) {

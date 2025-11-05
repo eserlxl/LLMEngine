@@ -53,6 +53,24 @@ namespace Utils {
     [[nodiscard]] std::vector<std::string> execCommand(std::string_view cmd, ::LLMEngine::Logger* logger = nullptr);
 
     /**
+     * @brief Execute a command with pre-parsed arguments (bypasses shell parsing entirely).
+     * 
+     * This overload accepts a vector of arguments directly, completely bypassing shell
+     * parsing and validation. Use this for trusted inputs where you have full control
+     * over the argument list (e.g., system utilities, tooling scenarios).
+     * 
+     * SECURITY: This function uses posix_spawn() which does NOT route through a shell.
+     * No validation is performed on arguments - they are passed directly to execvp().
+     * Only use this with trusted, well-formed argument vectors.
+     * 
+     * @param args Vector of arguments (first element is the program, subsequent are arguments)
+     *             Example: {"ls", "-la", "/tmp"}
+     * @param logger Optional logger for error messages (nullptr to suppress)
+     * @return Vector of output lines (stdout and stderr merged)
+     */
+    [[nodiscard]] std::vector<std::string> execCommand(const std::vector<std::string>& args, ::LLMEngine::Logger* logger = nullptr);
+
+    /**
      * @brief Remove Markdown syntax from input string.
      */
     [[nodiscard]] std::string stripMarkdown(std::string_view input);

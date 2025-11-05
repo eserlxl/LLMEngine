@@ -55,6 +55,8 @@ namespace Color {
 }
 }
 
+namespace LLMEngine {
+
 LLMOutputProcessor::LLMOutputProcessor(std::string_view jsonContent, bool debug)
     : debug_(debug) {
     colors_ = isTerminalOutput();
@@ -103,29 +105,40 @@ bool LLMOutputProcessor::hasErrors() const {
 void LLMOutputProcessor::parseJson(std::string_view jsonContent) {
     try {
         // Handle streaming JSON format from Ollama (multiple JSON objects, one per line)
+        // Optimize by aggregating chunks first to avoid repeated parsing overhead
         std::stringstream ss{std::string(jsonContent)};
         std::string line;
-        std::stringstream fullResponse;
+        std::vector<std::string> response_chunks;
+        bool found_streaming = false;
+        bool found_single_format = false;
         
+        // First pass: collect all lines and check format
+        std::vector<std::string> lines;
         while (std::getline(ss, line)) {
             if (line.empty()) continue;
-            
+            lines.push_back(line);
+        }
+        
+        // Second pass: parse collected lines (aggregated to reduce parsing overhead)
+        for (const auto& line : lines) {
             try {
                 auto j = nlohmann::json::parse(line);
                 
                 // Check if this is an Ollama streaming response format
                 if (j.contains("response")) {
-                    std::string response = j["response"].get<std::string>();
-                    fullResponse << response;
+                    found_streaming = true;
+                    response_chunks.push_back(j["response"].get<std::string>());
                 }
                 // Check if this is a traditional format with "data" field
-                else if (j.contains("data")) {
+                else if (j.contains("data") && !found_single_format) {
                     analysis = j["data"].get<std::string>();
+                    found_single_format = true;
                     return; // Use the data field and return
                 }
                 // Check if this is a direct analysis field
-                else if (j.contains("analysis")) {
+                else if (j.contains("analysis") && !found_single_format) {
                     analysis = j["analysis"].get<std::string>();
+                    found_single_format = true;
                     return; // Use the analysis field and return
                 }
             } catch (const std::exception& parseError) {
@@ -134,11 +147,19 @@ void LLMOutputProcessor::parseJson(std::string_view jsonContent) {
             }
         }
         
-        // If we collected streaming responses, use them
-        if (fullResponse.str().empty()) {
+        // If we collected streaming responses, concatenate them
+        if (found_streaming && !response_chunks.empty()) {
+            // Pre-allocate string to avoid repeated reallocations
+            size_t total_size = 0;
+            for (const auto& chunk : response_chunks) {
+                total_size += chunk.size();
+            }
+            analysis.reserve(total_size);
+            for (const auto& chunk : response_chunks) {
+                analysis += chunk;
+            }
+        } else if (!found_single_format) {
             analysis = "[ERROR] No valid response data found in JSON.";
-        } else {
-            analysis = fullResponse.str();
         }
         
     } catch (const std::exception& e) {
@@ -254,3 +275,5 @@ std::vector<std::string> LLMOutputProcessor::getAvailableSections() const {
     std::sort(titles.begin(), titles.end());
     return titles;
 }
+
+} // namespace LLMEngine

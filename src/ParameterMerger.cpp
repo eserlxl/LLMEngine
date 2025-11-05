@@ -9,12 +9,12 @@
 
 namespace LLMEngine {
 
-nlohmann::json ParameterMerger::merge(
+const nlohmann::json& ParameterMerger::merge(
     const nlohmann::json& base_params,
     const nlohmann::json& input,
     std::string_view mode) {
     
-    // Check if any overrides are present
+    // Check if any overrides are present (avoid materializing strings)
     bool needs_merge = false;
     
     if (input.contains("max_tokens") && input["max_tokens"].is_number_integer()) {
@@ -24,32 +24,33 @@ nlohmann::json ParameterMerger::merge(
         }
     }
     
-    if (!std::string(mode).empty()) {
+    if (!mode.empty()) {
         needs_merge = true;
     }
     
-    // If no overrides, return reference to base (no copy)
-    // Note: Returning a const reference to base_params is safe here since
-    // the caller will use it immediately and not store it
+    // If no overrides, return const reference to base_params to avoid allocations
     if (!needs_merge) {
-        return base_params;  // Return copy of reference (cheap for JSON)
+        return base_params;
     }
     
     // Copy and apply overrides
-    nlohmann::json merged = base_params;
+    // Use thread_local static storage to hold merged result (safe for return by reference)
+    // This avoids heap allocation while allowing reference return
+    thread_local static nlohmann::json merged_storage;
+    merged_storage = base_params;
     
     if (input.contains("max_tokens") && input["max_tokens"].is_number_integer()) {
         int max_tokens = input["max_tokens"].get<int>();
         if (max_tokens > 0) {
-            merged["max_tokens"] = max_tokens;
+            merged_storage["max_tokens"] = max_tokens;
         }
     }
     
-    if (!std::string(mode).empty()) {
-        merged["mode"] = std::string(mode);
+    if (!mode.empty()) {
+        merged_storage["mode"] = std::string(mode);
     }
     
-    return merged;
+    return merged_storage;
 }
 
 } // namespace LLMEngine

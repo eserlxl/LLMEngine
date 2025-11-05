@@ -67,7 +67,7 @@ namespace {
     template <typename RequestFunc>
     cpr::Response sendWithRetries(const RetrySettings& rs, RequestFunc&& doRequest) {
         cpr::Response resp;
-        BackoffConfig bcfg{rs.base_delay_ms, rs.max_delay_ms};
+        ::LLMEngine::BackoffConfig bcfg{rs.base_delay_ms, rs.max_delay_ms};
         std::unique_ptr<std::mt19937_64> rng;
         if (rs.jitter_seed != 0 && rs.exponential) {
             rng = std::make_unique<std::mt19937_64>(rs.jitter_seed);
@@ -78,9 +78,9 @@ namespace {
             if (attempt < rs.max_attempts) {
                 int delay = 0;
                 if (rs.exponential) {
-                    const uint64_t cap = computeBackoffCapMs(bcfg, attempt);
+                    const uint64_t cap = ::LLMEngine::computeBackoffCapMs(bcfg, attempt);
                     if (rng) {
-                        delay = jitterDelayMs(*rng, cap);
+                        delay = ::LLMEngine::jitterDelayMs(*rng, cap);
                     } else {
                         delay = static_cast<int>(cap);
                     }

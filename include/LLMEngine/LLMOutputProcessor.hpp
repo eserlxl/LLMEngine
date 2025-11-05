@@ -15,6 +15,8 @@
 #include <nlohmann/json.hpp>
 #include "LLMEngine/LLMEngineExport.hpp"
 
+namespace LLMEngine {
+
 /**
  * @brief Parses and queries structured LLM outputs.
  */
@@ -51,6 +53,8 @@ private:
     bool debug_;
     bool colors_;
 };
+
+} // namespace LLMEngine
 
 #endif // LLM_OUTPUT_PROCESSOR_HPP
 

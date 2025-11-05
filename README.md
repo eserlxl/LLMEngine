@@ -102,7 +102,11 @@ Its configuration-driven design allows rapid experimentation and reliable runtim
 - CMake 3.20+  
 - Dependencies: **OpenSSL**, **nlohmann_json**, **cpr**
 
-**Note:** Windows is not officially supported. While the codebase includes partial MSVC support in the build system, Windows has known limitations including hardcoded Unix-style temporary directory paths and disabled `execCommand()` functionality.
+**Note:** Windows is not officially supported. While the codebase includes partial MSVC support in the build system, Windows has known limitations:
+
+- **Temporary directories**: The default temporary directory path is hardcoded to Unix-style paths (`/tmp/llmengine`). Custom `ITempDirProvider` implementations can be used to provide Windows-compatible paths.
+- **Command execution**: The `execCommand()` function is disabled on Windows due to POSIX dependencies (`posix_spawn` API). The function will return an empty result set with an error log when called on Windows. For Windows compatibility, consider using alternative command execution methods or the vector-based `execCommand()` overload with a custom implementation.
+- **Other limitations**: Some POSIX-specific features may not work correctly on Windows. Testing and contributions for Windows support are welcome.
 
 ### Minimal Example
 

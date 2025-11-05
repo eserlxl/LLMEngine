@@ -152,8 +152,10 @@ namespace LLMEngineSystem {
         }
 
         // Merge parameters and execute request
-        const nlohmann::json final_params = ::LLMEngine::ParameterMerger::merge(
+        // Store result in a local variable to ensure lifetime beyond the reference return
+        const nlohmann::json& merged_params_ref = ::LLMEngine::ParameterMerger::merge(
             ctx.model_params, input, mode);
+        const nlohmann::json final_params = merged_params_ref;
         const auto api_response = RequestExecutor::execute(
             ctx.api_client, full_prompt, input, final_params);
 
@@ -198,6 +200,7 @@ LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> clien
       log_retention_hours_(log_retention_hours),
       debug_(debug),
       tmp_dir_(temp_dir_provider ? temp_dir_provider->getTempDir() : ::LLMEngine::DefaultTempDirProvider().getTempDir()),
+      temp_dir_provider_(temp_dir_provider ? temp_dir_provider : std::make_shared<::LLMEngine::DefaultTempDirProvider>()),
       api_client_(std::move(client)) {
     logger_ = std::make_shared<::LLMEngine::DefaultLogger>();
     if (!api_client_) {
@@ -218,6 +221,7 @@ LLMEngine::LLMEngine::LLMEngine(::LLMEngineAPI::ProviderType provider_type,
       log_retention_hours_(log_retention_hours),
       debug_(debug),
       tmp_dir_(::LLMEngine::DefaultTempDirProvider().getTempDir()),
+      temp_dir_provider_(std::make_shared<::LLMEngine::DefaultTempDirProvider>()),
       provider_type_(provider_type),
       api_key_(std::string(api_key)) {
     logger_ = std::make_shared<::LLMEngine::DefaultLogger>();
@@ -236,6 +240,7 @@ LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
       log_retention_hours_(log_retention_hours),
       debug_(debug),
       tmp_dir_(::LLMEngine::DefaultTempDirProvider().getTempDir()),
+      temp_dir_provider_(std::make_shared<::LLMEngine::DefaultTempDirProvider>()),
       api_key_(std::string(api_key)) {
     logger_ = std::make_shared<::LLMEngine::DefaultLogger>();
     
@@ -451,9 +456,10 @@ void LLMEngine::LLMEngine::setLogger(std::shared_ptr<::LLMEngine::Logger> logger
 }
 
 bool LLMEngine::LLMEngine::setTempDirectory(const std::string& tmp_dir) {
-    // Only accept directories within the default root to avoid accidental deletion elsewhere
+    // Only accept directories within the active provider's root to respect dependency injection
     try {
-        const std::filesystem::path default_root = std::filesystem::path(::LLMEngine::DefaultTempDirProvider().getTempDir()).lexically_normal();
+        const std::string allowed_root = temp_dir_provider_ ? temp_dir_provider_->getTempDir() : ::LLMEngine::DefaultTempDirProvider().getTempDir();
+        const std::filesystem::path default_root = std::filesystem::path(allowed_root).lexically_normal();
         const std::filesystem::path requested    = std::filesystem::path(tmp_dir).lexically_normal();
         // Check prefix match: requested path must begin with default_root components
         auto it_def = default_root.begin();

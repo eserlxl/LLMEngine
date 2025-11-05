@@ -26,10 +26,10 @@ find_dependency(cpr REQUIRED)
 find_dependency(nlohmann_json REQUIRED)
 
 # Include the exported targets unless any of them already exist (build-tree usage)
-# The exported namespace is lowercase (e.g., llmengine::llmengine)
+# The exported namespace is lowercase with original target name (e.g., llmengine::LLMEngine)
 # Note: Third-party dependencies (cpr, nlohmann_json) are not exported; consumers must provide them
 set(_llm_targets
-  ${_llm_ns}::${_llm_ns}
+  ${_llm_ns}::@PROJECT_NAME@
   ${_llm_ns}::compile_options)
 
 set(_need_include TRUE)
@@ -45,12 +45,21 @@ if (_need_include)
   if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
     include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
   else()
-    # Targets.cmake not available - fail fast to avoid link-time errors
+    # Targets.cmake not available - try to find build-tree targets or provide guidance
     # This happens when dependencies were fetched via FetchContent and export was skipped
-    message(FATAL_ERROR "LLMEngine Targets.cmake not found at ${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake. "
-                        "This may occur when dependencies were fetched via FetchContent. "
-                        "Ensure dependencies (nlohmann_json, cpr) are available and link to the LLMEngine target, "
-                        "or rebuild LLMEngine with system-provided dependencies to generate the export set.")
+    # Try to find the target in the build tree directly
+    if (TARGET @PROJECT_NAME@)
+      message(STATUS "LLMEngine: Using build-tree target directly (dependencies were fetched via FetchContent)")
+    else
+      # Provide helpful guidance instead of fatal error
+      message(WARNING "LLMEngine Targets.cmake not found and build-tree targets not available. "
+                      "This typically occurs when dependencies were fetched via FetchContent. "
+                      "Options:\n"
+                      "  1. Ensure dependencies (nlohmann_json, cpr) are available and link directly to the LLMEngine target\n"
+                      "  2. Rebuild LLMEngine with system-provided dependencies (LLM_DISABLE_FETCHCONTENT=ON)\n"
+                      "  3. Use FetchContent to include LLMEngine in your build tree\n"
+                      "The package may still be usable if targets are defined elsewhere.")
+    endif()
   endif()
 endif()
 

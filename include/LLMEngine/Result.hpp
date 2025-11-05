@@ -5,6 +5,8 @@
 #include <utility>
 #include <string>
 
+namespace LLMEngine {
+
 // A tiny Expected-like result type for non-exception error propagation.
 // Header-only; does not impose ABI changes on consumers.
 template <typename T, typename E>
@@ -95,5 +97,7 @@ public:
         E error;
     } v_;
 };
+
+} // namespace LLMEngine
 
 
