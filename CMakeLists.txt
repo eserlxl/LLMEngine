@@ -268,25 +268,19 @@ if (_CLANG_TIDY_CMD)
 endif()
 
 # Public dependencies (exported to consumers)
-# For FetchContent dependencies, link PUBLIC but include them in our export set
-# to prevent CMake export validation errors. This way CMake sees them as part of
-# the export set and doesn't complain about missing dependencies.
-# For system packages, link PUBLIC normally so they're exported.
+# For FetchContent dependencies, link PRIVATE since consumers will provide their own
+# via find_dependency() in Config.cmake. For system packages, link PUBLIC so they're exported.
 if (NLOHMANN_JSON_FETCHED)
-  # Link PUBLIC - we'll include nlohmann_json in our export set to satisfy CMake
-  target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json::nlohmann_json)
-  # Consumers will still use find_dependency() in Config.cmake, but the export
-  # will include nlohmann_json targets to satisfy CMake validation
+  # Link PRIVATE - consumers will provide their own via find_dependency()
+  target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)
 else()
   # System package - link PUBLIC so it's exported normally
   target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json::nlohmann_json)
 endif()
 
 if (CPR_FETCHED)
-  # Link PUBLIC - we'll include cpr in our export set to satisfy CMake
-  target_link_libraries(${PROJECT_NAME} PUBLIC cpr::cpr)
-  # Consumers will still use find_dependency() in Config.cmake, but the export
-  # will include cpr targets to satisfy CMake validation
+  # Link PRIVATE - consumers will provide their own via find_dependency()
+  target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
 else()
   # System package - link PUBLIC so it's exported normally
   target_link_libraries(${PROJECT_NAME} PUBLIC cpr::cpr)
