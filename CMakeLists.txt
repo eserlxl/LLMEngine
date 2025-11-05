@@ -656,42 +656,72 @@ endif()
 
 # Final safety check: remove any alias targets from install list
 # This is critical - CMake will error if we try to install an alias
+# Debug: log what's in the install list before filtering
+message(STATUS "Targets to install before safety check: ${_targets_to_install}")
 set(_filtered_targets_to_install "")
 foreach(_target IN LISTS _targets_to_install)
-  if (TARGET "${_target}")
-    get_target_property(_target_type "${_target}" TYPE)
-    if (_target_type STREQUAL "ALIAS")
-      # Never install alias targets - CMake will error
-      message(STATUS "Removing alias target from install list: ${_target}")
-    elseif (_target_type STREQUAL "INTERFACE_LIBRARY")
-      # Check if it's IMPORTED - IMPORTED INTERFACE libraries can't be installed
-      get_target_property(_imported "${_target}" IMPORTED)
-      if (_imported)
-        message(STATUS "Removing IMPORTED INTERFACE library from install list: ${_target}")
+  # Skip empty strings
+  if (_target)
+    set(_should_add_target FALSE)
+    
+    if (TARGET "${_target}")
+      get_target_property(_target_type "${_target}" TYPE)
+      # Handle case where property might be empty or NOTFOUND
+      if (NOT _target_type OR _target_type STREQUAL "NOTFOUND")
+        message(STATUS "Removing target with unknown type from install list: ${_target}")
+        set(_should_add_target FALSE)
+      # Check for alias targets - this is critical!
+      elseif (_target_type STREQUAL "ALIAS")
+        # Never install alias targets - CMake will error
+        message(STATUS "Removing alias target from install list: ${_target} (type: ${_target_type})")
+        set(_should_add_target FALSE)
       else()
-        # Regular INTERFACE library - verify it's installable
-        _is_target_installable("${_target}" _installable)
-        if (_installable)
-          list(APPEND _filtered_targets_to_install "${_target}")
+        # Also check if it's an alias by checking for ALIASED_TARGET property
+        get_target_property(_aliased_target "${_target}" ALIASED_TARGET)
+        if (_aliased_target AND NOT _aliased_target STREQUAL "NOTFOUND")
+          # This is an alias (has ALIASED_TARGET property)
+          message(STATUS "Removing alias target (detected via ALIASED_TARGET) from install list: ${_target}")
+          set(_should_add_target FALSE)
+        elseif (_target_type STREQUAL "INTERFACE_LIBRARY")
+          # Check if it's IMPORTED - IMPORTED INTERFACE libraries can't be installed
+          get_target_property(_imported "${_target}" IMPORTED)
+          if (_imported)
+            message(STATUS "Removing IMPORTED INTERFACE library from install list: ${_target}")
+            set(_should_add_target FALSE)
+          else()
+            # Regular INTERFACE library - verify it's installable
+            _is_target_installable("${_target}" _installable)
+            if (_installable)
+              set(_should_add_target TRUE)
+            else()
+              message(STATUS "Removing non-installable target from install list: ${_target}")
+              set(_should_add_target FALSE)
+            endif()
+          endif()
         else()
-          message(STATUS "Removing non-installable target from install list: ${_target}")
+          # Regular target (STATIC, SHARED, etc.) - verify it's installable
+          _is_target_installable("${_target}" _installable)
+          if (_installable)
+            set(_should_add_target TRUE)
+          else()
+            message(STATUS "Removing non-installable target from install list: ${_target}")
+            set(_should_add_target FALSE)
+          endif()
         endif()
       endif()
     else()
-      # Regular target (STATIC, SHARED, etc.) - verify it's installable
-      _is_target_installable("${_target}" _installable)
-      if (_installable)
-        list(APPEND _filtered_targets_to_install "${_target}")
-      else()
-        message(STATUS "Removing non-installable target from install list: ${_target}")
-      endif()
+      # Not a target, keep it (might be a generator expression or library file)
+      set(_should_add_target TRUE)
     endif()
-  else()
-    # Not a target, keep it (might be a generator expression or library file)
-    list(APPEND _filtered_targets_to_install "${_target}")
+    
+    if (_should_add_target)
+      list(APPEND _filtered_targets_to_install "${_target}")
+    endif()
   endif()
 endforeach()
 set(_targets_to_install ${_filtered_targets_to_install})
+# Debug: log what's in the install list after filtering
+message(STATUS "Targets to install after safety check: ${_targets_to_install}")
 
 install(TARGETS ${_targets_to_install}
   EXPORT ${PROJECT_NAME}Targets
