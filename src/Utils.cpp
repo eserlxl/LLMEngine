@@ -37,6 +37,9 @@ namespace LLMEngine::Utils {
     constexpr size_t COMMAND_BUFFER_SIZE = 256;
     constexpr size_t MAX_OUTPUT_LINES = 10000;  // Maximum number of output lines to prevent memory exhaustion
     constexpr size_t MAX_LINE_LENGTH = static_cast<size_t>(1024) * 1024;  // Maximum line length (1MB) to prevent memory exhaustion
+    constexpr size_t MAX_CMD_STRING_LENGTH = 4096; // Maximum allowed command string length
+    constexpr size_t MAX_ARG_COUNT = 64;           // Maximum number of arguments
+    constexpr size_t MAX_ARG_LENGTH = 512;         // Maximum length per argument
     
     // Precompiled regex patterns
     static const std::regex SAFE_CHARS_REGEX(R"([a-zA-Z0-9_./ -]+)");
@@ -115,6 +118,28 @@ namespace LLMEngine::Utils {
                 logger->log(::LLMEngine::LogLevel::Error, "execCommand: Empty command string");
             }
             return output;
+        }
+
+        // Enforce input size caps even for the vector overload (defensive programming)
+        if (cmd_str_for_logging.size() > MAX_CMD_STRING_LENGTH) {
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, "execCommand: Command string too long - rejected for security");
+            }
+            return output;
+        }
+        if (args.size() > MAX_ARG_COUNT) {
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, "execCommand: Too many arguments - rejected for security");
+            }
+            return output;
+        }
+        for (const auto& a : args) {
+            if (a.size() > MAX_ARG_LENGTH || !std::regex_match(a, SAFE_CHARS_REGEX)) {
+                if (logger) {
+                    logger->log(::LLMEngine::LogLevel::Error, "execCommand: Argument validation failed - rejected for security");
+                }
+                return output;
+            }
         }
         
         // Explicitly reject control characters including newlines, tabs, carriage returns
@@ -444,6 +469,13 @@ namespace LLMEngine::Utils {
             }
             return output;
         }
+
+        if (cmd_str.size() > MAX_CMD_STRING_LENGTH) {
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, "execCommand: Command string too long - rejected for security");
+            }
+            return output;
+        }
         
         // Explicitly reject control characters including newlines, tabs, carriage returns
         // These can be used for command injection even with metacharacter checks
@@ -515,6 +547,18 @@ namespace LLMEngine::Utils {
         std::string arg;
         while (iss >> arg) {
             args.push_back(arg);
+            if (args.size() > MAX_ARG_COUNT) {
+                if (logger) {
+                    logger->log(::LLMEngine::LogLevel::Error, "execCommand: Too many arguments - rejected for security");
+                }
+                return output;
+            }
+            if (arg.size() > MAX_ARG_LENGTH) {
+                if (logger) {
+                    logger->log(::LLMEngine::LogLevel::Error, "execCommand: Argument too long - rejected for security");
+                }
+                return output;
+            }
         }
         
         // Call the implementation with pre-parsed arguments
