@@ -76,7 +76,15 @@ public:
         }
         base_path_str_ = base_path_.string();
     }
-    explicit DefaultTempDirProvider(std::string_view base_path) : base_path_(base_path) {}
+    explicit DefaultTempDirProvider(std::string_view base_path) {
+        std::error_code ec;
+        base_path_ = std::filesystem::path(base_path).lexically_normal();
+        base_path_ = std::filesystem::weakly_canonical(base_path_, ec);
+        if (ec) {
+            base_path_ = base_path_.lexically_normal();
+        }
+        base_path_str_ = base_path_.string();
+    }
     
     [[nodiscard]] std::string getTempDir() const override {
         return base_path_str_;
