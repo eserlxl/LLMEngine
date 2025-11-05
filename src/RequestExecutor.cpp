@@ -6,6 +6,10 @@
 
 namespace LLMEngine {
 
+namespace {
+constexpr int kHttpStatusInternalServerError = 500;
+}
+
 ::LLMEngineAPI::APIResponse DefaultRequestExecutor::execute(
     const ::LLMEngineAPI::APIClient* api_client,
     const std::string& full_prompt,
@@ -15,7 +19,7 @@ namespace LLMEngine {
         ::LLMEngineAPI::APIResponse error_response;
         error_response.success = false;
         error_response.error_message = "API client not initialized";
-        error_response.status_code = 500;
+        error_response.status_code = kHttpStatusInternalServerError;
         error_response.error_code = ::LLMEngineAPI::APIResponse::APIError::Unknown;
         return error_response;
     }

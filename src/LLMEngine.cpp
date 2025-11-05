@@ -41,6 +41,8 @@ namespace {
 constexpr int kThreadHexReserve = 16;
 // HTTP status code for OK responses
 constexpr int kHttpStatusOk = 200;
+// HTTP status code for Internal Server Error responses
+constexpr int kHttpStatusInternalServerError = 500;
 }
 
 // Dependency injection constructor
@@ -301,7 +303,7 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
         if (logger_) {
             logger_->log(::LLMEngine::LogLevel::Error, "Request executor not configured");
         }
-        return ::LLMEngine::AnalysisResult{false, "", "", "Request executor not configured", 500};
+        return ::LLMEngine::AnalysisResult{false, "", "", "Request executor not configured", kHttpStatusInternalServerError};
     }
 
     // Write API response artifact
