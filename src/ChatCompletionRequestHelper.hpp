@@ -103,9 +103,11 @@ struct ChatCompletionRequestHelper {
             } else {
                 timeout_seconds = cfg ? cfg->getTimeoutSeconds() : APIConfigManager::getInstance().getTimeoutSeconds();
             }
-            // Clamp to a safe range [1, 600] seconds
+            // Clamp to a safe range [1, MAX_TIMEOUT_SECONDS] seconds
             if (timeout_seconds < 1) timeout_seconds = 1;
-            if (timeout_seconds > 600) timeout_seconds = 600;
+            if (timeout_seconds > ::LLMEngine::Constants::DefaultValues::MAX_TIMEOUT_SECONDS) {
+                timeout_seconds = ::LLMEngine::Constants::DefaultValues::MAX_TIMEOUT_SECONDS;
+            }
 
             // Optional connect timeout override in milliseconds
             int connect_timeout_ms = 0;

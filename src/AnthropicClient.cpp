@@ -63,9 +63,11 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
         } else {
             timeout_seconds = config_ ? config_->getTimeoutSeconds() : APIConfigManager::getInstance().getTimeoutSeconds();
         }
-        // Clamp to safe range [1, 600] seconds
+        // Clamp to safe range [1, MAX_TIMEOUT_SECONDS] seconds
         if (timeout_seconds < 1) timeout_seconds = 1;
-        if (timeout_seconds > 600) timeout_seconds = 600;
+        if (timeout_seconds > ::LLMEngine::Constants::DefaultValues::MAX_TIMEOUT_SECONDS) {
+            timeout_seconds = ::LLMEngine::Constants::DefaultValues::MAX_TIMEOUT_SECONDS;
+        }
 
         // SSL verification toggle (default: true for security)
         bool verify_ssl = true;
