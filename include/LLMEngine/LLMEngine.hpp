@@ -11,6 +11,7 @@
 #include <nlohmann/json.hpp>
 #include <vector>
 #include <memory>
+#include <functional>
 #include "LLMEngine/LLMEngineExport.hpp"
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Logger.hpp"
@@ -169,7 +170,14 @@ public:
     [[nodiscard]] std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const { return passthrough_prompt_builder_; }
     [[nodiscard]] const nlohmann::json& getModelParams() const { return model_params_; }
     [[nodiscard]] bool isDebugEnabled() const { return debug_; }
-    [[nodiscard]] bool areDebugFilesEnabled() const { return debug_ && !disable_debug_files_env_cached_; }
+    [[nodiscard]] bool areDebugFilesEnabled() const {
+        if (!debug_) return false;
+        if (debug_files_policy_) {
+            return debug_files_policy_();
+        }
+        // Cheap per-request check to allow runtime toggling by operators
+        return std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") == nullptr;
+    }
     [[nodiscard]] std::shared_ptr<IArtifactSink> getArtifactSink() const { return artifact_sink_; }
     [[nodiscard]] int getLogRetentionHours() const { return log_retention_hours_; }
     [[nodiscard]] std::shared_ptr<Logger> getLogger() const { return logger_; }
@@ -215,6 +223,16 @@ public:
      * @param logger Logger instance (shared ownership)
      */
     void setLogger(std::shared_ptr<Logger> logger);
+    /**
+     * @brief Inject a policy to determine whether debug files should be written.
+     *
+     * If not set, the engine performs a per-request environment check of
+     * LLMENGINE_DISABLE_DEBUG_FILES. Supplying a policy allows tests and
+     * long-lived services to toggle behavior without rebuilding the engine.
+     */
+    void setDebugFilesPolicy(std::function<bool()> policy) {
+        debug_files_policy_ = std::move(policy);
+    }
     
     // Dependency injection setters
     /** @brief Replace the request executor strategy. */
@@ -241,11 +259,8 @@ public:
     }
     
 private:
-    void cleanupResponseFiles() const;
     void initializeAPIClient();
     void ensureSecureTmpDir() const;
-    friend class RequestContextBuilder;
-    friend class ResponseHandler;
     
     std::string model_;
     nlohmann::json model_params_;
@@ -267,6 +282,8 @@ private:
     std::string api_key_;
     std::string ollama_url_;  // Only used when provider_type is OLLAMA
     std::shared_ptr<Logger> logger_;
+    // Optional injected policy for enabling/disabling debug artifact writing
+    std::function<bool()> debug_files_policy_;
     // Cached at construction to avoid repeated getenv calls per request.
     // Note: Read-once semantics; changes to the environment after construction
     // are not reflected in this instance. For dynamic toggling, inject a config object.

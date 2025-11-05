@@ -11,7 +11,6 @@
 #include <nlohmann/json.hpp>
 #include "LLMEngine.hpp"
 #include "LLMEngine/APIClient.hpp"
-#include "LLMOutputProcessor.hpp"
 #include "Utils.hpp"
 
 using namespace LLMEngine;

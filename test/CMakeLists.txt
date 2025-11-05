@@ -153,9 +153,6 @@ target_link_libraries(test_integration PRIVATE LLMEngine llmengine::compile_opti
 add_executable(test_api_config_parsing test_api_config_parsing.cpp)
 target_link_libraries(test_api_config_parsing PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 
-add_executable(test_output_processor_sections test_output_processor_sections.cpp)
-target_link_libraries(test_output_processor_sections PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
-
 add_executable(test_provider_mapping_extended test_provider_mapping_extended.cpp)
 target_link_libraries(test_provider_mapping_extended PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 
@@ -170,7 +167,6 @@ if (BUILD_TESTING)
   add_test(NAME test_llmengine_construction COMMAND test_llmengine_construction)
   add_test(NAME test_integration COMMAND test_integration)
   add_test(NAME test_api_config_parsing COMMAND test_api_config_parsing)
-  add_test(NAME test_output_processor_sections COMMAND test_output_processor_sections)
   add_test(NAME test_provider_mapping_extended COMMAND test_provider_mapping_extended)
 endif()
 

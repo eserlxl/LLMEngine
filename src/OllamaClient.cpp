@@ -15,11 +15,11 @@ namespace LLMEngineAPI {
 OllamaClient::OllamaClient(const std::string& base_url, const std::string& model)
     : base_url_(base_url), model_(model) {
     default_params_ = {
-        {"temperature", DEFAULT_TEMPERATURE},
-        {"top_p", DEFAULT_TOP_P},
-        {"top_k", DEFAULT_TOP_K},
-        {"min_p", DEFAULT_MIN_P},
-        {"context_window", DEFAULT_CONTEXT_WINDOW}
+        {"temperature", ::LLMEngine::Constants::DefaultValues::TEMPERATURE},
+        {"top_p", ::LLMEngine::Constants::DefaultValues::TOP_P},
+        {"top_k", ::LLMEngine::Constants::DefaultValues::TOP_K},
+        {"min_p", ::LLMEngine::Constants::DefaultValues::MIN_P},
+        {"context_window", ::LLMEngine::Constants::DefaultValues::CONTEXT_WINDOW}
     };
 }
 

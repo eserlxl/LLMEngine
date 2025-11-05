@@ -9,6 +9,7 @@
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/RequestLogger.hpp"
 #include "Backoff.hpp"
+#include "LLMEngine/Constants.hpp"
 #include <cpr/cpr.h>
 #include <iostream>
 #include <thread>
@@ -21,22 +22,12 @@ namespace LLMEngineAPI {
 
 // Internal constants (not exposed in public header)
 namespace {
-    constexpr double DEFAULT_TEMPERATURE = 0.7;
-    constexpr int DEFAULT_MAX_TOKENS = 2000;
-    constexpr double DEFAULT_TOP_P = 0.9;
-    constexpr double DEFAULT_MIN_P = 0.05;
-    constexpr int DEFAULT_TOP_K = 40;
-    constexpr int DEFAULT_CONTEXT_WINDOW = 10000;
     constexpr int MILLISECONDS_PER_SECOND = 1000;
     constexpr int HTTP_STATUS_OK = 200;
     constexpr int HTTP_STATUS_UNAUTHORIZED = 401;
     constexpr int HTTP_STATUS_FORBIDDEN = 403;
     constexpr int HTTP_STATUS_TOO_MANY_REQUESTS = 429;
     constexpr int HTTP_STATUS_SERVER_ERROR_MIN = 500;
-    constexpr int DEFAULT_TIMEOUT_SECONDS = 30;
-    constexpr int DEFAULT_RETRY_ATTEMPTS = 3;
-    constexpr int DEFAULT_RETRY_DELAY_MS = 1000;
-    constexpr int DEFAULT_MAX_BACKOFF_DELAY_MS = 30000;
 }
 
 // Shared helpers for provider clients
@@ -58,7 +49,7 @@ namespace {
             rs.max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
             rs.base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
         }
-        rs.max_delay_ms = DEFAULT_MAX_BACKOFF_DELAY_MS;
+        rs.max_delay_ms = ::LLMEngine::Constants::DefaultValues::MAX_BACKOFF_DELAY_MS;
         rs.jitter_seed = 0;
         rs.exponential = exponential_default;
         if (params.contains("retry_attempts")) rs.max_attempts = std::max(1, params["retry_attempts"].get<int>());

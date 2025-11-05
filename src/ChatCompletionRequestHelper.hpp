@@ -90,8 +90,9 @@ struct ChatCompletionRequestHelper {
             nlohmann::json request_params = default_params;
             request_params.update(params);
             
-            // Build provider-specific payload
+            // Build provider-specific payload once and cache serialized body for retries
             nlohmann::json payload = buildPayload(request_params);
+            const std::string serialized_body = payload.dump();
             
             // Get timeout from params or use config default
             int timeout_seconds = 0;
@@ -117,7 +118,7 @@ struct ChatCompletionRequestHelper {
                 return cpr::Post(
                     cpr::Url{url},
                     cpr::Header{headers.begin(), headers.end()},
-                    cpr::Body{payload.dump()},
+                    cpr::Body{serialized_body},
                     cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
                 );
             });

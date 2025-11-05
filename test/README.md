@@ -73,7 +73,7 @@ The test suite covers:
 
 1. **LLMEngine Initialization**: Tests basic constructor functionality
 2. **Analysis Function**: Tests the main `analyze()` method with sample data
-3. **LLMOutputProcessor**: Tests JSON response processing capabilities
+3. **Response Parsing**: Tests `LLMEngine::ResponseParser` for `<think>` extraction
 4. **Utils Functions**: Tests utility functions like markdown stripping
 
 ## Configuration
@@ -91,7 +91,7 @@ Note: Ollama URL is configured via `config/api_config.json` or defaults to "http
 The test will:
 1. Initialize the LLMEngine
 2. Send a test analysis request to Ollama
-3. Process the response using LLMOutputProcessor
+3. Parse the response using `ResponseParser`
 4. Test utility functions
 5. Display results and statistics
 

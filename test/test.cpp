@@ -10,7 +10,7 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 #include "LLMEngine.hpp"
-#include "LLMOutputProcessor.hpp"
+#include "LLMEngine/ResponseParser.hpp"
 #include "Utils.hpp"
 
 using namespace LLMEngine;
@@ -94,28 +94,12 @@ int main() {
             std::cout << "✗ Analysis failed: " << result.errorMessage << " (status " << result.statusCode << ")" << std::endl;
         }
         
-        // Test 3: LLMOutputProcessor usage
-        std::cout << "\n3. Testing LLMOutputProcessor..." << std::endl;
-        
-        // Create a sample JSON response for testing the processor
-        nlohmann::json sample_response = {
-            {"analysis", "This is a test analysis"},
-            {"risks", "Low risk detected"},
-            {"recommendations", "Continue monitoring"}
-        };
-        
-        LLMOutputProcessor processor(sample_response.dump(), true);
-        std::cout << "✓ LLMOutputProcessor initialized successfully" << std::endl;
-        
-        // Test processor methods
-        std::string raw_analysis = processor.getRawAnalysis();
-        std::cout << "Raw analysis length: " << raw_analysis.length() << " characters" << std::endl;
-        
-        bool has_errors = processor.hasErrors();
-        std::cout << "Has errors: " << (has_errors ? "Yes" : "No") << std::endl;
-        
-        std::vector<std::string> available_sections = processor.getAvailableSections();
-        std::cout << "Available sections: " << available_sections.size() << std::endl;
+        // Test 3: ResponseParser usage
+        std::cout << "\n3. Testing ResponseParser..." << std::endl;
+        const std::string synthetic = "<think>internal chain of thought</think>Visible content";
+        const auto parsed = LLMEngine::ResponseParser::parseResponse(synthetic);
+        std::cout << "Think: " << parsed.first << std::endl;
+        std::cout << "Content: " << parsed.second << std::endl;
         
         // Test 4: Utils functions
         std::cout << "\n4. Testing Utils functions..." << std::endl;

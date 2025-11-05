@@ -21,11 +21,10 @@ if [ ! -f "CMakeLists.txt" ]; then
     exit 1
 fi
 
-# Check if main library is built
-if [ ! -f "../build/libLLMEngine.a" ]; then
-    echo "❌ Error: Main library not found. Please build the main library first:"
-    echo "   cd .. && mkdir -p build && cd build && cmake .. && make -j20"
-    exit 1
+# Prefer consuming the exported package from build-tree or install
+if [ ! -d "../build" ]; then
+    echo "ℹ️  Build directory not found. Creating build directory and configuring root first."
+    (cd ..; mkdir -p build; cd build; cmake ..)
 fi
 
 # Create build directory

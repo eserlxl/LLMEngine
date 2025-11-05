@@ -7,43 +7,18 @@
 
 #include "LLMEngine/LLMEngine.hpp"
 #include "LLMEngine/ITempDirProvider.hpp"
-#include "LLMEngine/PromptBuilder.hpp"
-#include "LLMEngine/DebugArtifactManager.hpp"
 #include "LLMEngine/Constants.hpp"
-#include "LLMEngine/LLMOutputProcessor.hpp"
-#include "LLMEngine/Utils.hpp"
-#include "LLMEngine/DebugArtifacts.hpp"
 #include "LLMEngine/IConfigManager.hpp"
 #include "LLMEngine/APIClient.hpp"
-#include "LLMEngine/ResponseParser.hpp"
-#include "LLMEngine/RequestLogger.hpp"
-#include "LLMEngine/ParameterMerger.hpp"
 #include "LLMEngine/RequestContextBuilder.hpp"
 #include "LLMEngine/ResponseHandler.hpp"
-#include <cpr/cpr.h>
-#include <nlohmann/json.hpp>
-#include <fstream>
-#include <sstream>
-#include <iostream>
-#include <vector>
-#include <ctime>
-#include <iomanip>
-#include <chrono>
-#include <algorithm>
-#include <cctype>
-#include <cstring>
-#include <mutex>
-#include <thread>
 #include <filesystem>
 #include <cstdlib>
+#include <stdexcept>
 
 // (orchestration helpers removed; analyze now directly coordinates collaborators)
 
 namespace {
-// Number of hexadecimal characters reserved when encoding thread hash
-constexpr int kThreadHexReserve = 16;
-// HTTP status code for OK responses
-constexpr int kHttpStatusOk = 200;
 // HTTP status code for Internal Server Error responses
 constexpr int kHttpStatusInternalServerError = 500;
 }
@@ -233,11 +208,7 @@ void LLMEngine::LLMEngine::ensureSecureTmpDir() const {
     }
 }
 
-void LLMEngine::LLMEngine::cleanupResponseFiles() const {
-    // Legacy filename cleanup removed - we now use per-request directories
-    // Old request directories are cleaned up by DebugArtifacts::cleanupOld()
-    // This function is kept as a no-op for now to maintain the interface
-}
+// Removed legacy cleanup hook; per-request directories are managed by DebugArtifactManager
 
 
 ::LLMEngine::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt, 
@@ -245,8 +216,6 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
                                   std::string_view analysis_type, 
                                   std::string_view mode,
                                   bool prepend_terse_instruction) const {
-    cleanupResponseFiles();
-
     // Build request context
     RequestContext ctx = RequestContextBuilder::build(*this, prompt, input, analysis_type, mode, prepend_terse_instruction);
 

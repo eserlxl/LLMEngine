@@ -16,9 +16,9 @@ namespace LLMEngineAPI {
 OpenAIClient::OpenAIClient(const std::string& api_key, const std::string& model)
     : api_key_(api_key), model_(model), base_url_(std::string(::LLMEngine::Constants::DefaultUrls::OPENAI_BASE)) {
     default_params_ = {
-        {"temperature", DEFAULT_TEMPERATURE},
-        {"max_tokens", DEFAULT_MAX_TOKENS},
-        {"top_p", DEFAULT_TOP_P},
+        {"temperature", ::LLMEngine::Constants::DefaultValues::TEMPERATURE},
+        {"max_tokens", ::LLMEngine::Constants::DefaultValues::MAX_TOKENS},
+        {"top_p", ::LLMEngine::Constants::DefaultValues::TOP_P},
         {"frequency_penalty", 0.0},
         {"presence_penalty", 0.0}
     };

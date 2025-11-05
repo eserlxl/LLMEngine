@@ -16,8 +16,8 @@ RequestContext RequestContextBuilder::build(const LLMEngine& engine,
                                             std::string_view analysis_type,
                                             std::string_view mode,
                                             bool prepend_terse_instruction) {
-    (void)analysis_type;
     RequestContext ctx;
+    ctx.analysisType = std::string(analysis_type);
 
     // Unique request directory name
     const auto now = std::chrono::system_clock::now();
@@ -43,11 +43,12 @@ RequestContext RequestContextBuilder::build(const LLMEngine& engine,
     }
     ctx.fullPrompt = std::move(full_prompt);
 
-    // Parameters merge
+    // Parameters merge without an unnecessary initial copy
     nlohmann::json merged_params;
-    ctx.finalParams = engine.getModelParams();
     if (ParameterMerger::mergeInto(engine.getModelParams(), input, mode, merged_params)) {
         ctx.finalParams = std::move(merged_params);
+    } else {
+        ctx.finalParams = engine.getModelParams();
     }
 
     // Determine debug artifacts writing and create manager if needed

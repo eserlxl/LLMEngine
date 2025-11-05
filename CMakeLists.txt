@@ -235,7 +235,6 @@ endmacro()
 # ---- Library ---------------------------------------------------------------
 add_library(${PROJECT_NAME}
     src/LLMEngine.cpp
-    src/LLMOutputProcessor.cpp
     src/Utils.cpp
     src/APIClient.cpp
     src/QwenClient.cpp
@@ -410,7 +409,6 @@ install(FILES
     include/Utils.hpp
     include/Logger.hpp
     include/RequestLogger.hpp
-    include/LLMOutputProcessor.hpp
     include/DebugArtifacts.hpp
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES

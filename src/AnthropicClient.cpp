@@ -15,9 +15,9 @@ namespace LLMEngineAPI {
 AnthropicClient::AnthropicClient(const std::string& api_key, const std::string& model)
     : api_key_(api_key), model_(model), base_url_(std::string(::LLMEngine::Constants::DefaultUrls::ANTHROPIC_BASE)) {
     default_params_ = {
-        {"max_tokens", DEFAULT_MAX_TOKENS},
-        {"temperature", DEFAULT_TEMPERATURE},
-        {"top_p", DEFAULT_TOP_P}
+        {"max_tokens", ::LLMEngine::Constants::DefaultValues::MAX_TOKENS},
+        {"temperature", ::LLMEngine::Constants::DefaultValues::TEMPERATURE},
+        {"top_p", ::LLMEngine::Constants::DefaultValues::TOP_P}
     };
 }
 

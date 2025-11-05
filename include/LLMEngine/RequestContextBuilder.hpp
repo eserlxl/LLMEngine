@@ -2,10 +2,10 @@
 #include <string>
 #include <nlohmann/json.hpp>
 #include <memory>
+#include "LLMEngine/DebugArtifactManager.hpp"
 
 namespace LLMEngine {
 
-class DebugArtifactManager;
 class LLMEngine;
 class Logger;
 
@@ -15,6 +15,7 @@ struct RequestContext {
     nlohmann::json finalParams;
     std::unique_ptr<DebugArtifactManager> debugManager;
     bool writeDebugFiles { false };
+    std::string analysisType; // preserved for routing/telemetry
 };
 
 class RequestContextBuilder {

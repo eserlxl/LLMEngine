@@ -190,7 +190,7 @@ The configuration file (`config/api_config.json`) follows this structure:
    - Retention policy enforcement
 
 7. **Result formatting**
-   - THINK section extraction
+   - THINK section extraction (via `ResponseParser`)
    - Content section extraction
    - AnalysisResult construction
 
@@ -219,7 +219,7 @@ The unique directory name format is `req_{milliseconds}_{thread_id}`, ensuring t
 - **Symlink Protection**: Temporary directories cannot be symlinks; the library throws an exception if a symlink is detected to prevent symlink traversal attacks
 - **Secret Redaction**: API keys and sensitive tokens are automatically redacted
 - **Retention Policy**: Files older than `log_retention_hours` are automatically cleaned up (cleanup scans the base temp directory)
-- **Environment Control**: Set `LLMENGINE_DISABLE_DEBUG_FILES=1` to disable file generation
+- **Environment Control**: Set `LLMENGINE_DISABLE_DEBUG_FILES=1` to disable file generation. Alternatively, inject a policy via `setDebugFilesPolicy(std::function<bool()>)` to toggle behavior dynamically per-request or from application settings.
 - **Concurrent Safety**: Each request uses a unique subdirectory to prevent race conditions and file conflicts
 
 ### Retention Behavior

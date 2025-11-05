@@ -262,6 +262,7 @@ LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, apiKey, "qwen-flash", {}, 2
 **Artifact retention:**
 - Artifacts are automatically cleaned up after `log_retention_hours` (default: 24 hours)
 - Set `LLMENGINE_DISABLE_DEBUG_FILES=1` to disable debug file writing even when debug mode is enabled
+- Applications can inject a dynamic policy via `engine.setDebugFilesPolicy([]{ return /* enabled? */; });` to control artifact writing at runtime per request or per tenant.
 
 **Error handling:**
 - Failed artifact writes are logged as warnings but do not fail the request

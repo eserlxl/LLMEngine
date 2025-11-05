@@ -47,7 +47,14 @@ cmake --preset release -DLLM_ENABLE_LTO=ON
 cmake --preset debug -DENABLE_COVERAGE=ON
 ```
 
-A consumer example using `find_package(LLMEngine)` exists in `examples/consumer`.
+Examples and tests prefer consuming the exported package:
+
+```cmake
+find_package(LLMEngine CONFIG REQUIRED)
+target_link_libraries(your_example PRIVATE llmengine::LLMEngine llmengine::compile_options)
+```
+
+In build-tree scenarios, the examples will also attempt `find_package(LLMEngine CONFIG QUIET)` after prefixing `${PROJECT_SOURCE_DIR}/build` to `CMAKE_PREFIX_PATH`. Direct references to `../build/libLLMEngine.a` are guarded and no longer required for normal workflows.
 
 ---
 

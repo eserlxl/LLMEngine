@@ -35,7 +35,6 @@ The library uses a namespaced include structure under `LLMEngine/`. **These are 
 ```cpp
 #include "LLMEngine/LLMEngine.hpp"          // Main entry point
 #include "LLMEngine/APIClient.hpp"          // Provider interface and clients
-#include "LLMEngine/LLMOutputProcessor.hpp" // Output parsing helpers
 #include "LLMEngine/Utils.hpp"              // Utility functions
 #include "LLMEngine/DebugArtifacts.hpp"     // Debug artifact helpers
 ```
@@ -52,13 +51,12 @@ The following compatibility headers are provided in the root `include/` director
 
 - `include/LLMEngine.hpp` → redirects to `LLMEngine/LLMEngine.hpp`
 - `include/APIClient.hpp` → redirects to `LLMEngine/APIClient.hpp`
-- `include/LLMOutputProcessor.hpp` → redirects to `LLMEngine/LLMOutputProcessor.hpp`
 - `include/Utils.hpp` → redirects to `LLMEngine/Utils.hpp`
 - `include/Logger.hpp` → redirects to `LLMEngine/Logger.hpp`
 - `include/RequestLogger.hpp` → redirects to `LLMEngine/RequestLogger.hpp`
 - `include/DebugArtifacts.hpp` → redirects to `LLMEngine/DebugArtifacts.hpp`
 
-**Migration:** New code should use the `LLMEngine/` prefixed paths. Existing code using the compatibility headers will continue to work, but migration to the preferred paths is recommended.
+The former `LLMOutputProcessor` API has been removed. Consumers should parse responses using `LLMEngine::ResponseParser` or their own logic.
 
 For configuration details, see [docs/CONFIGURATION.md](CONFIGURATION.md) and `config/api_config.json`.
 
