@@ -19,18 +19,38 @@ namespace LLMEngineAPI {
 std::unique_ptr<APIClient> APIClientFactory::createClient(ProviderType type, 
                                                          std::string_view api_key,
                                                          std::string_view model,
-                                                         std::string_view base_url) {
+                                                         std::string_view base_url,
+                                                         std::shared_ptr<IConfigManager> cfg) {
     switch (type) {
-        case ProviderType::QWEN:
-            return std::make_unique<QwenClient>(std::string(api_key), std::string(model));
+        case ProviderType::QWEN: {
+            auto ptr = std::make_unique<QwenClient>(std::string(api_key), std::string(model));
+            if (cfg) ptr->setConfig(cfg);
+            return ptr;
+        }
         case ProviderType::OPENAI:
-            return std::make_unique<OpenAIClient>(std::string(api_key), std::string(model));
+        {
+            auto ptr = std::make_unique<OpenAIClient>(std::string(api_key), std::string(model));
+            if (cfg) ptr->setConfig(cfg);
+            return ptr;
+        }
         case ProviderType::ANTHROPIC:
-            return std::make_unique<AnthropicClient>(std::string(api_key), std::string(model));
+        {
+            auto ptr = std::make_unique<AnthropicClient>(std::string(api_key), std::string(model));
+            if (cfg) ptr->setConfig(cfg);
+            return ptr;
+        }
         case ProviderType::OLLAMA:
-            return std::make_unique<OllamaClient>(std::string(base_url), std::string(model));
+        {
+            auto ptr = std::make_unique<OllamaClient>(std::string(base_url), std::string(model));
+            if (cfg) ptr->setConfig(cfg);
+            return ptr;
+        }
         case ProviderType::GEMINI:
-            return std::make_unique<GeminiClient>(std::string(api_key), std::string(model));
+        {
+            auto ptr = std::make_unique<GeminiClient>(std::string(api_key), std::string(model));
+            if (cfg) ptr->setConfig(cfg);
+            return ptr;
+        }
         default:
             return nullptr;
     }
@@ -38,12 +58,15 @@ std::unique_ptr<APIClient> APIClientFactory::createClient(ProviderType type,
 
 std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_view provider_name,
                                                                      const nlohmann::json& config,
-                                                                     ::LLMEngine::Logger* logger) {
+                                                                     ::LLMEngine::Logger* logger,
+                                                                     std::shared_ptr<IConfigManager> cfg) {
     ProviderType type = stringToProviderType(provider_name);
     if (type == ProviderType::OLLAMA) {
         std::string base_url = config.value(std::string(::LLMEngine::Constants::JsonKeys::BASE_URL), std::string(::LLMEngine::Constants::DefaultUrls::OLLAMA_BASE));
         std::string model = config.value(std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_MODEL), std::string(::LLMEngine::Constants::DefaultModels::OLLAMA));
-        return std::make_unique<OllamaClient>(base_url, model);
+        auto ptr = std::make_unique<OllamaClient>(base_url, model);
+        if (cfg) ptr->setConfig(cfg);
+        return ptr;
     }
     
     // SECURITY: Prefer environment variables for API keys over config file
@@ -87,7 +110,7 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_
     }
     
     std::string model = config.value(std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_MODEL), "");
-    return createClient(type, api_key, model);
+    return createClient(type, api_key, model, "", cfg);
 }
 
 ProviderType APIClientFactory::stringToProviderType(std::string_view provider_name) {

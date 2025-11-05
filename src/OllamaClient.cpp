@@ -59,10 +59,10 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             
             // Get timeout from params or use provider-specific/default config
             int timeout_seconds = 0;
-            if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
+        if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
                 timeout_seconds = params[std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)].get<int>();
             } else {
-                timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds("ollama");
+            timeout_seconds = config_ ? config_->getTimeoutSeconds("ollama") : APIConfigManager::getInstance().getTimeoutSeconds("ollama");
             }
             
             const std::string url = base_url_ + "/api/generate";

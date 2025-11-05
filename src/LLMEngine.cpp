@@ -266,6 +266,8 @@ LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
             &::LLMEngineAPI::APIConfigManager::getInstance(),
             [](::LLMEngineAPI::IConfigManager*){});
     }
+    // Store for downstream factories
+    config_manager_ = config_mgr;
     
     // Load config
     if (!config_mgr->loadConfig()) {
@@ -341,10 +343,10 @@ LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
 void LLMEngine::LLMEngine::initializeAPIClient() {
     if (provider_type_ == ::LLMEngineAPI::ProviderType::OLLAMA) {
         api_client_ = ::LLMEngineAPI::APIClientFactory::createClient(
-            provider_type_, "", model_, ollama_url_);
+            provider_type_, "", model_, ollama_url_, config_manager_);
     } else {
         api_client_ = ::LLMEngineAPI::APIClientFactory::createClient(
-            provider_type_, api_key_, model_);
+            provider_type_, api_key_, model_, "", config_manager_);
     }
     
     if (!api_client_) {

@@ -49,10 +49,15 @@ namespace {
         bool exponential;
     };
 
-    inline RetrySettings computeRetrySettings(const nlohmann::json& params, bool exponential_default = true) {
+    inline RetrySettings computeRetrySettings(const nlohmann::json& params, const IConfigManager* cfg, bool exponential_default = true) {
         RetrySettings rs{};
-        rs.max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
-        rs.base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
+        if (cfg) {
+            rs.max_attempts = std::max(1, cfg->getRetryAttempts());
+            rs.base_delay_ms = std::max(0, cfg->getRetryDelayMs());
+        } else {
+            rs.max_attempts = std::max(1, APIConfigManager::getInstance().getRetryAttempts());
+            rs.base_delay_ms = std::max(0, APIConfigManager::getInstance().getRetryDelayMs());
+        }
         rs.max_delay_ms = DEFAULT_MAX_BACKOFF_DELAY_MS;
         rs.jitter_seed = 0;
         rs.exponential = exponential_default;

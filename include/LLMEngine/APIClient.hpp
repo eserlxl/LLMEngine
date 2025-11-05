@@ -103,6 +103,8 @@ public:
     virtual std::string getProviderName() const = 0;
     /** @brief Provider enumeration value. */
     virtual ProviderType getProviderType() const = 0;
+    /** @brief Optionally inject configuration manager (fallback to singleton when not set). */
+    virtual void setConfig(std::shared_ptr<IConfigManager>) {}
 };
 
 /**
@@ -120,12 +122,14 @@ public:
                            const nlohmann::json& params) const override;
     std::string getProviderName() const override { return "Qwen"; }
     ProviderType getProviderType() const override { return ProviderType::QWEN; }
+    void setConfig(std::shared_ptr<IConfigManager> cfg) override { config_ = std::move(cfg); }
 
 private:
     std::string api_key_;
     std::string model_;
     std::string base_url_;
     nlohmann::json default_params_;
+    std::shared_ptr<IConfigManager> config_;
 };
 
 /**
@@ -143,12 +147,14 @@ public:
                            const nlohmann::json& params) const override;
     std::string getProviderName() const override { return "OpenAI"; }
     ProviderType getProviderType() const override { return ProviderType::OPENAI; }
+    void setConfig(std::shared_ptr<IConfigManager> cfg) override { config_ = std::move(cfg); }
 
 private:
     std::string api_key_;
     std::string model_;
     std::string base_url_;
     nlohmann::json default_params_;
+    std::shared_ptr<IConfigManager> config_;
 };
 
 /**
@@ -166,12 +172,14 @@ public:
                            const nlohmann::json& params) const override;
     std::string getProviderName() const override { return "Anthropic"; }
     ProviderType getProviderType() const override { return ProviderType::ANTHROPIC; }
+    void setConfig(std::shared_ptr<IConfigManager> cfg) override { config_ = std::move(cfg); }
 
 private:
     std::string api_key_;
     std::string model_;
     std::string base_url_;
     nlohmann::json default_params_;
+    std::shared_ptr<IConfigManager> config_;
 };
 
 /**
@@ -190,11 +198,13 @@ public:
                            const nlohmann::json& params) const override;
     std::string getProviderName() const override { return "Ollama"; }
     ProviderType getProviderType() const override { return ProviderType::OLLAMA; }
+    void setConfig(std::shared_ptr<IConfigManager> cfg) override { config_ = std::move(cfg); }
 
 private:
     std::string base_url_;
     std::string model_;
     nlohmann::json default_params_;
+    std::shared_ptr<IConfigManager> config_;
 };
 
 /**
@@ -212,12 +222,14 @@ public:
                            const nlohmann::json& params) const override;
     std::string getProviderName() const override { return "Gemini"; }
     ProviderType getProviderType() const override { return ProviderType::GEMINI; }
+    void setConfig(std::shared_ptr<IConfigManager> cfg) override { config_ = std::move(cfg); }
 
 private:
     std::string api_key_;
     std::string model_;
     std::string base_url_;
     nlohmann::json default_params_;
+    std::shared_ptr<IConfigManager> config_;
 };
 
 /**
@@ -248,7 +260,8 @@ public:
     static std::unique_ptr<APIClient> createClient(ProviderType type, 
                                                    std::string_view api_key = "",
                                                    std::string_view model = "",
-                                                   std::string_view base_url = "");
+                                                   std::string_view base_url = "",
+                                                   std::shared_ptr<IConfigManager> cfg = nullptr);
     
     /**
      * @brief Create client by provider name from JSON config.
@@ -258,7 +271,8 @@ public:
      */
     static std::unique_ptr<APIClient> createClientFromConfig(std::string_view provider_name,
                                                              const nlohmann::json& config,
-                                                             ::LLMEngine::Logger* logger = nullptr);
+                                                             ::LLMEngine::Logger* logger = nullptr,
+                                                             std::shared_ptr<IConfigManager> cfg = nullptr);
     
     /**
      * @brief Convert provider string to enum.

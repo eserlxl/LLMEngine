@@ -72,14 +72,15 @@ struct ChatCompletionRequestHelper {
         UrlBuilder&& buildUrl,
         HeaderBuilder&& buildHeaders,
         ResponseParser&& parseResponse,
-        bool exponential_retry = true) {
+        bool exponential_retry = true,
+        const IConfigManager* cfg = nullptr) {
         
         APIResponse response;
         response.success = false;
         response.error_code = APIResponse::APIError::Unknown;
         
         try {
-            RetrySettings rs = computeRetrySettings(params, exponential_retry);
+            RetrySettings rs = computeRetrySettings(params, cfg, exponential_retry);
             
             // Merge default params with provided params
             nlohmann::json request_params = default_params;
@@ -93,7 +94,7 @@ struct ChatCompletionRequestHelper {
             if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
                 timeout_seconds = params[std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)].get<int>();
             } else {
-                timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
+                timeout_seconds = cfg ? cfg->getTimeoutSeconds() : APIConfigManager::getInstance().getTimeoutSeconds();
             }
             
             // Build provider-specific URL and headers

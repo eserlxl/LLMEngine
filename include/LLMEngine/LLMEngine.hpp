@@ -217,6 +217,7 @@ private:
     
     // API client support
     std::unique_ptr<::LLMEngineAPI::APIClient> api_client_;
+    std::shared_ptr<::LLMEngineAPI::IConfigManager> config_manager_;
 
     // Collaborators (injectable)
     std::shared_ptr<IPromptBuilder> terse_prompt_builder_ { std::make_shared<TersePromptBuilder>() };

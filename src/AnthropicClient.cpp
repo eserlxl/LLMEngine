@@ -28,7 +28,7 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
     response.success = false;
     
     try {
-        RetrySettings rs = computeRetrySettings(params, /*exponential_default*/true);
+        RetrySettings rs = computeRetrySettings(params, config_.get(), /*exponential_default*/true);
         
         // Merge default params with provided params using update() for efficiency
         nlohmann::json request_params = default_params_;
@@ -60,7 +60,7 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
         if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
             timeout_seconds = params[std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)].get<int>();
         } else {
-            timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds();
+            timeout_seconds = config_ ? config_->getTimeoutSeconds() : APIConfigManager::getInstance().getTimeoutSeconds();
         }
         
         // Send request with retries
