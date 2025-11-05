@@ -46,6 +46,7 @@ option(ENABLE_CLANG_TIDY          "Run clang-tidy if available"                 
 option(ENABLE_COVERAGE            "Enable coverage flags in Debug (GCC/Clang)"     OFF)
 option(ENABLE_DOXYGEN             "Enable Doxygen documentation target"            ON)
 option(LLM_DISABLE_FETCHCONTENT   "Disable FetchContent; require system packages"  OFF)
+option(LLMENGINE_ENABLE_VISIBILITY_HIDDEN "Enable -fvisibility=hidden for shared builds" ON)
 
 # Fine-grained toggles (optional; override ENABLE_SANITIZERS when set)
 option(LLM_ENABLE_ASAN "Enable AddressSanitizer" OFF)
@@ -300,6 +301,10 @@ if (MSVC)
 else()
   # Visibility flags are disabled until an export header is introduced for shared builds
   # Modes
+  if (BUILD_SHARED_LIBS AND LLMENGINE_ENABLE_VISIBILITY_HIDDEN)
+    # Apply default hidden visibility for shared libs; exported symbols annotated by generated header
+    target_compile_options(${PROJECT_NAME} PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
+  endif()
   if (DEBUG_MODE)
     target_compile_options(${PROJECT_NAME} PRIVATE -O0 -g -fno-omit-frame-pointer)
     target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG)
@@ -377,25 +382,14 @@ generate_export_header(${PROJECT_NAME}
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 
 # ---- Install ------------------------------------------------------------------
-# Install library (handles both static and shared) and export targets
-# Note: We do NOT export third-party dependencies (cpr, nlohmann_json) even when fetched via FetchContent.
-# Consumers should provide these dependencies themselves to avoid leaking build-system details
-# and potential conflicts with system-provided packages.
-# When dependencies are fetched via FetchContent, we cannot export them, so we skip EXPORT to avoid CMake errors.
-if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
-  # Dependencies fetched via FetchContent - skip EXPORT to avoid export validation errors
-  install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_compile_options
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-else()
-  # System-provided dependencies - safe to export
-  install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_compile_options
-    EXPORT ${PROJECT_NAME}Targets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-endif()
+# Install library (handles both static and shared) and export targets.
+# We always export our own targets; consumers are responsible for providing
+# third-party dependencies (cpr, nlohmann_json) discovered via find_dependency().
+install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_compile_options
+  EXPORT ${PROJECT_NAME}Targets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # Install public headers
 # Namespaced headers go to include/LLMEngine/
@@ -447,20 +441,9 @@ configure_package_config_file(
   INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
 # Export targets to the build tree so examples can use find_package() without install
-# Only export when export set exists (when dependencies are system-provided)
-# (when fetched via FetchContent, we skip EXPORT to avoid validation errors)
-if (NOT NLOHMANN_JSON_FETCHED AND NOT CPR_FETCHED)
-  export(EXPORT ${PROJECT_NAME}Targets
-    NAMESPACE ${PROJECT_NAME_LOWER}::
-    FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake")
-else()
-  # When dependencies are fetched, generate a thin Config.cmake that documents requirements
-  # and warns about missing export set
-  message(WARNING "LLMEngine dependencies were fetched via FetchContent. "
-                  "The generated Config.cmake file requires consumers to provide "
-                  "nlohmann_json and cpr dependencies themselves. "
-                  "For build-tree usage, targets are available directly.")
-endif()
+export(EXPORT ${PROJECT_NAME}Targets
+  NAMESPACE ${PROJECT_NAME_LOWER}::
+  FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake")
 
 # Always install config files (even when dependencies are fetched)
 # The Config.cmake will document dependency requirements
@@ -469,13 +452,10 @@ install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
-# Only install export set when dependencies are system-provided
-# (when fetched via FetchContent, we skip EXPORT to avoid validation errors)
-if (NOT NLOHMANN_JSON_FETCHED AND NOT CPR_FETCHED)
-  install(EXPORT ${PROJECT_NAME}Targets
-    NAMESPACE ${PROJECT_NAME_LOWER}::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
-endif()
+# Always install export set for our own targets
+install(EXPORT ${PROJECT_NAME}Targets
+  NAMESPACE ${PROJECT_NAME_LOWER}::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
 # ---- pkg-config ---------------------------------------------------------------
 configure_file(

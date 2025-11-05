@@ -10,23 +10,26 @@
 #include <ranges>
 #include <sstream>
 #include <cctype>
+#include "LLMEngine/SensitiveFields.hpp"
 
 namespace {
     const std::vector<std::string>& getSensitiveQueryParamsImpl() {
-        static const std::vector<std::string> params = {
-            "key", "api_key", "apikey", "token", "access_token", "accesstoken",
-            "secret", "password", "passwd", "pwd", "credential", "auth",
-            "authorization", "x-api-key", "xapikey", "apikey"
-        };
+        static const std::vector<std::string> params = []{
+            std::vector<std::string> v;
+            v.reserve(LLMEngine::Security::SENSITIVE_QUERY_PARAMS.size());
+            for (auto s : LLMEngine::Security::SENSITIVE_QUERY_PARAMS) v.emplace_back(s);
+            return v;
+        }();
         return params;
     }
 
     const std::vector<std::string>& getSensitiveHeaderNamesImpl() {
-        static const std::vector<std::string> headers = {
-            "authorization", "x-api-key", "xapikey", "apikey", "x-goog-api-key",
-            "x-auth-token", "api-key", "access-token", "secret", "password",
-            "cookie", "set-cookie"
-        };
+        static const std::vector<std::string> headers = []{
+            std::vector<std::string> v;
+            v.reserve(LLMEngine::Security::SENSITIVE_HEADER_NAMES.size());
+            for (auto s : LLMEngine::Security::SENSITIVE_HEADER_NAMES) v.emplace_back(s);
+            return v;
+        }();
         return headers;
     }
 
@@ -170,10 +173,20 @@ std::string RequestLogger::redactText(std::string_view text) {
                     while (j < src.size() && std::isspace(static_cast<unsigned char>(src[j]))) j++;
                     // Emit the part up to value start
                     out.append(src.data() + i, j - i);
-                    // Redact value until delimiter
+                    // Redact value until delimiter; handle simple quoted values
                     size_t v = j;
-                    while (v < src.size() && !std::isspace(static_cast<unsigned char>(src[v])) && src[v] != ',' && src[v] != ';') {
-                        v++;
+                    if (v < src.size() && (src[v] == '"' || src[v] == '\'')) {
+                        char quote = src[v];
+                        v++; // skip opening quote
+                        while (v < src.size() && src[v] != quote) {
+                            // do not attempt to handle escapes; conservative stop at next quote
+                            v++;
+                        }
+                        if (v < src.size()) v++; // include closing quote
+                    } else {
+                        while (v < src.size() && !std::isspace(static_cast<unsigned char>(src[v])) && src[v] != ',' && src[v] != ';') {
+                            v++;
+                        }
                     }
                     out.append("<REDACTED>");
                     i = v;
