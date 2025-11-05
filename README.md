@@ -292,6 +292,29 @@ This option is useful when you need precise control over prompts for evaluation 
 
 ---
 
+## 🧪 Testing
+
+Tests are enabled by default when `BUILD_TESTING=ON`.
+
+Build and run tests:
+
+```bash
+cmake -S . -B build_test -DBUILD_TESTING=ON
+cmake --build build_test -j20
+ctest --test-dir build_test --output-on-failure
+```
+
+Environment variables used by tests (set if hitting online providers):
+
+- `QWEN_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`
+- Optional toggles: `LLMENGINE_DISABLE_DEBUG_FILES` (disable artifact writes), `LLMENGINE_LOG_REQUESTS` (prints sanitized requests)
+
+Some tests will be skipped automatically if the corresponding API keys are not present.
+
+`/tmp` is used for temporary artifacts; paths can be overridden via a custom `ITempDirProvider` in tests.
+
+---
+
 ## 🔧 Build Configuration
 
 For detailed information about build presets, CMake options, and build configurations, see [docs/BUILD.md](docs/BUILD.md).

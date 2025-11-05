@@ -16,6 +16,7 @@
 #include "LLMEngine/IConfigManager.hpp"
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/ResponseParser.hpp"
+#include "LLMEngine/RequestLogger.hpp"
 #include "LLMEngine/ParameterMerger.hpp"
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
@@ -273,8 +274,8 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
         full_prompt = fallback.buildPrompt(prompt);
     }
 
-    // Determine whether to write debug artifacts
-    const bool write_debug_files = debug_ && (std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") == nullptr);
+    // Determine whether to write debug artifacts (cache env to avoid repeated getenv and thread-safety concerns)
+    const bool write_debug_files = debug_ && !disable_debug_files_env_cached_;
 
     // Create debug artifact manager if needed
     std::unique_ptr<::LLMEngine::DebugArtifactManager> debug_mgr;
@@ -314,7 +315,8 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
     // Handle error result
     if (!api_response.success) {
         if (logger_) {
-            logger_->log(::LLMEngine::LogLevel::Error, std::string("API error: ") + api_response.error_message);
+            const std::string redacted_err = ::LLMEngine::RequestLogger::redactText(api_response.error_message);
+            logger_->log(::LLMEngine::LogLevel::Error, std::string("API error: ") + redacted_err);
             if (write_debug_files && debug_mgr) {
                 logger_->log(::LLMEngine::LogLevel::Info, std::string("Error response saved to ") + request_tmp_dir + "/api_response_error.json");
             }
@@ -364,7 +366,11 @@ bool LLMEngine::LLMEngine::setTempDirectory(const std::string& tmp_dir) {
         const std::filesystem::path requested    = std::filesystem::path(tmp_dir).lexically_normal();
         // Ensure requested is under default_root using a robust relative check
         const std::filesystem::path rel = std::filesystem::weakly_canonical(requested).lexically_relative(std::filesystem::weakly_canonical(default_root));
-        const bool is_within = !rel.empty() && rel.native().find("..") == std::string::npos && !rel.is_absolute();
+        bool has_parent_ref = false;
+        for (const auto& part : rel) {
+            if (part == "..") { has_parent_ref = true; break; }
+        }
+        const bool is_within = !rel.empty() && !rel.is_absolute() && !has_parent_ref;
         if (is_within) {
             tmp_dir_ = requested.string();
             return true;

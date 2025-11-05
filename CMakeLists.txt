@@ -333,7 +333,11 @@ else()
   elseif (PERFORMANCE_BUILD)
     target_compile_options(${PROJECT_NAME} PRIVATE -O3)
     if (ENABLE_NATIVE_OPTIMIZATION)
-      target_compile_options(${PROJECT_NAME} PRIVATE -march=native -mtune=native)
+      # Apply native tuning safely based on compiler and platform
+      target_compile_options(${PROJECT_NAME} PRIVATE
+        $<$<AND:$<COMPILE_LANG_AND_ID:CXX,GNU>>:-march=native -mtune=native>
+        $<$<AND:$<COMPILE_LANG_AND_ID:CXX,Clang>,$<NOT:$<PLATFORM_ID:Darwin>>>:-march=native>
+      )
     endif()
     target_compile_definitions(${PROJECT_NAME} PRIVATE NDEBUG _FORTIFY_SOURCE=2)
   else()

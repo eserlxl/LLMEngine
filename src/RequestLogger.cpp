@@ -74,7 +74,7 @@ std::string RequestLogger::redactUrl(std::string_view url) {
         std::string lower_name = toLower(param_name);
         bool is_sensitive = std::ranges::any_of(getSensitiveQueryParamsImpl(),
             [&lower_name](const std::string& sensitive) {
-                return lower_name == sensitive;
+                return lower_name.find(sensitive) != std::string::npos;
             });
         
         if (is_sensitive) {
@@ -138,8 +138,47 @@ bool RequestLogger::isSensitiveHeader(std::string_view header_name) {
     std::string lower_name = toLower(header_name);
     return std::ranges::any_of(getSensitiveHeaderNamesImpl(),
         [&lower_name](const std::string& sensitive) {
-            return lower_name == sensitive;
+            return lower_name.find(sensitive) != std::string::npos;
         });
+}
+
+std::string RequestLogger::redactText(std::string_view text) {
+    // Heuristic redaction of key=value, key: value patterns for sensitive keywords
+    static const std::vector<std::string> keywords = {
+        "api", "key", "token", "secret", "refresh", "client", "password", "passwd"
+    };
+    std::string s(text);
+    std::string lower = toLower(s);
+    // Simple scan to replace values after sensitive keys
+    for (size_t i = 0; i < s.size(); ++i) {
+        // Check for keyword near current position
+        for (const auto& kw : keywords) {
+            if (i + kw.size() <= lower.size() && lower.compare(i, kw.size(), kw) == 0) {
+                // Look ahead for separators '=' or ':' and redact until delimiter/whitespace
+                size_t pos = i + kw.size();
+                // Allow optional separators and spaces in between words like client_secret
+                while (pos < lower.size() && (std::isalnum(static_cast<unsigned char>(lower[pos])) || lower[pos] == '_' )) {
+                    pos++;
+                }
+                // Skip spaces
+                while (pos < s.size() && std::isspace(static_cast<unsigned char>(s[pos]))) pos++;
+                if (pos < s.size() && (s[pos] == '=' || s[pos] == ':')) {
+                    pos++;
+                    while (pos < s.size() && std::isspace(static_cast<unsigned char>(s[pos]))) pos++;
+                    size_t start_val = pos;
+                    // Redact until whitespace or comma or newline
+                    while (pos < s.size() && !std::isspace(static_cast<unsigned char>(s[pos])) && s[pos] != ',' && s[pos] != ';') {
+                        pos++;
+                    }
+                    if (start_val < pos) {
+                        s.replace(start_val, pos - start_val, "<REDACTED>");
+                        lower = toLower(s);
+                    }
+                }
+            }
+        }
+    }
+    return s;
 }
 
 } // namespace LLMEngine

@@ -59,6 +59,16 @@ public:
                                      std::string_view url,
                                      const std::map<std::string, std::string>& headers);
 
+    /**
+     * @brief Redact sensitive tokens from arbitrary text (e.g., provider error messages).
+     *
+     * Performs case-insensitive substring-based redaction using a curated set of
+     * sensitive keywords (e.g., "key", "api", "token", "secret", "refresh", "client").
+     * Only the values following key-like patterns are masked conservatively to avoid
+     * over-redaction.
+     */
+    static std::string redactText(std::string_view text);
+ 
 private:
     // List of sensitive query parameter names to redact
     static const std::vector<std::string>& getSensitiveQueryParams();

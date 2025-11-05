@@ -12,22 +12,27 @@
 namespace LLMEngine {
 
 std::pair<std::string, std::string> ResponseParser::parseResponse(std::string_view response) {
-    std::string think_section;
-    std::string remaining_section = std::string(response);
-    
     constexpr std::string_view tag_open = "<think>";
     constexpr std::string_view tag_close = "</think>";
-    
-    std::string::size_type open = remaining_section.find(tag_open);
-    std::string::size_type close = remaining_section.find(tag_close);
-    
-    if (open != std::string::npos && close != std::string::npos && close > open) {
-        think_section = remaining_section.substr(open + tag_open.length(), close - (open + tag_open.length()));
-        std::string before = remaining_section.substr(0, open);
-        std::string after = remaining_section.substr(close + tag_close.length());
-        remaining_section = before + after;
+
+    const std::size_t open = response.find(tag_open);
+    const std::size_t close = response.find(tag_close, open == std::string_view::npos ? 0 : open + tag_open.size());
+
+    std::string think_section;
+    std::string remaining_section;
+
+    if (open != std::string_view::npos && close != std::string_view::npos && close > open) {
+        std::string_view think_sv = response.substr(open + tag_open.size(), close - (open + tag_open.size()));
+        std::string_view before_sv = response.substr(0, open);
+        std::string_view after_sv = response.substr(close + tag_close.size());
+        think_section.assign(think_sv.begin(), think_sv.end());
+        remaining_section.reserve(before_sv.size() + after_sv.size());
+        remaining_section.append(before_sv.begin(), before_sv.end());
+        remaining_section.append(after_sv.begin(), after_sv.end());
+    } else {
+        remaining_section.assign(response.begin(), response.end());
     }
-    
+
     return {trim(think_section), trim(remaining_section)};
 }
 
