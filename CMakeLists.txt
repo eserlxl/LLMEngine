@@ -71,6 +71,8 @@ endif()
 if(NOT DEFINED FETCHCONTENT_BASE_DIR)
   set(FETCHCONTENT_BASE_DIR "${CMAKE_BINARY_DIR}/_deps" CACHE PATH "Base directory for FetchContent dependencies")
 endif()
+# Ensure the directory exists
+file(MAKE_DIRECTORY "${FETCHCONTENT_BASE_DIR}")
 
 # ---- Dependencies ------------------------------------------------------------
 # Note: OpenSSL is not directly required by this library, but cpr depends on it.
@@ -90,6 +92,7 @@ if (NOT nlohmann_json_FOUND)
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG v3.11.3
+    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/nlohmann_json-src"
     FIND_PACKAGE_ARGS NAMES nlohmann_json
   )
   FetchContent_MakeAvailable(nlohmann_json)
@@ -117,6 +120,7 @@ else()
     cpr
     GIT_REPOSITORY https://github.com/libcpr/cpr.git
     GIT_TAG 1.10.5
+    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/cpr-src"
     FIND_PACKAGE_ARGS NAMES cpr
   )
   set(CPR_BUILD_TESTS OFF CACHE BOOL "" FORCE)

@@ -71,6 +71,8 @@ jobs:
 
       - name: Configure
         run: |
+          unset GIT_WORK_TREE
+          unset GIT_DIR
           cmake -S . -B build \
             -G Ninja \
             -DCMAKE_C_COMPILER="$CC" \
@@ -113,6 +115,8 @@ jobs:
 
       - name: Configure with clang-tidy
         run: |
+          unset GIT_WORK_TREE
+          unset GIT_DIR
           cmake -S . -B build \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
