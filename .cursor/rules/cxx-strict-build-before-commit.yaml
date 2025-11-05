@@ -1,15 +1,23 @@
 rules:
+  # See 50-cmake.md for CMake build guidelines and 90-commit-and-iteration.md for commit workflow
+  # See 99-review-checklist.md for comprehensive pre-commit checklist
   - id: cxx-strict-build-before-commit
     match: "(?i)\\bplan agent\\b"
     actions:
       - enforce: true
       - instruction: |
           For C and C++ projects, before staging or committing, first perform a non-interactive, warning-free build.
+          
+          This rule enforces the build requirements from 99-review-checklist.md:
+          - Code compiles with warnings-as-errors
+          - No compiler warnings or errors
+          - Builds in both Debug and Release configurations
 
           Build policy:
           - Treat any compiler warnings or errors as a hard failure for the task.
           - If any warnings or errors are detected in build output, DO NOT COMMIT. Fix the issues and rerun the task.
           - Do not ask for confirmation; fail fast and proceed to repairs autonomously.
+          - Build in Release mode to catch optimization-related issues.
 
           Build steps (non-interactive, use the first that applies):
           1) If a Makefile exists in ./build, run:
@@ -18,25 +26,42 @@ rules:
           2) Else if a Makefile exists in the repository root, run:
              - make -j20
           3) Else if it is a CMake project (CMakeLists.txt exists), run:
-             - cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-             - cd build
-             - make -j20
+             - cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DWARNING_MODE=ON -DWERROR=ON
+             - cmake --build build -j20
+             
+          Note: Use Ninja generator if available (faster), otherwise use default generator.
+          The build should use warnings-as-errors (WERROR=ON) to catch all issues.
 
           Warning detection criteria:
           - Consider any line containing "warning:" (case-insensitive) a failure.
           - Consider any line containing "error:" (case-insensitive) a failure.
-          - If the toolchain supports it, prefer enabling flags that elevate warnings to errors (e.g., -Wall -Wextra -Wpedantic -Werror) via environment or generator options, but do not modify project files.
+          - Consider any line containing "clang-tidy" errors a failure (if ENABLE_CLANG_TIDY is enabled).
+          - If the toolchain supports it, prefer enabling flags that elevate warnings to errors (e.g., -Wall -Wextra -Wpedantic -Werror) via CMake options (WERROR=ON), but do not modify project files.
+
+          Test execution:
+          - After successful build, run tests: cd build && ctest --output-on-failure -j20
+          - If tests fail, DO NOT COMMIT. Fix the failing tests and rebuild.
+          - See 60-tests.md for testing requirements and guidelines.
 
           Commit gating:
           - Only proceed to staging/commit if the last build completed successfully with ZERO warnings and ZERO errors.
+          - Only proceed if all tests pass.
           - If the working tree is dirty but the build fails or has warnings, do not stage or commit.
           - Do not amend, rebase, or push as part of this step.
 
           Logging and behavior:
           - Summarize any found warnings/errors and the first few offending lines for quick diagnosis.
-          - Continue to the next subtask only after a passing, warning-free build.
+          - Continue to the next subtask only after a passing, warning-free build and all tests pass.
           - Use non-interactive commands and do not change global Git configuration.
+          - Format code before building if unformatted (run clang-format, see 80-formatting.md).
 
           Examples of acceptable outcomes before commit:
-          - Build: success; Diagnostics: 0 errors, 0 warnings — proceed to commit.
+          - Build: success; Tests: all pass; Diagnostics: 0 errors, 0 warnings — proceed to commit.
           - Build: failed or warnings present — do not commit; attempt fixes and rebuild.
+          - Build: success; Tests: failed — do not commit; fix tests and rebuild.
+          
+          References:
+          - See 50-cmake.md for CMake build configuration
+          - See 60-tests.md for testing requirements
+          - See 80-formatting.md for code formatting
+          - See 99-review-checklist.md for complete pre-commit checklist

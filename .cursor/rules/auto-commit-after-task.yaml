@@ -1,4 +1,5 @@
 rules:
+  # See 90-commit-and-iteration.md for comprehensive commit and iteration guidelines
   - id: auto-commit-after-task
     match: "(?i)\\bplan agent\\b"
     actions:
@@ -9,26 +10,46 @@ rules:
           2. Immediately continue to the next task in the plan without asking for confirmation.
           3. Do not prompt the user with "move on" or similar messages — proceed autonomously.
           4. Include the task title in the commit message (e.g. "Task: <title> completed").
+          
+          IMPORTANT: Before committing, ensure:
+          - Code compiles with warnings-as-errors (see cxx-strict-build-before-commit.yaml)
+          - All tests pass (see 60-tests.md)
+          - Code is formatted (see 80-formatting.md)
+          - Review checklist items pass (see 99-review-checklist.md)
       - instruction: |
-          Commit message format:
+          Commit message format (Conventional Commits):
+          - Type: Use appropriate type (feat, fix, docs, style, refactor, test, chore, perf, ci)
+          - Scope: Optional scope (e.g., client, parser, cmake)
           - Title: chore(plan): Task: <title> completed
           - Body: Include one-line summary of the change and the task ID if present.
           - Footer: Auto-commit-by: plan-agent
+          
+          See 90-commit-and-iteration.md for detailed commit message guidelines.
       - instruction: |
           Behavior details:
           - If there are no changes to commit, skip the commit step silently and continue.
-          - Always include all modified, added, and removed files in the commit.
+          - Always include all modified, added, and removed files in the commit (atomic commits).
           - Do not amend previous commits, do not rebase, and do not push automatically.
           - Do not ask for confirmation before committing or proceeding.
           - Do not change global Git configuration or user settings.
+          
+          Atomic commits: Each commit should represent one logical change (see 90-commit-and-iteration.md).
+          If multiple unrelated changes exist, commit them separately with clear messages.
       - instruction: |
           Safety and consistency:
-          - Use non-interactive Git commands.
+          - Use non-interactive Git commands (e.g., git -c core.editor=true commit).
           - If the task title is unavailable, use: chore(plan): Task: (untitled) completed
           - If the working tree contains unrelated changes, still commit them together as part of the current task, and mention this in the commit body as: Includes unrelated modified files present in working tree.
           - Do not run tests that require interaction as a gate before committing.
+          - Ensure build passes before committing (see cxx-strict-build-before-commit.yaml).
       - instruction: |
           Examples of acceptable commit titles:
+          - feat(client): add retry logic with exponential backoff
+          - fix(parser): handle empty JSON objects correctly
           - chore(plan): Task: Configure cache layer completed
-          - chore(plan): Task: Parse CLI flags completed
+          - test(client): add tests for retry logic
+          - docs(api): update API documentation for new endpoint
           - chore(plan): Task: (untitled) completed
+          
+          Note: Use appropriate Conventional Commits types (feat, fix, docs, test, chore, etc.)
+          See 90-commit-and-iteration.md for full commit message format guidelines.

@@ -1,4 +1,8 @@
 rules:
+  # See .cursor/rules/RULES.md for comprehensive documentation
+  # This YAML file provides structured configuration data for code generation
+  # Detailed guidelines are in markdown files: 00-architecture.md, 10-cpp-style.md, etc.
+
   mode:
     enforce_strict: true
     allow_placeholders: false
@@ -7,59 +11,63 @@ rules:
   language:
     standard: "c++20"
     allow_cxx23: true
+    # See 10-cpp-style.md for detailed C++ style guidelines
     memory_management:
-      forbid_raw_new_delete: true
+      forbid_raw_new_delete: true  # RAII-first approach (see 20-error-handling.md)
       prefer_unique_ptr: true
       prefer_shared_ptr: "rare"
       use_optional: true
       use_variant: true
-      use_span: true
+      use_span: true  # C++20 feature (see 10-cpp-style.md)
       use_string_view: true
     casting:
-      forbid_c_style_casts: true
+      forbid_c_style_casts: true  # Use static_cast, const_cast, etc. (see 10-cpp-style.md)
       allowed_casts: ["static_cast", "const_cast", "reinterpret_cast (with reasoning)"]
     exception_safety:
-      noexcept_when_possible: true
+      noexcept_when_possible: true  # See 20-error-handling.md for exception policy
 
   project_structure:
+    # See 00-architecture.md for detailed architecture and structure guidelines
     layout:
       include_dir: "include/<proj>"
       src_dir: "src"
-      tests_dir: "tests"
+      tests_dir: "test"  # Matches actual project structure
       cmake_dir: "cmake"
       examples_dir: "examples"
     namespace_pattern: "<proj>"
-    one_class_per_file: true
+    one_class_per_file: true  # See 10-cpp-style.md
 
   cmake:
+    # See 50-cmake.md for comprehensive CMake guidelines
     minimum_version: "3.20"
-    target_based_only: true
+    target_based_only: true  # Modern CMake targets only (see 50-cmake.md)
     compiler_features:
       require: ["cxx_std_20"]
     include_style:
-      use_target_include_directories: true
+      use_target_include_directories: true  # Never use global include_directories
       forbid_global_include_directories: true
     warnings:
       enable_default: true
       gcc_clang: ["-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow", "-Wold-style-cast"]
       msvc: ["/W4", "/permissive-"]
-      werror_flag_controlled: "ENABLE_WARNINGS_AS_ERRORS"
+      werror_flag_controlled: "WERROR"  # Matches actual CMake option name
     options:
-      BUILD_TESTING: false
-      BUILD_EXAMPLES: false
-      ENABLE_WARNINGS_AS_ERRORS: false
-      ENABLE_ASAN: false
-      ENABLE_UBSAN: false
-      ENABLE_TSAN: false
-      ENABLE_COVERAGE: false
+      BUILD_TESTING: true  # Default to ON for testing (see 60-tests.md)
+      BUILD_EXAMPLES: true  # Default to ON for examples
+      ENABLE_WARNINGS_AS_ERRORS: false  # Controlled by WERROR option
+      ENABLE_ASAN: false  # Enable in Debug builds via ENABLE_SANITIZERS
+      ENABLE_UBSAN: false  # Enable in Debug builds via ENABLE_SANITIZERS
+      ENABLE_TSAN: false  # Enable via LLM_ENABLE_TSAN option
+      ENABLE_COVERAGE: false  # Enable via ENABLE_COVERAGE option (see 60-tests.md)
 
   code_quality:
+    # See 80-formatting.md for formatting and static analysis guidelines
     formatting:
       use_clang_format: true
-      style: "LLVM"
+      style: "LLVM"  # Matches .clang-format configuration
       column_limit: 120
     static_analysis:
-      use_clang_tidy: true
+      use_clang_tidy: true  # See .clang-tidy for enabled checks
       enable_checks:
         - "bugprone-*"
         - "performance-*"
@@ -67,29 +75,32 @@ rules:
         - "modernize-*"
         - "cppcoreguidelines-*"
     header_hygiene:
-      pragma_once: true
-      minimize_includes: true
+      pragma_once: true  # See 00-architecture.md for header organization
+      minimize_includes: true  # See 10-cpp-style.md for include hygiene
       prefer_forward_declarations: true
 
   error_handling:
+    # See 20-error-handling.md for comprehensive error handling guidelines
     model:
-      prefer_std_expected_if_available: true
+      prefer_std_expected_if_available: true  # C++23 std::expected
       otherwise: "status_or_pattern"
     logging:
-      avoid_global_singletons: true
+      avoid_global_singletons: true  # Pass logger as dependency
       allow_logging_adapter_layer: true
     exception_boundary_policy:
-      no_throw_across_shared_library_boundaries: true
+      no_throw_across_shared_library_boundaries: true  # ABI stability
 
   performance:
+    # See 30-performance.md for performance guidelines
     avoid_unnecessary_copies: true
-    prefer_move_semantics: true
+    prefer_move_semantics: true  # Zero-cost abstractions
     container_guidelines: 
       choose_based_on_complexity: true
     concurrency:
-      prefer_jthread: true
-      use_stop_token: true
-      enforce_race_free_design: true
+      # See 40-threading.md for threading and concurrency guidelines
+      prefer_jthread: true  # C++20 std::jthread
+      use_stop_token: true  # Cooperative cancellation
+      enforce_race_free_design: true  # No data races
 
   security:
     forbid_unsafe_functions: ["strcpy", "sprintf", "gets", "strcat", "printf %s user input"]
@@ -97,20 +108,25 @@ rules:
     enforce_invariants_with_asserts: true
 
   testing:
-    framework: "gtest_or_catch2"
+    # See 60-tests.md for comprehensive testing guidelines
+    framework: "gtest_or_catch2"  # GoogleTest preferred, Catch2 as alternative
     test_coverage:
-      edge_cases: true
-      failure_modes: true
-    ctest_integration: true
+      edge_cases: true  # Test boundary conditions
+      failure_modes: true  # Test error paths (see 20-error-handling.md)
+    ctest_integration: true  # Use CTest for test discovery
+    mandatory: true  # New/changed code requires tests
 
   documentation:
+    # See 95-docs.md for documentation guidelines
     require_readme: true
-    require_public_header_comments: true
-    build_docs_option: "BUILD_DOCS"
+    require_public_header_comments: true  # Doxygen comments for public API
+    build_docs_option: "ENABLE_DOXYGEN"  # Matches actual CMake option
+    style: "third_person_formal"  # Never use first/second person
 
   dependencies:
-    stdlib_first: true
-    isolate_third_party_behind_interfaces: true
+    # See 00-architecture.md for dependency management guidelines
+    stdlib_first: true  # Prefer standard library over third-party
+    isolate_third_party_behind_interfaces: true  # Don't leak third-party types
     forbid_leaking_third_party_types_in_public_headers: true
 
   licensing:
@@ -122,23 +138,27 @@ rules:
     include_file_tree: true
     include_unified_diffs: true
     include_build_instructions: true
-    include_rationale_notes: true
+    include_rationale_notes: true  # Document in .cursor/last-change-notes.md
     include_api_migration_notes_if_changed: true
 
   workflow:
+    # See 90-commit-and-iteration.md for commit and workflow guidelines
     step_limit: 200   # Max LOC changed per step
     commit_policy:
       autoreview_on_each_task: true
-      require_build_and_tests_pass_before_commit: true
-      commit_format: "conventional_commits"
+      require_build_and_tests_pass_before_commit: true  # See cxx-strict-build-before-commit.yaml
+      commit_format: "conventional_commits"  # See 90-commit-and-iteration.md
     failure_recovery:
       rebuild_and_fix_before_commit: true
 
   review_checklist:
+    # See 99-review-checklist.md for comprehensive pre-commit checklist
     - compiles_debug_and_release
     - tests_pass
     - no_new_clang_tidy_warnings
     - no_placeholder_or_todos
     - public_headers_no_accidental_includes
     - docs_updated_for_api_changes
+    - error_paths_tested  # All error paths must have tests
+    - no_undefined_behavior  # UB impossible by construction
 
