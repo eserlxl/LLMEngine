@@ -33,6 +33,16 @@ namespace {
         return headers;
     }
 
+    const std::vector<std::string>& getAllowedLogHeaderNamesImpl() {
+        static const std::vector<std::string> headers = []{
+            std::vector<std::string> v;
+            v.reserve(LLMEngine::Security::ALLOWED_LOG_HEADER_NAMES.size());
+            for (auto s : LLMEngine::Security::ALLOWED_LOG_HEADER_NAMES) v.emplace_back(s);
+            return v;
+        }();
+        return headers;
+    }
+
     std::string toLower(std::string_view str) {
         std::string result;
         result.reserve(str.size());
@@ -77,7 +87,7 @@ std::string RequestLogger::redactUrl(std::string_view url) {
         std::string lower_name = toLower(param_name);
         bool is_sensitive = std::ranges::any_of(getSensitiveQueryParamsImpl(),
             [&lower_name](const std::string& sensitive) {
-                return lower_name.find(sensitive) != std::string::npos;
+                return lower_name == sensitive;
             });
         
         if (is_sensitive) {
@@ -103,8 +113,17 @@ std::map<std::string, std::string> RequestLogger::redactHeaders(
     const std::map<std::string, std::string>& headers) {
     std::map<std::string, std::string> redacted;
     
+    // Default-deny header logging: only include headers on the allowlist.
     for (const auto& [name, value] : headers) {
-        if (isSensitiveHeader(name)) {
+        const std::string lower_name = toLower(name);
+        const bool allowed = std::ranges::any_of(getAllowedLogHeaderNamesImpl(),
+            [&lower_name](const std::string& allowed_name) {
+                return lower_name == allowed_name;
+            });
+        if (!allowed) {
+            continue; // omit non-allowed headers entirely
+        }
+        if (isSensitiveHeader(lower_name)) {
             redacted[name] = "<REDACTED>";
         } else {
             redacted[name] = value;
@@ -141,7 +160,7 @@ bool RequestLogger::isSensitiveHeader(std::string_view header_name) {
     std::string lower_name = toLower(header_name);
     return std::ranges::any_of(getSensitiveHeaderNamesImpl(),
         [&lower_name](const std::string& sensitive) {
-            return lower_name.find(sensitive) != std::string::npos;
+            return lower_name == sensitive;
         });
 }
 

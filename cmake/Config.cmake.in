@@ -22,6 +22,7 @@ endif()
 # during LLMEngine's build, the Targets.cmake file may not exist, and consumers should
 # link directly to the LLMEngine target or provide dependencies themselves.
 include(CMakeFindDependencyMacro)
+# Require consumer-side discovery of our public dependencies
 find_dependency(cpr REQUIRED)
 find_dependency(nlohmann_json REQUIRED)
 

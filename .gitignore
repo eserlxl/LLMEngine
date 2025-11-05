@@ -338,6 +338,9 @@ docs/build/
 # DEPENDENCY MANAGEMENT
 # =============================================================================
 
+# Cursor editor project files
+.cursor/
+
 # Node.js (if using any JS tools)
 node_modules/
 npm-debug.log*

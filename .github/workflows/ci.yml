@@ -1,0 +1,128 @@
+name: LLMEngine CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-test:
+    name: Build and Test (${{ matrix.compiler }} ${{ matrix.build_type }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: gcc
+            compiler_version: "11"
+            build_type: Debug
+            sanitizers: true
+            cmake_preset: debug
+            cmake_options: "-DDEBUG_MODE=ON -DENABLE_SANITIZERS=ON -DWARNING_MODE=ON"
+          - compiler: gcc
+            compiler_version: "12"
+            build_type: Release
+            sanitizers: false
+            cmake_preset: release
+            cmake_options: "-DPERFORMANCE_BUILD=ON -DWARNING_MODE=ON"
+          - compiler: clang
+            compiler_version: "14"
+            build_type: Debug
+            sanitizers: true
+            cmake_preset: debug
+            cmake_options: "-DDEBUG_MODE=ON -DENABLE_SANITIZERS=ON -DWARNING_MODE=ON"
+          - compiler: clang
+            compiler_version: "15"
+            build_type: Release
+            sanitizers: false
+            cmake_preset: release
+            cmake_options: "-DPERFORMANCE_BUILD=ON -DWARNING_MODE=ON"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v1
+        with:
+          cmake-version: "3.20"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ninja-build \
+            build-essential \
+            libssl-dev \
+            ${{ matrix.compiler }}-${{ matrix.compiler_version }}
+
+      - name: Set up compiler
+        run: |
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            echo "CC=gcc-${{ matrix.compiler_version }}" >> $GITHUB_ENV
+            echo "CXX=g++-${{ matrix.compiler_version }}" >> $GITHUB_ENV
+          else
+            echo "CC=clang-${{ matrix.compiler_version }}" >> $GITHUB_ENV
+            echo "CXX=clang++-${{ matrix.compiler_version }}" >> $GITHUB_ENV
+          fi
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -G Ninja \
+            -DCMAKE_C_COMPILER=$CC \
+            -DCMAKE_CXX_COMPILER=$CXX \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            ${{ matrix.cmake_options }} \
+            -DBUILD_TESTING=ON \
+            -DENABLE_EXAMPLES=ON \
+            -DWARNING_MODE=ON \
+            -DWERROR=ON
+
+      - name: Build
+        run: cmake --build build -j20
+
+      - name: Test
+        run: |
+          cd build
+          ctest --output-on-failure -j20
+
+  lint:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ninja-build \
+            build-essential \
+            libssl-dev \
+            clang-tidy
+
+      - name: Configure with clang-tidy
+        run: |
+          cmake -S . -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DENABLE_CLANG_TIDY=ON \
+            -DBUILD_TESTING=ON
+
+      - name: Build (clang-tidy will run)
+        run: cmake --build build -j20 || true
+
+      - name: Check clang-tidy results
+        run: |
+          # clang-tidy warnings are treated as errors in CI
+          if cmake --build build 2>&1 | grep -i "error:"; then
+            echo "clang-tidy found issues!"
+            exit 1
+          fi
+

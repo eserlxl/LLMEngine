@@ -27,6 +27,17 @@ inline constexpr std::array<std::string_view, 14> SENSITIVE_HEADER_NAMES = {
     "credential"
 };
 
+// Header names allowed to be logged verbatim (case-insensitive exact match)
+// All other headers should be omitted or redacted from logs
+inline constexpr std::array<std::string_view, 6> ALLOWED_LOG_HEADER_NAMES = {
+    "content-type",
+    "accept",
+    "user-agent",
+    "content-length",
+    "accept-encoding",
+    "connection"
+};
+
 } // namespace LLMEngine::Security
 
 

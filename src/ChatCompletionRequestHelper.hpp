@@ -105,22 +105,48 @@ struct ChatCompletionRequestHelper {
             // Clamp to a safe range [1, 600] seconds
             if (timeout_seconds < 1) timeout_seconds = 1;
             if (timeout_seconds > 600) timeout_seconds = 600;
+
+            // Optional connect timeout override in milliseconds
+            int connect_timeout_ms = 0;
+            if (params.contains("connect_timeout_ms") && params.at("connect_timeout_ms").is_number_integer()) {
+                connect_timeout_ms = params.at("connect_timeout_ms").get<int>();
+            }
+            if (connect_timeout_ms < 0) connect_timeout_ms = 0;
+            if (connect_timeout_ms > 120000) connect_timeout_ms = 120000; // cap at 120s
+
+            // SSL verification toggle (default: true)
+            bool verify_ssl = true;
+            if (params.contains("verify_ssl") && params.at("verify_ssl").is_boolean()) {
+                verify_ssl = params.at("verify_ssl").get<bool>();
+            }
             
             // Build provider-specific URL and headers
             const std::string url = buildUrl();
             const std::map<std::string, std::string> headers = buildHeaders();
             
-            // Log request if enabled
-            maybeLogRequest("POST", url, headers);
+            // Log request if enabled (with capped, redacted body when explicitly requested)
+            maybeLogRequestWithBody("POST", url, headers, serialized_body);
             
             // Execute request with retries
             cpr::Response cpr_response = sendWithRetries(rs, [&](){
-                return cpr::Post(
-                    cpr::Url{url},
-                    cpr::Header{headers.begin(), headers.end()},
-                    cpr::Body{serialized_body},
-                    cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
-                );
+                if (connect_timeout_ms > 0) {
+                    return cpr::Post(
+                        cpr::Url{url},
+                        cpr::Header{headers.begin(), headers.end()},
+                        cpr::Body{serialized_body},
+                        cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
+                        cpr::VerifySsl{verify_ssl},
+                        cpr::ConnectTimeout{connect_timeout_ms}
+                    );
+                } else {
+                    return cpr::Post(
+                        cpr::Url{url},
+                        cpr::Header{headers.begin(), headers.end()},
+                        cpr::Body{serialized_body},
+                        cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
+                        cpr::VerifySsl{verify_ssl}
+                    );
+                }
             });
             
             response.status_code = static_cast<int>(cpr_response.status_code);

@@ -71,7 +71,7 @@ namespace {
         for (int attempt = 1; attempt <= rs.max_attempts; ++attempt) {
             resp = doRequest();
             const int code = static_cast<int>(resp.status_code);
-            const bool is_success = (code >= 200 && code < 300) && !resp.text.empty();
+            const bool is_success = (code >= 200 && code < 300);
             if (is_success) break;
             const bool is_non_retriable = (code >= 400 && code < 500) && (code != HTTP_STATUS_TOO_MANY_REQUESTS);
             if (attempt < rs.max_attempts && !is_non_retriable) {
@@ -98,6 +98,21 @@ namespace {
                                 const std::map<std::string, std::string>& headers) {
         if (std::getenv("LLMENGINE_LOG_REQUESTS") != nullptr) {
             std::cerr << LLMEngine::RequestLogger::formatRequest(method, url, headers);
+        }
+    }
+
+    inline void maybeLogRequestWithBody(std::string_view method, std::string_view url,
+                                        const std::map<std::string, std::string>& headers,
+                                        std::string_view body) {
+        if (std::getenv("LLMENGINE_LOG_REQUESTS") == nullptr) return;
+        std::cerr << LLMEngine::RequestLogger::formatRequest(method, url, headers);
+        // Optional capped, redacted body logging when explicitly enabled
+        if (std::getenv("LLMENGINE_LOG_REQUESTS_BODY") != nullptr) {
+            constexpr size_t kMaxBytes = 512;
+            const size_t n = std::min(kMaxBytes, body.size());
+            const std::string prefix(body.substr(0, n));
+            const std::string redacted = LLMEngine::RequestLogger::redactText(prefix);
+            std::cerr << "Body (first " << n << " bytes, redacted):\n" << redacted << "\n";
         }
     }
 }

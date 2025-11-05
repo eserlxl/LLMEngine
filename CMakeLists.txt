@@ -7,6 +7,11 @@
 
 cmake_minimum_required(VERSION 3.20)
 
+# Ensure reproducible FetchContent timestamp handling
+if (POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
 # ---- Project -----------------------------------------------------------------
 project(LLMEngine
   VERSION 0.1.0
@@ -44,7 +49,8 @@ option(ENABLE_SANITIZERS          "Enable Address/Undefined sanitizers in debug"
 option(BUILD_SHARED_LIBS          "Build shared instead of static libraries"       OFF)
 option(ENABLE_CLANG_TIDY          "Run clang-tidy if available"                     OFF)
 option(ENABLE_COVERAGE            "Enable coverage flags in Debug (GCC/Clang)"     OFF)
-option(ENABLE_DOXYGEN             "Enable Doxygen documentation target"            ON)
+option(ENABLE_DOXYGEN             "Enable Doxygen documentation target"            OFF)
+option(WERROR                     "Treat warnings as errors (for CI builds)"       OFF)
 option(LLM_DISABLE_FETCHCONTENT   "Disable FetchContent; require system packages"  OFF)
 option(LLMENGINE_ENABLE_VISIBILITY_HIDDEN "Enable -fvisibility=hidden for shared builds" ON)
 
@@ -166,6 +172,9 @@ else()
       -Wold-style-cast -Woverloaded-virtual -Wnull-dereference -Wimplicit-fallthrough
       $<$<AND:$<COMPILE_LANG_AND_ID:CXX,GNU>,$<NOT:$<PLATFORM_ID:Darwin>>>:-Wformat=2>
       $<$<AND:$<COMPILE_LANG_AND_ID:CXX,Clang>,$<NOT:$<PLATFORM_ID:Darwin>>>:-Wformat=2>)
+    if (WERROR)
+      target_compile_options(${PROJECT_NAME}_compile_options INTERFACE -Werror)
+    endif()
     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       target_compile_options(${PROJECT_NAME}_compile_options INTERFACE -Wduplicated-cond -Wlogical-op -Wuseless-cast)
     endif()

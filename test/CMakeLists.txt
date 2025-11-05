@@ -39,6 +39,9 @@ endif()
 if (NOT DEFINED ENABLE_CLANG_TIDY)
   option(ENABLE_CLANG_TIDY          "Run clang-tidy if available"                     OFF)
 endif()
+if (NOT DEFINED ENABLE_FUZZ)
+  option(ENABLE_FUZZ                "Enable fuzz testing targets (requires libFuzzer)" OFF)
+endif()
 
 # Use default generator directories; avoid overriding global runtime output dir
 
@@ -156,6 +159,30 @@ target_link_libraries(test_api_config_parsing PRIVATE LLMEngine llmengine::compi
 add_executable(test_provider_mapping_extended test_provider_mapping_extended.cpp)
 target_link_libraries(test_provider_mapping_extended PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 
+add_executable(test_tempdir_hardening test_tempdir_hardening.cpp)
+target_link_libraries(test_tempdir_hardening PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+
+# ---- Fuzz Testing (optional) -------------------------------------------------
+if (ENABLE_FUZZ)
+  # Check if compiler supports libFuzzer
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_executable(fuzz_redactor fuzz_redactor.cpp)
+    target_link_libraries(fuzz_redactor PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+    target_compile_options(fuzz_redactor PRIVATE
+      -fsanitize=fuzzer,address,undefined
+      -O1
+      -g
+    )
+    target_link_options(fuzz_redactor PRIVATE
+      -fsanitize=fuzzer,address,undefined
+    )
+    message(STATUS "Fuzz test target 'fuzz_redactor' enabled (requires libFuzzer)")
+  else()
+    message(STATUS "Fuzz testing requires Clang compiler (libFuzzer support)")
+    message(STATUS "ENABLE_FUZZ=ON ignored (current compiler: ${CMAKE_CXX_COMPILER_ID})")
+  endif()
+endif()
+
 # ---- CTest Integration --------------------------------------------------------
 # Register tests with CTest for automatic execution
 if (BUILD_TESTING)
@@ -168,6 +195,7 @@ if (BUILD_TESTING)
   add_test(NAME test_integration COMMAND test_integration)
   add_test(NAME test_api_config_parsing COMMAND test_api_config_parsing)
   add_test(NAME test_provider_mapping_extended COMMAND test_provider_mapping_extended)
+  add_test(NAME test_tempdir_hardening COMMAND test_tempdir_hardening)
 endif()
 
 # ---- Target properties --------------------------------------------------------
