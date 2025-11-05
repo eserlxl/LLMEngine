@@ -62,6 +62,15 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
         } else {
             timeout_seconds = config_ ? config_->getTimeoutSeconds() : APIConfigManager::getInstance().getTimeoutSeconds();
         }
+        // Clamp to safe range [1, 600] seconds
+        if (timeout_seconds < 1) timeout_seconds = 1;
+        if (timeout_seconds > 600) timeout_seconds = 600;
+
+        // SSL verification toggle (default: true for security)
+        bool verify_ssl = true;
+        if (params.contains("verify_ssl") && params.at("verify_ssl").is_boolean()) {
+            verify_ssl = params.at("verify_ssl").get<bool>();
+        }
         
         // Send request with retries
         const std::string url = base_url_ + "/messages";
@@ -72,7 +81,8 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
                 cpr::Url{url},
                 cpr::Header{hdr.begin(), hdr.end()},
                 cpr::Body{payload.dump()},
-                cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
+                cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
+                cpr::VerifySsl{verify_ssl}
             );
         });
         

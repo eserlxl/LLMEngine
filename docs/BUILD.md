@@ -158,6 +158,80 @@ cmake -S . -B build \
   -DLLM_DISABLE_FETCHCONTENT=ON
 ```
 
+### Hermetic and Offline Builds
+
+LLMEngine uses CMake's `FetchContent` to download dependencies (`nlohmann_json` and `cpr`) when system packages are not available. For reproducible builds, CI caching, or offline environments, you can control how dependencies are fetched.
+
+#### Using CPM Source Cache
+
+[CPM](https://github.com/cpm-cmake/CPM.cmake) provides a source cache mechanism that can speed up builds and ensure reproducibility. Set the `CPM_SOURCE_CACHE` environment variable to enable caching:
+
+```bash
+# Set cache directory (shared across projects using CPM)
+export CPM_SOURCE_CACHE=$HOME/.cache/cpm
+
+# Build - dependencies will be cached here
+cmake -S . -B build
+cmake --build build
+```
+
+**Benefits:**
+- Dependencies are downloaded once and reused across builds
+- Faster subsequent builds (no re-download)
+- Can be shared across multiple projects
+- Useful for CI environments to cache dependencies
+
+**CI Example (GitHub Actions):**
+```yaml
+- name: Set up CPM cache
+  uses: actions/cache@v3
+  with:
+    path: ~/.cache/cpm
+    key: cpm-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
+    restore-keys: |
+      cpm-${{ runner.os }}-
+
+- name: Configure
+  env:
+    CPM_SOURCE_CACHE: ~/.cache/cpm
+  run: cmake -S . -B build
+```
+
+#### Fully Disconnected (Offline) Builds
+
+For builds that must work without network access, you can pre-populate the FetchContent cache:
+
+```bash
+# First, do a connected build to populate the cache
+cmake -S . -B build_connected
+cmake --build build_connected
+
+# Then, in an offline environment, use CMAKE_FETCHCONTENT_FULLY_DISCONNECTED
+cmake -S . -B build_offline \
+  -DCMAKE_FETCHCONTENT_FULLY_DISCONNECTED=ON
+cmake --build build_offline
+```
+
+**How it works:**
+- `CMAKE_FETCHCONTENT_FULLY_DISCONNECTED=ON` prevents any network requests during configuration
+- CMake will only use already-populated FetchContent cache entries
+- If dependencies are missing from cache, configuration will fail (as expected in offline mode)
+
+**Alternative: Use system packages**
+
+For truly offline builds, prefer system-installed dependencies:
+
+```bash
+# Install dependencies via package manager
+sudo apt install nlohmann-json3-dev libcpr-dev
+
+# Build with system dependencies only
+cmake -S . -B build \
+  -DLLM_DISABLE_FETCHCONTENT=ON
+```
+
+This approach requires no network access and ensures reproducible builds using system package versions.
+
 ### Build Presets
 
 The project includes CMake presets for common configurations:

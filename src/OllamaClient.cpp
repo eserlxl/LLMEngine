@@ -44,15 +44,23 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             return config_ ? config_->getTimeoutSeconds("ollama") : APIConfigManager::getInstance().getTimeoutSeconds("ollama");
         };
 
-        auto post_json = [&](const std::string& url, const nlohmann::json& payload, int timeout_seconds) -> cpr::Response {
+        // SSL verification toggle (default: false for local Ollama, which often uses self-signed certs)
+        // Set verify_ssl=true in params if you want to enforce SSL verification
+        bool verify_ssl = false;
+        if (params.contains("verify_ssl") && params.at("verify_ssl").is_boolean()) {
+            verify_ssl = params.at("verify_ssl").get<bool>();
+        }
+
+        auto post_json = [&, verify_ssl](const std::string& url, const nlohmann::json& payload, int timeout_seconds) -> cpr::Response {
             std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}};
             maybeLogRequest("POST", url, hdr);
-            return sendWithRetries(rs, [&](){
+            return sendWithRetries(rs, [&, verify_ssl](){
                 return cpr::Post(
                     cpr::Url{url},
                     cpr::Header{hdr.begin(), hdr.end()},
                     cpr::Body{payload.dump()},
-                    cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
+                    cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
+                    cpr::VerifySsl{verify_ssl}
                 );
             });
         };
