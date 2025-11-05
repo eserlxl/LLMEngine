@@ -34,14 +34,14 @@ jobs:
             sanitizers: true
             cmake_preset: debug
             cmake_options: "-DDEBUG_MODE=ON -DENABLE_SANITIZERS=ON -DWARNING_MODE=ON"
-            os: ubuntu-latest
+            os: ubuntu-22.04
           - compiler: clang
             compiler_version: "15"
             build_type: Release
             sanitizers: false
             cmake_preset: release
             cmake_options: "-DPERFORMANCE_BUILD=ON -DWARNING_MODE=ON"
-            os: ubuntu-latest
+            os: ubuntu-22.04
 
     steps:
       - name: Checkout
@@ -77,9 +77,13 @@ jobs:
               libstdc++-${{ matrix.compiler_version }}-dev
           else
             # Clang doesn't have a -base package, just install the compiler directly
+            # Also install GCC 11's libstdc++ so Clang uses it instead of GCC 14's
             sudo apt-get install -y \
               clang-${{ matrix.compiler_version }} \
-              clang++-${{ matrix.compiler_version }}
+              clang++-${{ matrix.compiler_version }} \
+              gcc-11 \
+              g++-11 \
+              libstdc++-11-dev
           fi
           # Verify the requested compiler version is installed
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
@@ -143,9 +147,26 @@ jobs:
             echo "GCC version details:"
             $GCC_CMD -v 2>&1 | tail -5
           else
+            # For Clang, we need to ensure it uses GCC 11's libstdc++ instead of GCC 14's
+            # Find the GCC 11 installation
+            if command -v gcc-11 &> /dev/null; then
+              GCC11_PATH=$(which gcc-11)
+              GXX11_PATH=$(which g++-11)
+            elif command -v gcc &> /dev/null && [ "$(gcc -dumpversion | cut -d. -f1)" = "11" ]; then
+              GCC11_PATH=$(which gcc)
+              GXX11_PATH=$(which g++)
+            else
+              echo "Error: GCC 11 not found for Clang to use as libstdc++ provider"
+              exit 1
+            fi
+            echo "Using GCC 11 at $GCC11_PATH for libstdc++"
             echo "CC=clang-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
             echo "CXX=clang++-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
+            # Set GCC 11 paths so Clang uses its libstdc++
+            echo "GCC11_PATH=$GCC11_PATH" >> "$GITHUB_ENV"
+            echo "GXX11_PATH=$GXX11_PATH" >> "$GITHUB_ENV"
             clang-${{ matrix.compiler_version }} --version
+            echo "Clang will use GCC 11's libstdc++"
           fi
 
       - name: Pre-fetch dependencies
