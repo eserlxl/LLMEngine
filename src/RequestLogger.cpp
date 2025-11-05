@@ -213,12 +213,12 @@ std::string RequestLogger::formatRequest(std::string_view method,
 
 std::vector<std::string> RequestLogger::getSensitiveQueryParams() {
     const auto& set = getSensitiveQueryParamsImpl();
-    return std::vector<std::string>(set.begin(), set.end());
+    return {set.begin(), set.end()};
 }
 
 std::vector<std::string> RequestLogger::getSensitiveHeaderNames() {
     const auto& set = getSensitiveHeaderNamesImpl();
-    return std::vector<std::string>(set.begin(), set.end());
+    return {set.begin(), set.end()};
 }
 
 bool RequestLogger::isSensitiveHeader(std::string_view header_name) {
