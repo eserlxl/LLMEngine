@@ -28,10 +28,14 @@ struct ChatMessageBuilder {
         
         // Add system message if input contains system prompt
         if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))) {
-            messages.push_back({
-                {"role", "system"},
-                {"content", input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)].get<std::string>()}
-            });
+            const auto& sp = input.at(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT));
+            if (sp.is_string()) {
+                messages.push_back({{"role", "system"}, {"content", sp.get<std::string>()}});
+            } else if (sp.is_number() || sp.is_boolean()) {
+                messages.push_back({{"role", "system"}, {"content", sp.dump()}});
+            } else {
+                // Ignore non-string non-scalar system_prompt to avoid exceptions
+            }
         }
         
         // Add user message
@@ -91,11 +95,15 @@ struct ChatCompletionRequestHelper {
             
             // Get timeout from params or use config default
             int timeout_seconds = 0;
-            if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
-                timeout_seconds = params[std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)].get<int>();
+            if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)) &&
+                params.at(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)).is_number_integer()) {
+                timeout_seconds = params.at(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)).get<int>();
             } else {
                 timeout_seconds = cfg ? cfg->getTimeoutSeconds() : APIConfigManager::getInstance().getTimeoutSeconds();
             }
+            // Clamp to a safe range [1, 600] seconds
+            if (timeout_seconds < 1) timeout_seconds = 1;
+            if (timeout_seconds > 600) timeout_seconds = 600;
             
             // Build provider-specific URL and headers
             const std::string url = buildUrl();
@@ -117,7 +125,7 @@ struct ChatCompletionRequestHelper {
             response.status_code = static_cast<int>(cpr_response.status_code);
             
             // Parse response using provider-specific parser
-            if (cpr_response.status_code == HTTP_STATUS_OK) {
+            if (response.status_code >= 200 && response.status_code < 300) {
                 // Only parse JSON for successful responses
                 try {
                     response.raw_response = nlohmann::json::parse(cpr_response.text);

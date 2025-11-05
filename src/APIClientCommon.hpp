@@ -79,8 +79,11 @@ namespace {
         }
         for (int attempt = 1; attempt <= rs.max_attempts; ++attempt) {
             resp = doRequest();
-            if (resp.status_code == HTTP_STATUS_OK && !resp.text.empty()) break;
-            if (attempt < rs.max_attempts) {
+            const int code = static_cast<int>(resp.status_code);
+            const bool is_success = (code >= 200 && code < 300) && !resp.text.empty();
+            if (is_success) break;
+            const bool is_non_retriable = (code >= 400 && code < 500) && (code != HTTP_STATUS_TOO_MANY_REQUESTS);
+            if (attempt < rs.max_attempts && !is_non_retriable) {
                 int delay = 0;
                 if (rs.exponential) {
                     const uint64_t cap = ::LLMEngine::computeBackoffCapMs(bcfg, attempt);
@@ -93,6 +96,8 @@ namespace {
                     delay = rs.base_delay_ms * attempt;
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+            } else {
+                break;
             }
         }
         return resp;

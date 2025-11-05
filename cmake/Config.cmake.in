@@ -24,6 +24,7 @@ endif()
 include(CMakeFindDependencyMacro)
 find_dependency(cpr REQUIRED)
 find_dependency(nlohmann_json REQUIRED)
+find_dependency(OpenSSL REQUIRED)
 
 # Include the exported targets unless any of them already exist (build-tree usage)
 # The exported namespace is lowercase with original target name (e.g., llmengine::LLMEngine)

@@ -34,175 +34,7 @@
 #include <filesystem>
 #include <cstdlib>
 
-// Internal subwrapper namespace and Core orchestrator
-namespace LLMEngineSystem {
-    // Constants used by Core orchestration
-    namespace {
-        constexpr int HTTP_STATUS_OK = 200;
-        constexpr int HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
-    }
-    struct Context {
-        const nlohmann::json& model_params;
-        int log_retention_hours;
-        bool debug;
-        const std::string& tmp_dir;
-        const ::LLMEngineAPI::APIClient* api_client;
-        ::LLMEngineAPI::ProviderType provider_type;
-        const std::shared_ptr<::LLMEngine::Logger>& logger;
-        const std::string& model;
-        // Injected collaborators
-        const ::LLMEngine::IRequestExecutor* request_executor;
-        const ::LLMEngine::IArtifactSink* artifact_sink;
-        const ::LLMEngine::IPromptBuilder* terse_builder;
-        const ::LLMEngine::IPromptBuilder* passthrough_builder;
-    };
-
-    // Collaborator: Prompt Strategy
-    // Encapsulates prompt building logic to allow easy swapping of strategies
-    // Caches prompt builders to avoid repeated allocations
-    inline std::string buildPrompt(const Context& ctx, std::string_view prompt, bool prepend_terse_instruction) {
-        if (prepend_terse_instruction && ctx.terse_builder) {
-            return ctx.terse_builder->buildPrompt(prompt);
-        }
-        if (ctx.passthrough_builder) {
-            return ctx.passthrough_builder->buildPrompt(prompt);
-        }
-        // Fallback to a local default if not provided
-        ::LLMEngine::PassthroughPromptBuilder fallback;
-        return fallback.buildPrompt(prompt);
-    }
-
-    // Collaborator: Request Executor
-    // Handles API request execution and response handling
-    struct RequestExecutor {
-        static ::LLMEngineAPI::APIResponse execute(
-            const ::LLMEngineAPI::APIClient* api_client,
-            const std::string& full_prompt,
-            const nlohmann::json& input,
-            const nlohmann::json& final_params) {
-            if (!api_client) {
-                ::LLMEngineAPI::APIResponse error_response;
-                error_response.success = false;
-                error_response.error_message = "API client not initialized";
-                error_response.status_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-                error_response.error_code = ::LLMEngineAPI::APIResponse::APIError::Unknown;
-                return error_response;
-            }
-            return api_client->sendRequest(full_prompt, input, final_params);
-        }
-    };
-
-    // Collaborator: Artifact Sink
-    // Manages debug artifact creation and writing
-    struct ArtifactSink {
-        static std::unique_ptr<::LLMEngine::DebugArtifactManager> create(
-            const std::string& request_tmp_dir,
-            const std::string& base_tmp_dir,
-            int log_retention_hours,
-            ::LLMEngine::Logger* logger) {
-            auto mgr = std::make_unique<::LLMEngine::DebugArtifactManager>(
-                request_tmp_dir, base_tmp_dir, log_retention_hours, logger);
-            mgr->ensureRequestDirectory();
-            return mgr;
-        }
-
-        static void writeApiResponse(::LLMEngine::DebugArtifactManager* mgr,
-                                    const ::LLMEngineAPI::APIResponse& response,
-                                    bool is_error) {
-            if (mgr) {
-                mgr->writeApiResponse(response, is_error);
-            }
-        }
-
-        static void writeFullResponse(::LLMEngine::DebugArtifactManager* mgr,
-                                     std::string_view full_response) {
-            if (mgr) {
-                mgr->writeFullResponse(full_response);
-            }
-        }
-
-        static void writeAnalysisArtifacts(::LLMEngine::DebugArtifactManager* mgr,
-                                          std::string_view analysis_type,
-                                          std::string_view think_section,
-                                          std::string_view remaining_section) {
-            if (mgr) {
-                mgr->writeAnalysisArtifacts(analysis_type, think_section, remaining_section);
-            }
-        }
-    };
-
-    // Free function instead of class with static method to avoid unnecessary allocation
-    // Use templates for callable parameters to avoid std::function heap allocations
-    template <typename CleanupFunc, typename EnsureSecureFunc, typename GetUniqueTmpDirFunc>
-    ::LLMEngine::AnalysisResult runAnalysis(Context& ctx,
-                             std::string_view prompt,
-                             const nlohmann::json& input,
-                             std::string_view analysis_type,
-                             std::string_view mode,
-                             bool prepend_terse_instruction,
-                             CleanupFunc&& cleanupResponseFiles,
-                             EnsureSecureFunc&& ensureSecureTmpDir,
-                             GetUniqueTmpDirFunc&& getUniqueTmpDir) {
-        cleanupResponseFiles();
-
-        // Build prompt using strategy pattern
-        const std::string full_prompt = buildPrompt(ctx, prompt, prepend_terse_instruction);
-
-        const bool write_debug_files = ctx.debug && (std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") == nullptr);
-        const std::string request_tmp_dir = getUniqueTmpDir();
-        
-        // Create debug artifact manager if needed
-        std::unique_ptr<::LLMEngine::DebugArtifactManager> debug_mgr;
-        if (write_debug_files) {
-            ensureSecureTmpDir();
-            if (ctx.artifact_sink) {
-                debug_mgr = ctx.artifact_sink->create(request_tmp_dir, ctx.tmp_dir, 
-                                            ctx.log_retention_hours,
-                                            ctx.logger ? ctx.logger.get() : nullptr);
-            }
-        }
-
-        // Merge parameters and execute request
-        // Store result in a local variable to ensure lifetime beyond the reference return
-        const nlohmann::json& merged_params_ref = ::LLMEngine::ParameterMerger::merge(
-            ctx.model_params, input, mode);
-        const nlohmann::json final_params = merged_params_ref;
-        const auto api_response = ctx.request_executor
-            ? ctx.request_executor->execute(ctx.api_client, full_prompt, input, final_params)
-            : ::LLMEngineAPI::APIResponse{};
-
-        // Write API response artifact
-        if (ctx.artifact_sink) {
-            ctx.artifact_sink->writeApiResponse(debug_mgr.get(), api_response, !api_response.success);
-        }
-
-        // Handle API response
-        if (!api_response.success) {
-            if (ctx.logger) {
-                ctx.logger->log(::LLMEngine::LogLevel::Error, 
-                               std::string("API error: ") + api_response.error_message);
-                if (write_debug_files && debug_mgr) {
-                    ctx.logger->log(::LLMEngine::LogLevel::Info, 
-                                   std::string("Error response saved to ") + request_tmp_dir + "/api_response_error.json");
-                }
-            }
-            return ::LLMEngine::AnalysisResult{false, "", "", api_response.error_message, api_response.status_code};
-        }
-
-        const std::string& full_response = api_response.content;
-
-        // Write full response artifact
-        if (debug_mgr) { debug_mgr->writeFullResponse(full_response); }
-
-        // Parse and write analysis artifacts
-        const auto [think_section, remaining_section] = ::LLMEngine::ResponseParser::parseResponse(full_response);
-        if (debug_mgr) { debug_mgr->writeAnalysisArtifacts(analysis_type, think_section, remaining_section); }
-
-        return ::LLMEngine::AnalysisResult{true, think_section, remaining_section, "", HTTP_STATUS_OK};
-    }
-}
-
-// (constants are defined within LLMEngineSystem above)
+// (orchestration helpers removed; analyze now directly coordinates collaborators)
 
 // Dependency injection constructor
 LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
@@ -401,53 +233,90 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
                                   std::string_view analysis_type, 
                                   std::string_view mode,
                                   bool prepend_terse_instruction) const {
-    // Create unique temp directory for this request to avoid conflicts in concurrent scenarios
-    // Use efficient string building instead of ostringstream for better performance
+    // Unique request directory inputs
     const auto now = std::chrono::system_clock::now();
     const auto time_since_epoch = now.time_since_epoch();
     const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(time_since_epoch).count();
-    
-    // Hash thread ID to hex string for efficient formatting (avoids locale-sensitive formatting)
     const auto thread_id = std::this_thread::get_id();
     std::hash<std::thread::id> hasher;
     uint64_t thread_hash = hasher(thread_id);
-    
-    // Pre-allocate string with estimated size
-    std::string request_tmp_dir;
-    constexpr size_t kRequestPathSuffixSize = 32; // Reserve space for "/req_" + milliseconds + "_" + hex hash
-    request_tmp_dir.reserve(tmp_dir_.size() + kRequestPathSuffixSize);
-    request_tmp_dir = tmp_dir_;
-    request_tmp_dir += "/req_";
-    request_tmp_dir += std::to_string(milliseconds);
-    request_tmp_dir += "_";
-    
-    // Convert thread hash to hex string
+
+    // Build unique request directory path
+    std::filesystem::path base = std::filesystem::path(tmp_dir_).lexically_normal();
+    std::filesystem::path request_dir = base / (std::string("req_") + std::to_string(milliseconds) + "_");
     constexpr const char* hex_digits = "0123456789abcdef";
     constexpr int kHexBitsPerDigit = 4;
-    constexpr int kHexStartBit = 60; // Start from bit 60 (64 - 4) for a 64-bit hash
-    constexpr uint64_t kHexDigitMask = 0xF; // Mask to extract 4 bits (one hex digit)
+    constexpr int kHexStartBit = 60;
+    constexpr uint64_t kHexDigitMask = 0xF;
+    std::string thread_hex;
+    thread_hex.reserve(16);
     for (int i = kHexStartBit; i >= 0; i -= kHexBitsPerDigit) {
-        request_tmp_dir += hex_digits[(thread_hash >> i) & kHexDigitMask];
+        thread_hex += hex_digits[(thread_hash >> i) & kHexDigitMask];
     }
-    
-    LLMEngineSystem::Context ctx{
-        model_params_, 
-        log_retention_hours_, 
-        debug_, 
-        tmp_dir_,  // Base tmp dir for cleanup
-        api_client_.get(),  // Pass raw pointer since we only need const access
-        provider_type_, 
-        logger_, 
-        model_,
-        request_executor_.get(),
-        artifact_sink_.get(),
-        terse_prompt_builder_.get(),
-        passthrough_prompt_builder_.get()
-    };
-    return LLMEngineSystem::runAnalysis(ctx, prompt, input, analysis_type, mode, prepend_terse_instruction,
-                      [this]{ this->cleanupResponseFiles(); },
-                      [this]{ this->ensureSecureTmpDir(); },
-                      [request_tmp_dir = std::move(request_tmp_dir)]{ return request_tmp_dir; });
+    request_dir += thread_hex;
+    const std::string request_tmp_dir = request_dir.string();
+
+    // Cleanup any legacy files (no-op) and ensure tmp base if needed
+    cleanupResponseFiles();
+
+    // Build prompt using injected builders
+    std::string full_prompt;
+    if (prepend_terse_instruction && terse_prompt_builder_) {
+        full_prompt = terse_prompt_builder_->buildPrompt(prompt);
+    } else if (passthrough_prompt_builder_) {
+        full_prompt = passthrough_prompt_builder_->buildPrompt(prompt);
+    } else {
+        ::LLMEngine::PassthroughPromptBuilder fallback;
+        full_prompt = fallback.buildPrompt(prompt);
+    }
+
+    // Determine whether to write debug artifacts
+    const bool write_debug_files = debug_ && (std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") == nullptr);
+
+    // Create debug artifact manager if needed
+    std::unique_ptr<::LLMEngine::DebugArtifactManager> debug_mgr;
+    if (write_debug_files) {
+        ensureSecureTmpDir();
+        if (artifact_sink_) {
+            debug_mgr = artifact_sink_->create(request_tmp_dir, tmp_dir_, log_retention_hours_, logger_ ? logger_.get() : nullptr);
+            if (debug_mgr) {
+                debug_mgr->ensureRequestDirectory();
+            }
+        }
+    }
+
+    // Merge parameters
+    const nlohmann::json final_params = ::LLMEngine::ParameterMerger::merge(model_params_, input, mode);
+
+    // Execute request via injected executor
+    ::LLMEngineAPI::APIResponse api_response;
+    if (request_executor_) {
+        api_response = request_executor_->execute(api_client_.get(), full_prompt, input, final_params);
+    }
+
+    // Write API response artifact
+    if (artifact_sink_) {
+        artifact_sink_->writeApiResponse(debug_mgr.get(), api_response, !api_response.success);
+    }
+
+    // Handle error result
+    if (!api_response.success) {
+        if (logger_) {
+            logger_->log(::LLMEngine::LogLevel::Error, std::string("API error: ") + api_response.error_message);
+            if (write_debug_files && debug_mgr) {
+                logger_->log(::LLMEngine::LogLevel::Info, std::string("Error response saved to ") + request_tmp_dir + "/api_response_error.json");
+            }
+        }
+        return ::LLMEngine::AnalysisResult{false, "", "", api_response.error_message, api_response.status_code};
+    }
+
+    // Success: record full response and parse
+    const std::string& full_response = api_response.content;
+    if (debug_mgr) { debug_mgr->writeFullResponse(full_response); }
+    const auto [think_section, remaining_section] = ::LLMEngine::ResponseParser::parseResponse(full_response);
+    if (debug_mgr) { debug_mgr->writeAnalysisArtifacts(analysis_type, think_section, remaining_section); }
+
+    return ::LLMEngine::AnalysisResult{true, think_section, remaining_section, "", 200};
 }
 
 std::string LLMEngine::LLMEngine::getProviderName() const {
@@ -481,13 +350,9 @@ bool LLMEngine::LLMEngine::setTempDirectory(const std::string& tmp_dir) {
         const std::string allowed_root = temp_dir_provider_ ? temp_dir_provider_->getTempDir() : ::LLMEngine::DefaultTempDirProvider().getTempDir();
         const std::filesystem::path default_root = std::filesystem::path(allowed_root).lexically_normal();
         const std::filesystem::path requested    = std::filesystem::path(tmp_dir).lexically_normal();
-        // Check prefix match: requested path must begin with default_root components
-        auto it_def = default_root.begin();
-        auto it_req = requested.begin();
-        bool is_within = true;
-        for (; it_def != default_root.end(); ++it_def, ++it_req) {
-            if (it_req == requested.end() || *it_def != *it_req) { is_within = false; break; }
-        }
+        // Ensure requested is under default_root using a robust relative check
+        const std::filesystem::path rel = std::filesystem::weakly_canonical(requested).lexically_relative(std::filesystem::weakly_canonical(default_root));
+        const bool is_within = !rel.empty() && rel.native().find("..") == std::string::npos && !rel.is_absolute();
         if (is_within) {
             tmp_dir_ = requested.string();
             return true;

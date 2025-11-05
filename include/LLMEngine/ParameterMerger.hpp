@@ -23,16 +23,15 @@ public:
     /**
      * @brief Merge base model parameters with input overrides.
      * 
-     * Returns a const reference to base_params when no overrides are present,
-     * avoiding unnecessary allocations. Only creates a copy when merging is required.
-     * Supports max_tokens and mode overrides from input.
+     * Returns a value. When no overrides are present, returns a copy of base_params
+     * (NRVO typically elides copies). Supports max_tokens and mode overrides from input.
      * 
      * @param base_params Base model parameters
      * @param input Input JSON that may contain overrides
      * @param mode Optional mode override
-     * @return Const reference to base_params if no overrides, or merged copy with overrides
+     * @return Merged parameters value
      */
-    [[nodiscard]] static const nlohmann::json& merge(
+    [[nodiscard]] static nlohmann::json merge(
         const nlohmann::json& base_params,
         const nlohmann::json& input,
         std::string_view mode);
