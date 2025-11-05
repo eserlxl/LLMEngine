@@ -7,7 +7,7 @@
 namespace LLMEngine {
 
 class LLMEngine;
-class Logger;
+struct Logger;
 
 struct RequestContext {
     std::string requestTmpDir;

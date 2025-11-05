@@ -5,7 +5,7 @@
 namespace LLMEngine {
 
 class DebugArtifactManager;
-class Logger;
+struct Logger;
 struct AnalysisResult;
 
 }

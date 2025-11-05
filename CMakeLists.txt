@@ -301,6 +301,11 @@ endif()
 if (CPR_FETCHED)
   # Link PRIVATE - consumers will provide their own via find_dependency()
   target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
+  # Treat CPR headers as system headers to suppress warnings from external dependency
+  get_target_property(CPR_INCLUDE_DIRS cpr::cpr INTERFACE_INCLUDE_DIRECTORIES)
+  if (CPR_INCLUDE_DIRS)
+    target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${CPR_INCLUDE_DIRS})
+  endif()
 else()
   # System package - link PUBLIC so it's exported normally
   target_link_libraries(${PROJECT_NAME} PUBLIC cpr::cpr)
