@@ -57,6 +57,7 @@ jobs:
             build-essential \
             libssl-dev \
             nlohmann-json3-dev \
+            libcpr-dev \
             ${{ matrix.compiler }}-${{ matrix.compiler_version }}
 
       - name: Set up compiler
@@ -109,6 +110,7 @@ jobs:
             build-essential \
             libssl-dev \
             nlohmann-json3-dev \
+            libcpr-dev \
             clang-tidy
 
       - name: Configure with clang-tidy
