@@ -261,7 +261,7 @@ public:
                                                    std::string_view api_key = "",
                                                    std::string_view model = "",
                                                    std::string_view base_url = "",
-                                                   std::shared_ptr<IConfigManager> cfg = nullptr);
+                                                   const std::shared_ptr<IConfigManager>& cfg = nullptr);
     
     /**
      * @brief Create client by provider name from JSON config.
@@ -272,7 +272,7 @@ public:
     static std::unique_ptr<APIClient> createClientFromConfig(std::string_view provider_name,
                                                              const nlohmann::json& config,
                                                              ::LLMEngine::Logger* logger = nullptr,
-                                                             std::shared_ptr<IConfigManager> cfg = nullptr);
+                                                             const std::shared_ptr<IConfigManager>& cfg = nullptr);
     
     /**
      * @brief Convert provider string to enum.

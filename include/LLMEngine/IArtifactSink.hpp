@@ -11,7 +11,7 @@
 #include <string_view>
 #include "LLMEngine/LLMEngineExport.hpp"
 
-namespace LLMEngine { class DebugArtifactManager; class Logger; }
+namespace LLMEngine { class DebugArtifactManager; struct Logger; }
 namespace LLMEngineAPI { struct APIResponse; }
 
 namespace LLMEngine {

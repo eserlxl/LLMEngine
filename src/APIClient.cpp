@@ -20,7 +20,7 @@ std::unique_ptr<APIClient> APIClientFactory::createClient(ProviderType type,
                                                          std::string_view api_key,
                                                          std::string_view model,
                                                          std::string_view base_url,
-                                                         std::shared_ptr<IConfigManager> cfg) {
+                                                         const std::shared_ptr<IConfigManager>& cfg) {
     switch (type) {
         case ProviderType::QWEN: {
             auto ptr = std::make_unique<QwenClient>(std::string(api_key), std::string(model));
@@ -59,7 +59,7 @@ std::unique_ptr<APIClient> APIClientFactory::createClient(ProviderType type,
 std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_view provider_name,
                                                                      const nlohmann::json& config,
                                                                      ::LLMEngine::Logger* logger,
-                                                                     std::shared_ptr<IConfigManager> cfg) {
+                                                                     const std::shared_ptr<IConfigManager>& cfg) {
     ProviderType type = stringToProviderType(provider_name);
     if (type == ProviderType::OLLAMA) {
         std::string base_url = config.value(std::string(::LLMEngine::Constants::JsonKeys::BASE_URL), std::string(::LLMEngine::Constants::DefaultUrls::OLLAMA_BASE));

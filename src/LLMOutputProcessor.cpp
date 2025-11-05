@@ -132,13 +132,11 @@ void LLMOutputProcessor::parseJson(std::string_view jsonContent) {
                 // Check if this is a traditional format with "data" field
                 else if (j.contains("data") && !found_single_format) {
                     analysis = j["data"].get<std::string>();
-                    found_single_format = true;
                     return; // Use the data field and return
                 }
                 // Check if this is a direct analysis field
                 else if (j.contains("analysis") && !found_single_format) {
                     analysis = j["analysis"].get<std::string>();
-                    found_single_format = true;
                     return; // Use the analysis field and return
                 }
             } catch (const std::exception& parseError) {
