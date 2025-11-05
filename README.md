@@ -2,6 +2,8 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://isocpp.org/std/status)
+[![CI](https://github.com/eserlxl/LLMEngine/workflows/LLMEngine%20CI/badge.svg)](https://github.com/eserlxl/LLMEngine/actions)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](https://github.com/eserlxl/LLMEngine/actions)
 
 **LLMEngine** is a modern **C++20 library** that provides a unified, type-safe interface for interacting with multiple **Large Language Model (LLM)** providers.  
 It supports both local and cloud-based backends — **Ollama**, **Qwen (DashScope)**, **OpenAI**, **Anthropic**, and **Gemini (AI Studio)** — with a flexible, configuration-driven architecture.
