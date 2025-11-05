@@ -450,13 +450,115 @@ function(_is_target_exportable target_name result_var)
   endif()
 endfunction()
 
-# Note: FetchContent dependencies are now linked PRIVATE, so they won't appear in
-# INTERFACE_LINK_LIBRARIES and won't cause export errors. The filtering code below
-# is kept as a safeguard in case any non-exportable dependencies slip through.
-# This filtering MUST happen BEFORE install(TARGETS ... EXPORT) because
-# CMake validates dependencies when processing install rules at configure time.
-if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
-  get_target_property(_original_interface_libs ${PROJECT_NAME} INTERFACE_LINK_LIBRARIES)
+# Helper function to check if a target is installable (not an alias, and installable)
+function(_is_target_installable target_name result_var)
+  if (NOT TARGET "${target_name}")
+    set(${result_var} FALSE PARENT_SCOPE)
+    return()
+  endif()
+  
+  # Aliases cannot be installed
+  get_target_property(_target_type "${target_name}" TYPE)
+  if (_target_type STREQUAL "ALIAS")
+    set(${result_var} FALSE PARENT_SCOPE)
+    return()
+  endif()
+  
+  # IMPORTED targets cannot be installed via install(TARGETS)
+  get_target_property(_imported "${target_name}" IMPORTED)
+  if (_imported)
+    set(${result_var} FALSE PARENT_SCOPE)
+    return()
+  endif()
+  
+  # Regular targets (STATIC, SHARED, MODULE, OBJECT, INTERFACE_LIBRARY) can be installed
+  set(${result_var} TRUE PARENT_SCOPE)
+endfunction()
+
+# Helper function to get the actual target name (not an alias) for installation
+function(_get_actual_target_name target_name result_var)
+  if (NOT TARGET "${target_name}")
+    set(${result_var} "" PARENT_SCOPE)
+    return()
+  endif()
+  
+  # Check if it's an alias - get the aliased target
+  get_target_property(_target_type "${target_name}" TYPE)
+  if (_target_type STREQUAL "ALIAS")
+    get_target_property(_aliased_target "${target_name}" ALIASED_TARGET)
+    if (_aliased_target)
+      set(${result_var} "${_aliased_target}" PARENT_SCOPE)
+      return()
+    endif()
+  endif()
+  
+  # Check if it's installable
+  _is_target_installable("${target_name}" _installable)
+  if (NOT _installable)
+    set(${result_var} "" PARENT_SCOPE)
+    return()
+  endif()
+  
+  # It's a real installable target, return it
+  set(${result_var} "${target_name}" PARENT_SCOPE)
+endfunction()
+
+# Before installing, handle FetchContent dependencies:
+# - If they're installable, include them in the export set
+# - If they're not installable (IMPORTED INTERFACE, aliases), filter them from INTERFACE_LINK_LIBRARIES
+# This prevents CMake export validation errors
+set(_targets_to_install ${PROJECT_NAME} ${PROJECT_NAME}_compile_options)
+set(_filter_interface_libs FALSE)
+
+if (NLOHMANN_JSON_FETCHED)
+  # Check if nlohmann_json is installable
+  _is_target_installable("nlohmann_json::nlohmann_json" _json_installable)
+  if (NOT _json_installable AND TARGET nlohmann_json)
+    _is_target_installable("nlohmann_json" _json_installable)
+  endif()
+  
+  if (_json_installable)
+    # It's installable, find the actual target and add it to install list
+    _get_actual_target_name("nlohmann_json::nlohmann_json" _json_actual_target)
+    if (NOT _json_actual_target AND TARGET nlohmann_json)
+      _get_actual_target_name("nlohmann_json" _json_actual_target)
+    endif()
+    if (_json_actual_target AND TARGET "${_json_actual_target}")
+      list(APPEND _targets_to_install "${_json_actual_target}")
+    endif()
+  else()
+    # Not installable, we need to filter it from INTERFACE_LINK_LIBRARIES
+    set(_filter_interface_libs TRUE)
+  endif()
+endif()
+
+if (CPR_FETCHED)
+  # Check if cpr is installable
+  _is_target_installable("cpr::cpr" _cpr_installable)
+  if (NOT _cpr_installable AND TARGET cpr)
+    _is_target_installable("cpr" _cpr_installable)
+  endif()
+  
+  if (_cpr_installable)
+    # It's installable, find the actual target and add it to install list
+    _get_actual_target_name("cpr::cpr" _cpr_actual_target)
+    if (NOT _cpr_actual_target AND TARGET cpr)
+      _get_actual_target_name("cpr" _cpr_actual_target)
+    endif()
+    if (_cpr_actual_target AND TARGET "${_cpr_actual_target}")
+      list(APPEND _targets_to_install "${_cpr_actual_target}")
+    endif()
+  else()
+    # Not installable, we need to filter it from INTERFACE_LINK_LIBRARIES
+    set(_filter_interface_libs TRUE)
+  endif()
+endif()
+
+# Filter non-installable FetchContent dependencies from INTERFACE_LINK_LIBRARIES if needed
+# Save original property before filtering so we can restore it after export
+if (_filter_interface_libs)
+  get_target_property(_original_interface_libs_before_filter ${PROJECT_NAME} INTERFACE_LINK_LIBRARIES)
+  set(_original_interface_libs ${_original_interface_libs_before_filter})
   if (_original_interface_libs)
     set(_filtered_libs "")
     foreach(_lib IN LISTS _original_interface_libs)
@@ -464,30 +566,37 @@ if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
       if (_lib MATCHES "^\\$<")
         list(APPEND _filtered_libs "${_lib}")
       else()
-        # Check if this is a target and if it's exportable (safeguard check)
-        _is_target_exportable("${_lib}" _is_exportable)
-        if (_is_exportable)
-          list(APPEND _filtered_libs "${_lib}")
+        # Check if this is a FetchContent dependency that's not installable
+        set(_should_filter FALSE)
+        if (NLOHMANN_JSON_FETCHED)
+          if (_lib STREQUAL "nlohmann_json::nlohmann_json" OR _lib STREQUAL "nlohmann_json")
+            _is_target_installable("${_lib}" _installable)
+            if (NOT _installable)
+              set(_should_filter TRUE)
+            endif()
+          endif()
+        endif()
+        if (CPR_FETCHED)
+          if (_lib STREQUAL "cpr::cpr" OR _lib STREQUAL "cpr")
+            _is_target_installable("${_lib}" _installable)
+            if (NOT _installable)
+              set(_should_filter TRUE)
+            endif()
+          endif()
+        endif()
+        
+        if (_should_filter)
+          # Filter out non-installable FetchContent dependencies
+          message(STATUS "Filtering non-installable FetchContent dependency from INTERFACE: ${_lib}")
         else()
-          # Non-exportable target found - this shouldn't happen with PRIVATE linking
-          # but filter it out as a safeguard
-          message(STATUS "Filtering non-exportable dependency from INTERFACE: ${_lib}")
+          # Keep all other dependencies
+          list(APPEND _filtered_libs "${_lib}")
         endif()
       endif()
     endforeach()
-    # Set filtered libraries for export (both export() and install(EXPORT) will use this)
+    # Set filtered libraries for export
     set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_LINK_LIBRARIES "${_filtered_libs}")
   endif()
-endif()
-
-# Install targets - include FetchContent dependencies in export set if they were fetched
-# This prevents CMake export validation errors
-set(_targets_to_install ${PROJECT_NAME} ${PROJECT_NAME}_compile_options)
-if (NLOHMANN_JSON_FETCHED AND TARGET nlohmann_json::nlohmann_json)
-  list(APPEND _targets_to_install nlohmann_json::nlohmann_json)
-endif()
-if (CPR_FETCHED AND TARGET cpr::cpr)
-  list(APPEND _targets_to_install cpr::cpr)
 endif()
 
 install(TARGETS ${_targets_to_install}
@@ -571,7 +680,7 @@ install(EXPORT ${PROJECT_NAME}Targets
 
 # Restore original INTERFACE_LINK_LIBRARIES after all export operations
 # (both export() and install(EXPORT) are processed at configure time)
-if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
+if (_filter_interface_libs)
   if (DEFINED _original_interface_libs AND _original_interface_libs)
     # Restore only if property had a value (not empty and not NOTFOUND)
     set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_LINK_LIBRARIES "${_original_interface_libs}")
