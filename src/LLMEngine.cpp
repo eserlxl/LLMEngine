@@ -267,7 +267,7 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
                                    ctx.requestTmpDir,
                                    analysis_type,
                                    ctx.writeDebugFiles,
-                                   logger_ ? static_cast<void*>(logger_.get()) : nullptr);
+                                   logger_.get());
 }
 
 std::string LLMEngine::LLMEngine::getProviderName() const {

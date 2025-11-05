@@ -164,6 +164,19 @@ public:
     /** @brief True if using an online provider (not local Ollama). */
     [[nodiscard]] bool isOnlineProvider() const;
     
+    // Narrow accessors for collaborators/state (to reduce friend coupling)
+    [[nodiscard]] std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const { return terse_prompt_builder_; }
+    [[nodiscard]] std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const { return passthrough_prompt_builder_; }
+    [[nodiscard]] const nlohmann::json& getModelParams() const { return model_params_; }
+    [[nodiscard]] bool isDebugEnabled() const { return debug_; }
+    [[nodiscard]] bool areDebugFilesEnabled() const { return debug_ && !disable_debug_files_env_cached_; }
+    [[nodiscard]] std::shared_ptr<IArtifactSink> getArtifactSink() const { return artifact_sink_; }
+    [[nodiscard]] int getLogRetentionHours() const { return log_retention_hours_; }
+    [[nodiscard]] std::shared_ptr<Logger> getLogger() const { return logger_; }
+    
+    // Expose safe preparation of temp directory without revealing internals
+    void prepareTempDirectory() const { ensureSecureTmpDir(); }
+    
     // Temporary directory configuration
     /**
      * @brief Set the temporary directory for debug artifacts.

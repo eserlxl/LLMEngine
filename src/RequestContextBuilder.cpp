@@ -33,10 +33,10 @@ RequestContext RequestContextBuilder::build(const LLMEngine& engine,
 
     // Prompt construction using engine's builders
     std::string full_prompt;
-    if (prepend_terse_instruction && engine.terse_prompt_builder_) {
-        full_prompt = engine.terse_prompt_builder_->buildPrompt(prompt);
-    } else if (engine.passthrough_prompt_builder_) {
-        full_prompt = engine.passthrough_prompt_builder_->buildPrompt(prompt);
+    if (prepend_terse_instruction && engine.getTersePromptBuilder()) {
+        full_prompt = engine.getTersePromptBuilder()->buildPrompt(prompt);
+    } else if (engine.getPassthroughPromptBuilder()) {
+        full_prompt = engine.getPassthroughPromptBuilder()->buildPrompt(prompt);
     } else {
         PassthroughPromptBuilder fallback;
         full_prompt = fallback.buildPrompt(prompt);
@@ -45,16 +45,17 @@ RequestContext RequestContextBuilder::build(const LLMEngine& engine,
 
     // Parameters merge
     nlohmann::json merged_params;
-    ctx.finalParams = engine.model_params_;
-    if (ParameterMerger::mergeInto(engine.model_params_, input, mode, merged_params)) {
+    ctx.finalParams = engine.getModelParams();
+    if (ParameterMerger::mergeInto(engine.getModelParams(), input, mode, merged_params)) {
         ctx.finalParams = std::move(merged_params);
     }
 
     // Determine debug artifacts writing and create manager if needed
-    ctx.writeDebugFiles = engine.debug_ && !engine.disable_debug_files_env_cached_;
-    if (ctx.writeDebugFiles && engine.artifact_sink_) {
-        engine.ensureSecureTmpDir();
-        ctx.debugManager = engine.artifact_sink_->create(ctx.requestTmpDir, engine.tmp_dir_, engine.log_retention_hours_, engine.logger_ ? engine.logger_.get() : nullptr);
+    ctx.writeDebugFiles = engine.areDebugFilesEnabled();
+    if (ctx.writeDebugFiles && engine.getArtifactSink()) {
+        engine.prepareTempDirectory();
+        auto loggerPtr = engine.getLogger() ? engine.getLogger().get() : nullptr;
+        ctx.debugManager = engine.getArtifactSink()->create(ctx.requestTmpDir, engine.getTempDirectory(), engine.getLogRetentionHours(), loggerPtr);
         if (ctx.debugManager) {
             ctx.debugManager->ensureRequestDirectory();
         }

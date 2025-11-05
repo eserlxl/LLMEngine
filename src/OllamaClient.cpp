@@ -35,6 +35,40 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
         // Merge default params with provided params using update() for efficiency
         nlohmann::json request_params = default_params_;
         request_params.update(params);
+
+        // Shared helpers
+        auto get_timeout_seconds = [&](const nlohmann::json& p) -> int {
+            if (p.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
+                return p.at(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)).get<int>();
+            }
+            return config_ ? config_->getTimeoutSeconds("ollama") : APIConfigManager::getInstance().getTimeoutSeconds("ollama");
+        };
+
+        auto post_json = [&](const std::string& url, const nlohmann::json& payload, int timeout_seconds) -> cpr::Response {
+            std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}};
+            maybeLogRequest("POST", url, hdr);
+            return sendWithRetries(rs, [&](){
+                return cpr::Post(
+                    cpr::Url{url},
+                    cpr::Header{hdr.begin(), hdr.end()},
+                    cpr::Body{payload.dump()},
+                    cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
+                );
+            });
+        };
+
+        auto set_error_from_http = [&](APIResponse& out, const cpr::Response& r){
+            out.error_message = "HTTP " + std::to_string(r.status_code) + ": " + r.text;
+            if (r.status_code == HTTP_STATUS_UNAUTHORIZED || r.status_code == HTTP_STATUS_FORBIDDEN) {
+                out.error_code = APIResponse::APIError::Auth;
+            } else if (r.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
+                out.error_code = APIResponse::APIError::RateLimited;
+            } else if (r.status_code >= HTTP_STATUS_SERVER_ERROR_MIN) {
+                out.error_code = APIResponse::APIError::Server;
+            } else {
+                out.error_code = APIResponse::APIError::Unknown;
+            }
+        };
         
         // Check if we should use generate mode instead of chat mode
         bool use_generate = false;
@@ -57,25 +91,10 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                 }
             }
             
-            // Get timeout from params or use provider-specific/default config
-            int timeout_seconds = 0;
-        if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
-                timeout_seconds = params[std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)].get<int>();
-            } else {
-            timeout_seconds = config_ ? config_->getTimeoutSeconds("ollama") : APIConfigManager::getInstance().getTimeoutSeconds("ollama");
-            }
-            
+            // Timeout selection
+            const int timeout_seconds = get_timeout_seconds(params);
             const std::string url = base_url_ + "/api/generate";
-            std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}};
-            maybeLogRequest("POST", url, hdr);
-            cpr::Response cpr_response = sendWithRetries(rs, [&](){
-                return cpr::Post(
-                    cpr::Url{url},
-                    cpr::Header{hdr.begin(), hdr.end()},
-                    cpr::Body{payload.dump()},
-                    cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
-                );
-            });
+            cpr::Response cpr_response = post_json(url, payload, timeout_seconds);
             
             response.status_code = static_cast<int>(cpr_response.status_code);
             
@@ -98,14 +117,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                     }
                 }
             } else {
-                response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
-                if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
-                    response.error_code = APIResponse::APIError::Auth;
-                } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
-                    response.error_code = APIResponse::APIError::RateLimited;
-                } else {
-                    response.error_code = APIResponse::APIError::Server;
-                }
+                set_error_from_http(response, cpr_response);
             }
         } else {
             // Use chat API for conversational mode (default)
@@ -139,25 +151,9 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                 }
             }
             
-            // Get timeout from params or use provider-specific/default config
-            int timeout_seconds = 0;
-            if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
-                timeout_seconds = params[std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)].get<int>();
-            } else {
-                timeout_seconds = APIConfigManager::getInstance().getTimeoutSeconds("ollama");
-            }
-            
+            const int timeout_seconds = get_timeout_seconds(params);
             const std::string url = base_url_ + "/api/chat";
-            std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}};
-            maybeLogRequest("POST", url, hdr);
-            cpr::Response cpr_response = sendWithRetries(rs, [&](){
-                return cpr::Post(
-                    cpr::Url{url},
-                    cpr::Header{hdr.begin(), hdr.end()},
-                    cpr::Body{payload.dump()},
-                    cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND}
-                );
-            });
+            cpr::Response cpr_response = post_json(url, payload, timeout_seconds);
             
             response.status_code = static_cast<int>(cpr_response.status_code);
             
@@ -180,16 +176,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                     }
                 }
             } else {
-                response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
-                if (cpr_response.status_code == HTTP_STATUS_UNAUTHORIZED || cpr_response.status_code == HTTP_STATUS_FORBIDDEN) {
-                    response.error_code = APIResponse::APIError::Auth;
-                } else if (cpr_response.status_code == HTTP_STATUS_TOO_MANY_REQUESTS) {
-                    response.error_code = APIResponse::APIError::RateLimited;
-                } else if (cpr_response.status_code >= HTTP_STATUS_SERVER_ERROR_MIN) {
-                    response.error_code = APIResponse::APIError::Server;
-                } else {
-                    response.error_code = APIResponse::APIError::Unknown;
-                }
+                set_error_from_http(response, cpr_response);
             }
         }
         

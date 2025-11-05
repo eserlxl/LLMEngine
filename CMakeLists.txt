@@ -265,9 +265,7 @@ endif()
 
 # Public dependencies (exported to consumers)
 target_link_libraries(${PROJECT_NAME} PUBLIC
-  nlohmann_json::nlohmann_json)
-# Private dependencies (implementation only, not exported)
-target_link_libraries(${PROJECT_NAME} PRIVATE
+  nlohmann_json::nlohmann_json
   cpr::cpr)
 
 # Propagate common compile options to library only (not to consumers)

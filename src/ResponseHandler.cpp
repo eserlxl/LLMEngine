@@ -12,8 +12,7 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
                                        const std::string& request_tmp_dir,
                                        std::string_view analysis_type,
                                        bool write_debug_files,
-                                       void* logger_ptr) {
-    Logger* logger = static_cast<Logger*>(logger_ptr);
+                                       Logger* logger) {
 
     // Write API response artifact
     if (debug_mgr) {
@@ -22,14 +21,15 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
 
     // Error path
     if (!api_response.success) {
+        const std::string redacted_err = RequestLogger::redactText(api_response.error_message);
         if (logger) {
-            const std::string redacted_err = RequestLogger::redactText(api_response.error_message);
             logger->log(LogLevel::Error, std::string("API error: ") + redacted_err);
             if (write_debug_files && debug_mgr) {
                 logger->log(LogLevel::Info, std::string("Error response saved to ") + request_tmp_dir + "/api_response_error.json");
             }
         }
-        return AnalysisResult{false, "", "", api_response.error_message, api_response.status_code};
+        // Return redacted error back to callers to avoid leaking secrets
+        return AnalysisResult{false, "", "", redacted_err, api_response.status_code};
     }
 
     // Success

@@ -21,7 +21,7 @@ public:
                                  const std::string& request_tmp_dir,
                                  std::string_view analysis_type,
                                  bool write_debug_files,
-                                 void* logger_ptr);
+                                 Logger* logger);
 };
 
 } // namespace LLMEngine
