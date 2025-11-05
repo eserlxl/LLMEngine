@@ -141,11 +141,6 @@ endif()
 # ---- Install dirs and prefix --------------------------------------------------
 include(GNUInstallDirs)
 
-# Track if dependencies need to be added to the export set (when fetched via FetchContent)
-# This is used later when installing targets to satisfy CMake's export validation
-set(NLOHMANN_JSON_NEEDS_EXPORT ${NLOHMANN_JSON_FETCHED})
-set(CPR_NEEDS_EXPORT ${CPR_FETCHED})
-
 # ---- Helper interface targets ------------------------------------------------
 # Introduce INTERFACE target to centralize common compile/link options
 add_library(${PROJECT_NAME}_compile_options INTERFACE)
@@ -394,16 +389,8 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 # Install library (handles both static and shared) and export targets.
 # We always export our own targets; consumers are responsible for providing
 # third-party dependencies (cpr, nlohmann_json) discovered via find_dependency().
-# However, when dependencies are fetched via FetchContent, they must be added
-# to the export set to satisfy CMake's export validation during configure time.
-set(_targets_to_install ${PROJECT_NAME} ${PROJECT_NAME}_compile_options)
-if (NLOHMANN_JSON_FETCHED AND TARGET nlohmann_json::nlohmann_json)
-  list(APPEND _targets_to_install nlohmann_json::nlohmann_json)
-endif()
-if (CPR_FETCHED AND TARGET cpr::cpr)
-  list(APPEND _targets_to_install cpr::cpr)
-endif()
-install(TARGETS ${_targets_to_install}
+# Note: FetchContent dependencies are not installed as they are build-time only.
+install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_compile_options
   EXPORT ${PROJECT_NAME}Targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
