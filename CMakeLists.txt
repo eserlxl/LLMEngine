@@ -476,31 +476,54 @@ function(_is_target_installable target_name result_var)
 endfunction()
 
 # Helper function to get the actual target name (not an alias) for installation
+# This function recursively resolves aliases until it finds a real target
 function(_get_actual_target_name target_name result_var)
   if (NOT TARGET "${target_name}")
     set(${result_var} "" PARENT_SCOPE)
     return()
   endif()
   
-  # Check if it's an alias - get the aliased target
-  get_target_property(_target_type "${target_name}" TYPE)
-  if (_target_type STREQUAL "ALIAS")
-    get_target_property(_aliased_target "${target_name}" ALIASED_TARGET)
-    if (_aliased_target)
-      set(${result_var} "${_aliased_target}" PARENT_SCOPE)
-      return()
+  # Recursively resolve aliases
+  set(_current_target "${target_name}")
+  set(_resolved_target "")
+  set(_max_depth 10)  # Prevent infinite loops
+  set(_depth 0)
+  
+  while(_depth LESS _max_depth)
+    get_target_property(_target_type "${_current_target}" TYPE)
+    if (_target_type STREQUAL "ALIAS")
+      # It's an alias, get the aliased target
+      get_target_property(_aliased_target "${_current_target}" ALIASED_TARGET)
+      if (_aliased_target AND TARGET "${_aliased_target}")
+        set(_current_target "${_aliased_target}")
+        math(EXPR _depth "${_depth} + 1")
+      else()
+        # Alias points to nothing or invalid target
+        set(${result_var} "" PARENT_SCOPE)
+        return()
+      endif()
+    else()
+      # Not an alias, this is the real target
+      set(_resolved_target "${_current_target}")
+      break()
     endif()
+  endwhile()
+  
+  # If we didn't resolve to a real target, return empty
+  if (NOT _resolved_target)
+    set(${result_var} "" PARENT_SCOPE)
+    return()
   endif()
   
-  # Check if it's installable
-  _is_target_installable("${target_name}" _installable)
+  # Verify the resolved target is installable (not IMPORTED, not an alias)
+  _is_target_installable("${_resolved_target}" _installable)
   if (NOT _installable)
     set(${result_var} "" PARENT_SCOPE)
     return()
   endif()
   
   # It's a real installable target, return it
-  set(${result_var} "${target_name}" PARENT_SCOPE)
+  set(${result_var} "${_resolved_target}" PARENT_SCOPE)
 endfunction()
 
 # Before installing, handle FetchContent dependencies:
@@ -528,12 +551,18 @@ if (NLOHMANN_JSON_FETCHED)
   endif()
   
   if (_json_actual_target AND TARGET "${_json_actual_target}")
-    # Verify it's still installable after resolving
-    _is_target_installable("${_json_actual_target}" _json_installable)
-    if (_json_installable)
-      list(APPEND _targets_to_install "${_json_actual_target}")
+    # Verify it's still installable after resolving and not an alias
+    get_target_property(_resolved_type "${_json_actual_target}" TYPE)
+    if (NOT _resolved_type STREQUAL "ALIAS")
+      _is_target_installable("${_json_actual_target}" _json_installable)
+      if (_json_installable)
+        list(APPEND _targets_to_install "${_json_actual_target}")
+      else()
+        # Resolved target is not installable, filter from interface
+        set(_filter_interface_libs TRUE)
+      endif()
     else()
-      # Resolved target is not installable, filter from interface
+      # Resolved to an alias, skip it and filter from interface
       set(_filter_interface_libs TRUE)
     endif()
   else()
@@ -560,12 +589,18 @@ if (CPR_FETCHED)
   endif()
   
   if (_cpr_actual_target AND TARGET "${_cpr_actual_target}")
-    # Verify it's still installable after resolving
-    _is_target_installable("${_cpr_actual_target}" _cpr_installable)
-    if (_cpr_installable)
-      list(APPEND _targets_to_install "${_cpr_actual_target}")
+    # Verify it's still installable after resolving and not an alias
+    get_target_property(_resolved_type "${_cpr_actual_target}" TYPE)
+    if (NOT _resolved_type STREQUAL "ALIAS")
+      _is_target_installable("${_cpr_actual_target}" _cpr_installable)
+      if (_cpr_installable)
+        list(APPEND _targets_to_install "${_cpr_actual_target}")
+      else()
+        # Resolved target is not installable, filter from interface
+        set(_filter_interface_libs TRUE)
+      endif()
     else()
-      # Resolved target is not installable, filter from interface
+      # Resolved to an alias, skip it and filter from interface
       set(_filter_interface_libs TRUE)
     endif()
   else()
@@ -620,20 +655,36 @@ if (_filter_interface_libs)
 endif()
 
 # Final safety check: remove any alias targets from install list
+# This is critical - CMake will error if we try to install an alias
 set(_filtered_targets_to_install "")
 foreach(_target IN LISTS _targets_to_install)
   if (TARGET "${_target}")
     get_target_property(_target_type "${_target}" TYPE)
-    if (NOT _target_type STREQUAL "ALIAS")
-      # Verify it's installable one more time
+    if (_target_type STREQUAL "ALIAS")
+      # Never install alias targets - CMake will error
+      message(STATUS "Removing alias target from install list: ${_target}")
+    elseif (_target_type STREQUAL "INTERFACE_LIBRARY")
+      # Check if it's IMPORTED - IMPORTED INTERFACE libraries can't be installed
+      get_target_property(_imported "${_target}" IMPORTED)
+      if (_imported)
+        message(STATUS "Removing IMPORTED INTERFACE library from install list: ${_target}")
+      else()
+        # Regular INTERFACE library - verify it's installable
+        _is_target_installable("${_target}" _installable)
+        if (_installable)
+          list(APPEND _filtered_targets_to_install "${_target}")
+        else()
+          message(STATUS "Removing non-installable target from install list: ${_target}")
+        endif()
+      endif()
+    else()
+      # Regular target (STATIC, SHARED, etc.) - verify it's installable
       _is_target_installable("${_target}" _installable)
       if (_installable)
         list(APPEND _filtered_targets_to_install "${_target}")
       else()
-        message(WARNING "Skipping non-installable target in install list: ${_target}")
+        message(STATUS "Removing non-installable target from install list: ${_target}")
       endif()
-    else()
-      message(WARNING "Skipping alias target in install list: ${_target}")
     endif()
   else()
     # Not a target, keep it (might be a generator expression or library file)
