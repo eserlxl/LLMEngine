@@ -391,9 +391,73 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 # third-party dependencies (cpr, nlohmann_json) discovered via find_dependency().
 # Note: FetchContent dependencies are not installed as they are build-time only.
 
-# Note: FetchContent dependencies are handled before export/install commands
-# to prevent export errors. The filtered INTERFACE_LINK_LIBRARIES will be
-# used for both export() and install(EXPORT), and restored after install.
+# Helper function to check if a target is exportable
+function(_is_target_exportable target_name result_var)
+  # Check if target exists
+  if (NOT TARGET "${target_name}")
+    set(${result_var} FALSE PARENT_SCOPE)
+    return()
+  endif()
+  
+  # FetchContent targets are never exportable
+  # Check specific known FetchContent targets first (most reliable check)
+  if (NLOHMANN_JSON_FETCHED)
+    if (target_name STREQUAL "nlohmann_json::nlohmann_json" OR target_name STREQUAL "nlohmann_json")
+      set(${result_var} FALSE PARENT_SCOPE)
+      return()
+    endif()
+  endif()
+  if (CPR_FETCHED)
+    if (target_name STREQUAL "cpr::cpr" OR target_name STREQUAL "cpr")
+      set(${result_var} FALSE PARENT_SCOPE)
+      return()
+    endif()
+  endif()
+  
+  # Check if target has EXPORT_NAME (exportable targets have this)
+  get_target_property(_export_name "${target_name}" EXPORT_NAME)
+  # Check if target is IMPORTED (system packages are IMPORTED and may be exportable via their own config)
+  get_target_property(_imported "${target_name}" IMPORTED)
+  # For FetchContent targets, they typically don't have EXPORT_NAME and are not IMPORTED
+  if (_export_name OR _imported)
+    set(${result_var} TRUE PARENT_SCOPE)
+  else()
+    # If it's a local target without EXPORT_NAME and not IMPORTED,
+    # it might be a FetchContent target or a local target
+    # Unknown target - assume exportable if it exists (might be a system package or local target)
+    # The specific checks above should have caught known FetchContent targets
+    set(${result_var} TRUE PARENT_SCOPE)
+  endif()
+endfunction()
+
+# Before exporting, handle FetchContent dependencies that are not exportable
+# Save original INTERFACE_LINK_LIBRARIES if we need to filter
+# FetchContent targets are not in any export set, so they cannot be part of
+# the exported target's INTERFACE_LINK_LIBRARIES. Consumers will discover
+# these dependencies via find_dependency() calls in Config.cmake.
+# This filtering MUST happen BEFORE install(TARGETS ... EXPORT) because
+# CMake validates dependencies when processing install rules at configure time.
+if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
+  get_target_property(_original_interface_libs ${PROJECT_NAME} INTERFACE_LINK_LIBRARIES)
+  if (_original_interface_libs)
+    set(_filtered_libs "")
+    foreach(_lib IN LISTS _original_interface_libs)
+      # Skip generator expressions - they're not direct target references
+      if (_lib MATCHES "^\\$<")
+        list(APPEND _filtered_libs "${_lib}")
+      else()
+        # Check if this is a target and if it's exportable
+        _is_target_exportable("${_lib}" _is_exportable)
+        if (_is_exportable)
+          list(APPEND _filtered_libs "${_lib}")
+        endif()
+        # Non-exportable targets (FetchContent) are skipped
+      endif()
+    endforeach()
+    # Set filtered libraries for export (both export() and install(EXPORT) will use this)
+    set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_LINK_LIBRARIES "${_filtered_libs}")
+  endif()
+endif()
 
 install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_compile_options
   EXPORT ${PROJECT_NAME}Targets
@@ -454,33 +518,8 @@ configure_package_config_file(
   "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
   INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
-# Before exporting, handle FetchContent dependencies that are not exportable
-# Save original INTERFACE_LINK_LIBRARIES if we need to filter
-# FetchContent targets are not in any export set, so they cannot be part of
-# the exported target's INTERFACE_LINK_LIBRARIES. Consumers will discover
-# these dependencies via find_dependency() calls in Config.cmake.
-if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
-  get_target_property(_original_interface_libs ${PROJECT_NAME} INTERFACE_LINK_LIBRARIES)
-  if (_original_interface_libs)
-    set(_filtered_libs "")
-    foreach(_lib IN LISTS _original_interface_libs)
-      # Filter out FetchContent dependencies that are not exportable
-      # Keep generator expressions and other dependencies
-      if (NLOHMANN_JSON_FETCHED AND (_lib STREQUAL "nlohmann_json::nlohmann_json" OR _lib STREQUAL "nlohmann_json"))
-        # Skip - not exportable when fetched
-      elseif (CPR_FETCHED AND (_lib STREQUAL "cpr::cpr" OR _lib STREQUAL "cpr"))
-        # Skip - not exportable when fetched
-      else()
-        # Keep all other dependencies (including generator expressions)
-        list(APPEND _filtered_libs "${_lib}")
-      endif()
-    endforeach()
-    # Set filtered libraries for export (both export() and install(EXPORT) will use this)
-    set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_LINK_LIBRARIES "${_filtered_libs}")
-  endif()
-endif()
-
 # Export targets to the build tree so examples can use find_package() without install
+# Note: INTERFACE_LINK_LIBRARIES filtering already happened before install(TARGETS ... EXPORT)
 export(EXPORT ${PROJECT_NAME}Targets
   NAMESPACE ${PROJECT_NAME_LOWER}::
   FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake")
