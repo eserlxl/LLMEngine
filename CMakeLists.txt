@@ -268,9 +268,24 @@ if (_CLANG_TIDY_CMD)
 endif()
 
 # Public dependencies (exported to consumers)
-target_link_libraries(${PROJECT_NAME} PUBLIC
-  nlohmann_json::nlohmann_json
-  cpr::cpr)
+# For FetchContent dependencies, we link them PRIVATE for build-time but
+# conditionally add them to INTERFACE only when they're exportable (system packages)
+# This prevents CMake export errors while maintaining the interface for consumers
+if (NLOHMANN_JSON_FETCHED)
+  # Link PRIVATE for build-time, consumers will use find_dependency()
+  target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)
+else()
+  # System package - link PUBLIC so it's exported
+  target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json::nlohmann_json)
+endif()
+
+if (CPR_FETCHED)
+  # Link PRIVATE for build-time, consumers will use find_dependency()
+  target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
+else()
+  # System package - link PUBLIC so it's exported
+  target_link_libraries(${PROJECT_NAME} PUBLIC cpr::cpr)
+endif()
 
 # Propagate common compile options to library only (not to consumers)
 # Keep compile options PRIVATE to avoid leaking build policy decisions to consumers
@@ -430,11 +445,9 @@ function(_is_target_exportable target_name result_var)
   endif()
 endfunction()
 
-# Before exporting, handle FetchContent dependencies that are not exportable
-# Save original INTERFACE_LINK_LIBRARIES if we need to filter
-# FetchContent targets are not in any export set, so they cannot be part of
-# the exported target's INTERFACE_LINK_LIBRARIES. Consumers will discover
-# these dependencies via find_dependency() calls in Config.cmake.
+# Note: FetchContent dependencies are now linked PRIVATE, so they won't appear in
+# INTERFACE_LINK_LIBRARIES and won't cause export errors. The filtering code below
+# is kept as a safeguard in case any non-exportable dependencies slip through.
 # This filtering MUST happen BEFORE install(TARGETS ... EXPORT) because
 # CMake validates dependencies when processing install rules at configure time.
 if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
@@ -446,12 +459,15 @@ if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
       if (_lib MATCHES "^\\$<")
         list(APPEND _filtered_libs "${_lib}")
       else()
-        # Check if this is a target and if it's exportable
+        # Check if this is a target and if it's exportable (safeguard check)
         _is_target_exportable("${_lib}" _is_exportable)
         if (_is_exportable)
           list(APPEND _filtered_libs "${_lib}")
+        else()
+          # Non-exportable target found - this shouldn't happen with PRIVATE linking
+          # but filter it out as a safeguard
+          message(STATUS "Filtering non-exportable dependency from INTERFACE: ${_lib}")
         endif()
-        # Non-exportable targets (FetchContent) are skipped
       endif()
     endforeach()
     # Set filtered libraries for export (both export() and install(EXPORT) will use this)
