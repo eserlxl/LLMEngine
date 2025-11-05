@@ -394,11 +394,21 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 # Install library (handles both static and shared) and export targets.
 # We always export our own targets; consumers are responsible for providing
 # third-party dependencies (cpr, nlohmann_json) discovered via find_dependency().
-install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_compile_options
+# However, when dependencies are fetched via FetchContent, they must be added
+# to the export set to satisfy CMake's export validation during configure time.
+set(_targets_to_install ${PROJECT_NAME} ${PROJECT_NAME}_compile_options)
+if (NLOHMANN_JSON_FETCHED AND TARGET nlohmann_json::nlohmann_json)
+  list(APPEND _targets_to_install nlohmann_json::nlohmann_json)
+endif()
+if (CPR_FETCHED AND TARGET cpr::cpr)
+  list(APPEND _targets_to_install cpr::cpr)
+endif()
+install(TARGETS ${_targets_to_install}
   EXPORT ${PROJECT_NAME}Targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Install public headers
 # Namespaced headers go to include/LLMEngine/
