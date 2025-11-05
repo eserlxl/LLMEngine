@@ -114,13 +114,23 @@ else()
     message(FATAL_ERROR "cpr not found and LLM_DISABLE_FETCHCONTENT=ON")
   endif()
   include(FetchContent)
-  message(STATUS "cpr not found via package config; fetching with FetchContent")
+  
+  # Check if source is already available (pre-cloned in CI)
+  set(_cpr_source_dir "${FETCHCONTENT_BASE_DIR}/cpr-src")
+  if(EXISTS "${_cpr_source_dir}/CMakeLists.txt")
+    message(STATUS "cpr source already available at ${_cpr_source_dir}, using pre-cloned source")
+    set(FETCHCONTENT_SOURCE_DIR_CPR "${_cpr_source_dir}" CACHE PATH "Source directory for cpr" FORCE)
+    set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "Skip updates for FetchContent" FORCE)
+  else()
+    message(STATUS "cpr not found via package config; fetching with FetchContent")
+  endif()
+  
   # Use a released tag for reproducible builds
   FetchContent_Declare(
     cpr
     GIT_REPOSITORY https://github.com/libcpr/cpr.git
     GIT_TAG 1.10.5
-    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/cpr-src"
+    SOURCE_DIR "${_cpr_source_dir}"
     FIND_PACKAGE_ARGS NAMES cpr
   )
   set(CPR_BUILD_TESTS OFF CACHE BOOL "" FORCE)
