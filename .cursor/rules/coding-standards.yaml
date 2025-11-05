@@ -1,0 +1,144 @@
+rules:
+  mode:
+    enforce_strict: true
+    allow_placeholders: false
+    ambiguity_resolution: "choose_sensible_default_and_document"
+
+  language:
+    standard: "c++20"
+    allow_cxx23: true
+    memory_management:
+      forbid_raw_new_delete: true
+      prefer_unique_ptr: true
+      prefer_shared_ptr: "rare"
+      use_optional: true
+      use_variant: true
+      use_span: true
+      use_string_view: true
+    casting:
+      forbid_c_style_casts: true
+      allowed_casts: ["static_cast", "const_cast", "reinterpret_cast (with reasoning)"]
+    exception_safety:
+      noexcept_when_possible: true
+
+  project_structure:
+    layout:
+      include_dir: "include/<proj>"
+      src_dir: "src"
+      tests_dir: "tests"
+      cmake_dir: "cmake"
+      examples_dir: "examples"
+    namespace_pattern: "<proj>"
+    one_class_per_file: true
+
+  cmake:
+    minimum_version: "3.20"
+    target_based_only: true
+    compiler_features:
+      require: ["cxx_std_20"]
+    include_style:
+      use_target_include_directories: true
+      forbid_global_include_directories: true
+    warnings:
+      enable_default: true
+      gcc_clang: ["-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow", "-Wold-style-cast"]
+      msvc: ["/W4", "/permissive-"]
+      werror_flag_controlled: "ENABLE_WARNINGS_AS_ERRORS"
+    options:
+      BUILD_TESTING: false
+      BUILD_EXAMPLES: false
+      ENABLE_WARNINGS_AS_ERRORS: false
+      ENABLE_ASAN: false
+      ENABLE_UBSAN: false
+      ENABLE_TSAN: false
+      ENABLE_COVERAGE: false
+
+  code_quality:
+    formatting:
+      use_clang_format: true
+      style: "LLVM"
+      column_limit: 120
+    static_analysis:
+      use_clang_tidy: true
+      enable_checks:
+        - "bugprone-*"
+        - "performance-*"
+        - "readability-*"
+        - "modernize-*"
+        - "cppcoreguidelines-*"
+    header_hygiene:
+      pragma_once: true
+      minimize_includes: true
+      prefer_forward_declarations: true
+
+  error_handling:
+    model:
+      prefer_std_expected_if_available: true
+      otherwise: "status_or_pattern"
+    logging:
+      avoid_global_singletons: true
+      allow_logging_adapter_layer: true
+    exception_boundary_policy:
+      no_throw_across_shared_library_boundaries: true
+
+  performance:
+    avoid_unnecessary_copies: true
+    prefer_move_semantics: true
+    container_guidelines: 
+      choose_based_on_complexity: true
+    concurrency:
+      prefer_jthread: true
+      use_stop_token: true
+      enforce_race_free_design: true
+
+  security:
+    forbid_unsafe_functions: ["strcpy", "sprintf", "gets", "strcat", "printf %s user input"]
+    validate_external_inputs: true
+    enforce_invariants_with_asserts: true
+
+  testing:
+    framework: "gtest_or_catch2"
+    test_coverage:
+      edge_cases: true
+      failure_modes: true
+    ctest_integration: true
+
+  documentation:
+    require_readme: true
+    require_public_header_comments: true
+    build_docs_option: "BUILD_DOCS"
+
+  dependencies:
+    stdlib_first: true
+    isolate_third_party_behind_interfaces: true
+    forbid_leaking_third_party_types_in_public_headers: true
+
+  licensing:
+    spdx:
+      header_template: "SPDX-License-Identifier: GPL-3.0-or-later"
+      apply_to_all_files: true
+
+  generation_output_requirements:
+    include_file_tree: true
+    include_unified_diffs: true
+    include_build_instructions: true
+    include_rationale_notes: true
+    include_api_migration_notes_if_changed: true
+
+  workflow:
+    step_limit: 200   # Max LOC changed per step
+    commit_policy:
+      autoreview_on_each_task: true
+      require_build_and_tests_pass_before_commit: true
+      commit_format: "conventional_commits"
+    failure_recovery:
+      rebuild_and_fix_before_commit: true
+
+  review_checklist:
+    - compiles_debug_and_release
+    - tests_pass
+    - no_new_clang_tidy_warnings
+    - no_placeholder_or_todos
+    - public_headers_no_accidental_includes
+    - docs_updated_for_api_changes
+

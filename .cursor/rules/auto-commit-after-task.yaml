@@ -1,0 +1,34 @@
+rules:
+  - id: auto-commit-after-task
+    match: "(?i)\\bplan agent\\b"
+    actions:
+      - enforce: true
+      - instruction: |
+          After completing each task or subtask, automatically:
+          1. Stage and commit all modified files with a descriptive commit message.
+          2. Immediately continue to the next task in the plan without asking for confirmation.
+          3. Do not prompt the user with "move on" or similar messages — proceed autonomously.
+          4. Include the task title in the commit message (e.g. "Task: <title> completed").
+      - instruction: |
+          Commit message format:
+          - Title: chore(plan): Task: <title> completed
+          - Body: Include one-line summary of the change and the task ID if present.
+          - Footer: Auto-commit-by: plan-agent
+      - instruction: |
+          Behavior details:
+          - If there are no changes to commit, skip the commit step silently and continue.
+          - Always include all modified, added, and removed files in the commit.
+          - Do not amend previous commits, do not rebase, and do not push automatically.
+          - Do not ask for confirmation before committing or proceeding.
+          - Do not change global Git configuration or user settings.
+      - instruction: |
+          Safety and consistency:
+          - Use non-interactive Git commands.
+          - If the task title is unavailable, use: chore(plan): Task: (untitled) completed
+          - If the working tree contains unrelated changes, still commit them together as part of the current task, and mention this in the commit body as: Includes unrelated modified files present in working tree.
+          - Do not run tests that require interaction as a gate before committing.
+      - instruction: |
+          Examples of acceptable commit titles:
+          - chore(plan): Task: Configure cache layer completed
+          - chore(plan): Task: Parse CLI flags completed
+          - chore(plan): Task: (untitled) completed

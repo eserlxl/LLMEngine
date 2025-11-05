@@ -339,7 +339,10 @@ docs/build/
 # =============================================================================
 
 # Cursor editor project files
-.cursor/
+# Ignore .cursor/ except for project rules
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**/*
 
 # Node.js (if using any JS tools)
 node_modules/
