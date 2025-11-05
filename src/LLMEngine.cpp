@@ -54,12 +54,15 @@ namespace LLMEngineSystem {
 
     // Collaborator: Prompt Strategy
     // Encapsulates prompt building logic to allow easy swapping of strategies
+    // Caches prompt builders to avoid repeated allocations
     inline std::string buildPrompt(std::string_view prompt, bool prepend_terse_instruction) {
         if (prepend_terse_instruction) {
-            ::LLMEngine::TersePromptBuilder builder;
+            // Cache the builder instance to avoid repeated construction
+            static const ::LLMEngine::TersePromptBuilder builder;
             return builder.buildPrompt(prompt);
         }
-        ::LLMEngine::PassthroughPromptBuilder builder;
+        // Cache the builder instance to avoid repeated construction
+        static const ::LLMEngine::PassthroughPromptBuilder builder;
         return builder.buildPrompt(prompt);
     }
 

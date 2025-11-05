@@ -37,15 +37,23 @@ public:
  * Prepends: "Please respond directly to the previous message, engaging with its content. 
  *            Try to be brief and concise and complete your response in one or two sentences, 
  *            mostly one sentence.\n"
+ * 
+ * The system instruction is cached as a static constant to avoid repeated allocations.
  */
 class LLMENGINE_EXPORT TersePromptBuilder : public IPromptBuilder {
 public:
     [[nodiscard]] std::string buildPrompt(std::string_view prompt) const override {
-        constexpr std::string_view system_instruction =
+        // Cache the system instruction as a static constant to avoid repeated allocations
+        static const std::string system_instruction =
             "Please respond directly to the previous message, engaging with its content. "
             "Try to be brief and concise and complete your response in one or two sentences, "
             "mostly one sentence.\n";
-        return std::string(system_instruction) + std::string(prompt);
+        // Pre-allocate result to avoid reallocations
+        std::string result;
+        result.reserve(system_instruction.size() + prompt.size());
+        result = system_instruction;
+        result += prompt;
+        return result;
     }
 };
 
