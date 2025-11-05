@@ -9,7 +9,7 @@ on:
 jobs:
   build-test:
     name: Build and Test (${{ matrix.compiler }} ${{ matrix.build_type }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -20,24 +20,28 @@ jobs:
             sanitizers: true
             cmake_preset: debug
             cmake_options: "-DDEBUG_MODE=ON -DENABLE_SANITIZERS=ON -DWARNING_MODE=ON"
+            os: ubuntu-22.04
           - compiler: gcc
             compiler_version: "12"
             build_type: Release
             sanitizers: false
             cmake_preset: release
             cmake_options: "-DPERFORMANCE_BUILD=ON -DWARNING_MODE=ON"
+            os: ubuntu-22.04
           - compiler: clang
             compiler_version: "14"
             build_type: Debug
             sanitizers: true
             cmake_preset: debug
             cmake_options: "-DDEBUG_MODE=ON -DENABLE_SANITIZERS=ON -DWARNING_MODE=ON"
+            os: ubuntu-latest
           - compiler: clang
             compiler_version: "15"
             build_type: Release
             sanitizers: false
             cmake_preset: release
             cmake_options: "-DPERFORMANCE_BUILD=ON -DWARNING_MODE=ON"
+            os: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -61,11 +65,23 @@ jobs:
       - name: Set up compiler
         run: |
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            # Verify the specific GCC version is installed and available
+            if ! command -v gcc-${{ matrix.compiler_version }} &> /dev/null; then
+              echo "Error: gcc-${{ matrix.compiler_version }} not found"
+              exit 1
+            fi
+            if ! command -v g++-${{ matrix.compiler_version }} &> /dev/null; then
+              echo "Error: g++-${{ matrix.compiler_version }} not found"
+              exit 1
+            fi
             echo "CC=gcc-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
             echo "CXX=g++-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
+            # Verify we're using the correct version
+            gcc-${{ matrix.compiler_version }} --version
           else
             echo "CC=clang-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
             echo "CXX=clang++-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
+            clang-${{ matrix.compiler_version }} --version
           fi
 
       - name: Pre-fetch dependencies
@@ -79,6 +95,11 @@ jobs:
         run: |
           unset GIT_WORK_TREE
           unset GIT_DIR
+          # Verify compiler environment variables are set
+          echo "Using CC=$CC"
+          echo "Using CXX=$CXX"
+          $CC --version
+          $CXX --version
           cmake -S . -B build \
             -G "Unix Makefiles" \
             -DCMAKE_C_COMPILER="$CC" \
@@ -89,6 +110,10 @@ jobs:
             -DENABLE_EXAMPLES=ON \
             -DWARNING_MODE=ON \
             -DWERROR=ON
+          # Verify CMake selected the correct compiler
+          echo "CMake detected compiler:"
+          cmake --build build --target help 2>&1 | head -20 || true
+          grep -A 5 "CMAKE_CXX_COMPILER" build/CMakeCache.txt || true
 
       - name: Build
         run: cmake --build build -j20
