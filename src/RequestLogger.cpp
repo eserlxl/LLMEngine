@@ -211,12 +211,12 @@ std::string RequestLogger::formatRequest(std::string_view method,
     return oss.str();
 }
 
-const std::vector<std::string> RequestLogger::getSensitiveQueryParams() {
+std::vector<std::string> RequestLogger::getSensitiveQueryParams() {
     const auto& set = getSensitiveQueryParamsImpl();
     return std::vector<std::string>(set.begin(), set.end());
 }
 
-const std::vector<std::string> RequestLogger::getSensitiveHeaderNames() {
+std::vector<std::string> RequestLogger::getSensitiveHeaderNames() {
     const auto& set = getSensitiveHeaderNamesImpl();
     return std::vector<std::string>(set.begin(), set.end());
 }

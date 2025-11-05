@@ -73,13 +73,13 @@ public:
      * @brief Get list of sensitive query parameter names (for testing/external use).
      * @return Vector of sensitive parameter names (lowercase)
      */
-    static const std::vector<std::string> getSensitiveQueryParams();
+    static std::vector<std::string> getSensitiveQueryParams();
     
     /**
      * @brief Get list of sensitive header names (for testing/external use).
      * @return Vector of sensitive header names (lowercase)
      */
-    static const std::vector<std::string> getSensitiveHeaderNames();
+    static std::vector<std::string> getSensitiveHeaderNames();
     
 private:
     // Check if a header name is sensitive (case-insensitive)
