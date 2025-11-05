@@ -119,7 +119,7 @@ namespace LLMEngine::Utils {
         
         // Explicitly reject control characters including newlines, tabs, carriage returns
         // These can be used for command injection even with metacharacter checks
-        for (char c : cmd_str) {
+        for (char c : cmd_str_for_logging) {
             if (std::iscntrl(static_cast<unsigned char>(c))) {
                 if (logger) {
                     logger->log(::LLMEngine::LogLevel::Error, "execCommand: Command contains control characters (newlines, tabs, etc.) - rejected for security");
@@ -129,9 +129,9 @@ namespace LLMEngine::Utils {
         }
         
         // Explicitly check for newlines and tabs (redundant but defensive)
-        if (cmd_str.find('\n') != std::string::npos ||
-            cmd_str.find('\r') != std::string::npos ||
-            cmd_str.find('\t') != std::string::npos) {
+        if (cmd_str_for_logging.find('\n') != std::string::npos ||
+            cmd_str_for_logging.find('\r') != std::string::npos ||
+            cmd_str_for_logging.find('\t') != std::string::npos) {
             if (logger) {
                 logger->log(::LLMEngine::LogLevel::Error, "execCommand: Command contains newlines, carriage returns, or tabs - rejected for security");
             }
@@ -139,9 +139,9 @@ namespace LLMEngine::Utils {
         }
         
         // Check if command matches whitelist pattern (no \s, only explicit space)
-        if (!std::regex_match(cmd_str, SAFE_CHARS_REGEX)) {
+        if (!std::regex_match(cmd_str_for_logging, SAFE_CHARS_REGEX)) {
             if (logger) {
-                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: Command contains potentially unsafe characters: ") + cmd_str);
+                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: Command contains potentially unsafe characters: ") + cmd_str_for_logging);
                 logger->log(::LLMEngine::LogLevel::Error, "Only alphanumeric, single spaces, hyphens, underscores, dots, and slashes are allowed");
                 logger->log(::LLMEngine::LogLevel::Error, "For security reasons, shell metacharacters and control characters are not permitted");
             }
@@ -149,24 +149,24 @@ namespace LLMEngine::Utils {
         }
         
         // Additional check: prevent command chaining attempts via shell metacharacters
-        if (cmd_str.find('|') != std::string::npos ||
-            cmd_str.find('&') != std::string::npos ||
-            cmd_str.find(';') != std::string::npos ||
-            cmd_str.find('$') != std::string::npos ||
-            cmd_str.find('`') != std::string::npos ||
-            cmd_str.find('(') != std::string::npos ||
-            cmd_str.find(')') != std::string::npos ||
-            cmd_str.find('<') != std::string::npos ||
-            cmd_str.find('>') != std::string::npos ||
-            cmd_str.find('{') != std::string::npos ||
-            cmd_str.find('}') != std::string::npos ||
-            cmd_str.find('[') != std::string::npos ||
-            cmd_str.find(']') != std::string::npos ||
-            cmd_str.find('*') != std::string::npos ||
-            cmd_str.find('?') != std::string::npos ||
-            cmd_str.find('!') != std::string::npos ||
-            cmd_str.find('#') != std::string::npos ||
-            cmd_str.find('~') != std::string::npos) {
+        if (cmd_str_for_logging.find('|') != std::string::npos ||
+            cmd_str_for_logging.find('&') != std::string::npos ||
+            cmd_str_for_logging.find(';') != std::string::npos ||
+            cmd_str_for_logging.find('$') != std::string::npos ||
+            cmd_str_for_logging.find('`') != std::string::npos ||
+            cmd_str_for_logging.find('(') != std::string::npos ||
+            cmd_str_for_logging.find(')') != std::string::npos ||
+            cmd_str_for_logging.find('<') != std::string::npos ||
+            cmd_str_for_logging.find('>') != std::string::npos ||
+            cmd_str_for_logging.find('{') != std::string::npos ||
+            cmd_str_for_logging.find('}') != std::string::npos ||
+            cmd_str_for_logging.find('[') != std::string::npos ||
+            cmd_str_for_logging.find(']') != std::string::npos ||
+            cmd_str_for_logging.find('*') != std::string::npos ||
+            cmd_str_for_logging.find('?') != std::string::npos ||
+            cmd_str_for_logging.find('!') != std::string::npos ||
+            cmd_str_for_logging.find('#') != std::string::npos ||
+            cmd_str_for_logging.find('~') != std::string::npos) {
             if (logger) {
                 logger->log(::LLMEngine::LogLevel::Error, "execCommand: Command contains shell metacharacters - rejected for security");
             }
@@ -174,27 +174,13 @@ namespace LLMEngine::Utils {
         }
         
         // Prevent multiple consecutive spaces (could be used to hide malicious content)
-        if (cmd_str.find("  ") != std::string::npos) {
+        if (cmd_str_for_logging.find("  ") != std::string::npos) {
             if (logger) {
                 logger->log(::LLMEngine::LogLevel::Error, "execCommand: Command contains multiple consecutive spaces - rejected for security");
             }
             return output;
         }
-        
-        // Parse command string into argv array (split on spaces)
-        std::vector<std::string> args;
-        std::istringstream iss(cmd_str);
-        std::string arg;
-        while (iss >> arg) {
-            args.push_back(arg);
-        }
-        
-        if (args.empty()) {
-            if (logger) {
-                logger->log(::LLMEngine::LogLevel::Error, std::string("execCommand: No command found in: ") + cmd_str_for_logging);
-            }
-            return output;
-        }
+
 
         // Prepare argv array for execve (must be null-terminated)
         std::vector<char*> argv;

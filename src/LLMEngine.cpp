@@ -410,7 +410,7 @@ void LLMEngine::LLMEngine::cleanupResponseFiles() const {
     // Hash thread ID to hex string for efficient formatting (avoids locale-sensitive formatting)
     const auto thread_id = std::this_thread::get_id();
     std::hash<std::thread::id> hasher;
-    const auto thread_hash = static_cast<uint64_t>(hasher(thread_id));
+    uint64_t thread_hash = hasher(thread_id);
     
     // Pre-allocate string with estimated size
     std::string request_tmp_dir;

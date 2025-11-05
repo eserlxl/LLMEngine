@@ -120,9 +120,9 @@ void LLMOutputProcessor::parseJson(std::string_view jsonContent) {
         }
         
         // Second pass: parse collected lines (aggregated to reduce parsing overhead)
-        for (const auto& line : lines) {
+        for (const auto& ln : lines) {
             try {
-                auto j = nlohmann::json::parse(line);
+                auto j = nlohmann::json::parse(ln);
                 
                 // Check if this is an Ollama streaming response format
                 if (j.contains("response")) {

@@ -30,7 +30,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
     response.success = false;
     
     try {
-        RetrySettings rs = computeRetrySettings(params, /*exponential_default*/false);
+        RetrySettings rs = computeRetrySettings(params, config_.get(), /*exponential_default*/false);
         
         // Merge default params with provided params using update() for efficiency
         nlohmann::json request_params = default_params_;
