@@ -612,8 +612,10 @@ endif()
 # Filter non-installable FetchContent dependencies from INTERFACE_LINK_LIBRARIES if needed
 # Save original property before filtering so we can restore it after export
 if (_filter_interface_libs)
+  message(STATUS "Filtering INTERFACE_LINK_LIBRARIES to remove non-installable FetchContent dependencies")
   get_target_property(_original_interface_libs_before_filter ${PROJECT_NAME} INTERFACE_LINK_LIBRARIES)
   set(_original_interface_libs ${_original_interface_libs_before_filter})
+  message(STATUS "Original INTERFACE_LINK_LIBRARIES: ${_original_interface_libs}")
   if (_original_interface_libs)
     set(_filtered_libs "")
     foreach(_lib IN LISTS _original_interface_libs)
@@ -623,19 +625,38 @@ if (_filter_interface_libs)
       else()
         # Check if this is a FetchContent dependency that's not installable
         set(_should_filter FALSE)
-        if (NLOHMANN_JSON_FETCHED)
-          if (_lib STREQUAL "nlohmann_json::nlohmann_json" OR _lib STREQUAL "nlohmann_json")
-            _is_target_installable("${_lib}" _installable)
-            if (NOT _installable)
-              set(_should_filter TRUE)
+        
+        # Check if it's a target and if it's one of our FetchContent dependencies
+        if (TARGET "${_lib}")
+          # Get the target type to check if it's an alias
+          get_target_property(_lib_type "${_lib}" TYPE)
+          
+          # If it's an alias, resolve it to check the underlying target
+          set(_lib_to_check "${_lib}")
+          if (_lib_type STREQUAL "ALIAS")
+            get_target_property(_aliased_target "${_lib}" ALIASED_TARGET)
+            if (_aliased_target)
+              set(_lib_to_check "${_aliased_target}")
             endif()
           endif()
-        endif()
-        if (CPR_FETCHED)
-          if (_lib STREQUAL "cpr::cpr" OR _lib STREQUAL "cpr")
-            _is_target_installable("${_lib}" _installable)
-            if (NOT _installable)
-              set(_should_filter TRUE)
+          
+          # Check if this is one of our FetchContent dependencies
+          if (NLOHMANN_JSON_FETCHED)
+            if (_lib STREQUAL "nlohmann_json::nlohmann_json" OR _lib STREQUAL "nlohmann_json" OR
+                _lib_to_check STREQUAL "nlohmann_json::nlohmann_json" OR _lib_to_check STREQUAL "nlohmann_json")
+              _is_target_installable("${_lib_to_check}" _installable)
+              if (NOT _installable)
+                set(_should_filter TRUE)
+              endif()
+            endif()
+          endif()
+          if (CPR_FETCHED)
+            if (_lib STREQUAL "cpr::cpr" OR _lib STREQUAL "cpr" OR
+                _lib_to_check STREQUAL "cpr::cpr" OR _lib_to_check STREQUAL "cpr")
+              _is_target_installable("${_lib_to_check}" _installable)
+              if (NOT _installable)
+                set(_should_filter TRUE)
+              endif()
             endif()
           endif()
         endif()
@@ -650,8 +671,13 @@ if (_filter_interface_libs)
       endif()
     endforeach()
     # Set filtered libraries for export
+    message(STATUS "Filtered INTERFACE_LINK_LIBRARIES: ${_filtered_libs}")
     set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_LINK_LIBRARIES "${_filtered_libs}")
+  else()
+    message(STATUS "INTERFACE_LINK_LIBRARIES is empty or not set")
   endif()
+else()
+  message(STATUS "Not filtering INTERFACE_LINK_LIBRARIES (_filter_interface_libs is FALSE)")
 endif()
 
 # Final safety check: remove any alias targets from install list
