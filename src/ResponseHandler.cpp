@@ -43,7 +43,8 @@ static AnalysisErrorCode mapErrorCode(::LLMEngineAPI::APIResponse::APIError api_
             return AnalysisErrorCode::Auth;
         }
         return AnalysisErrorCode::Client;
-    } else if (HttpStatus::isServerError(status_code)) {
+    }
+    if (HttpStatus::isServerError(status_code)) {
         return AnalysisErrorCode::Server;
     }
     
