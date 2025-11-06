@@ -290,11 +290,18 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
+          # Install GCC 12 toolchain (including gcov-12) to match the compiler version
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
           sudo apt-get install -y \
             git \
             build-essential \
             libssl-dev \
             nlohmann-json3-dev \
+            gcc-12 \
+            g++-12 \
+            gcov-12 \
             gcovr \
             python3-pip
           pip3 install gcovr
@@ -321,6 +328,7 @@ jobs:
         run: |
           cd build
           gcovr -r .. \
+            --gcov-executable gcov-12 \
             --exclude-directories build_examples \
             --exclude test \
             --xml coverage.xml \
@@ -335,7 +343,7 @@ jobs:
           echo "Checking coverage for security-critical modules..."
           
           # Check RequestLogger (redaction)
-          REQUEST_LOGGER_COV=$(gcovr -r .. --filter ../src/RequestLogger.cpp --txt - | grep -E "lines|branches" | head -2 || echo "0%")
+          REQUEST_LOGGER_COV=$(gcovr -r .. --gcov-executable gcov-12 --filter ../src/RequestLogger.cpp --txt - | grep -E "lines|branches" | head -2 || echo "0%")
           echo "RequestLogger coverage:"
           echo "$REQUEST_LOGGER_COV"
           
