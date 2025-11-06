@@ -1,14 +1,16 @@
 #include "LLMEngine/RequestContextBuilder.hpp"
-#include "LLMEngine/LLMEngine.hpp"
+#include "LLMEngine/IModelContext.hpp"
 #include "LLMEngine/PromptBuilder.hpp"
 #include "LLMEngine/DebugArtifactManager.hpp"
 #include "LLMEngine/ParameterMerger.hpp"
+#include "LLMEngine/IArtifactSink.hpp"
 #include <sstream>
 #include <filesystem>
 #include <chrono>
 #include <thread>
 #include <random>
 #include <atomic>
+#include <stdexcept>
 
 namespace LLMEngine {
 
@@ -17,7 +19,17 @@ namespace {
     std::atomic<uint64_t> request_counter{0};
     
     // Thread-local random number generator for additional uniqueness
-    thread_local std::mt19937_64 rng(std::chrono::steady_clock::now().time_since_epoch().count());
+    // Seeded with a combination of time, thread ID, and random_device to ensure uniqueness
+    thread_local std::mt19937_64 rng = []() {
+        std::random_device rd;
+        std::seed_seq seed{
+            static_cast<uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count()),
+            std::hash<std::thread::id>{}(std::this_thread::get_id()),
+            static_cast<uint64_t>(rd()),
+            static_cast<uint64_t>(rd())
+        };
+        return std::mt19937_64(seed);
+    }();
     
     /**
      * @brief Generate a unique request directory name with collision avoidance.
@@ -60,7 +72,7 @@ namespace {
     }
 }
 
-RequestContext RequestContextBuilder::build(const LLMEngine& engine,
+RequestContext RequestContextBuilder::build(const IModelContext& context,
                                             std::string_view prompt,
                                             const nlohmann::json& input,
                                             std::string_view analysis_type,
@@ -69,16 +81,25 @@ RequestContext RequestContextBuilder::build(const LLMEngine& engine,
     RequestContext ctx;
     ctx.analysisType = std::string(analysis_type);
 
+    // Validate temp directory path before using it
+    const std::string temp_dir = context.getTempDirectory();
+    if (temp_dir.empty()) {
+        throw std::runtime_error("Temporary directory path is empty");
+    }
+    
     // Generate unique request directory name with collision avoidance
-    std::filesystem::path base = std::filesystem::path(engine.getTempDirectory()).lexically_normal();
+    std::filesystem::path base = std::filesystem::path(temp_dir).lexically_normal();
+    if (base.empty()) {
+        throw std::runtime_error("Invalid temporary directory path: " + temp_dir);
+    }
     ctx.requestTmpDir = generateUniqueRequestDirName(base);
 
-    // Prompt construction using engine's builders
+    // Prompt construction using context's builders
     std::string full_prompt;
-    if (prepend_terse_instruction && engine.getTersePromptBuilder()) {
-        full_prompt = engine.getTersePromptBuilder()->buildPrompt(prompt);
-    } else if (engine.getPassthroughPromptBuilder()) {
-        full_prompt = engine.getPassthroughPromptBuilder()->buildPrompt(prompt);
+    if (prepend_terse_instruction && context.getTersePromptBuilder()) {
+        full_prompt = context.getTersePromptBuilder()->buildPrompt(prompt);
+    } else if (context.getPassthroughPromptBuilder()) {
+        full_prompt = context.getPassthroughPromptBuilder()->buildPrompt(prompt);
     } else {
         PassthroughPromptBuilder fallback;
         full_prompt = fallback.buildPrompt(prompt);
@@ -87,18 +108,20 @@ RequestContext RequestContextBuilder::build(const LLMEngine& engine,
 
     // Parameters merge without an unnecessary initial copy
     nlohmann::json merged_params;
-    if (ParameterMerger::mergeInto(engine.getModelParams(), input, mode, merged_params)) {
+    if (ParameterMerger::mergeInto(context.getModelParams(), input, mode, merged_params)) {
         ctx.finalParams = std::move(merged_params);
     } else {
-        ctx.finalParams = engine.getModelParams();
+        ctx.finalParams = context.getModelParams();
     }
 
     // Determine debug artifacts writing and create manager if needed
-    ctx.writeDebugFiles = engine.areDebugFilesEnabled();
-    if (ctx.writeDebugFiles && engine.getArtifactSink()) {
-        engine.prepareTempDirectory();
-        auto loggerPtr = engine.getLogger() ? engine.getLogger().get() : nullptr;
-        ctx.debugManager = engine.getArtifactSink()->create(ctx.requestTmpDir, engine.getTempDirectory(), engine.getLogRetentionHours(), loggerPtr);
+    // Note: prepareTempDirectory() is already called in analyze() before building context,
+    // but we call it here as well for safety (it's idempotent and cached)
+    ctx.writeDebugFiles = context.areDebugFilesEnabled();
+    if (ctx.writeDebugFiles && context.getArtifactSink()) {
+        context.prepareTempDirectory();  // Ensure base directory exists (cached, idempotent)
+        auto loggerPtr = context.getLogger() ? context.getLogger().get() : nullptr;
+        ctx.debugManager = context.getArtifactSink()->create(ctx.requestTmpDir, context.getTempDirectory(), context.getLogRetentionHours(), loggerPtr);
         if (ctx.debugManager) {
             ctx.debugManager->ensureRequestDirectory();
         }

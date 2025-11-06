@@ -1,11 +1,12 @@
 #include "LLMEngine/ResponseHandler.hpp"
+#include "LLMEngine/Logger.hpp"  // Include before RequestLogger to get LogLevel definition
+#include "LLMEngine/APIClient.hpp"  // Include before RequestLogger to get APIResponse definition
 #include "LLMEngine/DebugArtifactManager.hpp"
 #include "LLMEngine/RequestLogger.hpp"
 #include "LLMEngine/ResponseParser.hpp"
-#include "LLMEngine/LLMEngine.hpp"
-#include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/ErrorCodes.hpp"
 #include "LLMEngine/HttpStatus.hpp"
+#include "LLMEngine/AnalysisResult.hpp"
 
 namespace LLMEngine {
 
@@ -55,10 +56,18 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
                                        std::string_view /*analysis_type*/,
                                        bool write_debug_files,
                                        Logger* logger) {
-
-    // Write API response artifact
+    // Write API response artifact with exception safety
+    // If artifact writing fails, log the error but continue processing
     if (debug_mgr) {
-        debug_mgr->writeApiResponse(api_response, !api_response.success);
+        try {
+            debug_mgr->writeApiResponse(api_response, !api_response.success);
+        } catch (const std::exception& e) {
+            RequestLogger::logSafe(logger, LogLevel::Warn, 
+                std::string("Failed to write API response artifact: ") + e.what());
+        } catch (...) {
+            RequestLogger::logSafe(logger, LogLevel::Warn, 
+                "Failed to write API response artifact: unknown error");
+        }
     }
 
     // Error path
@@ -84,9 +93,20 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
         return result;
     }
 
-    // Success
+    // Success path - write full response with exception safety
     const std::string& full_response = api_response.content;
-    if (debug_mgr) { debug_mgr->writeFullResponse(full_response); }
+    if (debug_mgr) {
+        try {
+            debug_mgr->writeFullResponse(full_response);
+        } catch (const std::exception& e) {
+            RequestLogger::logSafe(logger, LogLevel::Warn, 
+                std::string("Failed to write full response artifact: ") + e.what());
+        } catch (...) {
+            RequestLogger::logSafe(logger, LogLevel::Warn, 
+                "Failed to write full response artifact: unknown error");
+        }
+    }
+    
     const auto [think_section, remaining_section] = ResponseParser::parseResponse(full_response);
     AnalysisResult result{true, think_section, remaining_section, "", api_response.status_code};
     result.errorCode = LLMEngineErrorCode::None;

@@ -6,7 +6,7 @@ namespace LLMEngine {
 
 class DebugArtifactManager;
 struct Logger;
-struct AnalysisResult;
+struct AnalysisResult;  // Forward declaration - full definition in AnalysisResult.hpp
 
 }
 

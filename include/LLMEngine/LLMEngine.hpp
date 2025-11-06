@@ -21,44 +21,10 @@
 #include "LLMEngine/PromptBuilder.hpp"
 #include "LLMEngine/IRequestExecutor.hpp"
 #include "LLMEngine/IArtifactSink.hpp"
+#include "LLMEngine/IModelContext.hpp"
+#include "LLMEngine/AnalysisResult.hpp"
 
 namespace LLMEngine {
-
-// Backward compatibility alias - use LLMEngineErrorCode in new code
-using AnalysisErrorCode = LLMEngineErrorCode;
-
-struct LLMENGINE_EXPORT AnalysisResult {
-    bool success;
-    std::string think;
-    std::string content;
-    std::string errorMessage;
-    int statusCode;
-    
-    /**
-     * @brief Structured error code for programmatic error handling.
-     * 
-     * Use this instead of parsing errorMessage for error classification.
-     * Only valid when success == false.
-     */
-    LLMEngineErrorCode errorCode = LLMEngineErrorCode::None;
-    
-    /**
-     * @brief Check if the result represents a specific error type.
-     */
-    [[nodiscard]] bool hasError(AnalysisErrorCode code) const {
-        return !success && errorCode == code;
-    }
-    
-    /**
-     * @brief Check if the result is a retriable error (network, timeout, server, rate limit).
-     */
-    [[nodiscard]] bool isRetriableError() const {
-        return !success && (errorCode == LLMEngineErrorCode::Network ||
-                           errorCode == LLMEngineErrorCode::Timeout ||
-                           errorCode == LLMEngineErrorCode::Server ||
-                           errorCode == LLMEngineErrorCode::RateLimited);
-    }
-};
 
 /**
  * @brief High-level interface for interacting with LLM providers.
@@ -104,7 +70,7 @@ struct LLMENGINE_EXPORT AnalysisResult {
  * });
  * ```
  */
-class LLMENGINE_EXPORT LLMEngine {
+class LLMENGINE_EXPORT LLMEngine : public IModelContext {
 public:
     // Constructor for API-based providers
     /**
@@ -231,12 +197,12 @@ public:
     /** @brief True if using an online provider (not local Ollama). */
     [[nodiscard]] bool isOnlineProvider() const;
     
-    // Narrow accessors for collaborators/state (to reduce friend coupling)
-    [[nodiscard]] std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const { return terse_prompt_builder_; }
-    [[nodiscard]] std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const { return passthrough_prompt_builder_; }
-    [[nodiscard]] const nlohmann::json& getModelParams() const { return model_params_; }
-    [[nodiscard]] bool isDebugEnabled() const { return debug_; }
-    [[nodiscard]] bool areDebugFilesEnabled() const {
+    // IModelContext interface implementation
+    [[nodiscard]] std::string getTempDirectory() const override;
+    [[nodiscard]] std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override { return terse_prompt_builder_; }
+    [[nodiscard]] std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override { return passthrough_prompt_builder_; }
+    [[nodiscard]] const nlohmann::json& getModelParams() const override { return model_params_; }
+    [[nodiscard]] bool areDebugFilesEnabled() const override {
         if (!debug_) return false;
         if (debug_files_policy_) {
             return debug_files_policy_();
@@ -244,12 +210,13 @@ public:
         // Use cached value to avoid repeated getenv calls on hot paths
         return !disable_debug_files_env_cached_;
     }
-    [[nodiscard]] std::shared_ptr<IArtifactSink> getArtifactSink() const { return artifact_sink_; }
-    [[nodiscard]] int getLogRetentionHours() const { return log_retention_hours_; }
-    [[nodiscard]] std::shared_ptr<Logger> getLogger() const { return logger_; }
+    [[nodiscard]] std::shared_ptr<IArtifactSink> getArtifactSink() const override { return artifact_sink_; }
+    [[nodiscard]] int getLogRetentionHours() const override { return log_retention_hours_; }
+    [[nodiscard]] std::shared_ptr<Logger> getLogger() const override { return logger_; }
+    void prepareTempDirectory() const override { ensureSecureTmpDir(); }
     
-    // Expose safe preparation of temp directory without revealing internals
-    void prepareTempDirectory() const { ensureSecureTmpDir(); }
+    // Additional accessors (not part of IModelContext)
+    [[nodiscard]] bool isDebugEnabled() const { return debug_; }
     
     // Temporary directory configuration
     /**
@@ -266,15 +233,6 @@ public:
      */
     [[nodiscard]] bool setTempDirectory(const std::string& tmp_dir);
     
-    /**
-     * @brief Get the current temporary directory path.
-     * 
-     * **Thread Safety:** This method is thread-safe for read access, but LLMEngine
-     * itself is not thread-safe, so concurrent access should be avoided.
-     * 
-     * @return Current temporary directory path
-     */
-    [[nodiscard]] std::string getTempDirectory() const;
     
     // Logging
     /**

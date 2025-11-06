@@ -3,10 +3,10 @@
 #include <nlohmann/json.hpp>
 #include <memory>
 #include "LLMEngine/DebugArtifactManager.hpp"
+#include "LLMEngine/IModelContext.hpp"
 
 namespace LLMEngine {
 
-class LLMEngine;
 struct Logger;
 
 struct RequestContext {
@@ -20,7 +20,7 @@ struct RequestContext {
 
 class RequestContextBuilder {
 public:
-    static RequestContext build(const LLMEngine& engine,
+    static RequestContext build(const IModelContext& context,
                                 std::string_view prompt,
                                 const nlohmann::json& input,
                                 std::string_view analysis_type,

@@ -179,8 +179,11 @@ LLM::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt,
                                   std::string_view analysis_type, 
                                   std::string_view mode,
                                   bool prepend_terse_instruction) const {
-    // Build request context
-    RequestContext ctx = RequestContextBuilder::build(*this, prompt, input, analysis_type, mode, prepend_terse_instruction);
+    // Ensure temp directory is prepared before building context (RAII enforcement)
+    ensureSecureTmpDir();
+    
+    // Build request context (using IModelContext interface to break cyclic dependency)
+    RequestContext ctx = RequestContextBuilder::build(static_cast<const IModelContext&>(*this), prompt, input, analysis_type, mode, prepend_terse_instruction);
 
     // Execute request via injected executor
     LLMAPI::APIResponse api_response;

@@ -63,6 +63,8 @@ bool ParameterMerger::mergeInto(
         if (val.type() == expected) {
             out[key] = val;
         }
+        // Type mismatch: silently ignore invalid types (defensive programming)
+        // Could log a warning here if logger was available
     }
 
     if (!mode.empty()) {
