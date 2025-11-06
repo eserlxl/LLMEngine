@@ -292,12 +292,25 @@ public:
     /**
      * @brief Inject a policy to determine whether debug files should be written.
      *
-     * If not set, the engine performs a per-request environment check of
-     * LLMENGINE_DISABLE_DEBUG_FILES. Supplying a policy allows tests and
-     * long-lived services to toggle behavior without rebuilding the engine.
+     * If not set, the engine uses the cached value of LLMENGINE_DISABLE_DEBUG_FILES
+     * read at construction time. Supplying a policy allows tests and long-lived
+     * services to toggle behavior at runtime without rebuilding the engine.
      */
     void setDebugFilesPolicy(std::function<bool()> policy) {
         debug_files_policy_ = std::move(policy);
+    }
+    
+    /**
+     * @brief Set whether debug files are enabled at runtime.
+     *
+     * This method allows runtime control over debug file writing, overriding
+     * both the cached environment variable value and any injected policy.
+     * Useful for dynamic toggling without environment variable changes.
+     *
+     * @param enabled True to enable debug files, false to disable
+     */
+    void setDebugFilesEnabled(bool enabled) {
+        debug_files_policy_ = [enabled]() { return enabled; };
     }
     
     // Dependency injection setters

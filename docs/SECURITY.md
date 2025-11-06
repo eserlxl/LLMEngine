@@ -41,26 +41,29 @@ setenv("LLMENGINE_DISABLE_DEBUG_FILES", "1", 1);
 
 #### Debug Files Environment Variable Caching Strategy
 
-LLMEngine uses a hybrid approach for checking `LLMENGINE_DISABLE_DEBUG_FILES`:
+LLMEngine caches the `LLMENGINE_DISABLE_DEBUG_FILES` environment variable value at construction time:
 
 **Caching Behavior:**
 - The environment variable is read once at `LLMEngine` construction time and cached in `disable_debug_files_env_cached_`
-- Per-request checks (`areDebugFilesEnabled()`) also check the environment variable if no policy is injected
-- This provides a balance between performance and runtime flexibility
+- Per-request checks (`areDebugFilesEnabled()`) use the cached value if no policy is injected
+- This avoids repeated `std::getenv()` calls on hot paths
 
-**Tradeoffs:**
-- **Cached at construction**: Fast checks without repeated `getenv()` calls
-- **Per-request fallback**: If no policy is set, each request checks the environment variable, allowing runtime toggling
-- **Policy injection**: For long-lived services, inject a policy via `setDebugFilesPolicy()` to avoid per-request environment checks
+**Runtime Control:**
+- **Policy injection**: Use `setDebugFilesPolicy()` to inject a custom policy function for dynamic control
+- **Direct setter**: Use `setDebugFilesEnabled(bool)` for simple runtime toggling
+- **Read-once semantics**: Changes to the environment variable after construction are not reflected unless a policy is used
 
 **Recommendations:**
-- **For tests**: Use `setDebugFilesPolicy()` to control behavior without environment variable dependencies
-- **For long-lived services**: Inject a policy to avoid repeated environment checks
-- **For runtime toggling**: The per-request check allows operators to disable debug files without restarting the service
+- **For tests**: Use `setDebugFilesEnabled(false)` or `setDebugFilesPolicy()` to control behavior without environment variable dependencies
+- **For long-lived services**: Use `setDebugFilesPolicy()` with a configuration-based policy for runtime control
+- **For runtime toggling**: Use `setDebugFilesEnabled()` or inject a policy that checks a configuration source
 
 **Example:**
 ```cpp
-// Long-lived service: inject policy to avoid per-request env checks
+// Simple runtime toggle
+engine.setDebugFilesEnabled(false);
+
+// Long-lived service: inject policy for dynamic control
 auto debug_policy = []() { return std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") == nullptr; };
 engine.setDebugFilesPolicy(debug_policy);
 
