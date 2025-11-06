@@ -11,6 +11,7 @@
 #include "LLMEngine/LLMEngineExport.hpp"
 
 namespace LLMEngine {
+    class Logger;  // Forward declaration
 
 /**
  * @brief Merges model parameters with input overrides.
@@ -62,6 +63,7 @@ public:
      * @param input Input overrides
      * @param mode Optional mode override
      * @param out Output object receiving merged params when changes are needed
+     * @param logger Optional logger for warning messages when type mismatches occur
      * @return true if changes were applied and 'out' was written, false if no changes were needed
      * 
      * @example
@@ -69,7 +71,7 @@ public:
      * nlohmann::json base = {{"temperature", 0.7}};
      * nlohmann::json input = {{"max_tokens", 2000}};
      * nlohmann::json result;
-     * if (ParameterMerger::mergeInto(base, input, "", result)) {
+     * if (ParameterMerger::mergeInto(base, input, "", result, logger)) {
      *     // result contains merged parameters
      *     // Use result instead of base
      * } else {
@@ -81,7 +83,8 @@ public:
         const nlohmann::json& base_params,
         const nlohmann::json& input,
         std::string_view mode,
-        nlohmann::json& out);
+        nlohmann::json& out,
+        Logger* logger = nullptr);
 };
 
 } // namespace LLMEngine

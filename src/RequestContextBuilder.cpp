@@ -18,17 +18,34 @@ namespace {
     // Thread-safe counter for request uniqueness within the same millisecond
     std::atomic<uint64_t> request_counter{0};
     
-    // Thread-local random number generator for additional uniqueness
-    // Seeded with a combination of time, thread ID, and random_device to ensure uniqueness
-    thread_local std::mt19937_64 rng = []() {
+    // Process-wide PRNG seeded once at startup to avoid blocking on /dev/random
+    // under entropy pressure. Each thread uses this with a thread-specific offset.
+    std::mt19937_64 process_rng = []() {
         std::random_device rd;
         std::seed_seq seed{
             static_cast<uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count()),
-            std::hash<std::thread::id>{}(std::this_thread::get_id()),
             static_cast<uint64_t>(rd()),
             static_cast<uint64_t>(rd())
         };
         return std::mt19937_64(seed);
+    }();
+    
+    // Thread-local offset for uniqueness per thread without reseeding
+    thread_local uint64_t thread_offset = []() {
+        return std::hash<std::thread::id>{}(std::this_thread::get_id());
+    }();
+    
+    // Thread-local random number generator initialized once per thread
+    // Uses process-wide PRNG state with thread-specific offset for uniqueness
+    thread_local std::mt19937_64 rng = []() {
+        // Initialize with process seed plus thread offset
+        std::mt19937_64 local_rng(process_rng());
+        // Mix in thread-specific offset
+        for (int i = 0; i < 10; ++i) {
+            local_rng();  // Discard some values to mix state
+        }
+        local_rng.seed(process_rng() ^ thread_offset);
+        return local_rng;
     }();
     
     /**
@@ -108,7 +125,8 @@ RequestContext RequestContextBuilder::build(const IModelContext& context,
 
     // Parameters merge without an unnecessary initial copy
     nlohmann::json merged_params;
-    if (ParameterMerger::mergeInto(context.getModelParams(), input, mode, merged_params)) {
+    Logger* logger = context.getLogger() ? context.getLogger().get() : nullptr;
+    if (ParameterMerger::mergeInto(context.getModelParams(), input, mode, merged_params, logger)) {
         ctx.finalParams = std::move(merged_params);
     } else {
         ctx.finalParams = context.getModelParams();

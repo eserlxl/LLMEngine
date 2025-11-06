@@ -47,9 +47,16 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
 
         // SSL verification toggle (default: false for local Ollama, which often uses self-signed certs)
         // Set verify_ssl=true in params if you want to enforce SSL verification
+        // SECURITY: Log when verification is disabled to prevent accidental use in production
         bool verify_ssl = false;
         if (params.contains("verify_ssl") && params.at("verify_ssl").is_boolean()) {
             verify_ssl = params.at("verify_ssl").get<bool>();
+        }
+        if (!verify_ssl) {
+            // Log when TLS verification is disabled (Ollama defaults to false for local use)
+            // This helps prevent accidental use in production environments
+            std::cerr << "[LLMEngine SECURITY WARNING] TLS verification is DISABLED for Ollama request. "
+                      << "This is acceptable for local development but should be enabled in production.\n";
         }
 
         auto post_json = [&, verify_ssl](const std::string& url, const nlohmann::json& payload, int timeout_seconds) -> cpr::Response {

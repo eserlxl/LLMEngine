@@ -142,7 +142,36 @@ cd LLMEngine
 ./build.sh
 ```
 
-For detailed build instructions, dependencies, and build options, see [docs/BUILD.md](docs/BUILD.md).
+### Building from Source
+
+The project uses CMake with several build configuration options. Key options include:
+
+- **`DEBUG_MODE`** (OFF): Enable debug build flags (`-O0 -g`)
+- **`PERFORMANCE_BUILD`** (OFF): Enable performance-optimized flags (`-O3`)
+  - **Note:** `DEBUG_MODE` and `PERFORMANCE_BUILD` are mutually exclusive
+- **`BUILD_TESTING`** (ON): Build tests and enable CTest
+- **`ENABLE_EXAMPLES`** (ON): Build example programs
+- **`WARNING_MODE`** (ON): Enable extra compiler warnings
+- **`ENABLE_SANITIZERS`** (OFF): Enable Address/Undefined sanitizers in debug builds
+- **`LLM_DISABLE_FETCHCONTENT`** (OFF): Disable FetchContent; require system packages
+
+Example build configurations:
+
+```bash
+# Debug build with sanitizers
+cmake -S . -B build_debug -DDEBUG_MODE=ON -DENABLE_SANITIZERS=ON
+cmake --build build_debug -j20
+
+# Performance-optimized build
+cmake -S . -B build_perf -DPERFORMANCE_BUILD=ON -DENABLE_NATIVE_OPTIMIZATION=ON
+cmake --build build_perf -j20
+
+# Release build (default)
+cmake -S . -B build_release
+cmake --build build_release -j20
+```
+
+For detailed build instructions, dependencies, and all build options, see [docs/BUILD.md](docs/BUILD.md).
 
 [↑ Back to top](#llmengine)
 

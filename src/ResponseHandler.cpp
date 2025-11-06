@@ -61,6 +61,9 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
     if (debug_mgr) {
         try {
             debug_mgr->writeApiResponse(api_response, !api_response.success);
+            // Trigger cleanup after writing API response to enforce retention consistently
+            // This ensures cleanup runs even when requests fail before think/content artifacts are produced
+            debug_mgr->performCleanup();
         } catch (const std::exception& e) {
             RequestLogger::logSafe(logger, LogLevel::Warn, 
                 std::string("Failed to write API response artifact: ") + e.what());

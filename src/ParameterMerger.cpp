@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/ParameterMerger.hpp"
+#include "LLMEngine/Logger.hpp"
 
 namespace LLMEngine {
 
@@ -14,7 +15,7 @@ nlohmann::json ParameterMerger::merge(
     const nlohmann::json& input,
     std::string_view mode) {
     nlohmann::json out;
-    const bool changed = mergeInto(base_params, input, mode, out);
+    const bool changed = mergeInto(base_params, input, mode, out, nullptr);
     if (!changed) {
         return base_params;
     }
@@ -25,7 +26,8 @@ bool ParameterMerger::mergeInto(
     const nlohmann::json& base_params,
     const nlohmann::json& input,
     std::string_view mode,
-    nlohmann::json& out) {
+    nlohmann::json& out,
+    Logger* logger) {
     // Allow-list of overridable keys and expected types
     static const std::vector<std::pair<const char*, nlohmann::json::value_t>> allowed_keys = {
         {"max_tokens", nlohmann::json::value_t::number_integer},
@@ -62,9 +64,26 @@ bool ParameterMerger::mergeInto(
         }
         if (val.type() == expected) {
             out[key] = val;
+        } else {
+            // Type mismatch: log warning to help users understand why override was dropped
+            if (logger) {
+                std::string expected_type_str;
+                switch (expected) {
+                    case nlohmann::json::value_t::number_integer:
+                        expected_type_str = "integer";
+                        break;
+                    case nlohmann::json::value_t::number_float:
+                        expected_type_str = "float";
+                        break;
+                    default:
+                        expected_type_str = "unknown";
+                        break;
+                }
+                logger->log(LogLevel::Warn, 
+                    "Parameter override '" + std::string(key) + "' has incorrect type (expected " + 
+                    expected_type_str + "), ignoring override");
+            }
         }
-        // Type mismatch: silently ignore invalid types (defensive programming)
-        // Could log a warning here if logger was available
     }
 
     if (!mode.empty()) {

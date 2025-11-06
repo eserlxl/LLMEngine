@@ -88,14 +88,19 @@ struct ChatCompletionRequestHelper {
             RetrySettings rs = computeRetrySettings(params, cfg, exponential_retry);
             
             // Merge default params with provided params
-            // Optimize: avoid copy when params is empty
-            nlohmann::json request_params;
+            // Optimize: avoid copy when params is empty by using const reference
+            const nlohmann::json* request_params_ptr;
+            nlohmann::json request_params_merged;
             if (params.empty() || params.is_null()) {
-                request_params = default_params;  // Copy only when needed
+                // No overrides: use default_params directly without copying
+                request_params_ptr = &default_params;
             } else {
-                request_params = default_params;  // Copy base
-                request_params.update(params);    // Apply overrides
+                // Overrides present: merge into a copy
+                request_params_merged = default_params;
+                request_params_merged.update(params);
+                request_params_ptr = &request_params_merged;
             }
+            const nlohmann::json& request_params = *request_params_ptr;
             
             // Build provider-specific payload once and cache serialized body for retries
             nlohmann::json payload = buildPayload(request_params);
@@ -124,14 +129,26 @@ struct ChatCompletionRequestHelper {
             if (connect_timeout_ms > 120000) connect_timeout_ms = 120000; // cap at 120s
 
             // SSL verification toggle (default: true)
+            // SECURITY: Log prominently when verification is disabled to prevent accidental use in production
             bool verify_ssl = true;
             if (params.contains("verify_ssl") && params.at("verify_ssl").is_boolean()) {
                 verify_ssl = params.at("verify_ssl").get<bool>();
+                if (!verify_ssl) {
+                    // Log prominently when TLS verification is disabled
+                    // This helps prevent accidental use in production environments
+                    std::cerr << "[LLMEngine SECURITY WARNING] TLS verification is DISABLED for this request. "
+                              << "This should only be used in development/testing environments. "
+                              << "Disabling TLS verification in production exposes the application to man-in-the-middle attacks.\n";
+                }
             }
             
-            // Build provider-specific URL and headers
+            // Build provider-specific URL and headers once before retries
+            // Headers are typically cached by the client, so we capture the reference/const reference
+            // to avoid redundant allocations in tight retry loops
             const std::string url = buildUrl();
             const std::map<std::string, std::string> headers = buildHeaders();
+            // Pre-allocate cpr::Header once to avoid repeated map iteration in retry loop
+            const cpr::Header cpr_headers{headers.begin(), headers.end()};
             
             // Log request if enabled (with capped, redacted body when explicitly requested)
             maybeLogRequestWithBody("POST", url, headers, serialized_body);
@@ -141,7 +158,7 @@ struct ChatCompletionRequestHelper {
                 if (connect_timeout_ms > 0) {
                     return cpr::Post(
                         cpr::Url{url},
-                        cpr::Header{headers.begin(), headers.end()},
+                        cpr_headers,
                         cpr::Body{serialized_body},
                         cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
                         cpr::VerifySsl{verify_ssl},
@@ -150,7 +167,7 @@ struct ChatCompletionRequestHelper {
                 } else {
                     return cpr::Post(
                         cpr::Url{url},
-                        cpr::Header{headers.begin(), headers.end()},
+                        cpr_headers,
                         cpr::Body{serialized_body},
                         cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
                         cpr::VerifySsl{verify_ssl}

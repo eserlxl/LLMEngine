@@ -136,6 +136,21 @@ namespace {
 }
 
 void ::LLMEngine::LLMEngine::initializeAPIClient() {
+    // SECURITY: Validate API key for cloud providers before instantiating HTTP client
+    // This fails fast during setup instead of deferring credential bugs to runtime 401s
+    if (provider_type_ != LLMAPI::ProviderType::OLLAMA) {
+        if (api_key_.empty()) {
+            std::string env_var_name = ProviderBootstrap::getApiKeyEnvVarName(provider_type_);
+            std::string error_msg = "No API key found for provider " + 
+                                   std::string(LLMAPI::APIClientFactory::providerTypeToString(provider_type_)) + ". "
+                                   + "Set the " + env_var_name + " environment variable or provide it in the constructor.";
+            if (logger_) {
+                logger_->log(LLM::LogLevel::Error, error_msg);
+            }
+            throw std::runtime_error(error_msg);
+        }
+    }
+    
     if (provider_type_ == LLMAPI::ProviderType::OLLAMA) {
         api_client_ = LLMAPI::APIClientFactory::createClient(
             provider_type_, "", model_, ollama_url_, config_manager_);
