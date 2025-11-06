@@ -355,7 +355,7 @@ jobs:
             --xml-version=2 \
             --output-file=cppcheck-report.xml \
             --project=build/compile_commands.json \
-            src/ include/ 2>&1 | tee cppcheck-output.txt || true
+            2>&1 | tee cppcheck-output.txt || true
           # Check if there are any errors (not warnings)
           if grep -i "error:" cppcheck-output.txt; then
             echo "cppcheck found errors!"
