@@ -51,7 +51,7 @@ if (_need_include)
     # Try to find the target in the build tree directly
     if (TARGET @PROJECT_NAME@)
       message(STATUS "LLMEngine: Using build-tree target directly (dependencies were fetched via FetchContent)")
-    else
+    else()
       # Provide helpful guidance instead of fatal error
       message(WARNING "LLMEngine Targets.cmake not found and build-tree targets not available. "
                       "This typically occurs when dependencies were fetched via FetchContent. "
