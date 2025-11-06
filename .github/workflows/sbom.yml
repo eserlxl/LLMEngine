@@ -52,17 +52,19 @@ jobs:
       - name: Generate dependency digest
         run: |
           # Create a simple dependency digest for verification
-          echo "# LLMEngine Dependency Digest" > dependency-digest.txt
-          echo "Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> dependency-digest.txt
-          echo "Commit: ${{ github.sha }}" >> dependency-digest.txt
-          echo "" >> dependency-digest.txt
-          echo "## CMake Dependencies" >> dependency-digest.txt
-          grep -E "find_package|FetchContent" CMakeLists.txt | head -20 >> dependency-digest.txt || true
-          echo "" >> dependency-digest.txt
-          echo "## External Dependencies" >> dependency-digest.txt
-          echo "- nlohmann_json (v3.11.3)" >> dependency-digest.txt
-          echo "- cpr (latest)" >> dependency-digest.txt
-          echo "- OpenSSL (system)" >> dependency-digest.txt
+          {
+            echo "# LLMEngine Dependency Digest"
+            echo "Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "Commit: ${{ github.sha }}"
+            echo ""
+            echo "## CMake Dependencies"
+            grep -E "find_package|FetchContent" CMakeLists.txt | head -20 || true
+            echo ""
+            echo "## External Dependencies"
+            echo "- nlohmann_json (v3.11.3)"
+            echo "- cpr (latest)"
+            echo "- OpenSSL (system)"
+          } > dependency-digest.txt
 
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v4
