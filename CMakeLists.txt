@@ -441,10 +441,22 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 # exportable and prevent CMake validation errors, but consumers should still use
 # find_dependency() to get them via Config.cmake.
 
-# Simplified install logic: only install project targets
-# FetchContent dependencies are linked PRIVATE, so they don't need to be in the export set
-# Consumers will provide their own dependencies via find_dependency() in Config.cmake
-install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_compile_options
+# Install project targets and FetchContent dependencies (if fetched) into export set
+# CMake requires all dependencies to be exportable, even when linked PRIVATE
+# Consumers should still use find_dependency() to get dependencies via Config.cmake
+set(_targets_to_install ${PROJECT_NAME} ${PROJECT_NAME}_compile_options)
+
+# Add FetchContent dependencies to export set if they were fetched
+# This is required for CMake export validation, even though they're linked PRIVATE
+if (NLOHMANN_JSON_FETCHED AND TARGET nlohmann_json::nlohmann_json)
+  list(APPEND _targets_to_install nlohmann_json::nlohmann_json)
+endif()
+
+if (CPR_FETCHED AND TARGET cpr::cpr)
+  list(APPEND _targets_to_install cpr::cpr)
+endif()
+
+install(TARGETS ${_targets_to_install}
   EXPORT ${PROJECT_NAME}Targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -517,14 +529,12 @@ install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
-# Always install export set for our own targets
-# Note: install(EXPORT) also generates export files at configure time,
-# so INTERFACE_LINK_LIBRARIES must still be filtered at this point
+# Always install export set for our own targets and FetchContent dependencies
+# Note: install(EXPORT) also generates export files at configure time
+# FetchContent dependencies are included in the export set to satisfy CMake validation
 install(EXPORT ${PROJECT_NAME}Targets
   NAMESPACE ${PROJECT_NAME_LOWER}::
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
-
-# No INTERFACE_LINK_LIBRARIES restoration needed since we link PRIVATE for FetchContent dependencies
 
 # ---- pkg-config ---------------------------------------------------------------
 configure_file(
