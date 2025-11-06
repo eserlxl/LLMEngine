@@ -16,6 +16,7 @@
 
 // Ensure export macros are available
 #include "LLMEngine/LLMEngineExport.hpp"
+#include "LLMEngine/ErrorCodes.hpp"
 #include "LLMEngine/Logger.hpp"
 #include "LLMEngine/IConfigManager.hpp"
 
@@ -49,16 +50,11 @@ struct APIResponse {
     std::string error_message;
     int status_code;
     nlohmann::json raw_response;
-    enum class APIError {
-        None,
-        Network,
-        Timeout,
-        InvalidResponse,
-        Auth,
-        RateLimited,
-        Server,
-        Unknown
-    } error_code = APIError::None;
+    
+    // Use unified error code enum
+    // Backward compatibility: APIError is an alias for LLMEngineErrorCode
+    using APIError = ::LLMEngine::LLMEngineErrorCode;
+    LLMEngine::LLMEngineErrorCode error_code = LLMEngine::LLMEngineErrorCode::None;
 };
 
 /**
@@ -107,8 +103,14 @@ public:
     virtual void setConfig(std::shared_ptr<IConfigManager>) {}
 };
 
+// Forward declaration for OpenAICompatibleClient (implementation in src/)
+// Note: OpenAICompatibleClient is an internal implementation detail
+// QwenClient and OpenAIClient inherit from it but expose APIClient interface
+
 /**
  * @brief Qwen (DashScope) client.
+ * 
+ * Uses OpenAICompatibleClient internally to share common OpenAI-compatible API logic.
  */
 class LLMENGINE_EXPORT QwenClient : public APIClient {
 public:
@@ -117,23 +119,23 @@ public:
      * @param model Default model, e.g. "qwen-flash".
      */
     QwenClient(const std::string& api_key, const std::string& model = "qwen-flash");
+    ~QwenClient();
     APIResponse sendRequest(std::string_view prompt, 
                            const nlohmann::json& input,
                            const nlohmann::json& params) const override;
     std::string getProviderName() const override { return "Qwen"; }
     ProviderType getProviderType() const override { return ProviderType::QWEN; }
-    void setConfig(std::shared_ptr<IConfigManager> cfg) override { config_ = std::move(cfg); }
+    void setConfig(std::shared_ptr<IConfigManager> cfg) override;
 
 private:
-    std::string api_key_;
-    std::string model_;
-    std::string base_url_;
-    nlohmann::json default_params_;
-    std::shared_ptr<IConfigManager> config_;
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 /**
  * @brief OpenAI client.
+ * 
+ * Uses OpenAICompatibleClient internally to share common OpenAI-compatible API logic.
  */
 class LLMENGINE_EXPORT OpenAIClient : public APIClient {
 public:
@@ -142,19 +144,17 @@ public:
      * @param model Default model, e.g. "gpt-3.5-turbo".
      */
     OpenAIClient(const std::string& api_key, const std::string& model = "gpt-3.5-turbo");
+    ~OpenAIClient();
     APIResponse sendRequest(std::string_view prompt, 
                            const nlohmann::json& input,
                            const nlohmann::json& params) const override;
     std::string getProviderName() const override { return "OpenAI"; }
     ProviderType getProviderType() const override { return ProviderType::OPENAI; }
-    void setConfig(std::shared_ptr<IConfigManager> cfg) override { config_ = std::move(cfg); }
+    void setConfig(std::shared_ptr<IConfigManager> cfg) override;
 
 private:
-    std::string api_key_;
-    std::string model_;
-    std::string base_url_;
-    nlohmann::json default_params_;
-    std::shared_ptr<IConfigManager> config_;
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 /**

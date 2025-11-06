@@ -82,7 +82,7 @@ struct ChatCompletionRequestHelper {
         
         APIResponse response;
         response.success = false;
-        response.error_code = APIResponse::APIError::Unknown;
+        response.error_code = LLMEngine::LLMEngineErrorCode::Unknown;
         
         try {
             RetrySettings rs = computeRetrySettings(params, cfg, exponential_retry);
@@ -162,18 +162,18 @@ struct ChatCompletionRequestHelper {
                     parseResponse(response, cpr_response.text);
                 } catch (const nlohmann::json::parse_error& e) {
                     response.error_message = "JSON parse error in successful response: " + std::string(e.what());
-                    response.error_code = APIResponse::APIError::InvalidResponse;
+                    response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                 }
             } else {
                 // For error responses, attempt to parse JSON but don't fail if it's not JSON
                 response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
                 if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED || 
                     cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
-                    response.error_code = APIResponse::APIError::Auth;
+                    response.error_code = LLMEngine::LLMEngineErrorCode::Auth;
                 } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
-                    response.error_code = APIResponse::APIError::RateLimited;
+                    response.error_code = LLMEngine::LLMEngineErrorCode::RateLimited;
                 } else {
-                    response.error_code = APIResponse::APIError::Server;
+                    response.error_code = LLMEngine::LLMEngineErrorCode::Server;
                 }
                 
                 // Attempt to parse error response JSON if available
@@ -188,10 +188,10 @@ struct ChatCompletionRequestHelper {
             
         } catch (const nlohmann::json::parse_error& e) {
             response.error_message = "JSON parse error: " + std::string(e.what());
-            response.error_code = APIResponse::APIError::InvalidResponse;
+            response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
         } catch (const std::exception& e) {
             response.error_message = "Exception: " + std::string(e.what());
-            response.error_code = APIResponse::APIError::Network;
+            response.error_code = LLMEngine::LLMEngineErrorCode::Network;
         }
         
         return response;

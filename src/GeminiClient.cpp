@@ -95,7 +95,7 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
         if (cpr_response.status_code == ::LLMEngine::HttpStatus::OK) {
             if (cpr_response.text.empty()) {
                 response.error_message = "Empty response from server";
-                response.error_code = APIResponse::APIError::InvalidResponse;
+                response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
             } else {
                 try {
                     response.raw_response = nlohmann::json::parse(cpr_response.text);
@@ -116,26 +116,26 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
                             response.success = true;
                         } else {
                             response.error_message = "No text content in response";
-                            response.error_code = APIResponse::APIError::InvalidResponse;
+                            response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                         }
                     } else {
                         response.error_message = "Invalid response format";
-                        response.error_code = APIResponse::APIError::InvalidResponse;
+                        response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                     }
                 } catch (const nlohmann::json::parse_error& e) {
                     response.error_message = std::string("JSON parse error: ") + e.what();
-                    response.error_code = APIResponse::APIError::InvalidResponse;
+                    response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                 }
             }
         } else {
             response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
             if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED || 
                 cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
-                response.error_code = APIResponse::APIError::Auth;
+                response.error_code = LLMEngine::LLMEngineErrorCode::Auth;
             } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
-                response.error_code = APIResponse::APIError::RateLimited;
+                response.error_code = LLMEngine::LLMEngineErrorCode::RateLimited;
             } else {
-                response.error_code = APIResponse::APIError::Server;
+                response.error_code = LLMEngine::LLMEngineErrorCode::Server;
             }
             try {
                 response.raw_response = nlohmann::json::parse(cpr_response.text);
@@ -146,7 +146,7 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
 
     } catch (const std::exception& e) {
         response.error_message = "Exception: " + std::string(e.what());
-        response.error_code = APIResponse::APIError::Network;
+        response.error_code = LLMEngine::LLMEngineErrorCode::Network;
     }
 
     return response;

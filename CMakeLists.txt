@@ -262,6 +262,7 @@ add_library(${PROJECT_NAME}
     src/LLMEngine.cpp
     src/Utils.cpp
     src/APIClient.cpp
+    src/OpenAICompatibleClient.cpp
     src/QwenClient.cpp
     src/OpenAIClient.cpp
     src/AnthropicClient.cpp

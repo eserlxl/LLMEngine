@@ -105,15 +105,15 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
                         response.success = true;
                     } else {
                         response.error_message = "No text content in response";
-                        response.error_code = APIResponse::APIError::InvalidResponse;
+                        response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                     }
                 } else {
                     response.error_message = "Invalid response format";
-                    response.error_code = APIResponse::APIError::InvalidResponse;
+                    response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                 }
             } catch (const nlohmann::json::parse_error& e) {
                 response.error_message = "JSON parse error: " + std::string(e.what());
-                response.error_code = APIResponse::APIError::InvalidResponse;
+                response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
             }
         } else {
             // Handle error responses - try to parse JSON for structured error messages
@@ -128,23 +128,23 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
             // Classify error based on HTTP status code
             if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED || 
                 cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
-                response.error_code = APIResponse::APIError::Auth;
+                response.error_code = LLMEngine::LLMEngineErrorCode::Auth;
             } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
-                response.error_code = APIResponse::APIError::RateLimited;
+                response.error_code = LLMEngine::LLMEngineErrorCode::RateLimited;
             } else if (::LLMEngine::HttpStatus::isServerError(static_cast<int>(cpr_response.status_code))) {
-                response.error_code = APIResponse::APIError::Server;
+                response.error_code = LLMEngine::LLMEngineErrorCode::Server;
             } else {
-                response.error_code = APIResponse::APIError::Unknown;
+                response.error_code = LLMEngine::LLMEngineErrorCode::Unknown;
             }
         }
         
     } catch (const nlohmann::json::parse_error& e) {
         // This catch block should rarely be reached now, but kept for safety
         response.error_message = "JSON parse error: " + std::string(e.what());
-        response.error_code = APIResponse::APIError::InvalidResponse;
+        response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
     } catch (const std::exception& e) {
         response.error_message = "Exception: " + std::string(e.what());
-        response.error_code = APIResponse::APIError::Network;
+        response.error_code = LLMEngine::LLMEngineErrorCode::Network;
     }
     
     return response;

@@ -18,8 +18,6 @@
 #include <stdexcept>
 #include <system_error>
 
-// (orchestration helpers removed; analyze now directly coordinates collaborators)
-
 // Dependency injection constructor
 LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
                      const nlohmann::json& model_params,
@@ -205,9 +203,6 @@ void LLMEngine::LLMEngine::ensureSecureTmpDir() const {
     }
 }
 
-// Removed legacy cleanup hook; per-request directories are managed by DebugArtifactManager
-
-
 ::LLMEngine::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt, 
                                   const nlohmann::json& input, 
                                   std::string_view analysis_type, 
@@ -225,7 +220,7 @@ void LLMEngine::LLMEngine::ensureSecureTmpDir() const {
             logger_->log(::LLMEngine::LogLevel::Error, "Request executor not configured");
         }
         ::LLMEngine::AnalysisResult result{false, "", "", "Request executor not configured", HttpStatus::INTERNAL_SERVER_ERROR};
-        result.errorCode = AnalysisErrorCode::Unknown;
+        result.errorCode = LLMEngineErrorCode::Unknown;
         return result;
     }
 

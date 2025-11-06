@@ -20,7 +20,7 @@ constexpr int kHttpStatusInternalServerError = 500;
         error_response.success = false;
         error_response.error_message = "API client not initialized";
         error_response.status_code = kHttpStatusInternalServerError;
-        error_response.error_code = ::LLMEngineAPI::APIResponse::APIError::Unknown;
+        error_response.error_code = LLMEngine::LLMEngineErrorCode::Unknown;
         return error_response;
     }
     return api_client->sendRequest(full_prompt, input, final_params);
