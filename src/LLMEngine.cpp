@@ -52,7 +52,6 @@ LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> clien
     : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
-      tmp_dir_(),
       temp_dir_provider_(nullptr),
       api_client_(std::move(client)) {
     initializeDefaults(logger_, temp_dir_provider_, temp_dir_provider, tmp_dir_);
@@ -72,7 +71,6 @@ LLMEngine::LLMEngine::LLMEngine(::LLMEngineAPI::ProviderType provider_type,
     : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
-      tmp_dir_(),
       temp_dir_provider_(nullptr),
       provider_type_(provider_type) {
     initializeDefaults(logger_, temp_dir_provider_, nullptr, tmp_dir_);
@@ -100,7 +98,6 @@ LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
     : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
-      tmp_dir_(),
       temp_dir_provider_(nullptr) {
     initializeDefaults(logger_, temp_dir_provider_, nullptr, tmp_dir_);
     
