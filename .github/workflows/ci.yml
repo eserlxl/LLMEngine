@@ -243,7 +243,7 @@ jobs:
       - name: Check code formatting
         run: |
           # Find all C++ source files
-          find src include test examples -name "*.cpp" -o -name "*.hpp" | while read file; do
+          find src include test examples -name "*.cpp" -o -name "*.hpp" | while read -r file; do
             if [ -f "$file" ]; then
               clang-format-14 --dry-run --Werror "$file" || {
                 echo "Error: $file is not properly formatted"
