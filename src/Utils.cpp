@@ -23,7 +23,7 @@
 
 // POSIX-specific includes (not available on Windows)
 #if defined(__unix__) || defined(__unix) ||                                        \
-    (defined(__APPLE__) && defined(__MACH__))
+        (defined(__APPLE__) && defined(__MACH__))
 #include <spawn.h>
 #include <sys/poll.h>
 #include <sys/wait.h>
@@ -39,13 +39,13 @@ namespace fs = std::filesystem;
 constexpr size_t COMMAND_BUFFER_SIZE = 256;
 constexpr size_t MAX_OUTPUT_LINES =
     10000; // Maximum number of output lines to prevent memory exhaustion
-constexpr size_t MAX_LINE_LENGTH = static_cast<size_t>(1024) *
-                                    1024; // Maximum line length (1MB) to prevent
-                                          // memory exhaustion
+constexpr size_t MAX_LINE_LENGTH =
+        static_cast<size_t>(1024) * 1024; // Maximum line length (1MB) to prevent
+                                           // memory exhaustion
 constexpr size_t MAX_CMD_STRING_LENGTH = 4096; // Maximum allowed command string
                                                 // length
-constexpr size_t MAX_ARG_COUNT = 64;            // Maximum number of arguments
-constexpr size_t MAX_ARG_LENGTH = 512;          // Maximum length per argument
+constexpr size_t MAX_ARG_COUNT = 64;           // Maximum number of arguments
+constexpr size_t MAX_ARG_LENGTH = 512;         // Maximum length per argument
 
 // Validation constants
 constexpr size_t MIN_API_KEY_LENGTH = 10;
@@ -65,7 +65,7 @@ static const std::regex MARKDOWN_HEADER_REGEX(R"(#+\s*)");
 namespace {
 void close_fd(int fd) {
 #if defined(__unix__) || defined(__unix) ||                                        \
-    (defined(__APPLE__) && defined(__MACH__))
+        (defined(__APPLE__) && defined(__MACH__))
     close(fd);
 #elif defined(_WIN32) || defined(_WIN64)
     _close(fd);
@@ -84,7 +84,9 @@ public:
     }
     PipeFD(const PipeFD&) = delete;
     PipeFD& operator=(const PipeFD&) = delete;
-    PipeFD(PipeFD&& other) noexcept : fd_(other.fd_) { other.fd_ = -1; }
+    PipeFD(PipeFD&& other) noexcept : fd_(other.fd_) {
+        other.fd_ = -1;
+    }
     PipeFD& operator=(PipeFD&& other) noexcept {
         if (this != &other) {
             if (fd_ >= 0)
@@ -129,7 +131,8 @@ std::vector<std::string> readLines(std::string_view filepath, size_t max_lines) 
 //   wildcards)
 // - Multiple redundant checks for defense in depth
 std::vector<std::string> execCommandImpl(
-        const std::vector<std::string>& args, ::LLMEngine::Logger* logger,
+        const std::vector<std::string>& args,
+        ::LLMEngine::Logger* logger,
         const std::string& cmd_str_for_logging) {
     std::vector<std::string> output;
 
@@ -302,45 +305,39 @@ std::vector<std::string> execCommandImpl(
         if (rc != 0) {
             if (logger) {
                 logger->log(::LLMEngine::LogLevel::Error,
-                            std::string("execCommand: ") + what +
-                                " failed (" + std::to_string(rc) + ")");
+                            std::string("execCommand: ") + what + " failed (" +
+                                    std::to_string(rc) + ")");
             }
             posix_spawn_file_actions_destroy(&file_actions);
             return false;
         }
         return true;
     };
-    if (!add_action(
-                posix_spawn_file_actions_addclose(&file_actions, stdout_read.get()),
-                "addclose stdout_read"))
+    if (!add_action(posix_spawn_file_actions_addclose(&file_actions, stdout_read.get()),
+                    "addclose stdout_read"))
         return output;
-    if (!add_action(
-                posix_spawn_file_actions_addclose(&file_actions, stderr_read.get()),
-                "addclose stderr_read"))
+    if (!add_action(posix_spawn_file_actions_addclose(&file_actions, stderr_read.get()),
+                    "addclose stderr_read"))
         return output;
-    if (!add_action(posix_spawn_file_actions_adddup2(&file_actions,
-                                                      stdout_write.get(),
+    if (!add_action(posix_spawn_file_actions_adddup2(&file_actions, stdout_write.get(),
                                                       STDOUT_FILENO),
                     "adddup2 stdout"))
         return output;
-    if (!add_action(posix_spawn_file_actions_adddup2(&file_actions,
-                                                      stderr_write.get(),
+    if (!add_action(posix_spawn_file_actions_adddup2(&file_actions, stderr_write.get(),
                                                       STDERR_FILENO),
                     "adddup2 stderr"))
         return output;
-    if (!add_action(
-                posix_spawn_file_actions_addclose(&file_actions, stdout_write.get()),
-                "addclose stdout_write"))
+    if (!add_action(posix_spawn_file_actions_addclose(&file_actions, stdout_write.get()),
+                    "addclose stdout_write"))
         return output;
-    if (!add_action(
-                posix_spawn_file_actions_addclose(&file_actions, stderr_write.get()),
-                "addclose stderr_write"))
+    if (!add_action(posix_spawn_file_actions_addclose(&file_actions, stderr_write.get()),
+                    "addclose stderr_write"))
         return output;
 
     // Spawn the process
     pid_t pid;
     int spawn_result = posix_spawnp(&pid, argv[0], &file_actions, nullptr, argv.data(),
-                                    ::environ);
+                                     ::environ);
 
     // Clean up file actions
     posix_spawn_file_actions_destroy(&file_actions);
@@ -350,8 +347,8 @@ std::vector<std::string> execCommandImpl(
             logger->log(::LLMEngine::LogLevel::Error,
                         std::string("execCommand: posix_spawnp() failed for "
                                     "command: ") +
-                            cmd_str_for_logging + " (error: " +
-                            std::to_string(spawn_result) + ")");
+                                cmd_str_for_logging + " (error: " +
+                                std::to_string(spawn_result) + ")");
         }
         // Pipes are automatically closed by RAII wrappers
         return output;
@@ -524,7 +521,7 @@ std::vector<std::string> execCommandImpl(
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
                         std::string("execCommand: waitpid() failed for command: ") +
-                            cmd_str_for_logging);
+                                cmd_str_for_logging);
         }
         return output;
     }
@@ -533,8 +530,8 @@ std::vector<std::string> execCommandImpl(
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Warn,
                         std::string("Command '") + cmd_str_for_logging +
-                            "' exited with non-zero status: " +
-                            std::to_string(WEXITSTATUS(status)));
+                                "' exited with non-zero status: " +
+                                std::to_string(WEXITSTATUS(status)));
             if (!output.empty()) {
                 std::string output_msg = "  Output:\n";
                 for (const auto& output_line : output) {
@@ -547,8 +544,8 @@ std::vector<std::string> execCommandImpl(
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Warn,
                         std::string("Command '") + cmd_str_for_logging +
-                            "' terminated by signal: " +
-                            std::to_string(WTERMSIG(status)));
+                                "' terminated by signal: " +
+                                std::to_string(WTERMSIG(status)));
         }
     }
 
