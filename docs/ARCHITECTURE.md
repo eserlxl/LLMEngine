@@ -21,9 +21,21 @@ LLMEngine provides a unified, type-safe interface to multiple Large Language Mod
 │  - Analysis result formatting                               │
 │  - Debug artifact management                                │
 │  - Logger injection                                         │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                         ▼
+│  - Request context building                                 │
+└────────────┬────────────────────────────────────────────────┘
+             │
+             ├──────────────────┬──────────────────────────────┐
+             │                  │                              │
+             ▼                  ▼                              ▼
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│RequestContext    │  │ResponseHandler   │  │DebugArtifact     │
+│Builder           │  │                  │  │Manager           │
+│- Build context   │  │- Handle response │  │- Write artifacts │
+│- Merge params    │  │- Parse errors    │  │- Cleanup old     │
+│- Build prompt    │  │- Extract content │  │- Retention       │
+└──────────────────┘  └──────────────────┘  └──────────────────┘
+             │
+             ▼
 ┌─────────────────────────────────────────────────────────────┐
 │              APIClient Interface (Abstract)                  │
 │  - sendRequest(prompt, input, params)                       │
@@ -37,11 +49,20 @@ LLMEngine provides a unified, type-safe interface to multiple Large Language Mod
 ┌─────────┐   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
 │ Qwen    │   │ OpenAI   │ │Anthropic │ │ Gemini   │ │ Ollama   │
 │ Client  │   │ Client   │ │ Client   │ │ Client   │ │ Client   │
-└─────────┘   └──────────┘ └──────────┘ └──────────┘ └──────────┘
-    │             │            │            │            │
-    └─────────────┴────────────┴────────────┴────────────┘
-                         │
-                         ▼
+└────┬────┘   └────┬─────┘ └──────────┘ └──────────┘ └──────────┘
+     │             │
+     └─────┬───────┘
+           │ (uses)
+           ▼
+┌─────────────────────────────────────────────────────────────┐
+│         OpenAICompatibleClient (Helper Class)               │
+│  - Shared implementation for OpenAI-compatible APIs         │
+│  - Payload building                                         │
+│  - URL/header caching                                       │
+│  - Response parsing                                         │
+└─────────────────────────────────────────────────────────────┘
+           │
+           ▼
 ┌─────────────────────────────────────────────────────────────┐
 │              APIClientFactory                                │
 │  - createClient(ProviderType, api_key, model, ...)          │
@@ -54,7 +75,17 @@ LLMEngine provides a unified, type-safe interface to multiple Large Language Mod
 │  - loadConfig(path)                                         │
 │  - getProviderConfig(name)                                  │
 │  - getDefaultProvider()                                     │
+│  - Configuration validation                                 │
 │  - Thread-safe configuration access                         │
+└─────────────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Helper Components                               │
+│  - ParameterMerger: Merge request parameters                │
+│  - ResponseParser: Parse responses with think tags          │
+│  - RequestLogger: Secret redaction and logging              │
+│  - Utils: Validation, file operations                       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -162,37 +193,182 @@ The configuration file (`config/api_config.json`) follows this structure:
 
 ## Request Flow
 
+### Sequence Diagram: Successful Request
+
+```
+Application
+    │
+    │ analyze(prompt, input, analysis_type, ...)
+    ▼
+LLMEngine
+    │
+    │ 1. Build request context
+    │    RequestContextBuilder::build()
+    │    ├─ Merge parameters (ParameterMerger)
+    │    ├─ Build full prompt
+    │    └─ Create DebugArtifactManager
+    ▼
+    │
+    │ 2. Send request
+    │    api_client_->sendRequest(full_prompt, input, params)
+    ▼
+APIClient (e.g., QwenClient/OpenAIClient)
+    │
+    │ 3. Prepare request (OpenAICompatibleClient)
+    │    ├─ Build payload (ChatCompletionRequestHelper)
+    │    ├─ Get cached URL/headers
+    │    └─ Serialize JSON
+    ▼
+    │
+    │ 4. HTTP request (CPR library)
+    │    ├─ Retry logic with exponential backoff
+    │    └─ Timeout handling
+    ▼
+    │
+    │ 5. Parse response
+    │    OpenAICompatibleClient::parseOpenAIResponse()
+    │    └─ Extract content from JSON
+    ▼
+    │
+    │ 6. Return APIResponse
+    ▼
+LLMEngine
+    │
+    │ 7. Handle response
+    │    ResponseHandler::handle()
+    │    ├─ Check success/error
+    │    ├─ Write debug artifacts (if enabled)
+    │    └─ Parse think tags (ResponseParser)
+    ▼
+    │
+    │ 8. Return AnalysisResult
+    ▼
+Application
+```
+
+### Sequence Diagram: Error Handling Flow
+
+```
+Application
+    │
+    │ analyze(...)
+    ▼
+LLMEngine
+    │
+    │ Request fails (network/timeout/API error)
+    ▼
+APIClient
+    │
+    │ Returns APIResponse with success=false
+    │ ├─ error_code: LLMEngineErrorCode
+    │ ├─ error_message: string
+    │ └─ status_code: int
+    ▼
+LLMEngine
+    │
+    │ ResponseHandler::handle()
+    │ ├─ Classify error code
+    │ │  ├─ HTTP 401/403 → Auth error
+    │  │  ├─ HTTP 429 → RateLimited
+    │  │  ├─ HTTP 4xx → Client error
+    │  │  └─ HTTP 5xx → Server error
+    │ ├─ Enhance error message with HTTP status
+    │ ├─ Redact secrets (RequestLogger::logSafe)
+    │ └─ Write error artifact (if debug enabled)
+    ▼
+    │
+    │ Return AnalysisResult with success=false
+    ▼
+Application
+    │
+    │ Check result.success and handle error
+    ▼
+```
+
+### Sequence Diagram: Configuration Loading
+
+```
+Application
+    │
+    │ LLMEngine constructor or
+    │ APIConfigManager::loadConfig()
+    ▼
+APIConfigManager (Singleton)
+    │
+    │ 1. Load JSON file
+    │    ├─ Parse config/api_config.json
+    │    └─ Handle parse errors
+    ▼
+    │
+    │ 2. Validate configuration
+    │    ├─ Validate JSON structure
+    │    ├─ Validate provider configs
+    │    │  ├─ base_url format (Utils::validateUrl)
+    │    │  └─ model name format (Utils::validateModelName)
+    │    └─ Validate global settings
+    │       ├─ timeout_seconds range
+    │       ├─ retry_attempts range
+    │       └─ retry_delay_ms range
+    ▼
+    │
+    │ 3. Store configuration
+    │    ├─ Thread-safe write lock
+    │    └─ Update internal state
+    ▼
+    │
+    │ 4. Return success/failure
+    ▼
+Application
+```
+
+### Detailed Request Flow Steps
+
 1. **Application calls `LLMEngine::analyze()`**
    - Prompt is optionally prepended with terse instruction
-   - Input parameters are merged with model defaults
+   - Input parameters are merged with model defaults via `ParameterMerger`
 
-2. **LLMEngine delegates to APIClient**
+2. **Request context building** (`RequestContextBuilder`)
+   - Builds full prompt with system/user messages
+   - Merges input parameters with defaults
+   - Creates temporary directory for debug artifacts
+   - Initializes `DebugArtifactManager` if debug files enabled
+
+3. **LLMEngine delegates to APIClient**
    - `api_client_->sendRequest(full_prompt, input, api_params)`
 
-3. **Provider-specific request preparation**
-   - Message formatting (system/user roles)
-   - Parameter merging
-   - Header construction (API keys, content types)
+4. **Provider-specific request preparation**
+   - For OpenAI-compatible providers: Uses `OpenAICompatibleClient` helper
+     - Message formatting via `ChatCompletionRequestHelper`
+     - Parameter merging
+     - Cached URL and header construction
+   - For other providers: Provider-specific implementation
 
-4. **HTTP request with retry logic**
+5. **HTTP request with retry logic**
    - Exponential backoff with jitter
    - Configurable retry attempts
    - Timeout handling
 
-5. **Response processing**
+6. **Response processing**
    - Status code checking
    - JSON parsing
    - Error extraction
+   - Content extraction (provider-specific)
 
-6. **Debug artifact generation** (if enabled)
+7. **Response handling** (`ResponseHandler`)
+   - Error classification based on HTTP status and error codes
+   - Error message enhancement with context
+   - Secret redaction for logging
+   - Debug artifact generation (if enabled)
+
+8. **Debug artifact generation** (if enabled)
    - Redacted JSON responses
    - Full text responses
    - Retention policy enforcement
 
-7. **Result formatting**
+9. **Result formatting**
    - THINK section extraction (via `ResponseParser`)
    - Content section extraction
-   - AnalysisResult construction
+   - `AnalysisResult` construction
 
 ## Temporary Artifact Management
 

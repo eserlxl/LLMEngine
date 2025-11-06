@@ -183,10 +183,15 @@ target_link_libraries(test_chat_completion_helper PRIVATE LLMEngine llmengine::c
 add_executable(test_secret_redaction test_secret_redaction.cpp)
 target_link_libraries(test_secret_redaction PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 
+add_executable(test_error_paths test_error_paths.cpp)
+target_link_libraries(test_error_paths PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+target_include_directories(test_error_paths PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+
 # ---- Fuzz Testing (optional) -------------------------------------------------
 if (ENABLE_FUZZ)
   # Check if compiler supports libFuzzer
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Fuzz test: RequestLogger redaction
     add_executable(fuzz_redactor fuzz_redactor.cpp)
     target_link_libraries(fuzz_redactor PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
     target_compile_options(fuzz_redactor PRIVATE
@@ -198,6 +203,45 @@ if (ENABLE_FUZZ)
       -fsanitize=fuzzer,address,undefined
     )
     message(STATUS "Fuzz test target 'fuzz_redactor' enabled (requires libFuzzer)")
+    
+    # Fuzz test: JSON parsing
+    add_executable(fuzz_json_parsing fuzz_json_parsing.cpp)
+    target_link_libraries(fuzz_json_parsing PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+    target_compile_options(fuzz_json_parsing PRIVATE
+      -fsanitize=fuzzer,address,undefined
+      -O1
+      -g
+    )
+    target_link_options(fuzz_json_parsing PRIVATE
+      -fsanitize=fuzzer,address,undefined
+    )
+    message(STATUS "Fuzz test target 'fuzz_json_parsing' enabled")
+    
+    # Fuzz test: Response parsing
+    add_executable(fuzz_response_parsing fuzz_response_parsing.cpp)
+    target_link_libraries(fuzz_response_parsing PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+    target_compile_options(fuzz_response_parsing PRIVATE
+      -fsanitize=fuzzer,address,undefined
+      -O1
+      -g
+    )
+    target_link_options(fuzz_response_parsing PRIVATE
+      -fsanitize=fuzzer,address,undefined
+    )
+    message(STATUS "Fuzz test target 'fuzz_response_parsing' enabled")
+    
+    # Fuzz test: Parameter merging
+    add_executable(fuzz_parameter_merging fuzz_parameter_merging.cpp)
+    target_link_libraries(fuzz_parameter_merging PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+    target_compile_options(fuzz_parameter_merging PRIVATE
+      -fsanitize=fuzzer,address,undefined
+      -O1
+      -g
+    )
+    target_link_options(fuzz_parameter_merging PRIVATE
+      -fsanitize=fuzzer,address,undefined
+    )
+    message(STATUS "Fuzz test target 'fuzz_parameter_merging' enabled")
   else()
     message(STATUS "Fuzz testing requires Clang compiler (libFuzzer support)")
     message(STATUS "ENABLE_FUZZ=ON ignored (current compiler: ${CMAKE_CXX_COMPILER_ID})")
@@ -302,6 +346,7 @@ if (BUILD_TESTING)
   add_test(NAME test_response_parser COMMAND test_response_parser)
   add_test(NAME test_chat_completion_helper COMMAND test_chat_completion_helper)
   add_test(NAME test_secret_redaction COMMAND test_secret_redaction)
+  add_test(NAME test_error_paths COMMAND test_error_paths)
 endif()
 
 # ---- Target properties --------------------------------------------------------
