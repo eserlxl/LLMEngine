@@ -134,10 +134,8 @@ jobs:
             GXX_PATH=$(which $GXX_CMD)
             echo "Found GCC at: $GCC_PATH"
             echo "Found G++ at: $GXX_PATH"
-            {
-              echo "CC=$GCC_PATH"
-              echo "CXX=$GXX_PATH"
-            } >> "$GITHUB_ENV"
+            echo "CC=$GCC_PATH" >> "$GITHUB_ENV"
+            echo "CXX=$GXX_PATH" >> "$GITHUB_ENV"
             # Verify we're using the correct version and check which libstdc++ it uses
             $GCC_CMD --version
             ACTUAL_VERSION=$($GCC_CMD -dumpversion | cut -d. -f1)
