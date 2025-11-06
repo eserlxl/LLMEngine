@@ -439,11 +439,34 @@ set(_targets_to_install ${PROJECT_NAME} ${PROJECT_NAME}_compile_options)
 
 # When dependencies are fetched via FetchContent, install them into the export set
 # to satisfy CMake's export validation, but they won't be exported to consumers
+# Note: We need to use the actual target name, not the alias
 if (NLOHMANN_JSON_FETCHED)
-  list(APPEND _targets_to_install nlohmann_json::nlohmann_json)
+  # Check if non-namespaced target exists (actual target)
+  if (TARGET nlohmann_json)
+    list(APPEND _targets_to_install nlohmann_json)
+  elseif (TARGET nlohmann_json::nlohmann_json)
+    # If only namespaced target exists, check if it's an alias
+    get_target_property(_is_alias nlohmann_json::nlohmann_json ALIASED_TARGET)
+    if (_is_alias)
+      list(APPEND _targets_to_install ${_is_alias})
+    else()
+      list(APPEND _targets_to_install nlohmann_json::nlohmann_json)
+    endif()
+  endif()
 endif()
 if (CPR_FETCHED)
-  list(APPEND _targets_to_install cpr::cpr)
+  # Check if non-namespaced target exists (actual target)
+  if (TARGET cpr)
+    list(APPEND _targets_to_install cpr)
+  elseif (TARGET cpr::cpr)
+    # If only namespaced target exists, check if it's an alias
+    get_target_property(_is_alias cpr::cpr ALIASED_TARGET)
+    if (_is_alias)
+      list(APPEND _targets_to_install ${_is_alias})
+    else()
+      list(APPEND _targets_to_install cpr::cpr)
+    endif()
+  endif()
 endif()
 
 install(TARGETS ${_targets_to_install}
