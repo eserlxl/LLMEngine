@@ -226,6 +226,12 @@ coverage/
 *.gcov
 *.lcov
 
+# CTest Testing directories
+Testing/
+Testing*/
+**/Testing/
+**/Testing*/
+
 # Valgrind
 valgrind-out.txt
 *.vglog
