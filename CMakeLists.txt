@@ -432,9 +432,19 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 
 # Install only our own targets into export set
 # External dependencies (nlohmann_json, cpr) are linked PRIVATE and are NOT exported.
-# Consumers must use find_dependency() in Config.cmake to discover dependencies
-# from the system or their own fetch logic.
+# However, when dependencies are fetched via FetchContent, we must install them into
+# the export set to satisfy CMake's export validation, even though they won't be
+# exported to consumers (consumers use find_dependency() in Config.cmake).
 set(_targets_to_install ${PROJECT_NAME} ${PROJECT_NAME}_compile_options)
+
+# When dependencies are fetched via FetchContent, install them into the export set
+# to satisfy CMake's export validation, but they won't be exported to consumers
+if (NLOHMANN_JSON_FETCHED)
+  list(APPEND _targets_to_install nlohmann_json::nlohmann_json)
+endif()
+if (CPR_FETCHED)
+  list(APPEND _targets_to_install cpr::cpr)
+endif()
 
 install(TARGETS ${_targets_to_install}
   EXPORT ${PROJECT_NAME}Targets
@@ -494,7 +504,7 @@ configure_package_config_file(
   INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
 # Export targets to the build tree so examples can use find_package() without install
-# Dependencies are linked PRIVATE, so they won't be part of the exported interface
+# Dependencies are already included in the export set via install() above when fetched
 export(EXPORT ${PROJECT_NAME}Targets
   NAMESPACE ${PROJECT_NAME_LOWER}::
   FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake")
