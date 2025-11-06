@@ -84,10 +84,13 @@ find_package(nlohmann_json CONFIG QUIET)
 set(NLOHMANN_JSON_FETCHED FALSE)
 if (NOT nlohmann_json_FOUND)
   if (LLM_DISABLE_FETCHCONTENT)
-    message(FATAL_ERROR "nlohmann_json not found and LLM_DISABLE_FETCHCONTENT=ON")
+    message(FATAL_ERROR
+      "nlohmann_json not found and LLM_DISABLE_FETCHCONTENT=ON.\n"
+      "Please install nlohmann_json (v3.11.3 or compatible) via your system package manager,\n"
+      "or set LLM_DISABLE_FETCHCONTENT=OFF to allow automatic fetching.")
   endif()
   include(FetchContent)
-  message(STATUS "nlohmann_json not found via package config; fetching with FetchContent")
+  message(STATUS "nlohmann_json not found via package config; fetching v3.11.3 with FetchContent")
   FetchContent_Declare(
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
@@ -111,7 +114,10 @@ if (cpr_FOUND)
   find_package(OpenSSL REQUIRED)
 else()
   if (LLM_DISABLE_FETCHCONTENT)
-    message(FATAL_ERROR "cpr not found and LLM_DISABLE_FETCHCONTENT=ON")
+    message(FATAL_ERROR
+      "cpr not found and LLM_DISABLE_FETCHCONTENT=ON.\n"
+      "Please install cpr (v1.10.5 or compatible) and OpenSSL via your system package manager,\n"
+      "or set LLM_DISABLE_FETCHCONTENT=OFF to allow automatic fetching.")
   endif()
   include(FetchContent)
   
@@ -122,7 +128,7 @@ else()
     set(FETCHCONTENT_SOURCE_DIR_CPR "${_cpr_source_dir}" CACHE PATH "Source directory for cpr" FORCE)
     set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "Skip updates for FetchContent" FORCE)
   else()
-    message(STATUS "cpr not found via package config; fetching with FetchContent")
+    message(STATUS "cpr not found via package config; fetching v1.10.5 with FetchContent")
   endif()
   
   # Use a released tag for reproducible builds
