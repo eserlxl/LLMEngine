@@ -142,7 +142,7 @@ void ::LLMEngine::LLMEngine::initializeAPIClient() {
         if (api_key_.empty()) {
             std::string env_var_name = ProviderBootstrap::getApiKeyEnvVarName(provider_type_);
             std::string error_msg = "No API key found for provider " + 
-                                   std::string(LLMAPI::APIClientFactory::providerTypeToString(provider_type_)) + ". "
+                                   LLMAPI::APIClientFactory::providerTypeToString(provider_type_) + ". "
                                    + "Set the " + env_var_name + " environment variable or provide it in the constructor.";
             if (logger_) {
                 logger_->log(LLM::LogLevel::Error, error_msg);
