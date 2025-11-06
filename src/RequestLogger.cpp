@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/RequestLogger.hpp"
+#include "LLMEngine/Logger.hpp"
 #include <algorithm>
 #include <ranges>
 #include <sstream>
@@ -283,6 +284,14 @@ std::string RequestLogger::redactText(std::string_view text) {
         }
     }
     return out;
+}
+
+void RequestLogger::logSafe(Logger* logger, LogLevel level, std::string_view message) {
+    if (logger) {
+        // Automatically redact secrets before logging
+        const std::string redacted = redactText(message);
+        logger->log(level, redacted);
+    }
 }
 
 } // namespace LLMEngine

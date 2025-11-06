@@ -30,6 +30,22 @@ public:
      * @param input Input JSON that may contain overrides
      * @param mode Optional mode override
      * @return Merged parameters value
+     * 
+     * @example
+     * ```cpp
+     * nlohmann::json base = {{"temperature", 0.7}, {"max_tokens", 1000}};
+     * nlohmann::json input = {{"temperature", 0.5}};
+     * auto merged = ParameterMerger::merge(base, input, "");
+     * // merged contains: {"temperature": 0.5, "max_tokens": 1000}
+     * ```
+     * 
+     * @example
+     * ```cpp
+     * nlohmann::json base = {{"temperature", 0.7}};
+     * nlohmann::json input = {};
+     * auto merged = ParameterMerger::merge(base, input, "chat");
+     * // merged contains: {"temperature": 0.7, "mode": "chat"}
+     * ```
      */
     [[nodiscard]] static nlohmann::json merge(
         const nlohmann::json& base_params,
@@ -38,11 +54,28 @@ public:
 
     /**
      * @brief Merge into an output object to avoid copies when unchanged.
+     * 
+     * This method is more efficient than merge() when you want to avoid
+     * unnecessary copies. It only modifies 'out' if changes are needed.
+     * 
      * @param base_params Base parameters (unchanged)
      * @param input Input overrides
      * @param mode Optional mode override
      * @param out Output object receiving merged params when changes are needed
      * @return true if changes were applied and 'out' was written, false if no changes were needed
+     * 
+     * @example
+     * ```cpp
+     * nlohmann::json base = {{"temperature", 0.7}};
+     * nlohmann::json input = {{"max_tokens", 2000}};
+     * nlohmann::json result;
+     * if (ParameterMerger::mergeInto(base, input, "", result)) {
+     *     // result contains merged parameters
+     *     // Use result instead of base
+     * } else {
+     *     // No changes needed, use base directly
+     * }
+     * ```
      */
     static bool mergeInto(
         const nlohmann::json& base_params,

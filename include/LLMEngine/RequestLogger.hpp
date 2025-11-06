@@ -13,6 +13,8 @@
 #include "LLMEngine/LLMEngineExport.hpp"
 
 namespace LLMEngine {
+    struct Logger;
+    enum class LogLevel;
 
 /**
  * @brief Centralized request logging utility with automatic redaction of sensitive data.
@@ -80,6 +82,19 @@ public:
      * @return Vector of sensitive header names (lowercase)
      */
     static std::vector<std::string> getSensitiveHeaderNames();
+    
+    /**
+     * @brief Safely log a message with automatic secret redaction.
+     * 
+     * This helper function automatically redacts secrets from log messages
+     * before passing them to the logger. Use this when logging user-provided
+     * data or data that might contain secrets.
+     * 
+     * @param logger Logger instance (can be nullptr)
+     * @param level Log level
+     * @param message Message to log (will be redacted if logger is not nullptr)
+     */
+    static void logSafe(Logger* logger, LogLevel level, std::string_view message);
     
 private:
     // Check if a header name is sensitive (case-insensitive)

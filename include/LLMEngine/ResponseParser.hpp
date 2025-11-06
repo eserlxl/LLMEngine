@@ -28,6 +28,23 @@ public:
      * 
      * @param response Full response from the LLM
      * @return Pair of (think_section, content_section), both trimmed
+     * 
+     * @example
+     * ```cpp
+     * std::string response = "<think>I need to analyze this code</think>"
+     *                        "The code has a bug in the loop condition.";
+     * auto [think, content] = ResponseParser::parseResponse(response);
+     * // think == "I need to analyze this code"
+     * // content == "The code has a bug in the loop condition."
+     * ```
+     * 
+     * @example
+     * ```cpp
+     * std::string response = "No reasoning tags, just content.";
+     * auto [think, content] = ResponseParser::parseResponse(response);
+     * // think == ""
+     * // content == "No reasoning tags, just content."
+     * ```
      */
     [[nodiscard]] static std::pair<std::string, std::string> parseResponse(std::string_view response);
     

@@ -8,6 +8,7 @@
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Logger.hpp"
 #include "LLMEngine/Constants.hpp"
+#include "LLMEngine/Utils.hpp"
 #include <fstream>
 #include <algorithm>
 #include <cctype>
@@ -201,6 +202,120 @@ std::shared_ptr<::LLMEngine::Logger> APIConfigManager::getLogger() const {
     return default_logger;
 }
 
+namespace {
+    // Helper function to validate configuration structure
+    bool validateConfig(const nlohmann::json& config, ::LLMEngine::Logger* logger) {
+        // Validate top-level structure
+        if (!config.is_object()) {
+            if (logger) {
+                logger->log(::LLMEngine::LogLevel::Error, "Config validation failed: root must be a JSON object");
+            }
+            return false;
+        }
+        
+        // Validate providers section
+        if (config.contains(std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS))) {
+            const auto& providers = config[std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS)];
+            if (!providers.is_object()) {
+                if (logger) {
+                    logger->log(::LLMEngine::LogLevel::Error, "Config validation failed: 'providers' must be an object");
+                }
+                return false;
+            }
+            
+            // Validate each provider configuration
+            for (const auto& [provider_name, provider_config] : providers.items()) {
+                if (!provider_config.is_object()) {
+                    if (logger) {
+                        logger->log(::LLMEngine::LogLevel::Error, 
+                            std::string("Config validation failed: provider '") + provider_name + "' must be an object");
+                    }
+                    return false;
+                }
+                
+                // Validate base_url if present
+                if (provider_config.contains(std::string(::LLMEngine::Constants::JsonKeys::BASE_URL))) {
+                    const auto& base_url = provider_config[std::string(::LLMEngine::Constants::JsonKeys::BASE_URL)];
+                    if (base_url.is_string()) {
+                        std::string url_str = base_url.get<std::string>();
+                        if (!url_str.empty() && !::LLMEngine::Utils::validateUrl(url_str)) {
+                            if (logger) {
+                                logger->log(::LLMEngine::LogLevel::Warn, 
+                                    std::string("Config validation warning: provider '") + provider_name + 
+                                    "' has invalid base_url format: " + url_str);
+                            }
+                            // Warning only, not a fatal error
+                        }
+                    }
+                }
+                
+                // Validate default_model if present
+                if (provider_config.contains(std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_MODEL))) {
+                    const auto& model = provider_config[std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_MODEL)];
+                    if (model.is_string()) {
+                        std::string model_str = model.get<std::string>();
+                        if (!model_str.empty() && !::LLMEngine::Utils::validateModelName(model_str)) {
+                            if (logger) {
+                                logger->log(::LLMEngine::LogLevel::Warn, 
+                                    std::string("Config validation warning: provider '") + provider_name + 
+                                    "' has invalid default_model format: " + model_str);
+                            }
+                            // Warning only, not a fatal error
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Validate timeout_seconds if present
+        if (config.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
+            const auto& timeout = config[std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)];
+            if (timeout.is_number_integer()) {
+                int timeout_val = timeout.get<int>();
+                if (timeout_val < 1 || timeout_val > 3600) {
+                    if (logger) {
+                        logger->log(::LLMEngine::LogLevel::Warn, 
+                            std::string("Config validation warning: timeout_seconds should be between 1 and 3600, got: ") + 
+                            std::to_string(timeout_val));
+                    }
+                }
+            }
+        }
+        
+        // Validate retry_attempts if present
+        if (config.contains(std::string(::LLMEngine::Constants::JsonKeys::RETRY_ATTEMPTS))) {
+            const auto& retries = config[std::string(::LLMEngine::Constants::JsonKeys::RETRY_ATTEMPTS)];
+            if (retries.is_number_integer()) {
+                int retries_val = retries.get<int>();
+                if (retries_val < 0 || retries_val > 10) {
+                    if (logger) {
+                        logger->log(::LLMEngine::LogLevel::Warn, 
+                            std::string("Config validation warning: retry_attempts should be between 0 and 10, got: ") + 
+                            std::to_string(retries_val));
+                    }
+                }
+            }
+        }
+        
+        // Validate retry_delay_ms if present
+        if (config.contains(std::string(::LLMEngine::Constants::JsonKeys::RETRY_DELAY_MS))) {
+            const auto& delay = config[std::string(::LLMEngine::Constants::JsonKeys::RETRY_DELAY_MS)];
+            if (delay.is_number_integer()) {
+                int delay_val = delay.get<int>();
+                if (delay_val < 0 || delay_val > 60000) {
+                    if (logger) {
+                        logger->log(::LLMEngine::LogLevel::Warn, 
+                            std::string("Config validation warning: retry_delay_ms should be between 0 and 60000, got: ") + 
+                            std::to_string(delay_val));
+                    }
+                }
+            }
+        }
+        
+        return true;
+    }
+}
+
 bool APIConfigManager::loadConfig(std::string_view config_path) {
     std::string path;
     if (config_path.empty()) {
@@ -226,9 +341,27 @@ bool APIConfigManager::loadConfig(std::string_view config_path) {
             return false;
         }
         
-        file >> config_;
+        nlohmann::json loaded_config;
+        file >> loaded_config;
+        
+        // Validate configuration before accepting it
+        auto logger = getLogger();
+        if (!validateConfig(loaded_config, logger.get())) {
+            logger->log(::LLMEngine::LogLevel::Error, "Config validation failed, using empty configuration");
+            config_loaded_ = false;
+            config_ = nlohmann::json{}; // Clear stale configuration
+            return false;
+        }
+        
+        config_ = std::move(loaded_config);
         config_loaded_ = true;
         return true;
+    } catch (const nlohmann::json::parse_error& e) {
+        getLogger()->log(::LLMEngine::LogLevel::Error, 
+            std::string("JSON parse error in config file: ") + e.what() + " at position " + std::to_string(e.byte));
+        config_loaded_ = false;
+        config_ = nlohmann::json{}; // Clear stale configuration
+        return false;
     } catch (const std::exception& e) {
         getLogger()->log(::LLMEngine::LogLevel::Error, std::string("Failed to load config: ") + e.what());
         config_loaded_ = false;

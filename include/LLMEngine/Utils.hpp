@@ -85,6 +85,13 @@ namespace Utils {
      * 
      * @param api_key API key to validate
      * @return true if API key appears valid, false otherwise
+     * 
+     * @example
+     * ```cpp
+     * if (!Utils::validateApiKey(api_key)) {
+     *     throw std::invalid_argument("Invalid API key format");
+     * }
+     * ```
      */
     [[nodiscard]] bool validateApiKey(std::string_view api_key);
     
@@ -99,6 +106,13 @@ namespace Utils {
      * 
      * @param model_name Model name to validate
      * @return true if model name appears valid, false otherwise
+     * 
+     * @example
+     * ```cpp
+     * if (!Utils::validateModelName(model)) {
+     *     throw std::invalid_argument("Invalid model name format");
+     * }
+     * ```
      */
     [[nodiscard]] bool validateModelName(std::string_view model_name);
     
@@ -113,6 +127,13 @@ namespace Utils {
      * 
      * @param url URL to validate
      * @return true if URL appears valid, false otherwise
+     * 
+     * @example
+     * ```cpp
+     * if (!Utils::validateUrl(base_url)) {
+     *     throw std::invalid_argument("Invalid URL format");
+     * }
+     * ```
      */
     [[nodiscard]] bool validateUrl(std::string_view url);
 } // namespace Utils

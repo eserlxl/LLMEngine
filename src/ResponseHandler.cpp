@@ -71,11 +71,10 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
             enhanced_error = "HTTP " + std::to_string(api_response.status_code) + ": " + enhanced_error;
         }
         
-        if (logger) {
-            logger->log(LogLevel::Error, std::string("API error: ") + enhanced_error);
-            if (write_debug_files && debug_mgr) {
-                logger->log(LogLevel::Info, std::string("Error response saved to ") + request_tmp_dir + "/api_response_error.json");
-            }
+        // Use safe logging to ensure secrets are redacted (though enhanced_error is already redacted)
+        RequestLogger::logSafe(logger, LogLevel::Error, std::string("API error: ") + enhanced_error);
+        if (logger && write_debug_files && debug_mgr) {
+            logger->log(LogLevel::Info, std::string("Error response saved to ") + request_tmp_dir + "/api_response_error.json");
         }
         // Classify error code (now using unified LLMEngineErrorCode)
         LLMEngineErrorCode error_code = classifyErrorCode(api_response.error_code, api_response.status_code);

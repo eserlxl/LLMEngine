@@ -38,54 +38,82 @@ fclose(f);
 
 ## Return-Based Error Models
 
-### Prefer std::expected (C++23)
+### Use Result<T, E> for Expected Failures
 
-When available, use `std::expected<T, E>` for functions that can fail:
+LLMEngine provides a custom `Result<T, E>` type (similar to `std::expected` in C++23) for functions that can fail:
 
 ```cpp
-#include <expected>
+#include "LLMEngine/Result.hpp"
+#include "LLMEngine/ResultError.hpp"
 
-std::expected<Response, Error> send_request(const Request& req) {
-  if (req.invalid()) {
-    return std::unexpected(Error::InvalidRequest);
+Result<std::string, ResultError> parseConfig(const std::string& path) {
+  if (path.empty()) {
+    return Result<std::string, ResultError>::err(
+      ResultError(LLMEngineErrorCode::Client, "Path cannot be empty"));
   }
   // ... process ...
-  return Response{data};
+  return Result<std::string, ResultError>::ok(parsed_value);
 }
 
 // Usage
-auto result = send_request(req);
+auto result = parseConfig(path);
 if (result) {
-  process(*result);
+  process(result.value());
 } else {
-  handle_error(result.error());
+  handle_error(result.error().code, result.error().message);
 }
 ```
 
-### Status Objects (Fallback)
+### Convenience Alias
 
-When `std::expected` is unavailable, use status objects:
+Use `ResultOrError<T>` as a shorthand for `Result<T, ResultError>`:
 
 ```cpp
-struct Status {
-  bool ok;
-  std::string message;
-};
-
-std::pair<Response, Status> send_request(const Request& req) {
-  if (req.invalid()) {
-    return {{}, Status{false, "Invalid request"}};
-  }
-  // ... process ...
-  return {Response{data}, Status{true, ""}};
-}
-
-// Usage
-auto [response, status] = send_request(req);
-if (!status.ok) {
-  handle_error(status.message);
+ResultOrError<std::string> parseConfig(const std::string& path) {
+  // ... same as above ...
 }
 ```
+
+### Result Helper Methods
+
+The `Result` type provides several helper methods:
+
+- `map<U>(f)`: Transform the value if successful
+- `andThen<U>(f)`: Chain operations that return Result
+- `valueOr(default)`: Get value or return default if error
+- `hasValue()` / `hasError()`: Check result state
+
+## Error Handling Strategy
+
+### When to Use Result<T, E>
+
+Use `Result<T, E>` for:
+- **Expected failures**: Network errors, invalid input, configuration errors
+- **Internal functions**: Utility functions, parsers, validators
+- **Non-throwing APIs**: Functions that should not throw exceptions
+
+### When to Use Exceptions
+
+Reserve exceptions for:
+- **Programming errors**: Null pointer dereference, invalid state
+- **Resource exhaustion**: Out of memory, too many open files
+- **Constructor failures**: When object construction cannot proceed
+- **Truly exceptional cases**: Cases that should never happen in correct code
+
+### Current State
+
+The codebase currently uses a mix of:
+- `AnalysisResult` struct for public API (`LLMEngine::analyze()`)
+- `APIResponse` struct for internal API responses
+- `Result<T, E>` for new internal functions (being adopted)
+- Exceptions for constructor failures and programming errors
+
+### Migration Strategy
+
+1. **New internal functions**: Use `Result<T, E>` or `ResultOrError<T>`
+2. **Existing functions**: Gradually migrate to `Result` where appropriate
+3. **Public API**: Keep `AnalysisResult` for backward compatibility (may migrate in future major version)
+4. **Constructors**: Continue using exceptions for construction failures
 
 ### Error Codes
 

@@ -42,6 +42,9 @@ endif()
 if (NOT DEFINED ENABLE_FUZZ)
   option(ENABLE_FUZZ                "Enable fuzz testing targets (requires libFuzzer)" OFF)
 endif()
+if (NOT DEFINED ENABLE_BENCHMARKS)
+  option(ENABLE_BENCHMARKS          "Enable benchmark tests (requires Google Benchmark)" OFF)
+endif()
 
 # Use default generator directories; avoid overriding global runtime output dir
 
@@ -177,6 +180,9 @@ target_link_libraries(test_response_parser PRIVATE LLMEngine llmengine::compile_
 add_executable(test_chat_completion_helper test_chat_completion_helper.cpp)
 target_link_libraries(test_chat_completion_helper PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 
+add_executable(test_secret_redaction test_secret_redaction.cpp)
+target_link_libraries(test_secret_redaction PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+
 # ---- Fuzz Testing (optional) -------------------------------------------------
 if (ENABLE_FUZZ)
   # Check if compiler supports libFuzzer
@@ -198,6 +204,85 @@ if (ENABLE_FUZZ)
   endif()
 endif()
 
+# ---- Benchmark Testing (optional) ---------------------------------------------
+if (ENABLE_BENCHMARKS)
+  # Try to find Google Benchmark
+  find_package(benchmark QUIET)
+  
+  if (NOT benchmark_FOUND)
+    # Check if FetchContent is disabled (inherit from parent if available)
+    get_property(_disable_fetchcontent GLOBAL PROPERTY LLM_DISABLE_FETCHCONTENT)
+    if (NOT DEFINED _disable_fetchcontent)
+      # Try to get from parent scope or cache
+      if (DEFINED LLM_DISABLE_FETCHCONTENT)
+        set(_disable_fetchcontent ${LLM_DISABLE_FETCHCONTENT})
+      else()
+        set(_disable_fetchcontent OFF)
+      endif()
+    endif()
+    
+    if (_disable_fetchcontent)
+      message(FATAL_ERROR "benchmark not found and LLM_DISABLE_FETCHCONTENT=ON. Set ENABLE_BENCHMARKS=OFF or install Google Benchmark.")
+    endif()
+    
+    include(FetchContent)
+    message(STATUS "Google Benchmark not found; fetching with FetchContent")
+    
+    FetchContent_Declare(
+      benchmark
+      GIT_REPOSITORY https://github.com/google/benchmark.git
+      GIT_TAG v1.8.3
+    )
+    
+    # Disable benchmark tests and examples
+    set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)
+    
+    FetchContent_MakeAvailable(benchmark)
+    message(STATUS "Google Benchmark fetched and configured")
+  else()
+    message(STATUS "Google Benchmark found via package config")
+  endif()
+  
+  # Benchmark: ParameterMerger
+  add_executable(benchmark_parameter_merger benchmark_parameter_merger.cpp)
+  target_link_libraries(benchmark_parameter_merger PRIVATE 
+    LLMEngine 
+    llmengine::compile_options 
+    nlohmann_json::nlohmann_json
+    benchmark::benchmark
+    benchmark::benchmark_main)
+  
+  # Benchmark: ResponseParser
+  add_executable(benchmark_response_parser benchmark_response_parser.cpp)
+  target_link_libraries(benchmark_response_parser PRIVATE 
+    LLMEngine 
+    llmengine::compile_options 
+    nlohmann_json::nlohmann_json
+    benchmark::benchmark
+    benchmark::benchmark_main)
+  
+  # Benchmark: RequestLogger (redaction)
+  add_executable(benchmark_request_logger benchmark_request_logger.cpp)
+  target_link_libraries(benchmark_request_logger PRIVATE 
+    LLMEngine 
+    llmengine::compile_options 
+    nlohmann_json::nlohmann_json
+    benchmark::benchmark
+    benchmark::benchmark_main)
+  
+  # Benchmark: JSON operations
+  add_executable(benchmark_json_ops benchmark_json_ops.cpp)
+  target_link_libraries(benchmark_json_ops PRIVATE 
+    LLMEngine 
+    llmengine::compile_options 
+    nlohmann_json::nlohmann_json
+    benchmark::benchmark
+    benchmark::benchmark_main)
+  
+  message(STATUS "Benchmark targets enabled: benchmark_parameter_merger, benchmark_response_parser, benchmark_request_logger, benchmark_json_ops")
+endif()
+
 # ---- CTest Integration --------------------------------------------------------
 # Register tests with CTest for automatic execution
 if (BUILD_TESTING)
@@ -216,6 +301,7 @@ if (BUILD_TESTING)
   add_test(NAME test_parameter_merger COMMAND test_parameter_merger)
   add_test(NAME test_response_parser COMMAND test_response_parser)
   add_test(NAME test_chat_completion_helper COMMAND test_chat_completion_helper)
+  add_test(NAME test_secret_redaction COMMAND test_secret_redaction)
 endif()
 
 # ---- Target properties --------------------------------------------------------

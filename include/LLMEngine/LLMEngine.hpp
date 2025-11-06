@@ -181,6 +181,43 @@ public:
      *        mostly one sentence.\n"
      *       To disable this behavior and use your prompt exactly as provided, set 
      *       prepend_terse_instruction to false.
+     * 
+     * @example Basic usage:
+     * ```cpp
+     * LLMEngine engine(LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash");
+     * nlohmann::json input = {{"system_prompt", "You are a helpful assistant."}};
+     * auto result = engine.analyze("What is 2+2?", input, "math_question");
+     * if (result.success) {
+     *     std::cout << "Answer: " << result.content << std::endl;
+     *     if (!result.think.empty()) {
+     *         std::cout << "Reasoning: " << result.think << std::endl;
+     *     }
+     * } else {
+     *     std::cerr << "Error: " << result.errorMessage << std::endl;
+     * }
+     * ```
+     * 
+     * @example Error handling:
+     * ```cpp
+     * auto result = engine.analyze("Analyze this code", input, "code_analysis");
+     * if (!result.success) {
+     *     if (result.hasError(LLMEngineErrorCode::Auth)) {
+     *         std::cerr << "Authentication failed" << std::endl;
+     *     } else if (result.isRetriableError()) {
+     *         // Retry the request
+     *     }
+     * }
+     * ```
+     * 
+     * @example With custom parameters:
+     * ```cpp
+     * nlohmann::json input = {
+     *     {"system_prompt", "You are a code reviewer."},
+     *     {"max_tokens", 500},
+     *     {"temperature", 0.3}
+     * };
+     * auto result = engine.analyze("Review this code", input, "code_review", "chat", false);
+     * ```
      */
     [[nodiscard]] AnalysisResult analyze(std::string_view prompt, const nlohmann::json& input, std::string_view analysis_type, std::string_view mode = "chat", bool prepend_terse_instruction = true) const;
     
