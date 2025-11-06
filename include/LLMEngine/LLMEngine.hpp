@@ -297,6 +297,7 @@ private:
     bool debug_;
     std::string tmp_dir_;  // Configurable temporary directory (defaults to Utils::TMP_DIR)
     std::shared_ptr<ITempDirProvider> temp_dir_provider_;  // Store provider for validation
+    mutable bool tmp_dir_verified_ = false;  // Cache directory existence check to reduce filesystem operations
     
     // API client support
     std::unique_ptr<::LLMEngineAPI::APIClient> api_client_;

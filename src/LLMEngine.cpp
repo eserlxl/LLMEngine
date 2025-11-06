@@ -171,6 +171,18 @@ void LLMEngine::LLMEngine::initializeAPIClient() {
 // Redaction and debug file I/O moved to DebugArtifacts
 
 void LLMEngine::LLMEngine::ensureSecureTmpDir() const {
+    // Cache directory existence check to reduce filesystem operations
+    // Only re-check if directory was previously verified and might have been deleted
+    if (tmp_dir_verified_) {
+        // Quick check: if directory still exists, skip expensive operations
+        std::error_code ec;
+        if (std::filesystem::exists(tmp_dir_, ec) && !ec) {
+            return;
+        }
+        // Directory was deleted, need to re-verify
+        tmp_dir_verified_ = false;
+    }
+    
     // Security: Check for symlink before creating directories
     // If the path exists and is a symlink, reject it to prevent symlink traversal attacks
     std::error_code ec;
@@ -201,6 +213,9 @@ void LLMEngine::LLMEngine::ensureSecureTmpDir() const {
             logger_->log(::LLMEngine::LogLevel::Warn, std::string("Failed to set permissions on ") + tmp_dir_ + ": " + ec_perm.message());
         }
     }
+    
+    // Mark as verified after successful creation/verification
+    tmp_dir_verified_ = true;
 }
 
 ::LLMEngine::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt, 
@@ -273,6 +288,7 @@ bool LLMEngine::LLMEngine::setTempDirectory(const std::string& tmp_dir) {
         const bool is_within = !rel.empty() && !rel.is_absolute() && !has_parent_ref;
         if (is_within) {
             tmp_dir_ = requested.string();
+            tmp_dir_verified_ = false;  // Reset cache when directory changes
             return true;
         }
         if (logger_) {

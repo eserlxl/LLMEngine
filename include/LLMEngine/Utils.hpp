@@ -74,6 +74,47 @@ namespace Utils {
      * @brief Remove Markdown syntax from input string.
      */
     [[nodiscard]] std::string stripMarkdown(std::string_view input);
+    
+    /**
+     * @brief Validate API key format (basic checks).
+     * 
+     * Performs basic validation on API keys:
+     * - Non-empty
+     * - Reasonable length (at least 10 characters, at most 512 characters)
+     * - No control characters
+     * 
+     * @param api_key API key to validate
+     * @return true if API key appears valid, false otherwise
+     */
+    [[nodiscard]] bool validateApiKey(std::string_view api_key);
+    
+    /**
+     * @brief Validate model name format.
+     * 
+     * Performs basic validation on model names:
+     * - Non-empty
+     * - Reasonable length (at most 256 characters)
+     * - Only alphanumeric, hyphens, underscores, dots, and slashes
+     * - No control characters
+     * 
+     * @param model_name Model name to validate
+     * @return true if model name appears valid, false otherwise
+     */
+    [[nodiscard]] bool validateModelName(std::string_view model_name);
+    
+    /**
+     * @brief Validate URL format (basic checks).
+     * 
+     * Performs basic validation on URLs:
+     * - Non-empty
+     * - Starts with http:// or https://
+     * - Reasonable length (at most 2048 characters)
+     * - No control characters
+     * 
+     * @param url URL to validate
+     * @return true if URL appears valid, false otherwise
+     */
+    [[nodiscard]] bool validateUrl(std::string_view url);
 } // namespace Utils
 } // namespace LLMEngine
 

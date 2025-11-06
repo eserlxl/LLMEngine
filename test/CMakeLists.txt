@@ -174,6 +174,9 @@ target_link_libraries(test_parameter_merger PRIVATE LLMEngine llmengine::compile
 add_executable(test_response_parser test_response_parser.cpp)
 target_link_libraries(test_response_parser PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 
+add_executable(test_chat_completion_helper test_chat_completion_helper.cpp)
+target_link_libraries(test_chat_completion_helper PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+
 # ---- Fuzz Testing (optional) -------------------------------------------------
 if (ENABLE_FUZZ)
   # Check if compiler supports libFuzzer
@@ -212,6 +215,7 @@ if (BUILD_TESTING)
   add_test(NAME test_retry_policy COMMAND test_retry_policy)
   add_test(NAME test_parameter_merger COMMAND test_parameter_merger)
   add_test(NAME test_response_parser COMMAND test_response_parser)
+  add_test(NAME test_chat_completion_helper COMMAND test_chat_completion_helper)
 endif()
 
 # ---- Target properties --------------------------------------------------------

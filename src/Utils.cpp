@@ -584,4 +584,74 @@ namespace LLMEngine::Utils {
         output = std::regex_replace(output, MARKDOWN_HEADER_REGEX, "");
         return output;
     }
+    
+    bool validateApiKey(std::string_view api_key) {
+        if (api_key.empty()) {
+            return false;
+        }
+        
+        // Check length (reasonable bounds)
+        if (api_key.size() < 10 || api_key.size() > 512) {
+            return false;
+        }
+        
+        // Check for control characters
+        for (char c : api_key) {
+            if (std::iscntrl(static_cast<unsigned char>(c))) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    bool validateModelName(std::string_view model_name) {
+        if (model_name.empty()) {
+            return false;
+        }
+        
+        // Check length
+        if (model_name.size() > 256) {
+            return false;
+        }
+        
+        // Check for allowed characters: alphanumeric, hyphens, underscores, dots, slashes
+        for (char c : model_name) {
+            if (!std::isalnum(static_cast<unsigned char>(c)) && 
+                c != '-' && c != '_' && c != '.' && c != '/') {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    bool validateUrl(std::string_view url) {
+        if (url.empty()) {
+            return false;
+        }
+        
+        // Check length
+        if (url.size() > 2048) {
+            return false;
+        }
+        
+        // Must start with http:// or https://
+        if (url.size() < 7) {  // Minimum "http://"
+            return false;
+        }
+        
+        if (url.substr(0, 7) != "http://" && url.substr(0, 8) != "https://") {
+            return false;
+        }
+        
+        // Check for control characters
+        for (char c : url) {
+            if (std::iscntrl(static_cast<unsigned char>(c))) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
 } // namespace LLMEngine::Utils 

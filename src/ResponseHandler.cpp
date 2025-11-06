@@ -64,16 +64,23 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
     // Error path
     if (!api_response.success) {
         const std::string redacted_err = RequestLogger::redactText(api_response.error_message);
+        
+        // Build enhanced error message with context
+        std::string enhanced_error = redacted_err;
+        if (api_response.status_code > 0) {
+            enhanced_error = "HTTP " + std::to_string(api_response.status_code) + ": " + enhanced_error;
+        }
+        
         if (logger) {
-            logger->log(LogLevel::Error, std::string("API error: ") + redacted_err);
+            logger->log(LogLevel::Error, std::string("API error: ") + enhanced_error);
             if (write_debug_files && debug_mgr) {
                 logger->log(LogLevel::Info, std::string("Error response saved to ") + request_tmp_dir + "/api_response_error.json");
             }
         }
         // Classify error code (now using unified LLMEngineErrorCode)
         LLMEngineErrorCode error_code = classifyErrorCode(api_response.error_code, api_response.status_code);
-        // Return redacted error back to callers to avoid leaking secrets
-        AnalysisResult result{false, "", "", redacted_err, api_response.status_code};
+        // Return enhanced error message with context
+        AnalysisResult result{false, "", "", enhanced_error, api_response.status_code};
         result.errorCode = error_code;
         return result;
     }

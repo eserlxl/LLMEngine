@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "../src/DebugArtifacts.hpp"
+#include "LLMEngine/DebugArtifactManager.hpp"
+#include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Utils.hpp"
 #include <cassert>
 #include <fstream>
@@ -9,6 +11,7 @@
 #include <filesystem>
 #include <thread>
 #include <chrono>
+#include <sstream>
 
 static std::string readAll(const std::string& path) {
     std::ifstream f(path);
@@ -71,6 +74,88 @@ int main() {
         bool newExists = fs::exists(newPath, ec);
         assert(!oldExists);
         assert(newExists);
+    }
+
+    // Test DebugArtifactManager
+    {
+        const std::string requestDir = baseDir + "/test_request_123";
+        LLMEngine::DebugArtifactManager mgr(requestDir, baseDir, 24, nullptr);
+        
+        // Test ensureRequestDirectory
+        assert(mgr.ensureRequestDirectory());
+        assert(fs::exists(requestDir, ec));
+        assert(mgr.getRequestTmpDir() == requestDir);
+        
+        // Test writeApiResponse (success)
+        LLMEngineAPI::APIResponse success_response;
+        success_response.success = true;
+        success_response.content = "Test response";
+        success_response.status_code = 200;
+        success_response.raw_response = {{"choices", nlohmann::json::array()}};
+        assert(mgr.writeApiResponse(success_response, false));
+        
+        const std::string apiResponsePath = requestDir + "/api_response.json";
+        assert(fs::exists(apiResponsePath, ec));
+        std::string content = readAll(apiResponsePath);
+        assert(content.find("choices") != std::string::npos);
+        
+        // Test writeApiResponse (error)
+        LLMEngineAPI::APIResponse error_response;
+        error_response.success = false;
+        error_response.error_message = "Test error";
+        error_response.status_code = 500;
+        error_response.raw_response = {{"error", "Internal server error"}};
+        assert(mgr.writeApiResponse(error_response, true));
+        
+        const std::string apiErrorPath = requestDir + "/api_response_error.json";
+        assert(fs::exists(apiErrorPath, ec));
+        
+        // Test writeFullResponse
+        assert(mgr.writeFullResponse("This is a full response text"));
+        const std::string fullResponsePath = requestDir + "/response_full.txt";
+        assert(fs::exists(fullResponsePath, ec));
+        content = readAll(fullResponsePath);
+        assert(content.find("full response") != std::string::npos);
+        
+        // Test writeAnalysisArtifacts
+        assert(mgr.writeAnalysisArtifacts("test_analysis", "Think section", "Content section"));
+        const std::string thinkPath = requestDir + "/test_analysis_think.txt";
+        const std::string contentPath = requestDir + "/test_analysis_content.txt";
+        assert(fs::exists(thinkPath, ec));
+        assert(fs::exists(contentPath, ec));
+        assert(readAll(thinkPath).find("Think section") != std::string::npos);
+        assert(readAll(contentPath).find("Content section") != std::string::npos);
+        
+        std::cout << "✓ DebugArtifactManager basic tests passed\n";
+    }
+    
+    // Test DebugArtifactManager with sanitized analysis type
+    {
+        const std::string requestDir2 = baseDir + "/test_request_456";
+        LLMEngine::DebugArtifactManager mgr2(requestDir2, baseDir, 24, nullptr);
+        mgr2.ensureRequestDirectory();
+        
+        // Test with analysis type containing special characters
+        assert(mgr2.writeAnalysisArtifacts("test/../analysis", "think", "content"));
+        // Should sanitize to safe filename
+        const std::string sanitizedPath = requestDir2 + "/test___analysis_think.txt";
+        assert(fs::exists(sanitizedPath, ec) || fs::exists(requestDir2 + "/analysis_think.txt", ec));
+        
+        std::cout << "✓ DebugArtifactManager sanitization test passed\n";
+    }
+    
+    // Test DebugArtifactManager with empty analysis type
+    {
+        const std::string requestDir3 = baseDir + "/test_request_789";
+        LLMEngine::DebugArtifactManager mgr3(requestDir3, baseDir, 24, nullptr);
+        mgr3.ensureRequestDirectory();
+        
+        assert(mgr3.writeAnalysisArtifacts("", "think", "content"));
+        // Should default to "analysis"
+        const std::string defaultPath = requestDir3 + "/analysis_think.txt";
+        assert(fs::exists(defaultPath, ec));
+        
+        std::cout << "✓ DebugArtifactManager empty analysis type test passed\n";
     }
 
     std::cout << "test_debug_artifacts: OK\n";

@@ -88,8 +88,14 @@ struct ChatCompletionRequestHelper {
             RetrySettings rs = computeRetrySettings(params, cfg, exponential_retry);
             
             // Merge default params with provided params
-            nlohmann::json request_params = default_params;
-            request_params.update(params);
+            // Optimize: avoid copy when params is empty
+            nlohmann::json request_params;
+            if (params.empty() || params.is_null()) {
+                request_params = default_params;  // Copy only when needed
+            } else {
+                request_params = default_params;  // Copy base
+                request_params.update(params);    // Apply overrides
+            }
             
             // Build provider-specific payload once and cache serialized body for retries
             nlohmann::json payload = buildPayload(request_params);
@@ -166,32 +172,64 @@ struct ChatCompletionRequestHelper {
                 }
             } else {
                 // For error responses, attempt to parse JSON but don't fail if it's not JSON
-                response.error_message = "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
+                // Build enhanced error message with context
+                std::string error_msg = "HTTP " + std::to_string(cpr_response.status_code);
+                if (!cpr_response.text.empty()) {
+                    // Try to extract structured error message from JSON response
+                    try {
+                        auto error_json = nlohmann::json::parse(cpr_response.text);
+                        response.raw_response = error_json;
+                        
+                        // Extract error message from common JSON error response formats
+                        if (error_json.contains("error")) {
+                            const auto& error_obj = error_json["error"];
+                            if (error_obj.is_object() && error_obj.contains("message")) {
+                                error_msg += ": " + error_obj["message"].get<std::string>();
+                            } else if (error_obj.is_string()) {
+                                error_msg += ": " + error_obj.get<std::string>();
+                            } else {
+                                error_msg += ": " + cpr_response.text;
+                            }
+                        } else if (error_json.contains("message")) {
+                            error_msg += ": " + error_json["message"].get<std::string>();
+                        } else {
+                            error_msg += ": " + cpr_response.text;
+                        }
+                    } catch (const nlohmann::json::parse_error&) {  // NOLINT(bugprone-empty-catch)
+                        // Non-JSON error response - use raw text
+                        error_msg += ": " + cpr_response.text;
+                        response.raw_response = nlohmann::json::object();
+                    }
+                } else {
+                    error_msg += ": Empty response body";
+                }
+                
+                response.error_message = error_msg;
+                
+                // Classify error based on HTTP status code
                 if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED || 
                     cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
                     response.error_code = LLMEngine::LLMEngineErrorCode::Auth;
                 } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
                     response.error_code = LLMEngine::LLMEngineErrorCode::RateLimited;
-                } else {
+                } else if (::LLMEngine::HttpStatus::isServerError(static_cast<int>(cpr_response.status_code))) {
                     response.error_code = LLMEngine::LLMEngineErrorCode::Server;
-                }
-                
-                // Attempt to parse error response JSON if available
-                if (!cpr_response.text.empty()) {
-                    try {
-                        response.raw_response = nlohmann::json::parse(cpr_response.text);
-                    } catch (const nlohmann::json::parse_error&) {  // NOLINT(bugprone-empty-catch)
-                        // Non-JSON error response is acceptable
-                    }
+                } else if (::LLMEngine::HttpStatus::isClientError(static_cast<int>(cpr_response.status_code))) {
+                    response.error_code = LLMEngine::LLMEngineErrorCode::Client;
+                } else {
+                    response.error_code = LLMEngine::LLMEngineErrorCode::Unknown;
                 }
             }
             
         } catch (const nlohmann::json::parse_error& e) {
-            response.error_message = "JSON parse error: " + std::string(e.what());
+            response.error_message = "JSON parse error at position " + std::to_string(e.byte) + ": " + std::string(e.what());
             response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
         } catch (const std::exception& e) {
-            response.error_message = "Exception: " + std::string(e.what());
+            response.error_message = "Network error: " + std::string(e.what());
             response.error_code = LLMEngine::LLMEngineErrorCode::Network;
+        } catch (...) {
+            response.error_message = "Unknown error occurred during request execution";
+            response.error_code = LLMEngine::LLMEngineErrorCode::Unknown;
         }
         
         return response;
