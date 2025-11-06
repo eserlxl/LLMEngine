@@ -10,6 +10,11 @@
 
 namespace LLMEngineAPI {
 
+namespace {
+    constexpr size_t CHAT_COMPLETIONS_PATH_LENGTH = 18;  // "/chat/completions" = 18 chars
+    constexpr size_t BEARER_PREFIX_LENGTH = 7;  // "Bearer " = 7 chars
+}
+
 OpenAICompatibleClient::OpenAICompatibleClient(const std::string& api_key, 
                                                const std::string& model,
                                                const std::string& base_url)
@@ -24,13 +29,13 @@ OpenAICompatibleClient::OpenAICompatibleClient(const std::string& api_key,
     };
     
     // Cache the chat completions URL to avoid string concatenation on every request
-    chat_completions_url_.reserve(base_url_.size() + 18);  // "/chat/completions" = 18 chars
+    chat_completions_url_.reserve(base_url_.size() + CHAT_COMPLETIONS_PATH_LENGTH);
     chat_completions_url_ = base_url_;
     chat_completions_url_ += "/chat/completions";
     
     // Cache headers to avoid rebuilding on every request
     std::string auth_header;
-    auth_header.reserve(api_key_.size() + 7);  // "Bearer " = 7 chars
+    auth_header.reserve(api_key_.size() + BEARER_PREFIX_LENGTH);
     auth_header = "Bearer ";
     auth_header += api_key_;
     
@@ -61,7 +66,7 @@ nlohmann::json OpenAICompatibleClient::buildPayload(const nlohmann::json& messag
     };
 }
 
-void OpenAICompatibleClient::parseOpenAIResponse(APIResponse& response, const std::string&) {
+void OpenAICompatibleClient::parseOpenAIResponse(APIResponse& response, const std::string& /*unused*/) {
     if (response.raw_response.contains("choices") && 
         response.raw_response["choices"].is_array() && 
         !response.raw_response["choices"].empty()) {

@@ -203,6 +203,14 @@ std::shared_ptr<::LLMEngine::Logger> APIConfigManager::getLogger() const {
 }
 
 namespace {
+    // Configuration validation constants
+    constexpr int MIN_TIMEOUT_SECONDS = 1;
+    constexpr int MAX_TIMEOUT_SECONDS = 3600;
+    constexpr int MIN_RETRY_ATTEMPTS = 0;
+    constexpr int MAX_RETRY_ATTEMPTS = 10;
+    constexpr int MIN_RETRY_DELAY_MS = 0;
+    constexpr int MAX_RETRY_DELAY_MS = 60000;
+    
     // Helper function to validate configuration structure
     bool validateConfig(const nlohmann::json& config, ::LLMEngine::Logger* logger) {
         // Validate top-level structure
@@ -240,9 +248,11 @@ namespace {
                         std::string url_str = base_url.get<std::string>();
                         if (!url_str.empty() && !::LLMEngine::Utils::validateUrl(url_str)) {
                             if (logger) {
-                                logger->log(::LLMEngine::LogLevel::Warn, 
-                                    std::string("Config validation warning: provider '") + provider_name + 
-                                    "' has invalid base_url format: " + url_str);
+                                std::string warning_msg = "Config validation warning: provider '";
+                                warning_msg += provider_name;
+                                warning_msg += "' has invalid base_url format: ";
+                                warning_msg += url_str;
+                                logger->log(::LLMEngine::LogLevel::Warn, warning_msg);
                             }
                             // Warning only, not a fatal error
                         }
@@ -256,9 +266,11 @@ namespace {
                         std::string model_str = model.get<std::string>();
                         if (!model_str.empty() && !::LLMEngine::Utils::validateModelName(model_str)) {
                             if (logger) {
-                                logger->log(::LLMEngine::LogLevel::Warn, 
-                                    std::string("Config validation warning: provider '") + provider_name + 
-                                    "' has invalid default_model format: " + model_str);
+                                std::string warning_msg = "Config validation warning: provider '";
+                                warning_msg += provider_name;
+                                warning_msg += "' has invalid default_model format: ";
+                                warning_msg += model_str;
+                                logger->log(::LLMEngine::LogLevel::Warn, warning_msg);
                             }
                             // Warning only, not a fatal error
                         }
@@ -272,11 +284,12 @@ namespace {
             const auto& timeout = config[std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)];
             if (timeout.is_number_integer()) {
                 int timeout_val = timeout.get<int>();
-                if (timeout_val < 1 || timeout_val > 3600) {
+                if (timeout_val < MIN_TIMEOUT_SECONDS || timeout_val > MAX_TIMEOUT_SECONDS) {
                     if (logger) {
                         logger->log(::LLMEngine::LogLevel::Warn, 
-                            std::string("Config validation warning: timeout_seconds should be between 1 and 3600, got: ") + 
-                            std::to_string(timeout_val));
+                            std::string("Config validation warning: timeout_seconds should be between ") + 
+                            std::to_string(MIN_TIMEOUT_SECONDS) + " and " + std::to_string(MAX_TIMEOUT_SECONDS) + 
+                            ", got: " + std::to_string(timeout_val));
                     }
                 }
             }
@@ -287,11 +300,12 @@ namespace {
             const auto& retries = config[std::string(::LLMEngine::Constants::JsonKeys::RETRY_ATTEMPTS)];
             if (retries.is_number_integer()) {
                 int retries_val = retries.get<int>();
-                if (retries_val < 0 || retries_val > 10) {
+                if (retries_val < MIN_RETRY_ATTEMPTS || retries_val > MAX_RETRY_ATTEMPTS) {
                     if (logger) {
                         logger->log(::LLMEngine::LogLevel::Warn, 
-                            std::string("Config validation warning: retry_attempts should be between 0 and 10, got: ") + 
-                            std::to_string(retries_val));
+                            std::string("Config validation warning: retry_attempts should be between ") + 
+                            std::to_string(MIN_RETRY_ATTEMPTS) + " and " + std::to_string(MAX_RETRY_ATTEMPTS) + 
+                            ", got: " + std::to_string(retries_val));
                     }
                 }
             }
@@ -302,11 +316,12 @@ namespace {
             const auto& delay = config[std::string(::LLMEngine::Constants::JsonKeys::RETRY_DELAY_MS)];
             if (delay.is_number_integer()) {
                 int delay_val = delay.get<int>();
-                if (delay_val < 0 || delay_val > 60000) {
+                if (delay_val < MIN_RETRY_DELAY_MS || delay_val > MAX_RETRY_DELAY_MS) {
                     if (logger) {
                         logger->log(::LLMEngine::LogLevel::Warn, 
-                            std::string("Config validation warning: retry_delay_ms should be between 0 and 60000, got: ") + 
-                            std::to_string(delay_val));
+                            std::string("Config validation warning: retry_delay_ms should be between ") + 
+                            std::to_string(MIN_RETRY_DELAY_MS) + " and " + std::to_string(MAX_RETRY_DELAY_MS) + 
+                            ", got: " + std::to_string(delay_val));
                     }
                 }
             }

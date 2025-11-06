@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <map>
 #include <algorithm>
+#include <ranges>
 
 // POSIX-specific includes (not available on Windows)
 #if defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
@@ -40,6 +41,15 @@ namespace LLMEngine::Utils {
     constexpr size_t MAX_CMD_STRING_LENGTH = 4096; // Maximum allowed command string length
     constexpr size_t MAX_ARG_COUNT = 64;           // Maximum number of arguments
     constexpr size_t MAX_ARG_LENGTH = 512;         // Maximum length per argument
+    
+    // Validation constants
+    constexpr size_t MIN_API_KEY_LENGTH = 10;
+    constexpr size_t MAX_API_KEY_LENGTH = 512;
+    constexpr size_t MAX_MODEL_NAME_LENGTH = 256;
+    constexpr size_t MAX_URL_LENGTH = 2048;
+    constexpr size_t MIN_URL_LENGTH = 7;  // Minimum "http://"
+    constexpr size_t HTTP_PREFIX_LENGTH = 7;  // "http://"
+    constexpr size_t HTTPS_PREFIX_LENGTH = 8;  // "https://"
     
     // Precompiled regex patterns
     static const std::regex SAFE_CHARS_REGEX(R"([a-zA-Z0-9_./ -]+)");
@@ -591,15 +601,15 @@ namespace LLMEngine::Utils {
         }
         
         // Check length (reasonable bounds)
-        if (api_key.size() < 10 || api_key.size() > 512) {
+        if (api_key.size() < MIN_API_KEY_LENGTH || api_key.size() > MAX_API_KEY_LENGTH) {
             return false;
         }
         
         // Check for control characters
-        for (char c : api_key) {
-            if (std::iscntrl(static_cast<unsigned char>(c))) {
-                return false;
-            }
+        if (!std::ranges::all_of(api_key, [](char c) {
+            return !std::iscntrl(static_cast<unsigned char>(c));
+        })) {
+            return false;
         }
         
         return true;
@@ -611,16 +621,16 @@ namespace LLMEngine::Utils {
         }
         
         // Check length
-        if (model_name.size() > 256) {
+        if (model_name.size() > MAX_MODEL_NAME_LENGTH) {
             return false;
         }
         
         // Check for allowed characters: alphanumeric, hyphens, underscores, dots, slashes
-        for (char c : model_name) {
-            if (!std::isalnum(static_cast<unsigned char>(c)) && 
-                c != '-' && c != '_' && c != '.' && c != '/') {
-                return false;
-            }
+        if (!std::ranges::all_of(model_name, [](char c) {
+            return std::isalnum(static_cast<unsigned char>(c)) || 
+                   c == '-' || c == '_' || c == '.' || c == '/';
+        })) {
+            return false;
         }
         
         return true;
@@ -632,24 +642,25 @@ namespace LLMEngine::Utils {
         }
         
         // Check length
-        if (url.size() > 2048) {
+        if (url.size() > MAX_URL_LENGTH) {
             return false;
         }
         
         // Must start with http:// or https://
-        if (url.size() < 7) {  // Minimum "http://"
+        if (url.size() < MIN_URL_LENGTH) {
             return false;
         }
         
-        if (url.substr(0, 7) != "http://" && url.substr(0, 8) != "https://") {
+        if (url.substr(0, HTTP_PREFIX_LENGTH) != "http://" && 
+            url.substr(0, HTTPS_PREFIX_LENGTH) != "https://") {
             return false;
         }
         
         // Check for control characters
-        for (char c : url) {
-            if (std::iscntrl(static_cast<unsigned char>(c))) {
-                return false;
-            }
+        if (!std::ranges::all_of(url, [](char c) {
+            return !std::iscntrl(static_cast<unsigned char>(c));
+        })) {
+            return false;
         }
         
         return true;
