@@ -54,8 +54,8 @@ public:
 
     void generateLogo(const std::string& description, const std::string& format = "png",
                       const std::string& filename = "") {
-        std::cout << "\n🎨 Generating logo from description: \"" << description << "\""
-                  << std::endl;
+        std::cout << "\n🎨 Generating logo from description: \"" << description
+                  << "\"" << std::endl;
 
         try {
             // Create detailed prompt for logo generation
@@ -386,8 +386,9 @@ int main(int argc, char* argv[]) {
                     descriptions.push_back(argv[i]);
                 }
                 if (descriptions.empty()) {
-                    std::cerr << "❌ No descriptions provided for multiple logo generation"
-                              << std::endl;
+                    std::cerr
+                        << "❌ No descriptions provided for multiple logo generation"
+                        << std::endl;
                     return 1;
                 }
                 generator.generateMultipleLogos(descriptions);
@@ -451,8 +452,9 @@ int main(int argc, char* argv[]) {
                 descriptions.push_back(argv[i]);
             }
             if (descriptions.empty()) {
-                std::cerr << "❌ No descriptions provided for multiple logo generation"
-                          << std::endl;
+                std::cerr
+                    << "❌ No descriptions provided for multiple logo generation"
+                    << std::endl;
                 return 1;
             }
             generator.generateMultipleLogos(descriptions);
