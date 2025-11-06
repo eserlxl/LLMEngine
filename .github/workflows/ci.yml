@@ -409,7 +409,8 @@ jobs:
           
           # Verify redaction tests pass (secret scanning)
           echo "Running secret scanning verification tests..."
-          ./test/test_request_logger || exit 1
+          # Use ctest to run the test (it knows where the executable is)
+          ctest -R test_request_logger --output-on-failure || exit 1
           
           echo "Security-critical module coverage check passed"
 
@@ -419,8 +420,28 @@ jobs:
           # Run tests that verify redaction removes sensitive values
           echo "Verifying secret redaction in logs..."
           
+          # Find the test executable location
+          # Try common locations first
+          TEST_EXEC=""
+          if [ -f "./test/test_request_logger" ]; then
+            TEST_EXEC="./test/test_request_logger"
+          elif [ -f "./test_request_logger" ]; then
+            TEST_EXEC="./test_request_logger"
+          else
+            # Search for the executable
+            TEST_EXEC=$(find . -name "test_request_logger" -type f -executable 2>/dev/null | head -1)
+            if [ -z "$TEST_EXEC" ]; then
+              echo "ERROR: Could not find test_request_logger executable"
+              echo "Searching for test executables..."
+              find . -name "*test*" -type f -executable 2>/dev/null | head -10 || true
+              exit 1
+            fi
+          fi
+          
+          echo "Using test executable: $TEST_EXEC"
+          
           # Test that redaction works for all sensitive fields
-          ./test/test_request_logger > /tmp/redaction_test.log 2>&1 || true
+          $TEST_EXEC > /tmp/redaction_test.log 2>&1 || true
           
           # Check that no sensitive values leak in test output
           SENSITIVE_PATTERNS="api_key|password|token|secret|authorization"
