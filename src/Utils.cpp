@@ -5,8 +5,8 @@
 // the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/Logger.hpp"
 #include "LLMEngine/Utils.hpp"
+#include "LLMEngine/Logger.hpp"
 #include <algorithm>
 #include <array>
 #include <cerrno>
@@ -40,8 +40,8 @@ constexpr size_t COMMAND_BUFFER_SIZE = 256;
 constexpr size_t MAX_OUTPUT_LINES =
     10000; // Maximum number of output lines to prevent memory exhaustion
 constexpr size_t MAX_LINE_LENGTH =
-        static_cast<size_t>(1024) * 1024; // Maximum line length (1MB) to prevent
-                                           // memory exhaustion
+    static_cast<size_t>(1024) * 1024; // Maximum line length (1MB) to prevent
+                                      // memory exhaustion
 constexpr size_t MAX_CMD_STRING_LENGTH = 4096; // Maximum allowed command string
                                                 // length
 constexpr size_t MAX_ARG_COUNT = 64;           // Maximum number of arguments
@@ -131,8 +131,8 @@ std::vector<std::string> readLines(std::string_view filepath, size_t max_lines) 
 //   wildcards)
 // - Multiple redundant checks for defense in depth
 std::vector<std::string> execCommandImpl(
-        const std::vector<std::string>& args, ::LLMEngine::Logger* logger,
-        const std::string& cmd_str_for_logging) {
+    const std::vector<std::string>& args, ::LLMEngine::Logger* logger,
+    const std::string& cmd_str_for_logging) {
     std::vector<std::string> output;
 
     // Windows support: execCommand is not available on Windows due to POSIX
@@ -149,7 +149,7 @@ std::vector<std::string> execCommandImpl(
     if (args.empty()) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
-                    "execCommand: Empty command string");
+                        "execCommand: Empty command string");
         }
         return output;
     }
@@ -304,7 +304,7 @@ std::vector<std::string> execCommandImpl(
         if (rc != 0) {
             if (logger) {
                 logger->log(::LLMEngine::LogLevel::Error,
-                        std::string("execCommand: ") + what + " failed (" +
+                            std::string("execCommand: ") + what + " failed (" +
                                 std::to_string(rc) + ")");
             }
             posix_spawn_file_actions_destroy(&file_actions);
@@ -318,13 +318,15 @@ std::vector<std::string> execCommandImpl(
     if (!add_action(posix_spawn_file_actions_addclose(&file_actions, stderr_read.get()),
                     "addclose stderr_read"))
         return output;
-    if (!add_action(posix_spawn_file_actions_adddup2(&file_actions, stdout_write.get(),
-                                                      STDOUT_FILENO),
-                    "adddup2 stdout"))
+    if (!add_action(
+            posix_spawn_file_actions_adddup2(&file_actions, stdout_write.get(),
+                                             STDOUT_FILENO),
+            "adddup2 stdout"))
         return output;
-    if (!add_action(posix_spawn_file_actions_adddup2(&file_actions, stderr_write.get(),
-                                                      STDERR_FILENO),
-                    "adddup2 stderr"))
+    if (!add_action(
+            posix_spawn_file_actions_adddup2(&file_actions, stderr_write.get(),
+                                             STDERR_FILENO),
+            "adddup2 stderr"))
         return output;
     if (!add_action(posix_spawn_file_actions_addclose(&file_actions, stdout_write.get()),
                     "addclose stdout_write"))
@@ -335,8 +337,8 @@ std::vector<std::string> execCommandImpl(
 
     // Spawn the process
     pid_t pid;
-    int spawn_result = posix_spawnp(&pid, argv[0], &file_actions, nullptr, argv.data(),
-                                    ::environ);
+    int spawn_result = posix_spawnp(&pid, argv[0], &file_actions, nullptr,
+                                    argv.data(), ::environ);
 
     // Clean up file actions
     posix_spawn_file_actions_destroy(&file_actions);
@@ -344,8 +346,8 @@ std::vector<std::string> execCommandImpl(
     if (spawn_result != 0) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
-                    std::string("execCommand: posix_spawnp() failed for "
-                                "command: ") +
+                        std::string("execCommand: posix_spawnp() failed for "
+                                    "command: ") +
                             cmd_str_for_logging + " (error: " +
                             std::to_string(spawn_result) + ")");
         }
@@ -519,7 +521,7 @@ std::vector<std::string> execCommandImpl(
     if (waitpid(pid, &status, 0) == -1) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
-                    std::string("execCommand: waitpid() failed for command: ") +
+                        std::string("execCommand: waitpid() failed for command: ") +
                             cmd_str_for_logging);
         }
         return output;
@@ -528,7 +530,7 @@ std::vector<std::string> execCommandImpl(
     if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Warn,
-                    std::string("Command '") + cmd_str_for_logging +
+                        std::string("Command '") + cmd_str_for_logging +
                             "' exited with non-zero status: " +
                             std::to_string(WEXITSTATUS(status)));
             if (!output.empty()) {
@@ -542,7 +544,7 @@ std::vector<std::string> execCommandImpl(
     } else if (WIFSIGNALED(status)) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Warn,
-                    std::string("Command '") + cmd_str_for_logging +
+                        std::string("Command '") + cmd_str_for_logging +
                             "' terminated by signal: " +
                             std::to_string(WTERMSIG(status)));
         }
@@ -577,7 +579,7 @@ std::vector<std::string> execCommand(std::string_view cmd, ::LLMEngine::Logger* 
     if (cmd_str.empty()) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
-                    "execCommand: Empty command string");
+                        "execCommand: Empty command string");
         }
         return output;
     }
@@ -724,8 +726,8 @@ bool validateApiKey(std::string_view api_key) {
 
     // Check for control characters
     if (!std::ranges::all_of(api_key, [](char c) {
-        return !std::iscntrl(static_cast<unsigned char>(c));
-    })) {
+            return !std::iscntrl(static_cast<unsigned char>(c));
+        })) {
         return false;
     }
 
@@ -776,8 +778,8 @@ bool validateUrl(std::string_view url) {
 
     // Check for control characters
     if (!std::ranges::all_of(url, [](char c) {
-        return !std::iscntrl(static_cast<unsigned char>(c));
-    })) {
+            return !std::iscntrl(static_cast<unsigned char>(c));
+        })) {
         return false;
     }
 
