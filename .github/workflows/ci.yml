@@ -301,9 +301,41 @@ jobs:
             nlohmann-json3-dev \
             gcc-12 \
             g++-12 \
-            gcov-12 \
             gcovr \
             python3-pip
+          # gcov-12 might be bundled with gcc-12 or available as a separate package
+          # Try to install it separately, but don't fail if it doesn't exist
+          sudo apt-get install -y gcov-12 || echo "gcov-12 not available as separate package, will use bundled version"
+          # Verify gcov-12 is available (either as separate package or bundled)
+          if ! command -v gcov-12 &> /dev/null; then
+            # Check if gcov from gcc-12 is available
+            if command -v gcc-12 &> /dev/null; then
+              # Create a symlink if gcov-12 doesn't exist but gcc-12 does
+              GCOV_PATH=$(gcc-12 -print-file-name=gcov 2>/dev/null || echo "")
+              if [ -n "$GCOV_PATH" ] && [ -f "$GCOV_PATH" ]; then
+                echo "Creating symlink for gcov-12 from $GCOV_PATH"
+                sudo ln -sf "$GCOV_PATH" /usr/bin/gcov-12 || true
+              else
+                # Try to find gcov in standard locations
+                if [ -f "/usr/bin/gcov" ]; then
+                  # Check if gcov version matches GCC 12
+                  GCOV_VERSION=$(gcov --version | head -1 | sed -n 's/.*gcov (GCC) \([0-9]\+\).*/\1/p' || echo "")
+                  if [ "$GCOV_VERSION" = "12" ]; then
+                    sudo ln -sf /usr/bin/gcov /usr/bin/gcov-12 || true
+                  fi
+                fi
+              fi
+            fi
+          fi
+          # Verify gcov-12 is now available
+          if ! command -v gcov-12 &> /dev/null; then
+            echo "Warning: gcov-12 not found, checking available gcov versions:"
+            ls -la /usr/bin/gcov* || true
+            echo "Will attempt to use gcov directly"
+          else
+            echo "gcov-12 is available at: $(which gcov-12)"
+            gcov-12 --version
+          fi
           pip3 install gcovr
 
       - name: Configure with coverage
@@ -327,8 +359,20 @@ jobs:
       - name: Generate coverage report
         run: |
           cd build
+          # Determine which gcov executable to use
+          if command -v gcov-12 &> /dev/null; then
+            GCOV_EXEC="gcov-12"
+          elif command -v gcov &> /dev/null; then
+            GCOV_EXEC="gcov"
+            echo "Using gcov (fallback, version check recommended)"
+          else
+            echo "Error: No gcov executable found"
+            exit 1
+          fi
+          echo "Using gcov executable: $GCOV_EXEC"
+          $GCOV_EXEC --version || true
           gcovr -r .. \
-            --gcov-executable gcov-12 \
+            --gcov-executable $GCOV_EXEC \
             --exclude-directories build_examples \
             --exclude test \
             --xml coverage.xml \
@@ -338,12 +382,21 @@ jobs:
       - name: Check security-critical module coverage
         run: |
           cd build
+          # Determine which gcov executable to use (same as coverage report step)
+          if command -v gcov-12 &> /dev/null; then
+            GCOV_EXEC="gcov-12"
+          elif command -v gcov &> /dev/null; then
+            GCOV_EXEC="gcov"
+          else
+            echo "Error: No gcov executable found"
+            exit 1
+          fi
           # Extract coverage for security-critical modules
           # Threshold: ≥90% line coverage, ≥80% branch coverage
           echo "Checking coverage for security-critical modules..."
           
           # Check RequestLogger (redaction)
-          REQUEST_LOGGER_COV=$(gcovr -r .. --gcov-executable gcov-12 --filter ../src/RequestLogger.cpp --txt - | grep -E "lines|branches" | head -2 || echo "0%")
+          REQUEST_LOGGER_COV=$(gcovr -r .. --gcov-executable $GCOV_EXEC --filter ../src/RequestLogger.cpp --txt - | grep -E "lines|branches" | head -2 || echo "0%")
           echo "RequestLogger coverage:"
           echo "$REQUEST_LOGGER_COV"
           
