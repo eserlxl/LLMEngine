@@ -40,8 +40,8 @@ constexpr size_t COMMAND_BUFFER_SIZE = 256;
 constexpr size_t MAX_OUTPUT_LINES =
     10000; // Maximum number of output lines to prevent memory exhaustion
 constexpr size_t MAX_LINE_LENGTH = static_cast<size_t>(1024) *
-                                   1024; // Maximum line length (1MB) to prevent
-                                         // memory exhaustion
+                                    1024; // Maximum line length (1MB) to prevent
+                                          // memory exhaustion
 constexpr size_t MAX_CMD_STRING_LENGTH = 4096; // Maximum allowed command string
                                                 // length
 constexpr size_t MAX_ARG_COUNT = 64;            // Maximum number of arguments
@@ -52,9 +52,9 @@ constexpr size_t MIN_API_KEY_LENGTH = 10;
 constexpr size_t MAX_API_KEY_LENGTH = 512;
 constexpr size_t MAX_MODEL_NAME_LENGTH = 256;
 constexpr size_t MAX_URL_LENGTH = 2048;
-constexpr size_t MIN_URL_LENGTH = 7;            // Minimum "http://"
-constexpr size_t HTTP_PREFIX_LENGTH = 7;        // "http://"
-constexpr size_t HTTPS_PREFIX_LENGTH = 8;       // "https://"
+constexpr size_t MIN_URL_LENGTH = 7;      // Minimum "http://"
+constexpr size_t HTTP_PREFIX_LENGTH = 7;  // "http://"
+constexpr size_t HTTPS_PREFIX_LENGTH = 8; // "https://"
 
 // Precompiled regex patterns
 static const std::regex SAFE_CHARS_REGEX(R"([a-zA-Z0-9_./ -]+)");
@@ -82,10 +82,10 @@ public:
             close_fd(fd_);
         }
     }
-    PipeFD(const PipeFD &) = delete;
-    PipeFD &operator=(const PipeFD &) = delete;
-    PipeFD(PipeFD &&other) noexcept : fd_(other.fd_) { other.fd_ = -1; }
-    PipeFD &operator=(PipeFD &&other) noexcept {
+    PipeFD(const PipeFD&) = delete;
+    PipeFD& operator=(const PipeFD&) = delete;
+    PipeFD(PipeFD&& other) noexcept : fd_(other.fd_) { other.fd_ = -1; }
+    PipeFD& operator=(PipeFD&& other) noexcept {
         if (this != &other) {
             if (fd_ >= 0)
                 close_fd(fd_);
@@ -94,7 +94,9 @@ public:
         }
         return *this;
     }
-    [[nodiscard]] int get() const { return fd_; }
+    [[nodiscard]] int get() const {
+        return fd_;
+    }
     int release() {
         int fd = fd_;
         fd_ = -1;
@@ -126,9 +128,9 @@ std::vector<std::string> readLines(std::string_view filepath, size_t max_lines) 
 // - Shell metacharacter rejection (|, &, ;, $, `, <, >, parentheses, brackets,
 //   wildcards)
 // - Multiple redundant checks for defense in depth
-std::vector<std::string>
-execCommandImpl(const std::vector<std::string> &args, ::LLMEngine::Logger *logger,
-                const std::string &cmd_str_for_logging) {
+std::vector<std::string> execCommandImpl(
+        const std::vector<std::string>& args, ::LLMEngine::Logger* logger,
+        const std::string& cmd_str_for_logging) {
     std::vector<std::string> output;
 
     // Windows support: execCommand is not available on Windows due to POSIX
@@ -167,7 +169,7 @@ execCommandImpl(const std::vector<std::string> &args, ::LLMEngine::Logger *logge
         }
         return output;
     }
-    for (const auto &a : args) {
+    for (const auto& a : args) {
         if (a.size() > MAX_ARG_LENGTH || !std::regex_match(a, SAFE_CHARS_REGEX)) {
             if (logger) {
                 logger->log(::LLMEngine::LogLevel::Error,
@@ -261,10 +263,10 @@ execCommandImpl(const std::vector<std::string> &args, ::LLMEngine::Logger *logge
     }
 
     // Prepare argv array for execve (must be null-terminated)
-    std::vector<char *> argv;
+    std::vector<char*> argv;
     argv.reserve(args.size() + 1); // Pre-allocate capacity for args + nullptr
-    for (auto &arg_str : args) {
-        argv.push_back(const_cast<char *>(arg_str.c_str()));
+    for (auto& arg_str : args) {
+        argv.push_back(const_cast<char*>(arg_str.c_str()));
     }
     argv.push_back(nullptr);
 
@@ -296,25 +298,25 @@ execCommandImpl(const std::vector<std::string> &args, ::LLMEngine::Logger *logge
         }
         return output;
     }
-    auto add_action = [&](int rc, const char *what) -> bool {
+    auto add_action = [&](int rc, const char* what) -> bool {
         if (rc != 0) {
             if (logger) {
                 logger->log(::LLMEngine::LogLevel::Error,
-                            std::string("execCommand: ") + what + " failed (" +
-                                std::to_string(rc) + ")");
+                            std::string("execCommand: ") + what +
+                                " failed (" + std::to_string(rc) + ")");
             }
             posix_spawn_file_actions_destroy(&file_actions);
             return false;
         }
         return true;
     };
-    if (!add_action(posix_spawn_file_actions_addclose(&file_actions,
-                                                       stdout_read.get()),
-                    "addclose stdout_read"))
+    if (!add_action(
+                posix_spawn_file_actions_addclose(&file_actions, stdout_read.get()),
+                "addclose stdout_read"))
         return output;
-    if (!add_action(posix_spawn_file_actions_addclose(&file_actions,
-                                                       stderr_read.get()),
-                    "addclose stderr_read"))
+    if (!add_action(
+                posix_spawn_file_actions_addclose(&file_actions, stderr_read.get()),
+                "addclose stderr_read"))
         return output;
     if (!add_action(posix_spawn_file_actions_adddup2(&file_actions,
                                                       stdout_write.get(),
@@ -326,19 +328,19 @@ execCommandImpl(const std::vector<std::string> &args, ::LLMEngine::Logger *logge
                                                       STDERR_FILENO),
                     "adddup2 stderr"))
         return output;
-    if (!add_action(posix_spawn_file_actions_addclose(&file_actions,
-                                                       stdout_write.get()),
-                    "addclose stdout_write"))
+    if (!add_action(
+                posix_spawn_file_actions_addclose(&file_actions, stdout_write.get()),
+                "addclose stdout_write"))
         return output;
-    if (!add_action(posix_spawn_file_actions_addclose(&file_actions,
-                                                       stderr_write.get()),
-                    "addclose stderr_write"))
+    if (!add_action(
+                posix_spawn_file_actions_addclose(&file_actions, stderr_write.get()),
+                "addclose stderr_write"))
         return output;
 
     // Spawn the process
     pid_t pid;
-    int spawn_result = posix_spawnp(&pid, argv[0], &file_actions, nullptr,
-                                    argv.data(), ::environ);
+    int spawn_result = posix_spawnp(&pid, argv[0], &file_actions, nullptr, argv.data(),
+                                    ::environ);
 
     // Clean up file actions
     posix_spawn_file_actions_destroy(&file_actions);
@@ -410,14 +412,12 @@ execCommandImpl(const std::vector<std::string> &args, ::LLMEngine::Logger *logge
 
         // Update original pollfds with revents from active_pollfds
         for (size_t i = 0; i < active_pollfds.size(); ++i) {
-            pollfds[static_cast<size_t>(fd_to_index[i])].revents =
-                active_pollfds[i].revents;
+            pollfds[static_cast<size_t>(fd_to_index[i])].revents = active_pollfds[i].revents;
         }
 
         // Read from stdout if available and not truncated
         if (!stdout_closed && (pollfds[0].revents & POLLIN)) {
-            ssize_t bytes_read =
-                read(stdout_read.get(), buffer.data(), buffer.size());
+            ssize_t bytes_read = read(stdout_read.get(), buffer.data(), buffer.size());
             if (bytes_read > 0) {
                 stdout_total_size += static_cast<size_t>(bytes_read);
                 if (stdout_total_size > MAX_LINE_LENGTH * MAX_OUTPUT_LINES) {
@@ -428,26 +428,22 @@ execCommandImpl(const std::vector<std::string> &args, ::LLMEngine::Logger *logge
                     }
                     stdout_closed = true;
                 } else {
-                    stdout_buffer.append(buffer.data(),
-                                         static_cast<size_t>(bytes_read));
+                    stdout_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
                 }
             } else if (bytes_read == 0 ||
-                       (bytes_read < 0 && errno != EAGAIN &&
-                        errno != EWOULDBLOCK)) {
+                       (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK)) {
                 // EOF or error (not just would-block)
                 stdout_closed = true;
                 pollfds[0].fd = -1; // Remove from poll set
             }
-        } else if (!stdout_closed &&
-                   (pollfds[0].revents & (POLLHUP | POLLERR))) {
+        } else if (!stdout_closed && (pollfds[0].revents & (POLLHUP | POLLERR))) {
             stdout_closed = true;
             pollfds[0].fd = -1;
         }
 
         // Read from stderr if available and not truncated
         if (!stderr_closed && (pollfds[1].revents & POLLIN)) {
-            ssize_t bytes_read =
-                read(stderr_read.get(), buffer.data(), buffer.size());
+            ssize_t bytes_read = read(stderr_read.get(), buffer.data(), buffer.size());
             if (bytes_read > 0) {
                 stderr_total_size += static_cast<size_t>(bytes_read);
                 if (stderr_total_size > MAX_LINE_LENGTH * MAX_OUTPUT_LINES) {
@@ -458,18 +454,15 @@ execCommandImpl(const std::vector<std::string> &args, ::LLMEngine::Logger *logge
                     }
                     stderr_closed = true;
                 } else {
-                    stderr_buffer.append(buffer.data(),
-                                         static_cast<size_t>(bytes_read));
+                    stderr_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
                 }
             } else if (bytes_read == 0 ||
-                       (bytes_read < 0 && errno != EAGAIN &&
-                        errno != EWOULDBLOCK)) {
+                       (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK)) {
                 // EOF or error (not just would-block)
                 stderr_closed = true;
                 pollfds[1].fd = -1; // Remove from poll set
             }
-        } else if (!stderr_closed &&
-                   (pollfds[1].revents & (POLLHUP | POLLERR))) {
+        } else if (!stderr_closed && (pollfds[1].revents & (POLLHUP | POLLERR))) {
             stderr_closed = true;
             pollfds[1].fd = -1;
         }
@@ -544,7 +537,7 @@ execCommandImpl(const std::vector<std::string> &args, ::LLMEngine::Logger *logge
                             std::to_string(WEXITSTATUS(status)));
             if (!output.empty()) {
                 std::string output_msg = "  Output:\n";
-                for (const auto &output_line : output) {
+                for (const auto& output_line : output) {
                     output_msg += "    " + output_line + "\n";
                 }
                 logger->log(::LLMEngine::LogLevel::Warn, output_msg);
@@ -562,8 +555,7 @@ execCommandImpl(const std::vector<std::string> &args, ::LLMEngine::Logger *logge
     return output;
 }
 
-std::vector<std::string> execCommand(std::string_view cmd,
-                                     ::LLMEngine::Logger *logger) {
+std::vector<std::string> execCommand(std::string_view cmd, ::LLMEngine::Logger* logger) {
     std::vector<std::string> output;
 
     // Windows support: execCommand is not available on Windows due to POSIX
@@ -618,8 +610,7 @@ std::vector<std::string> execCommand(std::string_view cmd,
     }
 
     // Explicitly check for newlines and tabs (redundant but defensive)
-    if (cmd_str.find('\n') != std::string::npos ||
-        cmd_str.find('\r') != std::string::npos ||
+    if (cmd_str.find('\n') != std::string::npos || cmd_str.find('\r') != std::string::npos ||
         cmd_str.find('\t') != std::string::npos) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
@@ -648,24 +639,15 @@ std::vector<std::string> execCommand(std::string_view cmd,
 
     // Additional check: prevent command chaining attempts via shell
     // metacharacters
-    if (cmd_str.find('|') != std::string::npos ||
-        cmd_str.find('&') != std::string::npos ||
-        cmd_str.find(';') != std::string::npos ||
-        cmd_str.find('$') != std::string::npos ||
-        cmd_str.find('`') != std::string::npos ||
-        cmd_str.find('(') != std::string::npos ||
-        cmd_str.find(')') != std::string::npos ||
-        cmd_str.find('<') != std::string::npos ||
-        cmd_str.find('>') != std::string::npos ||
-        cmd_str.find('{') != std::string::npos ||
-        cmd_str.find('}') != std::string::npos ||
-        cmd_str.find('[') != std::string::npos ||
-        cmd_str.find(']') != std::string::npos ||
-        cmd_str.find('*') != std::string::npos ||
-        cmd_str.find('?') != std::string::npos ||
-        cmd_str.find('!') != std::string::npos ||
-        cmd_str.find('#') != std::string::npos ||
-        cmd_str.find('~') != std::string::npos) {
+    if (cmd_str.find('|') != std::string::npos || cmd_str.find('&') != std::string::npos ||
+        cmd_str.find(';') != std::string::npos || cmd_str.find('$') != std::string::npos ||
+        cmd_str.find('`') != std::string::npos || cmd_str.find('(') != std::string::npos ||
+        cmd_str.find(')') != std::string::npos || cmd_str.find('<') != std::string::npos ||
+        cmd_str.find('>') != std::string::npos || cmd_str.find('{') != std::string::npos ||
+        cmd_str.find('}') != std::string::npos || cmd_str.find('[') != std::string::npos ||
+        cmd_str.find(']') != std::string::npos || cmd_str.find('*') != std::string::npos ||
+        cmd_str.find('?') != std::string::npos || cmd_str.find('!') != std::string::npos ||
+        cmd_str.find('#') != std::string::npos || cmd_str.find('~') != std::string::npos) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
                         "execCommand: Command contains shell metacharacters - "
@@ -713,8 +695,8 @@ std::vector<std::string> execCommand(std::string_view cmd,
     return execCommandImpl(args, logger, cmd_str);
 }
 
-std::vector<std::string>
-execCommand(const std::vector<std::string> &args, ::LLMEngine::Logger *logger) {
+std::vector<std::string> execCommand(const std::vector<std::string>& args,
+                                     ::LLMEngine::Logger* logger) {
     // Build command string for logging purposes
     std::string cmd_str_for_logging;
     if (!args.empty()) {
@@ -740,8 +722,7 @@ bool validateApiKey(std::string_view api_key) {
     }
 
     // Check length (reasonable bounds)
-    if (api_key.size() < MIN_API_KEY_LENGTH ||
-        api_key.size() > MAX_API_KEY_LENGTH) {
+    if (api_key.size() < MIN_API_KEY_LENGTH || api_key.size() > MAX_API_KEY_LENGTH) {
         return false;
     }
 
@@ -768,8 +749,8 @@ bool validateModelName(std::string_view model_name) {
     // Check for allowed characters: alphanumeric, hyphens, underscores, dots,
     // slashes
     if (!std::ranges::all_of(model_name, [](char c) {
-            return std::isalnum(static_cast<unsigned char>(c)) || c == '-' ||
-                   c == '_' || c == '.' || c == '/';
+            return std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_' ||
+                   c == '.' || c == '/';
         })) {
         return false;
     }
