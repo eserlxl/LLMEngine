@@ -11,7 +11,7 @@
 #include "LLMEngine/LLMEngineExport.hpp"
 
 namespace LLMEngine {
-    class Logger;  // Forward declaration
+    struct Logger;  // Forward declaration
 
 /**
  * @brief Merges model parameters with input overrides.
