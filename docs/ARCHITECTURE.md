@@ -19,7 +19,6 @@ LLMEngine provides a unified, type-safe interface to multiple Large Language Mod
 │                     LLMEngine Class                          │
 │  - High-level orchestration                                 │
 │  - Analysis result formatting                               │
-│  - Debug artifact management                                │
 │  - Logger injection                                         │
 │  - Request context building                                 │
 └────────────┬────────────────────────────────────────────────┘
@@ -33,6 +32,19 @@ LLMEngine provides a unified, type-safe interface to multiple Large Language Mod
 │- Build context   │  │- Handle response │  │- Write artifacts │
 │- Merge params    │  │- Parse errors    │  │- Cleanup old     │
 │- Build prompt    │  │- Extract content │  │- Retention       │
+└──────────────────┘  └──────────────────┘  └──────────────────┘
+             │
+             ├──────────────────┬──────────────────────────────┐
+             │                  │                              │
+             ▼                  ▼                              ▼
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│ProviderBootstrap │  │TempDirectory     │  │DebugArtifact     │
+│                  │  │Service           │  │Manager           │
+│- Provider        │  │- Directory       │  │- Write artifacts │
+│  discovery       │  │  creation        │  │- Cleanup old     │
+│- Credential      │  │- Security checks │  │- Retention       │
+│  resolution      │  │- Path validation │  │                  │
+│- Config loading  │  │- Permissions     │  │                  │
 └──────────────────┘  └──────────────────┘  └──────────────────┘
              │
              ▼
@@ -66,7 +78,9 @@ LLMEngine provides a unified, type-safe interface to multiple Large Language Mod
 ┌─────────────────────────────────────────────────────────────┐
 │              APIClientFactory                                │
 │  - createClient(ProviderType, api_key, model, ...)          │
+│  - createClientFromConfig(name, config, logger, ...)        │
 │  - stringToProviderType(name)                               │
+│  - Uses ProviderBootstrap for credential resolution         │
 └────────────────────────┬────────────────────────────────────┘
                          │
                          ▼
@@ -82,6 +96,10 @@ LLMEngine provides a unified, type-safe interface to multiple Large Language Mod
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
 │              Helper Components                               │
+│  - ProviderBootstrap: Provider discovery & credential       │
+│    resolution                                               │
+│  - TempDirectoryService: Filesystem security & directory    │
+│    management                                               │
 │  - ParameterMerger: Merge request parameters                │
 │  - ResponseParser: Parse responses with think tags          │
 │  - RequestLogger: Secret redaction and logging              │
@@ -95,14 +113,43 @@ LLMEngine provides a unified, type-safe interface to multiple Large Language Mod
 
 The main entry point for applications. It provides:
 - Provider-agnostic API for analysis requests
-- Configuration management
-- Debug artifact generation and cleanup
+- Request orchestration and result formatting
 - Logger abstraction for observability
 
 **Key Methods:**
 - `analyze(prompt, input, analysis_type, mode, prepend_terse_instruction)` - Main analysis method
 - `getProviderName()`, `getModelName()`, `getProviderType()` - Query methods
 - `setLogger(logger)` - Dependency injection for logging
+
+**Architecture Note:** LLMEngine delegates provider discovery and credential resolution to `ProviderBootstrap`, and filesystem operations to `TempDirectoryService`, following the Single Responsibility Principle.
+
+### ProviderBootstrap
+
+Helper class that extracts provider discovery and credential resolution logic:
+- Provider name resolution (default provider fallback)
+- Provider type resolution
+- Configuration loading
+- Credential resolution with priority: environment variables → constructor param → config file
+- Model resolution
+- Ollama URL resolution
+
+**Key Methods:**
+- `bootstrap(provider_name, api_key, model, config_manager, logger)` - Complete provider bootstrap
+- `resolveApiKey(provider_type, api_key_from_param, api_key_from_config, logger)` - Credential resolution
+- `getApiKeyEnvVarName(provider_type)` - Get environment variable name for a provider
+
+### TempDirectoryService
+
+Service class for managing temporary directories with security checks:
+- Directory creation with security validation
+- Symlink protection (prevents symlink traversal attacks)
+- Permission setting (0700 owner-only)
+- Path validation (ensures paths are within allowed root)
+
+**Key Methods:**
+- `ensureSecureDirectory(directory_path, logger)` - Create directory with security checks
+- `validatePathWithinRoot(requested_path, allowed_root, logger)` - Validate path is within root
+- `isDirectoryValid(directory_path, logger)` - Check if directory exists and is not a symlink
 
 ### APIClient Interface
 
@@ -285,22 +332,25 @@ Application
     ▼
 ```
 
-### Sequence Diagram: Configuration Loading
+### Sequence Diagram: Configuration Loading and Provider Bootstrap
 
 ```
 Application
     │
-    │ LLMEngine constructor or
-    │ APIConfigManager::loadConfig()
+    │ LLMEngine constructor with provider_name
+    ▼
+ProviderBootstrap::bootstrap()
+    │
+    │ 1. Resolve config manager (injected or singleton)
     ▼
 APIConfigManager (Singleton)
     │
-    │ 1. Load JSON file
+    │ 2. Load JSON file
     │    ├─ Parse config/api_config.json
     │    └─ Handle parse errors
     ▼
     │
-    │ 2. Validate configuration
+    │ 3. Validate configuration
     │    ├─ Validate JSON structure
     │    ├─ Validate provider configs
     │    │  ├─ base_url format (Utils::validateUrl)
@@ -310,13 +360,21 @@ APIConfigManager (Singleton)
     │       ├─ retry_attempts range
     │       └─ retry_delay_ms range
     ▼
+ProviderBootstrap
     │
-    │ 3. Store configuration
-    │    ├─ Thread-safe write lock
-    │    └─ Update internal state
+    │ 4. Resolve provider name (default if empty)
+    │ 5. Get provider configuration
+    │ 6. Resolve provider type
+    │ 7. Resolve credentials (env var → param → config)
+    │ 8. Resolve model name
+    │ 9. Resolve Ollama URL (if applicable)
     ▼
     │
-    │ 4. Return success/failure
+    │ Return BootstrapResult
+    ▼
+LLMEngine
+    │
+    │ Store resolved values and create APIClient
     ▼
 Application
 ```
@@ -465,6 +523,22 @@ struct Logger {
 4. Update `APIClientFactory::createClient()` to handle new type
 5. Update `APIClientFactory::stringToProviderType()` for string mapping
 
+## Design Principles
+
+1. **Provider Abstraction**: All providers implement the same `APIClient` interface, allowing seamless switching between providers.
+2. **Configuration-Driven**: Provider settings are loaded from JSON configuration files, with environment variable overrides.
+3. **Thread Safety**: APIClient implementations are stateless and thread-safe, while LLMEngine instances are not thread-safe.
+4. **Error Handling**: Comprehensive error classification and retry logic for transient failures.
+5. **Security**: API keys are never logged, and environment variables are preferred over config files.
+6. **Extensibility**: New providers can be added by implementing the `APIClient` interface.
+7. **Single Responsibility Principle (SRP)**: Components are separated by responsibility:
+   - `LLMEngine`: Request orchestration and result formatting
+   - `ProviderBootstrap`: Provider discovery and credential resolution
+   - `TempDirectoryService`: Filesystem security and directory management
+   - `RequestContextBuilder`: Request context construction
+   - `ResponseHandler`: Response processing and error handling
+8. **Testability**: Extracted services (`ProviderBootstrap`, `TempDirectoryService`) can be tested independently without requiring full LLMEngine setup.
+
 #### Design Rationale: Interface vs Concepts
 
 LLMEngine uses a traditional abstract base class (`APIClient`) rather than C++20 concepts for provider abstraction:
@@ -522,3 +596,4 @@ engine.setLogger(std::make_shared<MyLogger>());
 - [docs/PERFORMANCE.md](PERFORMANCE.md) - Performance considerations
 - [QUICKSTART.md](../QUICKSTART.md) - Quick start guide
 - [README.md](../README.md) - Main documentation
+

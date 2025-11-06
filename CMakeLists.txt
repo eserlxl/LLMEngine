@@ -270,6 +270,8 @@ add_library(${PROJECT_NAME}
     src/ParameterMerger.cpp
     src/RequestContextBuilder.cpp
     src/ResponseHandler.cpp
+    src/ProviderBootstrap.cpp
+    src/TempDirectoryService.cpp
 )
 
 # Versioning for shared libraries

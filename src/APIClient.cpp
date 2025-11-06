@@ -9,6 +9,7 @@
 #include "LLMEngine/Logger.hpp"
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/Utils.hpp"
+#include "LLMEngine/ProviderBootstrap.hpp"
 #include <fstream>
 #include <algorithm>
 #include <cctype>
@@ -62,46 +63,19 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_
                                                                      ::LLMEngine::Logger* logger,
                                                                      const std::shared_ptr<IConfigManager>& cfg) {
     ProviderType type = stringToProviderType(provider_name);
-    if (type == ProviderType::OLLAMA) {
-        std::string base_url = config.value(std::string(::LLMEngine::Constants::JsonKeys::BASE_URL), std::string(::LLMEngine::Constants::DefaultUrls::OLLAMA_BASE));
-        std::string model = config.value(std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_MODEL), std::string(::LLMEngine::Constants::DefaultModels::OLLAMA));
-        auto ptr = std::make_unique<OllamaClient>(base_url, model);
-        if (cfg) ptr->setConfig(cfg);
-        return ptr;
-    }
     
-    // SECURITY: Prefer environment variables for API keys over config file
-    std::string api_key = config.value(std::string(::LLMEngine::Constants::JsonKeys::API_KEY), "");
-    std::string env_var_name;
-    switch (type) {
-        case ProviderType::QWEN: env_var_name = std::string(::LLMEngine::Constants::EnvVars::QWEN_API_KEY); break;
-        case ProviderType::OPENAI: env_var_name = std::string(::LLMEngine::Constants::EnvVars::OPENAI_API_KEY); break;
-        case ProviderType::ANTHROPIC: env_var_name = std::string(::LLMEngine::Constants::EnvVars::ANTHROPIC_API_KEY); break;
-        case ProviderType::GEMINI: env_var_name = std::string(::LLMEngine::Constants::EnvVars::GEMINI_API_KEY); break;
-        default: break;
-    }
+    // Extract values from config
+    std::string api_key_from_config = config.value(std::string(::LLMEngine::Constants::JsonKeys::API_KEY), "");
+    std::string model = config.value(std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_MODEL), "");
     
-    // Override config API key with environment variable if available
-    // SECURITY: Guard against calling std::getenv("") which is undefined behavior
-    const char* env_api_key = nullptr;
-    if (!env_var_name.empty()) {
-        env_api_key = std::getenv(env_var_name.c_str());
-    }
-    if (env_api_key && std::strlen(env_api_key) > 0) {
-        api_key = env_api_key;
-    } else if (!api_key.empty()) {
-        // Warn if falling back to config file for credentials
-        if (logger) {
-            logger->log(::LLMEngine::LogLevel::Warn, 
-                std::string("Using API key from config file. For production use, ")
-                + "set the " + env_var_name + " environment variable instead. "
-                + "Storing credentials in config files is a security risk.");
-        }
-    }
+    // Use ProviderBootstrap to resolve API key with proper priority
+    std::string api_key = ::LLMEngine::ProviderBootstrap::resolveApiKey(
+        type, "", api_key_from_config, logger);
     
     // SECURITY: Fail fast if no credentials are available for providers that require them
     // This prevents silent failures in headless or hardened deployments
     if (api_key.empty() && type != ProviderType::OLLAMA) {
+        std::string env_var_name = ::LLMEngine::ProviderBootstrap::getApiKeyEnvVarName(type);
         std::string error_msg = "No API key found for provider " + std::string(provider_name) + ". "
                                + "Set the " + env_var_name + " environment variable or provide it in the config file.";
         if (logger) {
@@ -110,7 +84,17 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_
         throw std::runtime_error(error_msg);
     }
     
-    std::string model = config.value(std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_MODEL), "");
+    // Handle Ollama separately (uses base_url instead of api_key)
+    if (type == ProviderType::OLLAMA) {
+        std::string base_url = config.value(std::string(::LLMEngine::Constants::JsonKeys::BASE_URL), std::string(::LLMEngine::Constants::DefaultUrls::OLLAMA_BASE));
+        if (model.empty()) {
+            model = std::string(::LLMEngine::Constants::DefaultModels::OLLAMA);
+        }
+        auto ptr = std::make_unique<OllamaClient>(base_url, model);
+        if (cfg) ptr->setConfig(cfg);
+        return ptr;
+    }
+    
     return createClient(type, api_key, model, "", cfg);
 }
 

@@ -13,6 +13,8 @@
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/RequestContextBuilder.hpp"
 #include "LLMEngine/ResponseHandler.hpp"
+#include "LLMEngine/ProviderBootstrap.hpp"
+#include "LLMEngine/TempDirectoryService.hpp"
 #include <filesystem>
 #include <cstdlib>
 #include <stdexcept>
@@ -60,22 +62,30 @@ LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> clien
     provider_type_ = api_client_->getProviderType();
 }
 
-// New constructor for API-based providers
+// Constructor for API-based providers (direct ProviderType)
 LLMEngine::LLMEngine::LLMEngine(::LLMEngineAPI::ProviderType provider_type,
                      std::string_view api_key,
                      std::string_view model,
                      const nlohmann::json& model_params,
                      int log_retention_hours,
                      bool debug)
-    : model_(std::string(model)),
-      model_params_(model_params),
+    : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
       tmp_dir_(),
       temp_dir_provider_(nullptr),
-      provider_type_(provider_type),
-      api_key_(std::string(api_key)) {
+      provider_type_(provider_type) {
     initializeDefaults(logger_, temp_dir_provider_, nullptr, tmp_dir_);
+    
+    // Resolve API key using ProviderBootstrap (respects environment variables)
+    api_key_ = ProviderBootstrap::resolveApiKey(provider_type, api_key, "", logger_.get());
+    model_ = std::string(model);
+    
+    // Store config manager for downstream factories
+    config_manager_ = std::shared_ptr<::LLMEngineAPI::IConfigManager>(
+        &::LLMEngineAPI::APIConfigManager::getInstance(),
+        [](::LLMEngineAPI::IConfigManager*){});
+    
     initializeAPIClient();
 }
 
@@ -91,87 +101,32 @@ LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
       log_retention_hours_(log_retention_hours),
       debug_(debug),
       tmp_dir_(),
-      temp_dir_provider_(nullptr),
-      api_key_(std::string(api_key)) {
+      temp_dir_provider_(nullptr) {
     initializeDefaults(logger_, temp_dir_provider_, nullptr, tmp_dir_);
     
-    // Use injected config manager or fall back to singleton
-    std::shared_ptr<::LLMEngineAPI::IConfigManager> config_mgr = config_manager;
-    if (!config_mgr) {
-        // Wrap singleton in shared_ptr with no-op deleter for compatibility
-        config_mgr = std::shared_ptr<::LLMEngineAPI::IConfigManager>(
+    // Use ProviderBootstrap to resolve provider configuration
+    auto bootstrap_result = ProviderBootstrap::bootstrap(
+        provider_name,
+        api_key,
+        model,
+        config_manager,
+        logger_.get()
+    );
+    
+    // Store resolved values
+    provider_type_ = bootstrap_result.provider_type;
+    api_key_ = bootstrap_result.api_key;
+    model_ = bootstrap_result.model;
+    ollama_url_ = bootstrap_result.ollama_url;
+    
+    // Store config manager for downstream factories
+    if (config_manager) {
+        config_manager_ = config_manager;
+    } else {
+        // Wrap singleton in shared_ptr with no-op deleter
+        config_manager_ = std::shared_ptr<::LLMEngineAPI::IConfigManager>(
             &::LLMEngineAPI::APIConfigManager::getInstance(),
             [](::LLMEngineAPI::IConfigManager*){});
-    }
-    // Store for downstream factories
-    config_manager_ = config_mgr;
-    
-    // Load config
-    if (!config_mgr->loadConfig()) {
-        logger_->log(::LLMEngine::LogLevel::Warn, "Could not load API config, using defaults");
-    }
-    
-    // Determine provider name (use default if empty)
-    std::string resolved_provider(provider_name);
-    if (resolved_provider.empty()) {
-        resolved_provider = config_mgr->getDefaultProvider();
-        if (resolved_provider.empty()) {
-            resolved_provider = "ollama";
-        }
-    }
-
-    // Get provider configuration
-    auto provider_config = config_mgr->getProviderConfig(resolved_provider);
-    if (provider_config.empty()) {
-        logger_->log(::LLMEngine::LogLevel::Error, std::string("Provider ") + resolved_provider + " not found in config");
-        throw std::runtime_error("Invalid provider name");
-    }
-    
-    // Set provider type
-    provider_type_ = ::LLMEngineAPI::APIClientFactory::stringToProviderType(resolved_provider);
-    
-    // SECURITY: Prefer environment variables for API keys over config file or constructor parameter
-    // Only use provided api_key if environment variable is not set
-    std::string env_var_name;
-    switch (provider_type_) {
-        case ::LLMEngineAPI::ProviderType::QWEN: env_var_name = "QWEN_API_KEY"; break;
-        case ::LLMEngineAPI::ProviderType::OPENAI: env_var_name = "OPENAI_API_KEY"; break;
-        case ::LLMEngineAPI::ProviderType::ANTHROPIC: env_var_name = "ANTHROPIC_API_KEY"; break;
-        case ::LLMEngineAPI::ProviderType::GEMINI: env_var_name = "GEMINI_API_KEY"; break;
-        default: break;
-    }
-    
-    // Override API key with environment variable if available
-    // SECURITY: Guard against calling std::getenv("") which is undefined behavior
-    const char* env_api_key = nullptr;
-    if (!env_var_name.empty()) {
-        env_api_key = std::getenv(env_var_name.c_str());
-    }
-    if (env_api_key && strlen(env_api_key) > 0) {
-        api_key_ = env_api_key;
-    } else if (!std::string(api_key).empty()) {
-        // Use provided API key if environment variable is not set
-        api_key_ = std::string(api_key);
-    } else {
-        // Fall back to config file (last resort - not recommended for production)
-        api_key_ = provider_config.value("api_key", "");
-        if (!api_key_.empty()) {
-            logger_->log(::LLMEngine::LogLevel::Warn, std::string("Using API key from config file. For production use, ")
-                      + "set the " + env_var_name + " environment variable instead. "
-                      + "Storing credentials in config files is a security risk.");
-        }
-    }
-    
-    // Set model
-    if (std::string(model).empty()) {
-        model_ = provider_config.value("default_model", "");
-    } else {
-        model_ = std::string(model);
-    }
-    
-    // Set Ollama URL if using Ollama
-    if (provider_type_ == ::LLMEngineAPI::ProviderType::OLLAMA) {
-        ollama_url_ = provider_config.value("base_url", "http://localhost:11434");
     }
     
     initializeAPIClient();
@@ -196,45 +151,20 @@ void LLMEngine::LLMEngine::initializeAPIClient() {
 void LLMEngine::LLMEngine::ensureSecureTmpDir() const {
     // Cache directory existence check to reduce filesystem operations
     // Only re-check if directory was previously verified and might have been deleted
+    TempDirectoryService service;
     if (tmp_dir_verified_) {
-        // Quick check: if directory still exists, skip expensive operations
-        std::error_code ec;
-        if (std::filesystem::exists(tmp_dir_, ec) && !ec) {
+        // Quick check: if directory still exists and is valid, skip expensive operations
+        if (service.isDirectoryValid(tmp_dir_, logger_.get())) {
             return;
         }
-        // Directory was deleted, need to re-verify
+        // Directory was deleted or invalid, need to re-verify
         tmp_dir_verified_ = false;
     }
     
-    // Security: Check for symlink before creating directories
-    // If the path exists and is a symlink, reject it to prevent symlink traversal attacks
-    std::error_code ec;
-    if (std::filesystem::exists(tmp_dir_, ec)) {
-        std::error_code ec_symlink;
-        if (std::filesystem::is_symlink(tmp_dir_, ec_symlink)) {
-            if (logger_) {
-                logger_->log(::LLMEngine::LogLevel::Error, std::string("Temporary directory is a symlink: ") + tmp_dir_);
-            }
-            throw std::runtime_error("Temporary directory cannot be a symlink for security reasons: " + tmp_dir_);
-        }
-    }
-    
-    std::filesystem::create_directories(tmp_dir_, ec);
-    if (ec) {
-        if (logger_) {
-            logger_->log(::LLMEngine::LogLevel::Error, std::string("Failed to create temporary directory: ") + tmp_dir_ + ": " + ec.message());
-        }
-        throw std::runtime_error("Failed to create temporary directory: " + tmp_dir_);
-    }
-    
-    if (std::filesystem::exists(tmp_dir_)) {
-        std::error_code ec_perm;
-        std::filesystem::permissions(tmp_dir_, 
-            std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec,
-            std::filesystem::perm_options::replace, ec_perm);
-        if (ec_perm && logger_) {
-            logger_->log(::LLMEngine::LogLevel::Warn, std::string("Failed to set permissions on ") + tmp_dir_ + ": " + ec_perm.message());
-        }
+    // Use TempDirectoryService to ensure directory with security checks
+    auto result = service.ensureSecureDirectory(tmp_dir_, logger_.get());
+    if (!result.success) {
+        throw std::runtime_error(result.error_message);
     }
     
     // Mark as verified after successful creation/verification
@@ -298,32 +228,15 @@ void LLMEngine::LLMEngine::setLogger(std::shared_ptr<::LLMEngine::Logger> logger
 
 bool LLMEngine::LLMEngine::setTempDirectory(const std::string& tmp_dir) {
     // Only accept directories within the active provider's root to respect dependency injection
-    try {
-        const std::string allowed_root = temp_dir_provider_ ? temp_dir_provider_->getTempDir() : ::LLMEngine::DefaultTempDirProvider().getTempDir();
-        const std::filesystem::path default_root = std::filesystem::path(allowed_root).lexically_normal();
-        const std::filesystem::path requested    = std::filesystem::path(tmp_dir).lexically_normal();
-        // Ensure requested is under default_root using a robust relative check
-        const std::filesystem::path rel = std::filesystem::weakly_canonical(requested).lexically_relative(std::filesystem::weakly_canonical(default_root));
-        bool has_parent_ref = false;
-        for (const auto& part : rel) {
-            if (part == "..") { has_parent_ref = true; break; }
-        }
-        const bool is_within = !rel.empty() && !rel.is_absolute() && !has_parent_ref;
-        if (is_within) {
-            tmp_dir_ = requested.string();
-            tmp_dir_verified_ = false;  // Reset cache when directory changes
-            return true;
-        }
-        if (logger_) {
-            logger_->log(::LLMEngine::LogLevel::Warn, std::string("Rejected temp directory outside allowed root: ") + requested.string());
-        }
-        return false;
-    } catch (...) {
-        if (logger_) {
-            logger_->log(::LLMEngine::LogLevel::Error, std::string("Failed to set temp directory due to path error: ") + tmp_dir);
-        }
-        return false;
+    const std::string allowed_root = temp_dir_provider_ ? temp_dir_provider_->getTempDir() : ::LLMEngine::DefaultTempDirProvider().getTempDir();
+    
+    TempDirectoryService service;
+    if (service.validatePathWithinRoot(tmp_dir, allowed_root, logger_.get())) {
+        tmp_dir_ = tmp_dir;
+        tmp_dir_verified_ = false;  // Reset cache when directory changes
+        return true;
     }
+    return false;
 }
 
 std::string LLMEngine::LLMEngine::getTempDirectory() const {
