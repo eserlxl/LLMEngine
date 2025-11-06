@@ -21,13 +21,11 @@ int main() {
     APIConfigManager& mgr = APIConfigManager::getInstance();
     (void)mgr.loadConfig("/opt/lxl/c++/LLMEngine/config/api_config.json");
     auto ty = APIClientFactory::stringToProviderType("not-a-provider");
-    (void)ty; // cannot assert exact fallback without knowing default; only ensure it returns a valid enum value by converting back
+    (void)ty; // cannot assert exact fallback without knowing default; only ensure it returns a
+              // valid enum value by converting back
     auto s = APIClientFactory::providerTypeToString(ty);
     assert(!s.empty());
 
     std::cout << "OK\n";
     return 0;
 }
-
-
-

@@ -6,25 +6,25 @@
 // See the LICENSE file in the project root for details.
 
 #pragma once
+#include "LLMEngine/LLMEngineExport.hpp"
 #include <string>
 #include <string_view>
-#include "LLMEngine/LLMEngineExport.hpp"
 
 namespace LLMEngine {
 
 /**
  * @brief Strategy interface for building prompts.
- * 
+ *
  * Allows different prompt building strategies (terse, verbose, custom, etc.)
  * to be composed into the analysis pipeline.
  */
 class LLMENGINE_EXPORT IPromptBuilder {
 public:
     virtual ~IPromptBuilder() = default;
-    
+
     /**
      * @brief Build the final prompt from the user-provided prompt.
-     * 
+     *
      * @param prompt User-provided prompt
      * @return Final prompt to send to the LLM
      */
@@ -33,11 +33,11 @@ public:
 
 /**
  * @brief Default prompt builder that prepends a terse instruction.
- * 
- * Prepends: "Please respond directly to the previous message, engaging with its content. 
- *            Try to be brief and concise and complete your response in one or two sentences, 
+ *
+ * Prepends: "Please respond directly to the previous message, engaging with its content.
+ *            Try to be brief and concise and complete your response in one or two sentences,
  *            mostly one sentence.\n"
- * 
+ *
  * The system instruction is cached as a static constant to avoid repeated allocations.
  */
 class LLMENGINE_EXPORT TersePromptBuilder : public IPromptBuilder {
@@ -59,7 +59,7 @@ public:
 
 /**
  * @brief Pass-through prompt builder that returns the prompt unchanged.
- * 
+ *
  * Useful for evaluation or when precise prompt control is needed.
  */
 class LLMENGINE_EXPORT PassthroughPromptBuilder : public IPromptBuilder {
@@ -70,4 +70,3 @@ public:
 };
 
 } // namespace LLMEngine
-

@@ -15,12 +15,15 @@ public:
     explicit FakeAPIClient(ProviderType type = ProviderType::OPENAI,
                            std::string providerName = "Fake");
 
-    APIResponse sendRequest(std::string_view prompt,
-                            const nlohmann::json& input,
+    APIResponse sendRequest(std::string_view prompt, const nlohmann::json& input,
                             const nlohmann::json& params) const override;
 
-    std::string getProviderName() const override { return provider_name_; }
-    ProviderType getProviderType() const override { return provider_type_; }
+    std::string getProviderName() const override {
+        return provider_name_;
+    }
+    ProviderType getProviderType() const override {
+        return provider_type_;
+    }
 
     void setNextResponse(const APIResponse& response);
 
@@ -32,5 +35,3 @@ private:
 };
 
 } // namespace LLMEngineAPI
-
-

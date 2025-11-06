@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #pragma once
+#include <algorithm>
 #include <cstdint>
 #include <random>
-#include <algorithm>
 
 namespace LLMEngine {
 
 struct BackoffConfig {
-    int baseDelayMs;      // base delay in ms
-    int maxDelayMs;       // cap per attempt in ms
+    int baseDelayMs; // base delay in ms
+    int maxDelayMs;  // cap per attempt in ms
 };
 
 constexpr inline uint64_t computeBackoffCapMs(const BackoffConfig& cfg, int attempt) {
@@ -21,11 +21,10 @@ constexpr inline uint64_t computeBackoffCapMs(const BackoffConfig& cfg, int atte
 }
 
 inline int jitterDelayMs(std::mt19937_64& rng, uint64_t capMs) {
-    if (capMs == 0) return 0;
+    if (capMs == 0)
+        return 0;
     std::uniform_int_distribution<uint64_t> dist(0, capMs);
     return static_cast<int>(dist(rng));
 }
 
 } // namespace LLMEngine
-
-

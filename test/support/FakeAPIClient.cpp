@@ -17,8 +17,7 @@ void FakeAPIClient::setNextResponse(const APIResponse& response) {
     has_custom_response_ = true;
 }
 
-APIResponse FakeAPIClient::sendRequest(std::string_view prompt,
-                                       const nlohmann::json& input,
+APIResponse FakeAPIClient::sendRequest(std::string_view prompt, const nlohmann::json& input,
                                        const nlohmann::json& params) const {
     if (has_custom_response_) {
         has_custom_response_ = false;
@@ -30,15 +29,11 @@ APIResponse FakeAPIClient::sendRequest(std::string_view prompt,
     // Produce a deterministic echo-style response for tests
     r.content = std::string("[FAKE] ") + std::string(prompt);
     r.status_code = 200;
-    r.raw_response = {
-        {"fake", true},
-        {"provider", provider_name_},
-        {"prompt_len", static_cast<int>(std::string(prompt).size())},
-        {"has_system", input.contains("system_prompt")}
-    };
+    r.raw_response = {{"fake", true},
+                      {"provider", provider_name_},
+                      {"prompt_len", static_cast<int>(std::string(prompt).size())},
+                      {"has_system", input.contains("system_prompt")}};
     return r;
 }
 
 } // namespace LLMEngineAPI
-
-

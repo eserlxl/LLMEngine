@@ -6,59 +6,59 @@
 // See the LICENSE file in the project root for details.
 
 #pragma once
+#include "LLMEngine/APIClient.hpp"
+#include "LLMEngine/AnalysisResult.hpp"
+#include "LLMEngine/ErrorCodes.hpp"
+#include "LLMEngine/IArtifactSink.hpp"
+#include "LLMEngine/IConfigManager.hpp"
+#include "LLMEngine/IModelContext.hpp"
+#include "LLMEngine/IRequestExecutor.hpp"
+#include "LLMEngine/ITempDirProvider.hpp"
+#include "LLMEngine/LLMEngineExport.hpp"
+#include "LLMEngine/Logger.hpp"
+#include "LLMEngine/PromptBuilder.hpp"
+#include <functional>
+#include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <string_view>
-#include <nlohmann/json.hpp>
 #include <vector>
-#include <memory>
-#include <functional>
-#include "LLMEngine/LLMEngineExport.hpp"
-#include "LLMEngine/ErrorCodes.hpp"
-#include "LLMEngine/APIClient.hpp"
-#include "LLMEngine/Logger.hpp"
-#include "LLMEngine/ITempDirProvider.hpp"
-#include "LLMEngine/IConfigManager.hpp"
-#include "LLMEngine/PromptBuilder.hpp"
-#include "LLMEngine/IRequestExecutor.hpp"
-#include "LLMEngine/IArtifactSink.hpp"
-#include "LLMEngine/IModelContext.hpp"
-#include "LLMEngine/AnalysisResult.hpp"
 
 namespace LLMEngine {
 
 /**
  * @brief High-level interface for interacting with LLM providers.
- * 
+ *
  * ## Thread Safety
- * 
+ *
  * **LLMEngine instances are NOT thread-safe.** Each instance should be used from
  * a single thread. To use LLMEngine from multiple threads, create separate instances.
- * 
+ *
  * The underlying APIClient implementations are thread-safe (stateless), but the
  * LLMEngine class maintains internal state (model parameters, configuration, logger)
  * that is not protected by locks.
- * 
+ *
  * ## Lifecycle and Ownership
- * 
+ *
  * - **LLMEngine instances** are moveable but not copyable
  * - **API Client ownership**: LLMEngine owns the APIClient instance via unique_ptr
  * - **Logger ownership**: LLMEngine holds a shared_ptr to the Logger, allowing
  *   multiple instances to share the same logger safely (if the logger is thread-safe)
  * - **Temp Directory Provider**: If provided, held via shared_ptr (shared ownership)
- * 
+ *
  * ## Resource Management
- * 
+ *
  * - Temporary directories are created per-request and cleaned up automatically
  * - Debug artifacts are managed according to retention policy
  * - No manual cleanup required for normal usage
- * 
+ *
  * ## Example Usage
- * 
+ *
  * ```cpp
  * // Single-threaded usage
  * LLMEngine engine(LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash");
  * auto result = engine.analyze("Analyze this code", input, "code_analysis");
- * 
+ *
  * // Multi-threaded usage (create separate instances)
  * std::thread t1([&]() {
  *     LLMEngine engine1(LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash");
@@ -82,8 +82,10 @@ public:
      * @param log_retention_hours Hours to keep debug artifacts.
      * @param debug Enable response artifact logging.
      */
-    LLMEngine(::LLMEngineAPI::ProviderType provider_type, std::string_view api_key, std::string_view model, const nlohmann::json& model_params = {}, int log_retention_hours = 24, bool debug = false);
-    
+    LLMEngine(::LLMEngineAPI::ProviderType provider_type, std::string_view api_key,
+              std::string_view model, const nlohmann::json& model_params = {},
+              int log_retention_hours = 24, bool debug = false);
+
     // Constructor using config file
     /**
      * @brief Construct using provider name resolved via configuration.
@@ -97,25 +99,22 @@ public:
      *                       uses APIConfigManager::getInstance() singleton. This parameter
      *                       enables dependency injection for testing and custom configurations.
      */
-    LLMEngine(std::string_view provider_name, 
-              std::string_view api_key = "", 
-              std::string_view model = "", 
-              const nlohmann::json& model_params = {}, 
-              int log_retention_hours = 24, 
-              bool debug = false,
+    LLMEngine(std::string_view provider_name, std::string_view api_key = "",
+              std::string_view model = "", const nlohmann::json& model_params = {},
+              int log_retention_hours = 24, bool debug = false,
               const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager = nullptr);
-    
+
     // Dependency injection constructor for tests and advanced usage
     /**
      * @brief Construct with a custom API client (testing/advanced scenarios).
-     * 
+     *
      * **Ownership:** Takes ownership of the client via unique_ptr. The client
      * will be destroyed when this LLMEngine instance is destroyed.
-     * 
+     *
      * **Thread Safety:** The client implementation must be thread-safe if the
      * resulting LLMEngine instance will be used from multiple threads (though
      * LLMEngine itself is not thread-safe).
-     * 
+     *
      * @param client Custom API client instance (transferred ownership)
      * @param model_params Default model params
      * @param log_retention_hours Hours to keep debug artifacts
@@ -125,29 +124,28 @@ public:
      *                          thread-safe if shared across multiple LLMEngine instances.
      */
     LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
-              const nlohmann::json& model_params = {},
-              int log_retention_hours = 24,
+              const nlohmann::json& model_params = {}, int log_retention_hours = 24,
               bool debug = false,
               const std::shared_ptr<ITempDirProvider>& temp_dir_provider = nullptr);
-    
+
     /**
      * @brief Run an analysis request.
      * @param prompt User/system instruction.
      * @param input Structured input payload.
      * @param analysis_type Tag used for routing/processing.
      * @param mode Provider-specific mode (default: "chat").
-     * @param prepend_terse_instruction If true (default), prepends a system instruction asking for brief, concise responses. 
-     *                                  Set to false to use the prompt verbatim without modification, useful for evaluation 
-     *                                  or when precise prompt control is needed for downstream agents.
+     * @param prepend_terse_instruction If true (default), prepends a system instruction asking for
+     * brief, concise responses. Set to false to use the prompt verbatim without modification,
+     * useful for evaluation or when precise prompt control is needed for downstream agents.
      * @return AnalysisResult with typed fields.
-     * 
+     *
      * @note By default, this method prepends the following instruction to your prompt:
-     *       "Please respond directly to the previous message, engaging with its content. 
-     *        Try to be brief and concise and complete your response in one or two sentences, 
+     *       "Please respond directly to the previous message, engaging with its content.
+     *        Try to be brief and concise and complete your response in one or two sentences,
      *        mostly one sentence.\n"
-     *       To disable this behavior and use your prompt exactly as provided, set 
+     *       To disable this behavior and use your prompt exactly as provided, set
      *       prepend_terse_instruction to false.
-     * 
+     *
      * @example Basic usage:
      * ```cpp
      * LLMEngine engine(LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash");
@@ -162,7 +160,7 @@ public:
      *     std::cerr << "Error: " << result.errorMessage << std::endl;
      * }
      * ```
-     * 
+     *
      * @example Error handling:
      * ```cpp
      * auto result = engine.analyze("Analyze this code", input, "code_analysis");
@@ -174,7 +172,7 @@ public:
      *     }
      * }
      * ```
-     * 
+     *
      * @example With custom parameters:
      * ```cpp
      * nlohmann::json input = {
@@ -185,8 +183,11 @@ public:
      * auto result = engine.analyze("Review this code", input, "code_review", "chat", false);
      * ```
      */
-    [[nodiscard]] AnalysisResult analyze(std::string_view prompt, const nlohmann::json& input, std::string_view analysis_type, std::string_view mode = "chat", bool prepend_terse_instruction = true) const;
-    
+    [[nodiscard]] AnalysisResult analyze(std::string_view prompt, const nlohmann::json& input,
+                                         std::string_view analysis_type,
+                                         std::string_view mode = "chat",
+                                         bool prepend_terse_instruction = true) const;
+
     // Utility methods
     /** @brief Provider display name. */
     [[nodiscard]] std::string getProviderName() const;
@@ -196,54 +197,71 @@ public:
     [[nodiscard]] ::LLMEngineAPI::ProviderType getProviderType() const;
     /** @brief True if using an online provider (not local Ollama). */
     [[nodiscard]] bool isOnlineProvider() const;
-    
+
     // IModelContext interface implementation
     [[nodiscard]] std::string getTempDirectory() const override;
-    [[nodiscard]] std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override { return terse_prompt_builder_; }
-    [[nodiscard]] std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override { return passthrough_prompt_builder_; }
-    [[nodiscard]] const nlohmann::json& getModelParams() const override { return model_params_; }
+    [[nodiscard]] std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override {
+        return terse_prompt_builder_;
+    }
+    [[nodiscard]] std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override {
+        return passthrough_prompt_builder_;
+    }
+    [[nodiscard]] const nlohmann::json& getModelParams() const override {
+        return model_params_;
+    }
     [[nodiscard]] bool areDebugFilesEnabled() const override {
-        if (!debug_) return false;
+        if (!debug_)
+            return false;
         if (debug_files_policy_) {
             return debug_files_policy_();
         }
         // Use cached value to avoid repeated getenv calls on hot paths
         return !disable_debug_files_env_cached_;
     }
-    [[nodiscard]] std::shared_ptr<IArtifactSink> getArtifactSink() const override { return artifact_sink_; }
-    [[nodiscard]] int getLogRetentionHours() const override { return log_retention_hours_; }
-    [[nodiscard]] std::shared_ptr<Logger> getLogger() const override { return logger_; }
-    void prepareTempDirectory() const override { ensureSecureTmpDir(); }
-    
+    [[nodiscard]] std::shared_ptr<IArtifactSink> getArtifactSink() const override {
+        return artifact_sink_;
+    }
+    [[nodiscard]] int getLogRetentionHours() const override {
+        return log_retention_hours_;
+    }
+    [[nodiscard]] std::shared_ptr<Logger> getLogger() const override {
+        return logger_;
+    }
+    void prepareTempDirectory() const override {
+        ensureSecureTmpDir();
+    }
+
     // Additional accessors (not part of IModelContext)
-    [[nodiscard]] bool isDebugEnabled() const { return debug_; }
-    
+    [[nodiscard]] bool isDebugEnabled() const {
+        return debug_;
+    }
+
     // Temporary directory configuration
     /**
      * @brief Set the temporary directory for debug artifacts.
-     * 
+     *
      * **Thread Safety:** This method modifies internal state and is not thread-safe.
      * Do not call concurrently with other methods on the same instance.
-     * 
+     *
      * **Security:** Only directories within the default root are accepted to prevent
      * accidental deletion of system directories.
-     * 
+     *
      * @param tmp_dir Temporary directory path (must be within default root)
-     * @return true if the directory was set successfully, false if it was rejected or an error occurred
+     * @return true if the directory was set successfully, false if it was rejected or an error
+     * occurred
      */
     [[nodiscard]] bool setTempDirectory(const std::string& tmp_dir);
-    
-    
+
     // Logging
     /**
      * @brief Set a custom logger instance.
-     * 
+     *
      * **Ownership:** Takes shared ownership of the logger. Multiple LLMEngine instances
      * can share the same logger safely if the logger implementation is thread-safe.
-     * 
+     *
      * **Thread Safety:** The logger must be thread-safe if it will be used by multiple
      * LLMEngine instances concurrently. DefaultLogger is thread-safe.
-     * 
+     *
      * @param logger Logger instance (shared ownership)
      */
     void setLogger(std::shared_ptr<Logger> logger);
@@ -257,7 +275,7 @@ public:
     void setDebugFilesPolicy(std::function<bool()> policy) {
         debug_files_policy_ = std::move(policy);
     }
-    
+
     /**
      * @brief Set whether debug files are enabled at runtime.
      *
@@ -270,7 +288,7 @@ public:
     void setDebugFilesEnabled(bool enabled) {
         debug_files_policy_ = [enabled]() { return enabled; };
     }
-    
+
     // Dependency injection setters
     /** @brief Replace the request executor strategy. */
     void setRequestExecutor(std::shared_ptr<IRequestExecutor> executor) {
@@ -294,38 +312,40 @@ public:
             passthrough_prompt_builder_ = std::move(passthrough);
         }
     }
-    
+
 private:
     void initializeAPIClient();
     void ensureSecureTmpDir() const;
-    
+
     std::string model_;
     nlohmann::json model_params_;
     int log_retention_hours_;
     bool debug_;
-    std::string tmp_dir_;  // Configurable temporary directory (defaults to Utils::TMP_DIR)
-    std::shared_ptr<ITempDirProvider> temp_dir_provider_;  // Store provider for validation
-    mutable bool tmp_dir_verified_ = false;  // Cache directory existence check to reduce filesystem operations
-    
+    std::string tmp_dir_; // Configurable temporary directory (defaults to Utils::TMP_DIR)
+    std::shared_ptr<ITempDirProvider> temp_dir_provider_; // Store provider for validation
+    mutable bool tmp_dir_verified_ =
+        false; // Cache directory existence check to reduce filesystem operations
+
     // API client support
     std::unique_ptr<::LLMEngineAPI::APIClient> api_client_;
     std::shared_ptr<::LLMEngineAPI::IConfigManager> config_manager_;
 
     // Collaborators (injectable)
-    std::shared_ptr<IPromptBuilder> terse_prompt_builder_ { std::make_shared<TersePromptBuilder>() };
-    std::shared_ptr<IPromptBuilder> passthrough_prompt_builder_ { std::make_shared<PassthroughPromptBuilder>() };
-    std::shared_ptr<IRequestExecutor> request_executor_ { std::make_shared<DefaultRequestExecutor>() };
-    std::shared_ptr<IArtifactSink> artifact_sink_ { std::make_shared<DefaultArtifactSink>() };
+    std::shared_ptr<IPromptBuilder> terse_prompt_builder_{std::make_shared<TersePromptBuilder>()};
+    std::shared_ptr<IPromptBuilder> passthrough_prompt_builder_{
+        std::make_shared<PassthroughPromptBuilder>()};
+    std::shared_ptr<IRequestExecutor> request_executor_{std::make_shared<DefaultRequestExecutor>()};
+    std::shared_ptr<IArtifactSink> artifact_sink_{std::make_shared<DefaultArtifactSink>()};
     ::LLMEngineAPI::ProviderType provider_type_;
     std::string api_key_;
-    std::string ollama_url_;  // Only used when provider_type is OLLAMA
+    std::string ollama_url_; // Only used when provider_type is OLLAMA
     std::shared_ptr<Logger> logger_;
     // Optional injected policy for enabling/disabling debug artifact writing
     std::function<bool()> debug_files_policy_;
     // Cached at construction to avoid repeated getenv calls per request.
     // Note: Read-once semantics; changes to the environment after construction
     // are not reflected in this instance. For dynamic toggling, inject a config object.
-    bool disable_debug_files_env_cached_ { std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") != nullptr };
+    bool disable_debug_files_env_cached_{std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") != nullptr};
 };
 
 } // namespace LLMEngine

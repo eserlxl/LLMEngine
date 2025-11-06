@@ -27,5 +27,3 @@ int main() {
     std::cout << "test_provider_type_mapping: OK\n";
     return 0;
 }
-
-

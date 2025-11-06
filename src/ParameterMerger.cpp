@@ -10,10 +10,8 @@
 
 namespace LLMEngine {
 
-nlohmann::json ParameterMerger::merge(
-    const nlohmann::json& base_params,
-    const nlohmann::json& input,
-    std::string_view mode) {
+nlohmann::json ParameterMerger::merge(const nlohmann::json& base_params,
+                                      const nlohmann::json& input, std::string_view mode) {
     nlohmann::json out;
     const bool changed = mergeInto(base_params, input, mode, out, nullptr);
     if (!changed) {
@@ -22,12 +20,8 @@ nlohmann::json ParameterMerger::merge(
     return out;
 }
 
-bool ParameterMerger::mergeInto(
-    const nlohmann::json& base_params,
-    const nlohmann::json& input,
-    std::string_view mode,
-    nlohmann::json& out,
-    Logger* logger) {
+bool ParameterMerger::mergeInto(const nlohmann::json& base_params, const nlohmann::json& input,
+                                std::string_view mode, nlohmann::json& out, Logger* logger) {
     // Allow-list of overridable keys and expected types
     static const std::vector<std::pair<const char*, nlohmann::json::value_t>> allowed_keys = {
         {"max_tokens", nlohmann::json::value_t::number_integer},
@@ -37,28 +31,34 @@ bool ParameterMerger::mergeInto(
         {"min_p", nlohmann::json::value_t::number_float},
         {"presence_penalty", nlohmann::json::value_t::number_float},
         {"frequency_penalty", nlohmann::json::value_t::number_float},
-        {"timeout_seconds", nlohmann::json::value_t::number_integer}
-    };
+        {"timeout_seconds", nlohmann::json::value_t::number_integer}};
 
     bool changed = false;
     // Fast check: mode or any allowed key present
-    if (!mode.empty()) changed = true;
+    if (!mode.empty())
+        changed = true;
     if (!changed) {
         for (const auto& [key, _] : allowed_keys) {
             auto it = input.find(key);
-            if (it != input.end()) { changed = true; break; }
+            if (it != input.end()) {
+                changed = true;
+                break;
+            }
         }
     }
-    if (!changed) return false;
+    if (!changed)
+        return false;
 
     out = base_params;
 
     for (const auto& [key, expected] : allowed_keys) {
         auto it = input.find(key);
-        if (it == input.end()) continue;
+        if (it == input.end())
+            continue;
         const nlohmann::json& val = *it;
         // Accept integer where float expected if convertible
-        if (expected == nlohmann::json::value_t::number_float && (val.is_number_float() || val.is_number_integer())) {
+        if (expected == nlohmann::json::value_t::number_float &&
+            (val.is_number_float() || val.is_number_integer())) {
             out[key] = val.get<double>();
             continue;
         }
@@ -79,9 +79,9 @@ bool ParameterMerger::mergeInto(
                         expected_type_str = "unknown";
                         break;
                 }
-                logger->log(LogLevel::Warn, 
-                    "Parameter override '" + std::string(key) + "' has incorrect type (expected " + 
-                    expected_type_str + "), ignoring override");
+                logger->log(LogLevel::Warn, "Parameter override '" + std::string(key) +
+                                                "' has incorrect type (expected " +
+                                                expected_type_str + "), ignoring override");
             }
         }
     }
@@ -94,4 +94,3 @@ bool ParameterMerger::mergeInto(
 }
 
 } // namespace LLMEngine
-

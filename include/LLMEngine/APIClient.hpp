@@ -6,41 +6,35 @@
 // See the LICENSE file in the project root for details.
 
 #pragma once
+#include <map>
+#include <memory>
+#include <nlohmann/json.hpp>
+#include <shared_mutex>
 #include <string>
 #include <string_view>
-#include <nlohmann/json.hpp>
-#include <memory>
-#include <map>
 #include <vector>
-#include <shared_mutex>
 
 // Ensure export macros are available
-#include "LLMEngine/LLMEngineExport.hpp"
 #include "LLMEngine/ErrorCodes.hpp"
-#include "LLMEngine/Logger.hpp"
 #include "LLMEngine/IConfigManager.hpp"
+#include "LLMEngine/LLMEngineExport.hpp"
+#include "LLMEngine/Logger.hpp"
 
 namespace LLMEngineAPI {
 
 /**
  * @brief Supported LLM providers.
- * 
+ *
  * **Thread Safety:** This enum is thread-safe (enum values are immutable).
  */
-enum class ProviderType {
-    QWEN,
-    OPENAI,
-    ANTHROPIC,
-    OLLAMA,
-    GEMINI
-};
+enum class ProviderType { QWEN, OPENAI, ANTHROPIC, OLLAMA, GEMINI };
 
 /**
  * @brief Normalized API response returned by all providers.
- * 
+ *
  * **Thread Safety:** This struct is thread-safe for read access. It is typically
  * created by APIClient implementations and returned by value.
- * 
+ *
  * **Ownership:** Contains a nlohmann::json object (value semantics, no special
  * ownership concerns).
  */
@@ -50,7 +44,7 @@ struct APIResponse {
     std::string error_message;
     int status_code;
     nlohmann::json raw_response;
-    
+
     // Use unified error code enum
     // Backward compatibility: APIError is an alias for LLMEngineErrorCode
     using APIError = ::LLMEngine::LLMEngineErrorCode;
@@ -59,23 +53,23 @@ struct APIResponse {
 
 /**
  * @brief Abstract client interface implemented by all providers.
- * 
+ *
  * ## Thread Safety
- * 
+ *
  * **APIClient implementations are thread-safe.** They are stateless (except for
  * configuration set during construction) and can be called concurrently from
  * multiple threads. However, each instance should be used with a single provider
  * configuration.
- * 
+ *
  * ## Lifecycle and Ownership
- * 
+ *
  * - **Construction:** Clients are created via APIClientFactory
  * - **Ownership:** Typically owned by LLMEngine via unique_ptr
  * - **Lifetime:** Clients live as long as the owning LLMEngine instance
  * - **Thread Safety:** Stateless design allows concurrent sendRequest() calls
- * 
+ *
  * ## Implementation Requirements
- * 
+ *
  * Derived classes must:
  * - Be thread-safe (stateless or properly synchronized)
  * - Handle errors gracefully and return appropriate APIResponse
@@ -92,9 +86,8 @@ public:
      * @param params Model parameters (temperature, max_tokens, etc.).
      * @return Provider-agnostic APIResponse.
      */
-    virtual APIResponse sendRequest(std::string_view prompt, 
-                                   const nlohmann::json& input,
-                                   const nlohmann::json& params) const = 0;
+    virtual APIResponse sendRequest(std::string_view prompt, const nlohmann::json& input,
+                                    const nlohmann::json& params) const = 0;
     /** @brief Human-readable provider name. */
     virtual std::string getProviderName() const = 0;
     /** @brief Provider enumeration value. */
@@ -109,7 +102,7 @@ public:
 
 /**
  * @brief Qwen (DashScope) client.
- * 
+ *
  * Uses OpenAICompatibleClient internally to share common OpenAI-compatible API logic.
  */
 class LLMENGINE_EXPORT QwenClient : public APIClient {
@@ -120,11 +113,14 @@ public:
      */
     QwenClient(const std::string& api_key, const std::string& model = "qwen-flash");
     ~QwenClient();
-    APIResponse sendRequest(std::string_view prompt, 
-                           const nlohmann::json& input,
-                           const nlohmann::json& params) const override;
-    std::string getProviderName() const override { return "Qwen"; }
-    ProviderType getProviderType() const override { return ProviderType::QWEN; }
+    APIResponse sendRequest(std::string_view prompt, const nlohmann::json& input,
+                            const nlohmann::json& params) const override;
+    std::string getProviderName() const override {
+        return "Qwen";
+    }
+    ProviderType getProviderType() const override {
+        return ProviderType::QWEN;
+    }
     void setConfig(std::shared_ptr<IConfigManager> cfg) override;
 
 private:
@@ -134,7 +130,7 @@ private:
 
 /**
  * @brief OpenAI client.
- * 
+ *
  * Uses OpenAICompatibleClient internally to share common OpenAI-compatible API logic.
  */
 class LLMENGINE_EXPORT OpenAIClient : public APIClient {
@@ -145,11 +141,14 @@ public:
      */
     OpenAIClient(const std::string& api_key, const std::string& model = "gpt-3.5-turbo");
     ~OpenAIClient();
-    APIResponse sendRequest(std::string_view prompt, 
-                           const nlohmann::json& input,
-                           const nlohmann::json& params) const override;
-    std::string getProviderName() const override { return "OpenAI"; }
-    ProviderType getProviderType() const override { return ProviderType::OPENAI; }
+    APIResponse sendRequest(std::string_view prompt, const nlohmann::json& input,
+                            const nlohmann::json& params) const override;
+    std::string getProviderName() const override {
+        return "OpenAI";
+    }
+    ProviderType getProviderType() const override {
+        return ProviderType::OPENAI;
+    }
     void setConfig(std::shared_ptr<IConfigManager> cfg) override;
 
 private:
@@ -167,12 +166,17 @@ public:
      * @param model Default model, e.g. "claude-3-sonnet".
      */
     AnthropicClient(const std::string& api_key, const std::string& model = "claude-3-sonnet");
-    APIResponse sendRequest(std::string_view prompt, 
-                           const nlohmann::json& input,
-                           const nlohmann::json& params) const override;
-    std::string getProviderName() const override { return "Anthropic"; }
-    ProviderType getProviderType() const override { return ProviderType::ANTHROPIC; }
-    void setConfig(std::shared_ptr<IConfigManager> cfg) override { config_ = std::move(cfg); }
+    APIResponse sendRequest(std::string_view prompt, const nlohmann::json& input,
+                            const nlohmann::json& params) const override;
+    std::string getProviderName() const override {
+        return "Anthropic";
+    }
+    ProviderType getProviderType() const override {
+        return ProviderType::ANTHROPIC;
+    }
+    void setConfig(std::shared_ptr<IConfigManager> cfg) override {
+        config_ = std::move(cfg);
+    }
 
 private:
     std::string api_key_;
@@ -191,14 +195,19 @@ public:
      * @param base_url Ollama server URL.
      * @param model Default local model name.
      */
-    OllamaClient(const std::string& base_url = "http://localhost:11434", 
+    OllamaClient(const std::string& base_url = "http://localhost:11434",
                  const std::string& model = "llama2");
-    APIResponse sendRequest(std::string_view prompt, 
-                           const nlohmann::json& input,
-                           const nlohmann::json& params) const override;
-    std::string getProviderName() const override { return "Ollama"; }
-    ProviderType getProviderType() const override { return ProviderType::OLLAMA; }
-    void setConfig(std::shared_ptr<IConfigManager> cfg) override { config_ = std::move(cfg); }
+    APIResponse sendRequest(std::string_view prompt, const nlohmann::json& input,
+                            const nlohmann::json& params) const override;
+    std::string getProviderName() const override {
+        return "Ollama";
+    }
+    ProviderType getProviderType() const override {
+        return ProviderType::OLLAMA;
+    }
+    void setConfig(std::shared_ptr<IConfigManager> cfg) override {
+        config_ = std::move(cfg);
+    }
 
 private:
     std::string base_url_;
@@ -217,12 +226,17 @@ public:
      * @param model Default model, e.g. "gemini-1.5-flash".
      */
     GeminiClient(const std::string& api_key, const std::string& model = "gemini-1.5-flash");
-    APIResponse sendRequest(std::string_view prompt,
-                           const nlohmann::json& input,
-                           const nlohmann::json& params) const override;
-    std::string getProviderName() const override { return "Gemini"; }
-    ProviderType getProviderType() const override { return ProviderType::GEMINI; }
-    void setConfig(std::shared_ptr<IConfigManager> cfg) override { config_ = std::move(cfg); }
+    APIResponse sendRequest(std::string_view prompt, const nlohmann::json& input,
+                            const nlohmann::json& params) const override;
+    std::string getProviderName() const override {
+        return "Gemini";
+    }
+    ProviderType getProviderType() const override {
+        return ProviderType::GEMINI;
+    }
+    void setConfig(std::shared_ptr<IConfigManager> cfg) override {
+        config_ = std::move(cfg);
+    }
 
 private:
     std::string api_key_;
@@ -234,19 +248,19 @@ private:
 
 /**
  * @brief Factory for creating provider clients.
- * 
+ *
  * ## Thread Safety
- * 
+ *
  * **All factory methods are thread-safe.** They are stateless and can be called
  * concurrently from multiple threads.
- * 
+ *
  * ## Ownership
- * 
+ *
  * Factory methods return unique_ptr, transferring ownership to the caller.
  * The caller is responsible for managing the lifetime of the created client.
- * 
+ *
  * ## Credential Resolution
- * 
+ *
  * Credentials are resolved in the following order:
  * 1. Environment variables (highest priority)
  * 2. Configuration file (with security warning)
@@ -257,23 +271,21 @@ public:
     /**
      * @brief Create client by enum type.
      */
-    static std::unique_ptr<APIClient> createClient(ProviderType type, 
-                                                   std::string_view api_key = "",
-                                                   std::string_view model = "",
-                                                   std::string_view base_url = "",
-                                                   const std::shared_ptr<IConfigManager>& cfg = nullptr);
-    
+    static std::unique_ptr<APIClient> createClient(
+        ProviderType type, std::string_view api_key = "", std::string_view model = "",
+        std::string_view base_url = "", const std::shared_ptr<IConfigManager>& cfg = nullptr);
+
     /**
      * @brief Create client by provider name from JSON config.
      * @param provider_name Provider name (e.g., "qwen", "openai")
      * @param config Provider configuration JSON
      * @param logger Optional logger for warnings and errors (nullptr to suppress)
      */
-    static std::unique_ptr<APIClient> createClientFromConfig(std::string_view provider_name,
-                                                             const nlohmann::json& config,
-                                                             ::LLMEngine::Logger* logger = nullptr,
-                                                             const std::shared_ptr<IConfigManager>& cfg = nullptr);
-    
+    static std::unique_ptr<APIClient> createClientFromConfig(
+        std::string_view provider_name, const nlohmann::json& config,
+        ::LLMEngine::Logger* logger = nullptr,
+        const std::shared_ptr<IConfigManager>& cfg = nullptr);
+
     /**
      * @brief Convert provider string to enum.
      */
@@ -286,37 +298,37 @@ public:
 
 /**
  * @brief Singleton managing `api_config.json` loading and access.
- * 
+ *
  * Implements IConfigManager interface for dependency injection support while
  * maintaining singleton pattern for backward compatibility.
- * 
+ *
  * ## Thread Safety
- * 
+ *
  * **All methods are thread-safe** and can be called concurrently from multiple threads.
  * Uses reader-writer locks (std::shared_mutex) to allow concurrent reads while
  * protecting writes.
- * 
+ *
  * ## Lifecycle
- * 
+ *
  * - **Singleton Pattern:** Single instance per process (created on first getInstance() call)
  * - **Lifetime:** Lives for the duration of the program
  * - **Initialization:** Config is loaded lazily via loadConfig()
- * 
+ *
  * ## Ownership
- * 
+ *
  * - **Logger:** Holds a weak_ptr to avoid dangling pointer risks. If the logger
  *   is destroyed, the singleton falls back to a thread-safe DefaultLogger.
  * - **Configuration:** Owned by the singleton instance
  * - **Thread Safety:** Logger access is protected by mutex
- * 
+ *
  * ## Usage Pattern
- * 
+ *
  * ```cpp
  * // Singleton usage (backward compatible)
  * auto& config = APIConfigManager::getInstance();
  * config.loadConfig();  // Load from default path
  * auto provider_config = config.getProviderConfig("qwen");
- * 
+ *
  * // Dependency injection usage (new)
  * std::shared_ptr<IConfigManager> config = std::make_shared<APIConfigManager>();
  * // or use singleton as shared_ptr
@@ -326,7 +338,7 @@ public:
 class LLMENGINE_EXPORT APIConfigManager : public IConfigManager {
 public:
     static APIConfigManager& getInstance();
-    
+
     /**
      * @brief Set the default configuration file path.
      * @param config_path The path to use as default when loadConfig() is called without arguments.
@@ -349,16 +361,15 @@ public:
 
 private:
     APIConfigManager();
-    mutable std::shared_mutex mutex_;  // For read-write lock
+    mutable std::shared_mutex mutex_; // For read-write lock
     nlohmann::json config_;
     bool config_loaded_ = false;
-    std::string default_config_path_;  // Default config file path
-    std::weak_ptr<::LLMEngine::Logger> logger_;  // Optional logger (weak ownership to avoid dangling pointers)
-    
+    std::string default_config_path_; // Default config file path
+    std::weak_ptr<::LLMEngine::Logger>
+        logger_; // Optional logger (weak ownership to avoid dangling pointers)
+
     // Helper method to safely get logger (locks weak_ptr or returns DefaultLogger)
     std::shared_ptr<::LLMEngine::Logger> getLogger() const;
 };
 
 } // namespace LLMEngineAPI
-
-

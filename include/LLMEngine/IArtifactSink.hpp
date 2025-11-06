@@ -6,13 +6,18 @@
 // See the LICENSE file in the project root for details.
 
 #pragma once
+#include "LLMEngine/LLMEngineExport.hpp"
 #include <memory>
 #include <string>
 #include <string_view>
-#include "LLMEngine/LLMEngineExport.hpp"
 
-namespace LLMEngine { class DebugArtifactManager; struct Logger; }
-namespace LLMEngineAPI { struct APIResponse; }
+namespace LLMEngine {
+class DebugArtifactManager;
+struct Logger;
+} // namespace LLMEngine
+namespace LLMEngineAPI {
+struct APIResponse;
+}
 
 namespace LLMEngine {
 
@@ -27,18 +32,15 @@ public:
      * @brief Create a new DebugArtifactManager for a request.
      */
     [[nodiscard]] virtual std::unique_ptr<DebugArtifactManager> create(
-        const std::string& request_tmp_dir,
-        const std::string& base_tmp_dir,
-        int log_retention_hours,
-        Logger* logger) const = 0;
+        const std::string& request_tmp_dir, const std::string& base_tmp_dir,
+        int log_retention_hours, Logger* logger) const = 0;
 
     /**
      * @brief Write API response to artifacts.
      */
-    virtual void writeApiResponse(
-        DebugArtifactManager* mgr,
-        const ::LLMEngineAPI::APIResponse& response,
-        bool is_error) const = 0;
+    virtual void writeApiResponse(DebugArtifactManager* mgr,
+                                  const ::LLMEngineAPI::APIResponse& response,
+                                  bool is_error) const = 0;
 };
 
 /**
@@ -46,18 +48,13 @@ public:
  */
 class LLMENGINE_EXPORT DefaultArtifactSink : public IArtifactSink {
 public:
-    [[nodiscard]] std::unique_ptr<DebugArtifactManager> create(
-        const std::string& request_tmp_dir,
-        const std::string& base_tmp_dir,
-        int log_retention_hours,
-        Logger* logger) const override;
+    [[nodiscard]] std::unique_ptr<DebugArtifactManager> create(const std::string& request_tmp_dir,
+                                                               const std::string& base_tmp_dir,
+                                                               int log_retention_hours,
+                                                               Logger* logger) const override;
 
-    void writeApiResponse(
-        DebugArtifactManager* mgr,
-        const ::LLMEngineAPI::APIResponse& response,
-        bool is_error) const override;
+    void writeApiResponse(DebugArtifactManager* mgr, const ::LLMEngineAPI::APIResponse& response,
+                          bool is_error) const override;
 };
 
 } // namespace LLMEngine
-
-

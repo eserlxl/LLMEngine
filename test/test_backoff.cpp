@@ -3,8 +3,8 @@
 
 #include "../src/Backoff.hpp"
 #include <cassert>
-#include <vector>
 #include <iostream>
+#include <vector>
 
 int main() {
     BackoffConfig cfg{100, 10'000}; // base 100ms, max 10s
@@ -19,7 +19,8 @@ int main() {
     //  - All delays are within [0, cap]
     //  - Caps grow exponentially (100,200,400,800,1600)
     std::vector<uint64_t> caps;
-    for (int attempt = 1; attempt <= 5; ++attempt) caps.push_back(computeBackoffCapMs(cfg, attempt));
+    for (int attempt = 1; attempt <= 5; ++attempt)
+        caps.push_back(computeBackoffCapMs(cfg, attempt));
     assert(caps[0] == 100 && caps[1] == 200 && caps[2] == 400 && caps[3] == 800 && caps[4] == 1600);
     for (size_t i = 0; i < delays.size(); ++i) {
         assert(delays[i] >= 0);
@@ -28,5 +29,3 @@ int main() {
     std::cout << "test_backoff: OK\n";
     return 0;
 }
-
-

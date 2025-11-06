@@ -119,7 +119,7 @@ void testTagAtEnd() {
 
 int main() {
     std::cout << "=== ResponseParser Unit Tests ===\n";
-    
+
     testBasicParsing();
     testNoTags();
     testEmptyThinkSection();
@@ -133,8 +133,7 @@ int main() {
     testWhitespaceOnly();
     testTagAtStart();
     testTagAtEnd();
-    
+
     std::cout << "\nAll ResponseParser tests passed!\n";
     return 0;
 }
-

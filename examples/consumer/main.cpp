@@ -1,6 +1,6 @@
 #include <LLMEngine/LLMEngine.hpp>
-#include <nlohmann/json.hpp>
 #include <iostream>
+#include <nlohmann/json.hpp>
 
 using namespace LLMEngine;
 
@@ -15,5 +15,3 @@ int main() {
         return 1;
     }
 }
-
-

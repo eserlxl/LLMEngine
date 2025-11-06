@@ -6,9 +6,9 @@
 // See the LICENSE file in the project root for details.
 
 #pragma once
-#include <string>
-#include "LLMEngine/LLMEngineExport.hpp"
 #include "LLMEngine/ErrorCodes.hpp"
+#include "LLMEngine/LLMEngineExport.hpp"
+#include <string>
 
 namespace LLMEngine {
 
@@ -17,7 +17,7 @@ using AnalysisErrorCode = LLMEngineErrorCode;
 
 /**
  * @brief Result structure returned by LLMEngine::analyze().
- * 
+ *
  * Contains the success status, extracted content, and error information.
  */
 struct LLMENGINE_EXPORT AnalysisResult {
@@ -26,32 +26,31 @@ struct LLMENGINE_EXPORT AnalysisResult {
     std::string content;
     std::string errorMessage;
     int statusCode;
-    
+
     /**
      * @brief Structured error code for programmatic error handling.
-     * 
+     *
      * Use this instead of parsing errorMessage for error classification.
      * Only valid when success == false.
      */
     LLMEngineErrorCode errorCode = LLMEngineErrorCode::None;
-    
+
     /**
      * @brief Check if the result represents a specific error type.
      */
     [[nodiscard]] bool hasError(AnalysisErrorCode code) const {
         return !success && errorCode == code;
     }
-    
+
     /**
      * @brief Check if the result is a retriable error (network, timeout, server, rate limit).
      */
     [[nodiscard]] bool isRetriableError() const {
         return !success && (errorCode == LLMEngineErrorCode::Network ||
-                           errorCode == LLMEngineErrorCode::Timeout ||
-                           errorCode == LLMEngineErrorCode::Server ||
-                           errorCode == LLMEngineErrorCode::RateLimited);
+                            errorCode == LLMEngineErrorCode::Timeout ||
+                            errorCode == LLMEngineErrorCode::Server ||
+                            errorCode == LLMEngineErrorCode::RateLimited);
     }
 };
 
 } // namespace LLMEngine
-

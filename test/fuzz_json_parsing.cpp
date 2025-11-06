@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Fuzz test target for JSON parsing operations.
-// Build with: clang++ -fsanitize=fuzzer,address,undefined -O1 fuzz_json_parsing.cpp -o fuzz_json_parsing
-// Or use CMake with ENABLE_FUZZ=ON (see test/CMakeLists.txt)
+// Build with: clang++ -fsanitize=fuzzer,address,undefined -O1 fuzz_json_parsing.cpp -o
+// fuzz_json_parsing Or use CMake with ENABLE_FUZZ=ON (see test/CMakeLists.txt)
 
-#include <nlohmann/json.hpp>
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
+#include <nlohmann/json.hpp>
 #include <string>
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
-    if (size == 0 || size > 100000) {  // Reasonable size limit
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+    if (size == 0 || size > 100000) { // Reasonable size limit
         return 0;
     }
-    
+
     // Create a string from the fuzzer input
     std::string input(reinterpret_cast<const char*>(data), size);
-    
+
     // Test 1: Basic JSON parsing
     try {
         auto json = nlohmann::json::parse(input);
@@ -33,15 +33,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     } catch (...) {
         // Other exceptions should not occur, but we catch them to prevent crashes
     }
-    
+
     // Test 2: JSON merge operations (common in ParameterMerger)
     try {
-        nlohmann::json base = {
-            {"temperature", 0.7},
-            {"max_tokens", 1000},
-            {"top_p", 0.9}
-        };
-        
+        nlohmann::json base = {{"temperature", 0.7}, {"max_tokens", 1000}, {"top_p", 0.9}};
+
         // Try to parse input as JSON and merge
         try {
             auto override_json = nlohmann::json::parse(input);
@@ -58,7 +54,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     } catch (...) {
         // Ignore all exceptions
     }
-    
+
     // Test 3: JSON array access
     try {
         auto json = nlohmann::json::parse(input);
@@ -73,7 +69,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     } catch (...) {
         // Ignore other exceptions
     }
-    
+
     // Test 4: JSON object field access
     try {
         auto json = nlohmann::json::parse(input);
@@ -84,7 +80,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
             (void)json.contains("content");
             (void)json.contains("temperature");
             (void)json.contains("max_tokens");
-            
+
             // Try to get values
             if (json.contains("choices")) {
                 (void)json["choices"];
@@ -95,7 +91,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     } catch (...) {
         // Ignore other exceptions
     }
-    
+
     return 0;
 }
-

@@ -9,12 +9,9 @@
 #include <nlohmann/json.hpp>
 
 static void BM_JSON_Merge_Empty(benchmark::State& state) {
-    nlohmann::json base = {
-        {"temperature", 0.7},
-        {"max_tokens", 1000}
-    };
+    nlohmann::json base = {{"temperature", 0.7}, {"max_tokens", 1000}};
     nlohmann::json override_json = {};
-    
+
     for (auto _ : state) {
         nlohmann::json result = base;
         result.update(override_json);
@@ -24,16 +21,9 @@ static void BM_JSON_Merge_Empty(benchmark::State& state) {
 BENCHMARK(BM_JSON_Merge_Empty);
 
 static void BM_JSON_Merge_WithOverrides(benchmark::State& state) {
-    nlohmann::json base = {
-        {"temperature", 0.7},
-        {"max_tokens", 1000},
-        {"top_p", 0.9}
-    };
-    nlohmann::json override_json = {
-        {"temperature", 0.5},
-        {"max_tokens", 2000}
-    };
-    
+    nlohmann::json base = {{"temperature", 0.7}, {"max_tokens", 1000}, {"top_p", 0.9}};
+    nlohmann::json override_json = {{"temperature", 0.5}, {"max_tokens", 2000}};
+
     for (auto _ : state) {
         nlohmann::json result = base;
         result.update(override_json);
@@ -44,7 +34,7 @@ BENCHMARK(BM_JSON_Merge_WithOverrides);
 
 static void BM_JSON_Parse_Simple(benchmark::State& state) {
     std::string json_str = R"({"temperature": 0.7, "max_tokens": 1000})";
-    
+
     for (auto _ : state) {
         auto result = nlohmann::json::parse(json_str);
         benchmark::DoNotOptimize(result);
@@ -65,7 +55,7 @@ static void BM_JSON_Parse_Complex(benchmark::State& state) {
         "frequency_penalty": 0.0,
         "presence_penalty": 0.0
     })";
-    
+
     for (auto _ : state) {
         auto result = nlohmann::json::parse(json_str);
         benchmark::DoNotOptimize(result);
@@ -75,15 +65,13 @@ BENCHMARK(BM_JSON_Parse_Complex);
 
 static void BM_JSON_Serialize(benchmark::State& state) {
     nlohmann::json json_obj = {
-        {"messages", nlohmann::json::array({
-            {{"role", "system"}, {"content", "You are a helpful assistant."}},
-            {{"role", "user"}, {"content", "What is 2+2?"}}
-        })},
+        {"messages",
+         nlohmann::json::array({{{"role", "system"}, {"content", "You are a helpful assistant."}},
+                                {{"role", "user"}, {"content", "What is 2+2?"}}})},
         {"model", "gpt-4"},
         {"temperature", 0.7},
-        {"max_tokens", 1000}
-    };
-    
+        {"max_tokens", 1000}};
+
     for (auto _ : state) {
         std::string result = json_obj.dump();
         benchmark::DoNotOptimize(result);
@@ -92,4 +80,3 @@ static void BM_JSON_Serialize(benchmark::State& state) {
 BENCHMARK(BM_JSON_Serialize);
 
 BENCHMARK_MAIN();
-

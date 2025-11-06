@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Fuzz test target for response parsing operations.
-// Build with: clang++ -fsanitize=fuzzer,address,undefined -O1 fuzz_response_parsing.cpp -o fuzz_response_parsing
-// Or use CMake with ENABLE_FUZZ=ON (see test/CMakeLists.txt)
+// Build with: clang++ -fsanitize=fuzzer,address,undefined -O1 fuzz_response_parsing.cpp -o
+// fuzz_response_parsing Or use CMake with ENABLE_FUZZ=ON (see test/CMakeLists.txt)
 
 #include "LLMEngine/ResponseParser.hpp"
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <string>
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
-    if (size == 0 || size > 100000) {  // Reasonable size limit
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+    if (size == 0 || size > 100000) { // Reasonable size limit
         return 0;
     }
-    
+
     // Create a string from the fuzzer input
     std::string input(reinterpret_cast<const char*>(data), size);
-    
+
     // Test ResponseParser::parseResponse with fuzzed input
     try {
         auto [think, remaining] = LLMEngine::ResponseParser::parseResponse(input);
@@ -29,7 +29,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     } catch (...) {
         // Ignore all exceptions - parseResponse should not throw
     }
-    
+
     // Test with various think tag patterns
     try {
         // Test with think tags
@@ -40,7 +40,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     } catch (...) {
         // Ignore exceptions
     }
-    
+
     // Test with nested think tags (edge case)
     try {
         std::string nested = "<think>Outer<think>" + input + "</think></think>Content";
@@ -50,7 +50,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     } catch (...) {
         // Ignore exceptions
     }
-    
+
     // Test with multiple think tags
     try {
         std::string multiple = "<think>First</think>" + input + "<think>Second</think>More";
@@ -60,7 +60,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     } catch (...) {
         // Ignore exceptions
     }
-    
+
     // Test with unclosed think tags
     try {
         std::string unclosed = "<think>" + input;
@@ -70,7 +70,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     } catch (...) {
         // Ignore exceptions
     }
-    
+
     // Test with mismatched tags
     try {
         std::string mismatched = "<think>" + input + "</think2>";
@@ -80,7 +80,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     } catch (...) {
         // Ignore exceptions
     }
-    
+
     return 0;
 }
-

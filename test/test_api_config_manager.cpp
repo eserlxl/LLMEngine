@@ -29,15 +29,15 @@ int main() {
     // Test default config path API
     {
         auto& mgr = APIConfigManager::getInstance();
-        
+
         // Check default path is set to expected value
         std::string default_path = mgr.getDefaultConfigPath();
         assert(default_path == "config/api_config.json");
-        
+
         // Change the default path
         mgr.setDefaultConfigPath("/custom/path/config.json");
         assert(mgr.getDefaultConfigPath() == "/custom/path/config.json");
-        
+
         // Reset to original default
         mgr.setDefaultConfigPath("config/api_config.json");
         assert(mgr.getDefaultConfigPath() == "config/api_config.json");
@@ -50,15 +50,15 @@ int main() {
         if (ok) {
             // Global timeout should be 30 seconds
             assert(mgr.getTimeoutSeconds() == 30);
-            
+
             // Ollama should have provider-specific timeout of 300 seconds
             int ollama_timeout = mgr.getTimeoutSeconds("ollama");
             assert(ollama_timeout == 300);
-            
+
             // Other providers should fall back to global timeout (30 seconds)
             int qwen_timeout = mgr.getTimeoutSeconds("qwen");
             assert(qwen_timeout == 30);
-            
+
             // Non-existent provider should fall back to global timeout
             int unknown_timeout = mgr.getTimeoutSeconds("nonexistent");
             assert(unknown_timeout == 30);
@@ -68,5 +68,3 @@ int main() {
     std::cout << "test_api_config_manager: OK\n";
     return 0;
 }
-
-

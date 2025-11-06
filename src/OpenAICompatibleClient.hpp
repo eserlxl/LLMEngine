@@ -6,26 +6,26 @@
 // See the LICENSE file in the project root for details.
 
 #pragma once
-#include "LLMEngine/APIClient.hpp"
-#include "ChatCompletionRequestHelper.hpp"
 #include "APIClientCommon.hpp"
+#include "ChatCompletionRequestHelper.hpp"
+#include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Constants.hpp"
+#include <map>
 #include <nlohmann/json.hpp>
 #include <string>
 #include <string_view>
-#include <map>
 
 namespace LLMEngineAPI {
 
 /**
  * @brief Base class for OpenAI-compatible API clients.
- * 
+ *
  * This class provides a common implementation for providers that use the
  * OpenAI-compatible API format (e.g., Qwen, OpenAI, and other compatible providers).
  * It handles payload building, URL construction, header building, and response parsing.
- * 
+ *
  * ## Thread Safety
- * 
+ *
  * This class is thread-safe. It is stateless (except for configuration set during
  * construction) and can be called concurrently from multiple threads.
  */
@@ -41,12 +41,13 @@ protected:
      * @param model Default model name
      * @param base_url Base URL for the API endpoint
      */
-    OpenAICompatibleClient(const std::string& api_key, 
-                          const std::string& model,
-                          const std::string& base_url);
+    OpenAICompatibleClient(const std::string& api_key, const std::string& model,
+                           const std::string& base_url);
 
 public:
-    void setConfig(std::shared_ptr<IConfigManager> cfg) { config_ = std::move(cfg); }
+    void setConfig(std::shared_ptr<IConfigManager> cfg) {
+        config_ = std::move(cfg);
+    }
 
     /**
      * @brief Get cached headers (built once in constructor).
@@ -66,7 +67,7 @@ public:
      * @param request_params Merged request parameters
      * @return JSON payload object
      */
-    nlohmann::json buildPayload(const nlohmann::json& messages, 
+    nlohmann::json buildPayload(const nlohmann::json& messages,
                                 const nlohmann::json& request_params) const;
 
     /**
@@ -79,22 +80,25 @@ public:
     /**
      * @brief Get default parameters (for use by wrapper classes).
      */
-    const nlohmann::json& getDefaultParams() const { return default_params_; }
+    const nlohmann::json& getDefaultParams() const {
+        return default_params_;
+    }
 
     /**
      * @brief Get config manager (for use by wrapper classes).
      */
-    IConfigManager* getConfig() const { return config_.get(); }
+    IConfigManager* getConfig() const {
+        return config_.get();
+    }
 
 protected:
     std::string api_key_;
     std::string model_;
     std::string base_url_;
-    std::string chat_completions_url_;  // Cached URL
-    std::map<std::string, std::string> cached_headers_;  // Cached headers
+    std::string chat_completions_url_;                  // Cached URL
+    std::map<std::string, std::string> cached_headers_; // Cached headers
     nlohmann::json default_params_;
     std::shared_ptr<IConfigManager> config_;
 };
 
 } // namespace LLMEngineAPI
-

@@ -6,13 +6,16 @@
 // See the LICENSE file in the project root for details.
 
 #pragma once
+#include "LLMEngine/LLMEngineExport.hpp"
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <string_view>
-#include <nlohmann/json.hpp>
-#include "LLMEngine/LLMEngineExport.hpp"
 
-namespace LLMEngineAPI { class APIClient; struct APIResponse; }
+namespace LLMEngineAPI {
+class APIClient;
+struct APIResponse;
+} // namespace LLMEngineAPI
 
 namespace LLMEngine {
 
@@ -27,10 +30,8 @@ public:
      * @brief Execute a request using the provided API client.
      */
     [[nodiscard]] virtual ::LLMEngineAPI::APIResponse execute(
-        const ::LLMEngineAPI::APIClient* api_client,
-        const std::string& full_prompt,
-        const nlohmann::json& input,
-        const nlohmann::json& final_params) const = 0;
+        const ::LLMEngineAPI::APIClient* api_client, const std::string& full_prompt,
+        const nlohmann::json& input, const nlohmann::json& final_params) const = 0;
 };
 
 /**
@@ -39,12 +40,8 @@ public:
 class LLMENGINE_EXPORT DefaultRequestExecutor : public IRequestExecutor {
 public:
     [[nodiscard]] ::LLMEngineAPI::APIResponse execute(
-        const ::LLMEngineAPI::APIClient* api_client,
-        const std::string& full_prompt,
-        const nlohmann::json& input,
-        const nlohmann::json& final_params) const override;
+        const ::LLMEngineAPI::APIClient* api_client, const std::string& full_prompt,
+        const nlohmann::json& input, const nlohmann::json& final_params) const override;
 };
 
 } // namespace LLMEngine
-
-
