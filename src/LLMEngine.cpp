@@ -169,10 +169,9 @@ void ::LLMEngine::LLMEngine::initializeAPIClient() {
 void ::LLMEngine::LLMEngine::ensureSecureTmpDir() const {
     // Cache directory existence check to reduce filesystem operations
     // Only re-check if directory was previously verified and might have been deleted
-    TempDirectoryService service;
     if (tmp_dir_verified_) {
         // Quick check: if directory still exists and is valid, skip expensive operations
-        if (service.isDirectoryValid(tmp_dir_, logger_.get())) {
+        if (TempDirectoryService::isDirectoryValid(tmp_dir_, logger_.get())) {
             return;
         }
         // Directory was deleted or invalid, need to re-verify
@@ -180,7 +179,7 @@ void ::LLMEngine::LLMEngine::ensureSecureTmpDir() const {
     }
     
     // Use TempDirectoryService to ensure directory with security checks
-    auto result = service.ensureSecureDirectory(tmp_dir_, logger_.get());
+    auto result = TempDirectoryService::ensureSecureDirectory(tmp_dir_, logger_.get());
     if (!result.success) {
         throw std::runtime_error(result.error_message);
     }
@@ -208,8 +207,14 @@ LLM::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt,
         if (logger_) {
             logger_->log(LLM::LogLevel::Error, "Request executor not configured");
         }
-        LLM::AnalysisResult result{false, "", "", "Request executor not configured", HttpStatus::INTERNAL_SERVER_ERROR};
-        result.errorCode = LLMEngineErrorCode::Unknown;
+        LLM::AnalysisResult result{
+            .success = false,
+            .think = "",
+            .content = "",
+            .errorMessage = "Request executor not configured",
+            .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
+            .errorCode = LLMEngineErrorCode::Unknown
+        };
         return result;
     }
 
@@ -251,8 +256,7 @@ bool ::LLMEngine::LLMEngine::setTempDirectory(const std::string& tmp_dir) {
     // Only accept directories within the active provider's root to respect dependency injection
     const std::string allowed_root = temp_dir_provider_ ? temp_dir_provider_->getTempDir() : LLM::DefaultTempDirProvider().getTempDir();
     
-    TempDirectoryService service;
-    if (service.validatePathWithinRoot(tmp_dir, allowed_root, logger_.get())) {
+    if (TempDirectoryService::validatePathWithinRoot(tmp_dir, allowed_root, logger_.get())) {
         tmp_dir_ = tmp_dir;
         tmp_dir_verified_ = false;  // Reset cache when directory changes
         return true;

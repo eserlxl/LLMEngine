@@ -448,6 +448,49 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 # from the system or their own fetch logic.
 set(_targets_to_install ${PROJECT_NAME} ${PROJECT_NAME}_compile_options)
 
+# Save original link libraries before filtering (needed for build-tree usage)
+get_target_property(_orig_link_libs ${PROJECT_NAME} LINK_LIBRARIES)
+get_target_property(_orig_interface_link_libs ${PROJECT_NAME} INTERFACE_LINK_LIBRARIES)
+
+# Filter out FetchContent dependencies from export to prevent CMake validation errors
+# These dependencies will be provided by consumers via find_dependency() in Config.cmake
+if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
+  set(_filtered_link_libs "")
+  if (_orig_link_libs)
+    foreach(_lib IN LISTS _orig_link_libs)
+      set(_skip FALSE)
+      if (NLOHMANN_JSON_FETCHED AND _lib MATCHES "nlohmann_json")
+        set(_skip TRUE)
+      endif()
+      if (CPR_FETCHED AND _lib MATCHES "cpr")
+        set(_skip TRUE)
+      endif()
+      if (NOT _skip)
+        list(APPEND _filtered_link_libs "${_lib}")
+      endif()
+    endforeach()
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_LIBRARIES "${_filtered_link_libs}")
+  endif()
+  
+  # Also filter INTERFACE_LINK_LIBRARIES if it exists and differs from LINK_LIBRARIES
+  if (_orig_interface_link_libs AND NOT _orig_interface_link_libs STREQUAL "_orig_interface_link_libs-NOTFOUND")
+    set(_filtered_interface_libs "")
+    foreach(_lib IN LISTS _orig_interface_link_libs)
+      set(_skip FALSE)
+      if (NLOHMANN_JSON_FETCHED AND _lib MATCHES "nlohmann_json")
+        set(_skip TRUE)
+      endif()
+      if (CPR_FETCHED AND _lib MATCHES "cpr")
+        set(_skip TRUE)
+      endif()
+      if (NOT _skip)
+        list(APPEND _filtered_interface_libs "${_lib}")
+      endif()
+    endforeach()
+    set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_LINK_LIBRARIES "${_filtered_interface_libs}")
+  endif()
+endif()
+
 install(TARGETS ${_targets_to_install}
   EXPORT ${PROJECT_NAME}Targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -455,8 +498,15 @@ install(TARGETS ${_targets_to_install}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-# Note: INTERFACE_LINK_LIBRARIES restoration happens after install(EXPORT)
-# to ensure export files are generated with filtered dependencies
+# Restore original link libraries after export (for build-tree usage and examples)
+if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
+  if (_orig_link_libs)
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_LIBRARIES "${_orig_link_libs}")
+  endif()
+  if (_orig_interface_link_libs AND NOT _orig_interface_link_libs STREQUAL "_orig_interface_link_libs-NOTFOUND")
+    set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_LINK_LIBRARIES "${_orig_interface_link_libs}")
+  endif()
+endif()
 
 # Install public headers
 # Namespaced headers go to include/LLMEngine/
@@ -509,10 +559,60 @@ configure_package_config_file(
   INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
 # Export targets to the build tree so examples can use find_package() without install
-# Note: INTERFACE_LINK_LIBRARIES filtering already happened before install(TARGETS ... EXPORT)
+# Note: We need to filter dependencies again before build-tree export
+if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
+  # Save and filter again (properties were restored after install)
+  get_target_property(_orig_link_libs ${PROJECT_NAME} LINK_LIBRARIES)
+  get_target_property(_orig_interface_link_libs ${PROJECT_NAME} INTERFACE_LINK_LIBRARIES)
+  
+  if (_orig_link_libs)
+    set(_filtered_link_libs "")
+    foreach(_lib IN LISTS _orig_link_libs)
+      set(_skip FALSE)
+      if (NLOHMANN_JSON_FETCHED AND _lib MATCHES "nlohmann_json")
+        set(_skip TRUE)
+      endif()
+      if (CPR_FETCHED AND _lib MATCHES "cpr")
+        set(_skip TRUE)
+      endif()
+      if (NOT _skip)
+        list(APPEND _filtered_link_libs "${_lib}")
+      endif()
+    endforeach()
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_LIBRARIES "${_filtered_link_libs}")
+  endif()
+  
+  if (_orig_interface_link_libs AND NOT _orig_interface_link_libs STREQUAL "_orig_interface_link_libs-NOTFOUND")
+    set(_filtered_interface_libs "")
+    foreach(_lib IN LISTS _orig_interface_link_libs)
+      set(_skip FALSE)
+      if (NLOHMANN_JSON_FETCHED AND _lib MATCHES "nlohmann_json")
+        set(_skip TRUE)
+      endif()
+      if (CPR_FETCHED AND _lib MATCHES "cpr")
+        set(_skip TRUE)
+      endif()
+      if (NOT _skip)
+        list(APPEND _filtered_interface_libs "${_lib}")
+      endif()
+    endforeach()
+    set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_LINK_LIBRARIES "${_filtered_interface_libs}")
+  endif()
+endif()
+
 export(EXPORT ${PROJECT_NAME}Targets
   NAMESPACE ${PROJECT_NAME_LOWER}::
   FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake")
+
+# Restore again for build-tree usage
+if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
+  if (_orig_link_libs)
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_LIBRARIES "${_orig_link_libs}")
+  endif()
+  if (_orig_interface_link_libs AND NOT _orig_interface_link_libs STREQUAL "_orig_interface_link_libs-NOTFOUND")
+    set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_LINK_LIBRARIES "${_orig_interface_link_libs}")
+  endif()
+endif()
 
 # Always install config files (even when dependencies are fetched)
 # The Config.cmake will document dependency requirements

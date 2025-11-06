@@ -101,20 +101,20 @@ std::string ProviderBootstrap::resolveApiKey(
     }
     
     if (env_api_key && strlen(env_api_key) > 0) {
-        return std::string(env_api_key);
-    } else if (!std::string(api_key_from_param).empty()) {
-        // Use provided API key if environment variable is not set
-        return std::string(api_key_from_param);
-    } else {
-        // Fall back to config file (last resort - not recommended for production)
-        std::string api_key = std::string(api_key_from_config);
-        if (!api_key.empty() && logger) {
-            logger->log(LogLevel::Warn, std::string("Using API key from config file. For production use, ")
-                      + "set the " + env_var_name + " environment variable instead. "
-                      + "Storing credentials in config files is a security risk.");
-        }
-        return api_key;
+        return std::string{env_api_key};
     }
+    if (!std::string(api_key_from_param).empty()) {
+        // Use provided API key if environment variable is not set
+        return std::string{api_key_from_param};
+    }
+    // Fall back to config file (last resort - not recommended for production)
+    std::string api_key = std::string(api_key_from_config);
+    if (!api_key.empty() && logger) {
+        logger->log(LogLevel::Warn, std::string("Using API key from config file. For production use, ")
+                  + "set the " + env_var_name + " environment variable instead. "
+                  + "Storing credentials in config files is a security risk.");
+    }
+    return api_key;
 }
 
 std::string ProviderBootstrap::getApiKeyEnvVarName(::LLMEngineAPI::ProviderType provider_type) {

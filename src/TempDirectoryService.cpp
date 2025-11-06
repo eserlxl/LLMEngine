@@ -14,7 +14,7 @@ namespace LLMEngine {
 
 TempDirectoryService::DirectoryResult TempDirectoryService::ensureSecureDirectory(
     const std::string& directory_path,
-    Logger* logger) const {
+    Logger* logger) {
     
     DirectoryResult result;
     result.success = false;
@@ -61,7 +61,7 @@ TempDirectoryService::DirectoryResult TempDirectoryService::ensureSecureDirector
 bool TempDirectoryService::validatePathWithinRoot(
     const std::string& requested_path,
     const std::string& allowed_root,
-    Logger* logger) const {
+    Logger* logger) {
     
     try {
         const std::filesystem::path default_root = std::filesystem::path(allowed_root).lexically_normal();
@@ -94,7 +94,7 @@ bool TempDirectoryService::validatePathWithinRoot(
     }
 }
 
-bool TempDirectoryService::isDirectoryValid(const std::string& directory_path, Logger* logger) const {
+bool TempDirectoryService::isDirectoryValid(const std::string& directory_path, Logger* logger) {
     std::error_code ec;
     if (!std::filesystem::exists(directory_path, ec)) {
         return false;

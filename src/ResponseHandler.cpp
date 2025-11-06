@@ -91,8 +91,14 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
         // Classify error code (now using unified LLMEngineErrorCode)
         LLMEngineErrorCode error_code = classifyErrorCode(api_response.error_code, api_response.status_code);
         // Return enhanced error message with context
-        AnalysisResult result{false, "", "", enhanced_error, api_response.status_code};
-        result.errorCode = error_code;
+        AnalysisResult result{
+            .success = false,
+            .think = "",
+            .content = "",
+            .errorMessage = enhanced_error,
+            .statusCode = api_response.status_code,
+            .errorCode = error_code
+        };
         return result;
     }
 
@@ -111,8 +117,14 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
     }
     
     const auto [think_section, remaining_section] = ResponseParser::parseResponse(full_response);
-    AnalysisResult result{true, think_section, remaining_section, "", api_response.status_code};
-    result.errorCode = LLMEngineErrorCode::None;
+    AnalysisResult result{
+        .success = true,
+        .think = think_section,
+        .content = remaining_section,
+        .errorMessage = "",
+        .statusCode = api_response.status_code,
+        .errorCode = LLMEngineErrorCode::None
+    };
     return result;
 }
 

@@ -12,6 +12,7 @@
 #include "LLMEngine/ProviderBootstrap.hpp"
 #include <fstream>
 #include <algorithm>
+#include <ranges>
 #include <cctype>
 #include <cstring>
 #include <iostream>
@@ -101,7 +102,7 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(std::string_
 
 ProviderType APIClientFactory::stringToProviderType(std::string_view provider_name) {
     std::string name(provider_name);
-    std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+    std::ranges::transform(name, name.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
     
     // Direct mapping for known providers
     if (name == "qwen") return ProviderType::QWEN;
@@ -123,7 +124,7 @@ ProviderType APIClientFactory::stringToProviderType(std::string_view provider_na
     const auto& cfg = APIConfigManager::getInstance();
     const std::string def = cfg.getDefaultProvider();
     std::string def_lower = def;
-    std::transform(def_lower.begin(), def_lower.end(), def_lower.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+    std::ranges::transform(def_lower, def_lower.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
     
     if (def_lower == "qwen") return ProviderType::QWEN;
     if (def_lower == "openai") return ProviderType::OPENAI;

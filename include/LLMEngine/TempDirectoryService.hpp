@@ -78,10 +78,10 @@ public:
      * @param logger Optional logger for error messages.
      * @return DirectoryResult indicating success or failure.
      */
-    [[nodiscard]] DirectoryResult ensureSecureDirectory(
+    [[nodiscard]] static DirectoryResult ensureSecureDirectory(
         const std::string& directory_path,
         Logger* logger = nullptr
-    ) const;
+    );
     
     /**
      * @brief Validate that a requested path is within an allowed root.
@@ -94,11 +94,11 @@ public:
      * @param logger Optional logger for warnings.
      * @return true if path is valid and within allowed root, false otherwise.
      */
-    [[nodiscard]] bool validatePathWithinRoot(
+    [[nodiscard]] static bool validatePathWithinRoot(
         const std::string& requested_path,
         const std::string& allowed_root,
         Logger* logger = nullptr
-    ) const;
+    );
     
     /**
      * @brief Check if a directory exists and is not a symlink.
@@ -107,7 +107,7 @@ public:
      * @param logger Optional logger for errors.
      * @return true if directory exists and is not a symlink, false otherwise.
      */
-    [[nodiscard]] bool isDirectoryValid(const std::string& directory_path, Logger* logger = nullptr) const;
+    [[nodiscard]] static bool isDirectoryValid(const std::string& directory_path, Logger* logger = nullptr);
 };
 
 } // namespace LLMEngine

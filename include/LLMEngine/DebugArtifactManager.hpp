@@ -94,6 +94,14 @@ public:
      * @return true if directory exists or was created successfully
      */
     bool ensureRequestDirectory();
+    
+    /**
+     * @brief Perform cleanup of old debug artifacts.
+     * 
+     * Removes debug artifacts older than the configured retention period.
+     * This is called automatically after writing API responses.
+     */
+    void performCleanup();
 
 private:
     std::string request_tmp_dir_;
@@ -103,8 +111,6 @@ private:
     bool directory_created_;
     mutable std::chrono::system_clock::time_point last_cleanup_time_;
     mutable bool cleanup_time_initialized_;
-    
-    void performCleanup();
 };
 
 } // namespace LLMEngine

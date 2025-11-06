@@ -41,7 +41,8 @@ namespace {
         // Initialize with process seed plus thread offset
         std::mt19937_64 local_rng(process_rng());
         // Mix in thread-specific offset
-        for (int i = 0; i < 10; ++i) {
+        constexpr int rng_warmup_rounds = 10;  // Number of values to discard for state mixing
+        for (int i = 0; i < rng_warmup_rounds; ++i) {
             local_rng();  // Discard some values to mix state
         }
         local_rng.seed(process_rng() ^ thread_offset);

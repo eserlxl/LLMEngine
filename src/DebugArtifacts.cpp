@@ -6,6 +6,7 @@
 #include <fstream>
 #include <chrono>
 #include <algorithm>
+#include <ranges>
 #include <vector>
 
 namespace {
@@ -150,8 +151,8 @@ nlohmann::json DebugArtifacts::redactJson(const nlohmann::json& j) {
     };
     for (auto& [key, value] : out.items()) {
         std::string lower = key;
-        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-        if (std::any_of(sensitive_keys.begin(), sensitive_keys.end(), [&](const std::string& s){ return lower.find(s) != std::string::npos; })) {
+        std::ranges::transform(lower, lower.begin(), ::tolower);
+        if (std::ranges::any_of(sensitive_keys, [&](const std::string& s){ return lower.find(s) != std::string::npos; })) {
             out[key] = "<REDACTED>";
             continue;
         }
