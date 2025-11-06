@@ -5,8 +5,8 @@
 // the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/Utils.hpp"
 #include "LLMEngine/Logger.hpp"
+#include "LLMEngine/Utils.hpp"
 #include <algorithm>
 #include <array>
 #include <cerrno>
@@ -23,7 +23,7 @@
 
 // POSIX-specific includes (not available on Windows)
 #if defined(__unix__) || defined(__unix) ||                                        \
-        (defined(__APPLE__) && defined(__MACH__))
+    (defined(__APPLE__) && defined(__MACH__))
 #include <spawn.h>
 #include <sys/poll.h>
 #include <sys/wait.h>
@@ -65,7 +65,7 @@ static const std::regex MARKDOWN_HEADER_REGEX(R"(#+\s*)");
 namespace {
 void close_fd(int fd) {
 #if defined(__unix__) || defined(__unix) ||                                        \
-        (defined(__APPLE__) && defined(__MACH__))
+    (defined(__APPLE__) && defined(__MACH__))
     close(fd);
 #elif defined(_WIN32) || defined(_WIN64)
     _close(fd);
@@ -131,8 +131,7 @@ std::vector<std::string> readLines(std::string_view filepath, size_t max_lines) 
 //   wildcards)
 // - Multiple redundant checks for defense in depth
 std::vector<std::string> execCommandImpl(
-        const std::vector<std::string>& args,
-        ::LLMEngine::Logger* logger,
+        const std::vector<std::string>& args, ::LLMEngine::Logger* logger,
         const std::string& cmd_str_for_logging) {
     std::vector<std::string> output;
 
@@ -150,7 +149,7 @@ std::vector<std::string> execCommandImpl(
     if (args.empty()) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
-                        "execCommand: Empty command string");
+                    "execCommand: Empty command string");
         }
         return output;
     }
@@ -305,8 +304,8 @@ std::vector<std::string> execCommandImpl(
         if (rc != 0) {
             if (logger) {
                 logger->log(::LLMEngine::LogLevel::Error,
-                            std::string("execCommand: ") + what + " failed (" +
-                                    std::to_string(rc) + ")");
+                        std::string("execCommand: ") + what + " failed (" +
+                                std::to_string(rc) + ")");
             }
             posix_spawn_file_actions_destroy(&file_actions);
             return false;
@@ -337,7 +336,7 @@ std::vector<std::string> execCommandImpl(
     // Spawn the process
     pid_t pid;
     int spawn_result = posix_spawnp(&pid, argv[0], &file_actions, nullptr, argv.data(),
-                                     ::environ);
+                                    ::environ);
 
     // Clean up file actions
     posix_spawn_file_actions_destroy(&file_actions);
@@ -345,10 +344,10 @@ std::vector<std::string> execCommandImpl(
     if (spawn_result != 0) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
-                        std::string("execCommand: posix_spawnp() failed for "
-                                    "command: ") +
-                                cmd_str_for_logging + " (error: " +
-                                std::to_string(spawn_result) + ")");
+                    std::string("execCommand: posix_spawnp() failed for "
+                                "command: ") +
+                            cmd_str_for_logging + " (error: " +
+                            std::to_string(spawn_result) + ")");
         }
         // Pipes are automatically closed by RAII wrappers
         return output;
@@ -520,8 +519,8 @@ std::vector<std::string> execCommandImpl(
     if (waitpid(pid, &status, 0) == -1) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
-                        std::string("execCommand: waitpid() failed for command: ") +
-                                cmd_str_for_logging);
+                    std::string("execCommand: waitpid() failed for command: ") +
+                            cmd_str_for_logging);
         }
         return output;
     }
@@ -529,9 +528,9 @@ std::vector<std::string> execCommandImpl(
     if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Warn,
-                        std::string("Command '") + cmd_str_for_logging +
-                                "' exited with non-zero status: " +
-                                std::to_string(WEXITSTATUS(status)));
+                    std::string("Command '") + cmd_str_for_logging +
+                            "' exited with non-zero status: " +
+                            std::to_string(WEXITSTATUS(status)));
             if (!output.empty()) {
                 std::string output_msg = "  Output:\n";
                 for (const auto& output_line : output) {
@@ -543,9 +542,9 @@ std::vector<std::string> execCommandImpl(
     } else if (WIFSIGNALED(status)) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Warn,
-                        std::string("Command '") + cmd_str_for_logging +
-                                "' terminated by signal: " +
-                                std::to_string(WTERMSIG(status)));
+                    std::string("Command '") + cmd_str_for_logging +
+                            "' terminated by signal: " +
+                            std::to_string(WTERMSIG(status)));
         }
     }
 
@@ -578,7 +577,7 @@ std::vector<std::string> execCommand(std::string_view cmd, ::LLMEngine::Logger* 
     if (cmd_str.empty()) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
-                        "execCommand: Empty command string");
+                    "execCommand: Empty command string");
         }
         return output;
     }
@@ -725,8 +724,8 @@ bool validateApiKey(std::string_view api_key) {
 
     // Check for control characters
     if (!std::ranges::all_of(api_key, [](char c) {
-            return !std::iscntrl(static_cast<unsigned char>(c));
-        })) {
+        return !std::iscntrl(static_cast<unsigned char>(c));
+    })) {
         return false;
     }
 
@@ -777,8 +776,8 @@ bool validateUrl(std::string_view url) {
 
     // Check for control characters
     if (!std::ranges::all_of(url, [](char c) {
-            return !std::iscntrl(static_cast<unsigned char>(c));
-        })) {
+        return !std::iscntrl(static_cast<unsigned char>(c));
+    })) {
         return false;
     }
 
