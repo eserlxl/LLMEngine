@@ -22,7 +22,7 @@ using namespace LLMEngine;
 
 class ReadmeChatBot {
 private:
-    std::unique_ptr<LLMEngine> engine_;
+    std::unique_ptr<LLMEngine::LLMEngine> engine_;
     std::string readme_content_;
     std::string project_url_;
     std::string project_name_;
@@ -43,7 +43,7 @@ public:
                 {"think", true}              // Enable chain of thought reasoning
             };
             
-            engine_ = std::make_unique<LLMEngine>(provider_name, api_key, model, 
+            engine_ = std::make_unique<LLMEngine::LLMEngine>(provider_name, api_key, model, 
                                                  chat_params, 24, debug);
             std::cout << "✓ ReadmeChatBot initialized with " << engine_->getProviderName() 
                       << " (" << (engine_->isOnlineProvider() ? "Online" : "Local") << ")" 

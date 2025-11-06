@@ -108,7 +108,7 @@ void testLLMEngineWithQwen() {
             {"temperature", 0.7}
         };
         
-        LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash", model_params, 24, true);
+        LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash", model_params, 24, true);
         std::cout << "✓ LLMEngine initialized with Qwen" << std::endl;
         std::cout << "  Provider: " << engine.getProviderName() << std::endl;
         std::cout << "  Is online: " << (engine.isOnlineProvider() ? "Yes" : "No") << std::endl;
@@ -133,7 +133,7 @@ void testLLMEngineWithQwen() {
         
         // Test with provider name constructor
         std::cout << "\n2. Testing with provider name constructor..." << std::endl;
-        LLMEngine engine2("qwen", api_key, "qwen-flash", model_params, 24, true);
+        LLMEngine::LLMEngine engine2("qwen", api_key, "qwen-flash", model_params, 24, true);
         std::cout << "✓ LLMEngine initialized with provider name" << std::endl;
         std::cout << "  Provider: " << engine2.getProviderName() << std::endl;
         
@@ -154,13 +154,13 @@ void testLLMEngineOllamaProvider() {
             {"top_p", 0.9}
         };
         
-        LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", model, model_params, 24, true);
+        LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", model, model_params, 24, true);
         std::cout << "✓ LLMEngine initialized with Ollama provider" << std::endl;
         std::cout << "  Provider: " << engine.getProviderName() << std::endl;
         std::cout << "  Is online: " << (engine.isOnlineProvider() ? "Yes" : "No") << std::endl;
         
         // Test with provider name constructor
-        LLMEngine engine2("ollama", "", model, model_params, 24, true);
+        LLMEngine::LLMEngine engine2("ollama", "", model, model_params, 24, true);
         std::cout << "✓ LLMEngine initialized with provider name 'ollama'" << std::endl;
         
         // Note: We don't actually make a request here since Ollama might not be running

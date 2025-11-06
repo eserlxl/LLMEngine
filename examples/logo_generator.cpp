@@ -21,7 +21,7 @@ using namespace LLMEngine;
 
 class LogoGenerator {
 private:
-    std::unique_ptr<LLMEngine> engine_;
+    std::unique_ptr<LLMEngine::LLMEngine> engine_;
     bool debug_mode_;
     std::string output_dir_;
     
@@ -39,7 +39,7 @@ public:
                 {"presence_penalty", 0.0}    // No penalty for introducing new concepts
             };
             
-            engine_ = std::make_unique<LLMEngine>(provider_name, api_key, model, 
+            engine_ = std::make_unique<LLMEngine::LLMEngine>(provider_name, api_key, model, 
                                                  logo_params, 24, debug);
             output_dir_ = "generated_logos";
             std::filesystem::create_directories(output_dir_);

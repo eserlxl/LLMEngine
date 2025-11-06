@@ -22,7 +22,7 @@ using namespace LLMEngine;
 
 class ImageGenerator {
 private:
-    std::unique_ptr<LLMEngine> engine_;
+    std::unique_ptr<LLMEngine::LLMEngine> engine_;
     bool debug_mode_;
     std::string output_dir_;
     
@@ -44,7 +44,7 @@ public:
                 {"think", true}              // Enable chain of thought reasoning
             };
             
-            engine_ = std::make_unique<LLMEngine>(provider_name, api_key, model, 
+            engine_ = std::make_unique<LLMEngine::LLMEngine>(provider_name, api_key, model, 
                                                  image_params, 24, debug);
             output_dir_ = "generated_images";
             std::filesystem::create_directories(output_dir_);

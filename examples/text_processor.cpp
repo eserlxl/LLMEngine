@@ -20,7 +20,7 @@ using namespace LLMEngine;
 
 class TextProcessor {
 private:
-    std::unique_ptr<LLMEngine> engine_;
+    std::unique_ptr<LLMEngine::LLMEngine> engine_;
     bool debug_mode_;
     std::string mode_;
     
@@ -38,7 +38,7 @@ public:
                 {"presence_penalty", 0.0}     // No penalty for introducing concepts
             };
             
-            engine_ = std::make_unique<LLMEngine>(provider_name, api_key, model, 
+            engine_ = std::make_unique<LLMEngine::LLMEngine>(provider_name, api_key, model, 
                                                  text_params, 24, debug);
             std::cout << "✓ TextProcessor initialized with " << engine_->getProviderName() 
                       << " (" << (engine_->isOnlineProvider() ? "Online" : "Local") << ")" 

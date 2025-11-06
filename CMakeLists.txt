@@ -283,6 +283,8 @@ add_library(${PROJECT_NAME}
     src/ResponseHandler.cpp
     src/ProviderBootstrap.cpp
     src/TempDirectoryService.cpp
+    src/ArtifactSink.cpp
+    src/RequestExecutor.cpp
 )
 
 # Versioning for shared libraries

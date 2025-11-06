@@ -68,7 +68,7 @@ void testSymlinkRejection() {
     fs::create_symlink(test_dir, symlink_path);
     
     // Create LLMEngine instance and try to set the symlink path
-    LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
+    LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
     
     // Try to set temp directory to symlink - should be rejected
     bool set_result = engine.setTempDirectory(symlink_path);
@@ -92,7 +92,7 @@ void testSymlinkRejection() {
         fs::create_symlink("/tmp", symlink_path);
         
         // Try to prepare a directory that is a symlink
-        LLMEngine engine2(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
+        LLMEngine::LLMEngine engine2(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
         if (engine2.setTempDirectory(symlink_path)) {
             try {
                 engine2.prepareTempDirectory();
@@ -115,7 +115,7 @@ void testDirectoryPermissions() {
     TestTempDir base_dir;
     const std::string test_dir = base_dir.path() + "/secure_dir";
     
-    LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
+    LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
     engine.setTempDirectory(test_dir);
     engine.prepareTempDirectory();
     
@@ -146,7 +146,7 @@ void testDirectoryCreation() {
     TestTempDir base_dir;
     const std::string test_dir = base_dir.path() + "/nested/deep/directory";
     
-    LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
+    LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
     engine.setTempDirectory(test_dir);
     engine.prepareTempDirectory();
     
@@ -170,7 +170,7 @@ void testPathValidation() {
     // Create a custom temp dir provider
     auto custom_provider = std::make_shared<DefaultTempDirProvider>(allowed_root);
     
-    LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
+    LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
     // Note: We can't directly inject the provider after construction,
     // but we can test the path validation in setTempDirectory
     
@@ -203,7 +203,7 @@ void testMultipleCalls() {
     TestTempDir base_dir;
     const std::string test_dir = base_dir.path() + "/multi_call";
     
-    LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
+    LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
     engine.setTempDirectory(test_dir);
     
     // Call multiple times - should be safe
