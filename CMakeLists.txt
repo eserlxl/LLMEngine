@@ -142,21 +142,10 @@ else()
   set(CPR_BUILD_TESTS OFF CACHE BOOL "" FORCE)
   set(CPR_BUILD_TESTS_SSL OFF CACHE BOOL "" FORCE)
   set(CPR_ENABLE_SSL ON CACHE BOOL "" FORCE)
-  # Temporarily force static libraries for CPR only; restore user's setting after
-  if (DEFINED BUILD_SHARED_LIBS)
-    set(_SAVED_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
-    set(_HAD_BUILD_SHARED_LIBS TRUE)
-  else()
-    set(_HAD_BUILD_SHARED_LIBS FALSE)
-  endif()
-  set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+  # Use CPR_BUILD_SHARED_LIBS option instead of mutating global BUILD_SHARED_LIBS cache
+  # This respects user's choice and avoids breaking multi-config generators
+  set(CPR_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(cpr)
-  # Restore previous BUILD_SHARED_LIBS cache value to avoid leaking into other dependencies
-  if (_HAD_BUILD_SHARED_LIBS)
-    set(BUILD_SHARED_LIBS ${_SAVED_BUILD_SHARED_LIBS} CACHE BOOL "" FORCE)
-  else()
-    unset(BUILD_SHARED_LIBS CACHE)
-  endif()
   set(CPR_FETCHED TRUE)
   # Some environments expose an un-namespaced target; normalize if needed
   if (TARGET cpr AND NOT TARGET cpr::cpr)
@@ -587,93 +576,16 @@ if (CPR_FETCHED)
   endforeach()
 endif()
 
-# Filter FetchContent dependencies from INTERFACE_LINK_LIBRARIES only if they're not installable
-# The Config.cmake will still require consumers to provide them via find_dependency()
-set(_filter_interface_libs FALSE)
-
-if (NLOHMANN_JSON_FETCHED OR CPR_FETCHED)
-  # For FetchContent dependencies, always filter from INTERFACE_LINK_LIBRARIES
-  # to avoid export validation errors with non-installable alias targets
-  set(_filter_interface_libs TRUE)
-endif()
-
-# Filter non-installable FetchContent dependencies from INTERFACE_LINK_LIBRARIES if needed
-# Save original property before filtering so we can restore it after export
-if (_filter_interface_libs)
-  message(STATUS "Filtering INTERFACE_LINK_LIBRARIES to remove non-installable FetchContent dependencies")
-  get_target_property(_original_interface_libs_before_filter ${PROJECT_NAME} INTERFACE_LINK_LIBRARIES)
-  set(_original_interface_libs ${_original_interface_libs_before_filter})
-  message(STATUS "Original INTERFACE_LINK_LIBRARIES: ${_original_interface_libs}")
-  if (_original_interface_libs)
-    set(_filtered_libs "")
-    foreach(_lib IN LISTS _original_interface_libs)
-      set(_should_filter FALSE)
-      set(_lib_to_check "${_lib}")
-      
-      # Handle generator expressions like $<LINK_ONLY:target> or $<...>
-      if (_lib MATCHES "^\\$<")
-        # Extract target from $<LINK_ONLY:target> or similar patterns
-        if (_lib MATCHES "\\$<LINK_ONLY:([^>]+)>")
-          set(_lib_to_check "${CMAKE_MATCH_1}")
-        elseif (_lib MATCHES "\\$<[^:]+:([^>]+)>")
-          set(_lib_to_check "${CMAKE_MATCH_1}")
-        else()
-          # Complex generator expression we can't parse - keep it
-          list(APPEND _filtered_libs "${_lib}")
-          continue()
-        endif()
-      endif()
-      
-      # Check if this is a FetchContent dependency that should be filtered
-      if (TARGET "${_lib_to_check}")
-        # Get the target type to check if it's an alias
-        get_target_property(_lib_type "${_lib_to_check}" TYPE)
-        
-        # If it's an alias, resolve it to check the underlying target
-        if (_lib_type STREQUAL "ALIAS")
-          get_target_property(_aliased_target "${_lib_to_check}" ALIASED_TARGET)
-          if (_aliased_target)
-            set(_lib_to_check "${_aliased_target}")
-          endif()
-        endif()
-        
-        # Check if this is one of our FetchContent dependencies
-        # Always filter FetchContent dependencies from export - consumers will provide them
-        if (NLOHMANN_JSON_FETCHED)
-          if (_lib_to_check STREQUAL "nlohmann_json::nlohmann_json" OR _lib_to_check STREQUAL "nlohmann_json")
-            set(_should_filter TRUE)
-          endif()
-        endif()
-        if (CPR_FETCHED)
-          if (_lib_to_check STREQUAL "cpr::cpr" OR _lib_to_check STREQUAL "cpr")
-            set(_should_filter TRUE)
-          endif()
-        endif()
-      endif()
-      
-      if (_should_filter)
-        # Filter out non-installable FetchContent dependencies
-        message(STATUS "Filtering non-installable FetchContent dependency from INTERFACE: ${_lib}")
-      else()
-        # Keep all other dependencies
-        list(APPEND _filtered_libs "${_lib}")
-      endif()
-    endforeach()
-    # Set filtered libraries for export
-    message(STATUS "Filtered INTERFACE_LINK_LIBRARIES: ${_filtered_libs}")
-    set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_LINK_LIBRARIES "${_filtered_libs}")
-  else()
-    message(STATUS "INTERFACE_LINK_LIBRARIES is empty or not set")
-  endif()
-else()
-  message(STATUS "Not filtering INTERFACE_LINK_LIBRARIES (_filter_interface_libs is FALSE)")
-endif()
+# For FetchContent dependencies, we link PRIVATE so they don't appear in INTERFACE_LINK_LIBRARIES
+# This avoids the need for complex filtering. The Config.cmake will still require consumers
+# to provide them via find_dependency().
+# No filtering needed since we already link PRIVATE for FetchContent dependencies above.
 
 # Final safety check: remove any alias targets from install list
 # This is critical - CMake will error if we try to install an alias
-# Debug: log what's in the install list before filtering
-message(STATUS "Targets to install before safety check: ${_targets_to_install}")
+# Aggregate filtered targets for summary logging
 set(_filtered_targets_to_install "")
+set(_filtered_out_targets "")
 foreach(_target IN LISTS _targets_to_install)
   # Skip empty strings
   if (_target)
@@ -683,25 +595,25 @@ foreach(_target IN LISTS _targets_to_install)
       get_target_property(_target_type "${_target}" TYPE)
       # Handle case where property might be empty or NOTFOUND
       if (NOT _target_type OR _target_type STREQUAL "NOTFOUND")
-        message(STATUS "Removing target with unknown type from install list: ${_target}")
+        list(APPEND _filtered_out_targets "${_target}")
         set(_should_add_target FALSE)
       # Check for alias targets - this is critical!
       elseif (_target_type STREQUAL "ALIAS")
         # Never install alias targets - CMake will error
-        message(STATUS "Removing alias target from install list: ${_target} (type: ${_target_type})")
+        list(APPEND _filtered_out_targets "${_target}")
         set(_should_add_target FALSE)
       else()
         # Also check if it's an alias by checking for ALIASED_TARGET property
         get_target_property(_aliased_target "${_target}" ALIASED_TARGET)
         if (_aliased_target AND NOT _aliased_target STREQUAL "NOTFOUND")
           # This is an alias (has ALIASED_TARGET property)
-          message(STATUS "Removing alias target (detected via ALIASED_TARGET) from install list: ${_target}")
+          list(APPEND _filtered_out_targets "${_target}")
           set(_should_add_target FALSE)
         elseif (_target_type STREQUAL "INTERFACE_LIBRARY")
           # Check if it's IMPORTED - IMPORTED INTERFACE libraries can't be installed
           get_target_property(_imported "${_target}" IMPORTED)
           if (_imported)
-            message(STATUS "Removing IMPORTED INTERFACE library from install list: ${_target}")
+            list(APPEND _filtered_out_targets "${_target}")
             set(_should_add_target FALSE)
           else()
             # Regular INTERFACE library - verify it's installable
@@ -709,7 +621,7 @@ foreach(_target IN LISTS _targets_to_install)
             if (_installable)
               set(_should_add_target TRUE)
             else()
-              message(STATUS "Removing non-installable target from install list: ${_target}")
+              list(APPEND _filtered_out_targets "${_target}")
               set(_should_add_target FALSE)
             endif()
           endif()
@@ -719,7 +631,7 @@ foreach(_target IN LISTS _targets_to_install)
           if (_installable)
             set(_should_add_target TRUE)
           else()
-            message(STATUS "Removing non-installable target from install list: ${_target}")
+            list(APPEND _filtered_out_targets "${_target}")
             set(_should_add_target FALSE)
           endif()
         endif()
@@ -735,8 +647,10 @@ foreach(_target IN LISTS _targets_to_install)
   endif()
 endforeach()
 set(_targets_to_install ${_filtered_targets_to_install})
-# Debug: log what's in the install list after filtering
-message(STATUS "Targets to install after safety check: ${_targets_to_install}")
+# Only log summary if verbose config is enabled and targets were filtered
+if (LLM_VERBOSE_CONFIG_SUMMARY AND _filtered_out_targets)
+  message(STATUS "Filtered out ${_filtered_out_targets} non-installable targets from export set")
+endif()
 
 install(TARGETS ${_targets_to_install}
   EXPORT ${PROJECT_NAME}Targets
@@ -818,14 +732,7 @@ install(EXPORT ${PROJECT_NAME}Targets
   NAMESPACE ${PROJECT_NAME_LOWER}::
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
-# Restore original INTERFACE_LINK_LIBRARIES after all export operations
-# (both export() and install(EXPORT) are processed at configure time)
-if (_filter_interface_libs)
-  if (DEFINED _original_interface_libs AND _original_interface_libs)
-    # Restore only if property had a value (not empty and not NOTFOUND)
-    set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_LINK_LIBRARIES "${_original_interface_libs}")
-  endif()
-endif()
+# No INTERFACE_LINK_LIBRARIES restoration needed since we link PRIVATE for FetchContent dependencies
 
 # ---- pkg-config ---------------------------------------------------------------
 configure_file(

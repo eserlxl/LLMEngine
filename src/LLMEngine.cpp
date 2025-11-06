@@ -18,6 +18,29 @@
 #include <stdexcept>
 #include <system_error>
 
+// Helper function to initialize common defaults (logger and temp dir provider)
+namespace {
+    void initializeDefaults(std::shared_ptr<::LLMEngine::Logger>& logger,
+                           std::shared_ptr<::LLMEngine::ITempDirProvider>& temp_dir_provider,
+                           const std::shared_ptr<::LLMEngine::ITempDirProvider>& provided_temp_dir_provider,
+                           std::string& tmp_dir) {
+        // Initialize logger if not already set
+        if (!logger) {
+            logger = std::make_shared<::LLMEngine::DefaultLogger>();
+        }
+        
+        // Initialize temp dir provider if not provided
+        if (!temp_dir_provider) {
+            temp_dir_provider = provided_temp_dir_provider ? provided_temp_dir_provider : std::make_shared<::LLMEngine::DefaultTempDirProvider>();
+        }
+        
+        // Set tmp_dir from provider if not already set
+        if (tmp_dir.empty()) {
+            tmp_dir = temp_dir_provider->getTempDir();
+        }
+    }
+}
+
 // Dependency injection constructor
 LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
                      const nlohmann::json& model_params,
@@ -27,10 +50,10 @@ LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> clien
     : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
-      tmp_dir_(temp_dir_provider ? temp_dir_provider->getTempDir() : ::LLMEngine::DefaultTempDirProvider().getTempDir()),
-      temp_dir_provider_(temp_dir_provider ? temp_dir_provider : std::make_shared<::LLMEngine::DefaultTempDirProvider>()),
+      tmp_dir_(),
+      temp_dir_provider_(nullptr),
       api_client_(std::move(client)) {
-    logger_ = std::make_shared<::LLMEngine::DefaultLogger>();
+    initializeDefaults(logger_, temp_dir_provider_, temp_dir_provider, tmp_dir_);
     if (!api_client_) {
         throw std::runtime_error("API client must not be null");
     }
@@ -48,11 +71,11 @@ LLMEngine::LLMEngine::LLMEngine(::LLMEngineAPI::ProviderType provider_type,
       model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
-      tmp_dir_(::LLMEngine::DefaultTempDirProvider().getTempDir()),
-      temp_dir_provider_(std::make_shared<::LLMEngine::DefaultTempDirProvider>()),
+      tmp_dir_(),
+      temp_dir_provider_(nullptr),
       provider_type_(provider_type),
       api_key_(std::string(api_key)) {
-    logger_ = std::make_shared<::LLMEngine::DefaultLogger>();
+    initializeDefaults(logger_, temp_dir_provider_, nullptr, tmp_dir_);
     initializeAPIClient();
 }
 
@@ -67,10 +90,10 @@ LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
     : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
-      tmp_dir_(::LLMEngine::DefaultTempDirProvider().getTempDir()),
-      temp_dir_provider_(std::make_shared<::LLMEngine::DefaultTempDirProvider>()),
+      tmp_dir_(),
+      temp_dir_provider_(nullptr),
       api_key_(std::string(api_key)) {
-    logger_ = std::make_shared<::LLMEngine::DefaultLogger>();
+    initializeDefaults(logger_, temp_dir_provider_, nullptr, tmp_dir_);
     
     // Use injected config manager or fall back to singleton
     std::shared_ptr<::LLMEngineAPI::IConfigManager> config_mgr = config_manager;

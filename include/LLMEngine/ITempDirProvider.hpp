@@ -8,6 +8,8 @@
 #pragma once
 #include <string>
 #include <filesystem>
+#include <cstdlib>
+#include <stdexcept>
 #include "LLMEngine/LLMEngineExport.hpp"
 
 namespace LLMEngine {
@@ -68,7 +70,28 @@ public:
     DefaultTempDirProvider() {
         std::error_code ec;
         const auto base = std::filesystem::temp_directory_path(ec);
-        base_path_ = (ec ? std::filesystem::path{"/tmp"} : base) / "llmengine";
+        if (ec) {
+            // Platform-specific fallback for temp directory
+            #ifdef _WIN32
+            // Windows: Use %TEMP% or %TMP% environment variable, fallback to current directory
+            const char* temp_env = std::getenv("TEMP");
+            if (!temp_env) temp_env = std::getenv("TMP");
+            if (temp_env) {
+                base_path_ = std::filesystem::path(temp_env) / "llmengine";
+            } else {
+                // Last resort: use current directory (not ideal but better than /tmp on Windows)
+                base_path_ = std::filesystem::current_path(ec) / "llmengine";
+                if (ec) {
+                    throw std::runtime_error("Failed to determine temporary directory: no system temp path and current directory unavailable");
+                }
+            }
+            #else
+            // POSIX: Fallback to /tmp (exists on most Unix-like systems)
+            base_path_ = std::filesystem::path{"/tmp"} / "llmengine";
+            #endif
+        } else {
+            base_path_ = base / "llmengine";
+        }
         base_path_ = std::filesystem::weakly_canonical(base_path_, ec);
         if (ec) {
             // If canonicalization fails, fall back to generic form

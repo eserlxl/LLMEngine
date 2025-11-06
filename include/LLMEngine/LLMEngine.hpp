@@ -241,8 +241,8 @@ public:
         if (debug_files_policy_) {
             return debug_files_policy_();
         }
-        // Cheap per-request check to allow runtime toggling by operators
-        return std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") == nullptr;
+        // Use cached value to avoid repeated getenv calls on hot paths
+        return !disable_debug_files_env_cached_;
     }
     [[nodiscard]] std::shared_ptr<IArtifactSink> getArtifactSink() const { return artifact_sink_; }
     [[nodiscard]] int getLogRetentionHours() const { return log_retention_hours_; }

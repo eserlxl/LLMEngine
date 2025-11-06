@@ -101,6 +101,8 @@ private:
     int log_retention_hours_;
     Logger* logger_;
     bool directory_created_;
+    mutable std::chrono::system_clock::time_point last_cleanup_time_;
+    mutable bool cleanup_time_initialized_;
     
     void performCleanup();
 };
