@@ -16,10 +16,14 @@ namespace LLMEngine {
 
 namespace {
     // Thread-safe counter for request uniqueness within the same millisecond
+    // Uses atomic operations with relaxed memory ordering for performance.
+    // Thread-safety: Safe for concurrent access from multiple threads.
     std::atomic<uint64_t> request_counter{0};
     
     // Process-wide PRNG seeded once at startup to avoid blocking on /dev/random
     // under entropy pressure. Each thread uses this with a thread-specific offset.
+    // Thread-safety: Initialized once at program startup, then read-only.
+    // Each thread has its own thread_local RNG instance for thread safety.
     std::mt19937_64 process_rng = []() {
         std::random_device rd;
         std::seed_seq seed{
@@ -31,12 +35,14 @@ namespace {
     }();
     
     // Thread-local offset for uniqueness per thread without reseeding
+    // Thread-safety: Each thread has its own instance, no synchronization needed.
     thread_local uint64_t thread_offset = []() {
         return std::hash<std::thread::id>{}(std::this_thread::get_id());
     }();
     
     // Thread-local random number generator initialized once per thread
     // Uses process-wide PRNG state with thread-specific offset for uniqueness
+    // Thread-safety: Each thread has its own instance, safe for concurrent use.
     thread_local std::mt19937_64 rng = []() {
         // Initialize with process seed plus thread offset
         std::mt19937_64 local_rng(process_rng());

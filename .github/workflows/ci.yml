@@ -228,6 +228,32 @@ jobs:
           cd build
           ctest --output-on-failure -j20
 
+  format-check:
+    name: Code Formatting Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format-14
+
+      - name: Check code formatting
+        run: |
+          # Find all C++ source files
+          find src include test examples -name "*.cpp" -o -name "*.hpp" | while read file; do
+            if [ -f "$file" ]; then
+              clang-format-14 --dry-run --Werror "$file" || {
+                echo "Error: $file is not properly formatted"
+                echo "Run: clang-format-14 -i $file"
+                exit 1
+              }
+            fi
+          done
+          echo "✓ All files are properly formatted"
+
   lint:
     name: Code Quality Checks
     runs-on: ubuntu-latest
@@ -246,7 +272,9 @@ jobs:
             build-essential \
             libssl-dev \
             nlohmann-json3-dev \
-            clang-tidy
+            clang-tidy \
+            cppcheck \
+            clang-14
 
       - name: Pre-fetch dependencies
         run: |
@@ -275,6 +303,102 @@ jobs:
             echo "clang-tidy found issues!"
             exit 1
           fi
+
+  static-analysis:
+    name: Static Analysis (cppcheck, clang-static-analyzer)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git \
+            build-essential \
+            libssl-dev \
+            nlohmann-json3-dev \
+            cppcheck \
+            clang-14
+
+      - name: Pre-fetch dependencies
+        run: |
+          mkdir -p build/_deps
+          if [ ! -d "build/_deps/cpr-src" ]; then
+            git clone --depth 1 --branch 1.10.5 https://github.com/libcpr/cpr.git build/_deps/cpr-src
+          fi
+
+      - name: Configure
+        run: |
+          unset GIT_WORK_TREE
+          unset GIT_DIR
+          cmake -S . -B build \
+            -G "Unix Makefiles" \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_COMPILER=clang++-14 \
+            -DBUILD_TESTING=ON
+
+      - name: Run cppcheck
+        run: |
+          cppcheck --version
+          cppcheck \
+            --enable=all \
+            --suppress=missingIncludeSystem \
+            --suppress=unusedFunction \
+            --suppress=unmatchedSuppression \
+            --inline-suppr \
+            --xml \
+            --xml-version=2 \
+            --output-file=cppcheck-report.xml \
+            --project=build/compile_commands.json \
+            src/ include/ 2>&1 | tee cppcheck-output.txt || true
+          # Check if there are any errors (not warnings)
+          if grep -i "error:" cppcheck-output.txt; then
+            echo "cppcheck found errors!"
+            exit 1
+          fi
+
+      - name: Run clang-static-analyzer
+        run: |
+          clang-14 --version
+          # Use scan-build (clang static analyzer)
+          if command -v scan-build-14 &> /dev/null; then
+            SCAN_BUILD="scan-build-14"
+          elif command -v scan-build &> /dev/null; then
+            SCAN_BUILD="scan-build"
+          else
+            echo "scan-build not found, skipping clang-static-analyzer"
+            exit 0
+          fi
+          $SCAN_BUILD --version || true
+          # Run static analyzer
+          $SCAN_BUILD \
+            -o build/scan-build-output \
+            --use-analyzer=clang++-14 \
+            cmake --build build -j20 2>&1 | tee scan-build-output.txt || true
+          # Check if there are any critical issues
+          if [ -d "build/scan-build-output" ]; then
+            REPORT_COUNT=$(find build/scan-build-output -name "*.html" | wc -l)
+            echo "Found $REPORT_COUNT static analyzer reports"
+            if [ "$REPORT_COUNT" -gt 0 ]; then
+              echo "Static analyzer found issues. Reports available in build/scan-build-output/"
+              # Don't fail the build, but report the issues
+            fi
+          fi
+
+      - name: Upload static analysis reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: static-analysis-reports
+          path: |
+            cppcheck-report.xml
+            build/scan-build-output/
+          retention-days: 7
 
   security-gates:
     name: Security Gates (Coverage & Secret Scanning)
@@ -377,7 +501,25 @@ jobs:
             --exclude test \
             --xml coverage.xml \
             --txt coverage.txt \
-            --html-details coverage.html
+            --html-details coverage.html \
+            --print-summary
+          
+          # Extract coverage percentage for threshold checking
+          COVERAGE_LINE=$(gcovr -r .. --gcov-executable $GCOV_EXEC --exclude-directories build_examples --exclude test --txt - | grep -E "^TOTAL" || echo "")
+          echo "Coverage summary:"
+          echo "$COVERAGE_LINE"
+          
+          # Check if coverage meets threshold (80% line coverage)
+          COVERAGE_PCT=$(echo "$COVERAGE_LINE" | awk '{print $3}' | sed 's/%//' || echo "0")
+          if [ -n "$COVERAGE_PCT" ] && [ "$COVERAGE_PCT" != "0" ]; then
+            COVERAGE_INT=${COVERAGE_PCT%.*}
+            if [ "$COVERAGE_INT" -lt 80 ]; then
+              echo "WARNING: Line coverage ($COVERAGE_PCT%) is below threshold (80%)"
+              # Don't fail the build, but warn
+            else
+              echo "✓ Line coverage ($COVERAGE_PCT%) meets threshold (80%)"
+            fi
+          fi
 
       - name: Check security-critical module coverage
         run: |
@@ -396,9 +538,21 @@ jobs:
           echo "Checking coverage for security-critical modules..."
           
           # Check RequestLogger (redaction)
-          REQUEST_LOGGER_COV=$(gcovr -r .. --gcov-executable $GCOV_EXEC --filter ../src/RequestLogger.cpp --txt - | grep -E "lines|branches" | head -2 || echo "0%")
+          REQUEST_LOGGER_COV=$(gcovr -r .. --gcov-executable $GCOV_EXEC --filter ../src/RequestLogger.cpp --txt - | grep -E "^TOTAL|^.*\.cpp" | tail -1 || echo "")
           echo "RequestLogger coverage:"
           echo "$REQUEST_LOGGER_COV"
+          
+          # Extract line coverage percentage for RequestLogger
+          REQUEST_LOGGER_LINE_COV=$(echo "$REQUEST_LOGGER_COV" | awk '{print $3}' | sed 's/%//' || echo "0")
+          if [ -n "$REQUEST_LOGGER_LINE_COV" ] && [ "$REQUEST_LOGGER_LINE_COV" != "0" ]; then
+            REQUEST_LOGGER_INT=${REQUEST_LOGGER_LINE_COV%.*}
+            if [ "$REQUEST_LOGGER_INT" -lt 90 ]; then
+              echo "WARNING: RequestLogger line coverage ($REQUEST_LOGGER_LINE_COV%) is below security threshold (90%)"
+              # Don't fail, but warn
+            else
+              echo "✓ RequestLogger line coverage ($REQUEST_LOGGER_LINE_COV%) meets security threshold (90%)"
+            fi
+          fi
           
           # Check SensitiveFields usage
           # Note: Header files don't generate coverage, but we verify tests exist

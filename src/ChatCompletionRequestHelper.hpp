@@ -210,8 +210,12 @@ struct ChatCompletionRequestHelper {
                         } else {
                             error_msg += ": " + cpr_response.text;
                         }
-                    } catch (const nlohmann::json::parse_error&) {  // NOLINT(bugprone-empty-catch)
+                    } catch (const nlohmann::json::parse_error& e) {  // NOLINT(bugprone-empty-catch)
                         // Non-JSON error response - use raw text
+                        // This is expected behavior: some error responses may not be valid JSON.
+                        // We intentionally swallow the parse error and use the raw response text instead.
+                        // Logging is not available in this context, but the error is handled by
+                        // including the raw response text in the error message.
                         error_msg += ": " + cpr_response.text;
                         response.raw_response = nlohmann::json::object();
                     }

@@ -135,7 +135,15 @@ void DebugArtifacts::cleanupOld(const std::string& dir, int hours) {
                 fs::remove(path, ec);
             }
         }
-    } catch (...) {  // NOLINT(bugprone-empty-catch): best-effort, swallow exceptions
+    } catch (const std::exception& e) {  // NOLINT(bugprone-empty-catch): best-effort, swallow exceptions
+        // Best-effort cleanup: failures are non-fatal and should not interrupt normal operation.
+        // This function is designed to be called periodically and failures (e.g., permission errors,
+        // filesystem errors) are expected in some environments. Logging is not available in this
+        // static context, but cleanup failures are acceptable since this is a maintenance operation.
+        (void)e;  // Suppress unused variable warning
+    } catch (...) {  // NOLINT(bugprone-empty-catch): best-effort, swallow all exceptions
+        // Catch-all for any other exceptions during cleanup.
+        // Same rationale as above: best-effort operation that should not fail the application.
     }
 }
 

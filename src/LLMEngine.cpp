@@ -160,7 +160,9 @@ void ::LLMEngine::LLMEngine::initializeAPIClient() {
     }
     
     if (!api_client_) {
-        throw std::runtime_error("Failed to create API client");
+        std::string provider_name = LLMAPI::APIClientFactory::providerTypeToString(provider_type_);
+        throw std::runtime_error("Failed to create API client for provider: " + provider_name + 
+                                 ". Check that the provider type is valid and all required dependencies are available.");
     }
 }
 
@@ -205,13 +207,13 @@ LLM::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt,
         api_response = request_executor_->execute(api_client_.get(), ctx.fullPrompt, input, ctx.finalParams);
     } else {
         if (logger_) {
-            logger_->log(LLM::LogLevel::Error, "Request executor not configured");
+            logger_->log(LLM::LogLevel::Error, "Request executor not configured. This is an internal error - the API client was not properly initialized.");
         }
         LLM::AnalysisResult result{
             .success = false,
             .think = "",
             .content = "",
-            .errorMessage = "Request executor not configured",
+            .errorMessage = "Request executor not configured. This is an internal error - the API client was not properly initialized. Please check your LLMEngine configuration.",
             .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
             .errorCode = LLMEngineErrorCode::Unknown
         };

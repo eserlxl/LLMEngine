@@ -137,8 +137,13 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
             }
             try {
                 response.raw_response = nlohmann::json::parse(cpr_response.text);
-            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
-                // keep raw_response default, ignore parse errors
+            } catch (const std::exception& e) {  // NOLINT(bugprone-empty-catch)
+                // Best-effort JSON parsing for error responses.
+                // If parsing fails, keep raw_response as default empty object.
+                // This is expected behavior: error responses may not always be valid JSON.
+                // The error message already contains the raw response text, so no information is lost.
+                // Logging is not available in this context, but the error is handled gracefully.
+                (void)e;  // Suppress unused variable warning
             }
         }
 
