@@ -160,13 +160,11 @@ jobs:
               exit 1
             fi
             echo "Using GCC 11 at $GCC11_PATH for libstdc++"
-            {
-              echo "CC=clang-${{ matrix.compiler_version }}"
-              echo "CXX=clang++-${{ matrix.compiler_version }}"
-              # Set GCC 11 paths so Clang uses its libstdc++
-              echo "GCC11_PATH=$GCC11_PATH"
-              echo "GXX11_PATH=$GXX11_PATH"
-            } >> "$GITHUB_ENV"
+            echo "CC=clang-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
+            echo "CXX=clang++-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
+            # Set GCC 11 paths so Clang uses its libstdc++
+            echo "GCC11_PATH=$GCC11_PATH" >> "$GITHUB_ENV"
+            echo "GXX11_PATH=$GXX11_PATH" >> "$GITHUB_ENV"
             clang-${{ matrix.compiler_version }} --version
             echo "Clang will use GCC 11's libstdc++"
           fi
