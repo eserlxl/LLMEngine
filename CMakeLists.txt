@@ -123,9 +123,13 @@ else()
   
   # Check if source is already available (pre-cloned in CI)
   set(_cpr_source_dir "${FETCHCONTENT_BASE_DIR}/cpr-src")
+  # Save current FETCHCONTENT_UPDATES_DISCONNECTED value to restore after CPR setup
+  # This prevents the CPR-specific setting from affecting other FetchContent dependencies
+  get_property(_saved_fetchcontent_updates_disconnected CACHE FETCHCONTENT_UPDATES_DISCONNECTED PROPERTY VALUE)
   if(EXISTS "${_cpr_source_dir}/CMakeLists.txt")
     message(STATUS "cpr source already available at ${_cpr_source_dir}, using pre-cloned source")
     set(FETCHCONTENT_SOURCE_DIR_CPR "${_cpr_source_dir}" CACHE PATH "Source directory for cpr" FORCE)
+    # Temporarily set FETCHCONTENT_UPDATES_DISCONNECTED for CPR only
     set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "Skip updates for FetchContent" FORCE)
   else()
     message(STATUS "cpr not found via package config; fetching v1.10.5 with FetchContent")
@@ -147,6 +151,13 @@ else()
   set(CPR_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(cpr)
   set(CPR_FETCHED TRUE)
+  # Restore original FETCHCONTENT_UPDATES_DISCONNECTED value to avoid affecting other FetchContent dependencies
+  if(DEFINED _saved_fetchcontent_updates_disconnected)
+    set(FETCHCONTENT_UPDATES_DISCONNECTED "${_saved_fetchcontent_updates_disconnected}" CACHE BOOL "Skip updates for FetchContent" FORCE)
+  else()
+    # If it wasn't set before, remove it from cache to restore default behavior
+    unset(FETCHCONTENT_UPDATES_DISCONNECTED CACHE)
+  endif()
   # Some environments expose an un-namespaced target; normalize if needed
   if (TARGET cpr AND NOT TARGET cpr::cpr)
     add_library(cpr::cpr ALIAS cpr)

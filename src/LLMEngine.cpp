@@ -20,20 +20,26 @@
 #include <stdexcept>
 #include <system_error>
 
+// Namespace aliases to reduce verbosity
+namespace LLM = ::LLMEngine;
+namespace LLMAPI = ::LLMEngineAPI;
+// Note: We keep the full LLMEngine::LLMEngine:: qualification for class methods
+// to avoid ambiguity with the namespace name
+
 // Helper function to initialize common defaults (logger and temp dir provider)
 namespace {
-    void initializeDefaults(std::shared_ptr<::LLMEngine::Logger>& logger,
-                           std::shared_ptr<::LLMEngine::ITempDirProvider>& temp_dir_provider,
-                           const std::shared_ptr<::LLMEngine::ITempDirProvider>& provided_temp_dir_provider,
+    void initializeDefaults(std::shared_ptr<LLM::Logger>& logger,
+                           std::shared_ptr<LLM::ITempDirProvider>& temp_dir_provider,
+                           const std::shared_ptr<LLM::ITempDirProvider>& provided_temp_dir_provider,
                            std::string& tmp_dir) {
         // Initialize logger if not already set
         if (!logger) {
-            logger = std::make_shared<::LLMEngine::DefaultLogger>();
+            logger = std::make_shared<LLM::DefaultLogger>();
         }
         
         // Initialize temp dir provider if not provided
         if (!temp_dir_provider) {
-            temp_dir_provider = provided_temp_dir_provider ? provided_temp_dir_provider : std::make_shared<::LLMEngine::DefaultTempDirProvider>();
+            temp_dir_provider = provided_temp_dir_provider ? provided_temp_dir_provider : std::make_shared<LLM::DefaultTempDirProvider>();
         }
         
         // Set tmp_dir from provider if not already set
@@ -44,11 +50,11 @@ namespace {
 }
 
 // Dependency injection constructor
-LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
+::LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<LLMAPI::APIClient> client,
                      const nlohmann::json& model_params,
                      int log_retention_hours,
                      bool debug,
-                     const std::shared_ptr<::LLMEngine::ITempDirProvider>& temp_dir_provider)
+                     const std::shared_ptr<LLM::ITempDirProvider>& temp_dir_provider)
     : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
@@ -62,7 +68,7 @@ LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> clien
 }
 
 // Constructor for API-based providers (direct ProviderType)
-LLMEngine::LLMEngine::LLMEngine(::LLMEngineAPI::ProviderType provider_type,
+::LLMEngine::LLMEngine::LLMEngine(LLMAPI::ProviderType provider_type,
                      std::string_view api_key,
                      std::string_view model,
                      const nlohmann::json& model_params,
@@ -80,21 +86,21 @@ LLMEngine::LLMEngine::LLMEngine(::LLMEngineAPI::ProviderType provider_type,
     model_ = std::string(model);
     
     // Store config manager for downstream factories
-    config_manager_ = std::shared_ptr<::LLMEngineAPI::IConfigManager>(
-        &::LLMEngineAPI::APIConfigManager::getInstance(),
-        [](::LLMEngineAPI::IConfigManager*){});
+    config_manager_ = std::shared_ptr<LLMAPI::IConfigManager>(
+        &LLMAPI::APIConfigManager::getInstance(),
+        [](LLMAPI::IConfigManager*){});
     
     initializeAPIClient();
 }
 
 // Constructor using config file
-LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
+::LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
                      std::string_view api_key,
                      std::string_view model,
                      const nlohmann::json& model_params,
                      int log_retention_hours,
                      bool debug,
-                     const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager)
+                     const std::shared_ptr<LLMAPI::IConfigManager>& config_manager)
     : model_params_(model_params),
       log_retention_hours_(log_retention_hours),
       debug_(debug),
@@ -121,20 +127,20 @@ LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
         config_manager_ = config_manager;
     } else {
         // Wrap singleton in shared_ptr with no-op deleter
-        config_manager_ = std::shared_ptr<::LLMEngineAPI::IConfigManager>(
-            &::LLMEngineAPI::APIConfigManager::getInstance(),
-            [](::LLMEngineAPI::IConfigManager*){});
+        config_manager_ = std::shared_ptr<LLMAPI::IConfigManager>(
+            &LLMAPI::APIConfigManager::getInstance(),
+            [](LLMAPI::IConfigManager*){});
     }
     
     initializeAPIClient();
 }
 
-void LLMEngine::LLMEngine::initializeAPIClient() {
-    if (provider_type_ == ::LLMEngineAPI::ProviderType::OLLAMA) {
-        api_client_ = ::LLMEngineAPI::APIClientFactory::createClient(
+void ::LLMEngine::LLMEngine::initializeAPIClient() {
+    if (provider_type_ == LLMAPI::ProviderType::OLLAMA) {
+        api_client_ = LLMAPI::APIClientFactory::createClient(
             provider_type_, "", model_, ollama_url_, config_manager_);
     } else {
-        api_client_ = ::LLMEngineAPI::APIClientFactory::createClient(
+        api_client_ = LLMAPI::APIClientFactory::createClient(
             provider_type_, api_key_, model_, "", config_manager_);
     }
     
@@ -145,7 +151,7 @@ void LLMEngine::LLMEngine::initializeAPIClient() {
 
 // Redaction and debug file I/O moved to DebugArtifacts
 
-void LLMEngine::LLMEngine::ensureSecureTmpDir() const {
+void ::LLMEngine::LLMEngine::ensureSecureTmpDir() const {
     // Cache directory existence check to reduce filesystem operations
     // Only re-check if directory was previously verified and might have been deleted
     TempDirectoryService service;
@@ -168,7 +174,7 @@ void LLMEngine::LLMEngine::ensureSecureTmpDir() const {
     tmp_dir_verified_ = true;
 }
 
-::LLMEngine::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt, 
+LLM::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt, 
                                   const nlohmann::json& input, 
                                   std::string_view analysis_type, 
                                   std::string_view mode,
@@ -177,14 +183,14 @@ void LLMEngine::LLMEngine::ensureSecureTmpDir() const {
     RequestContext ctx = RequestContextBuilder::build(*this, prompt, input, analysis_type, mode, prepend_terse_instruction);
 
     // Execute request via injected executor
-    ::LLMEngineAPI::APIResponse api_response;
+    LLMAPI::APIResponse api_response;
     if (request_executor_) {
         api_response = request_executor_->execute(api_client_.get(), ctx.fullPrompt, input, ctx.finalParams);
     } else {
         if (logger_) {
-            logger_->log(::LLMEngine::LogLevel::Error, "Request executor not configured");
+            logger_->log(LLM::LogLevel::Error, "Request executor not configured");
         }
-        ::LLMEngine::AnalysisResult result{false, "", "", "Request executor not configured", HttpStatus::INTERNAL_SERVER_ERROR};
+        LLM::AnalysisResult result{false, "", "", "Request executor not configured", HttpStatus::INTERNAL_SERVER_ERROR};
         result.errorCode = LLMEngineErrorCode::Unknown;
         return result;
     }
@@ -209,23 +215,23 @@ std::string LLMEngine::LLMEngine::getModelName() const {
     return model_;
 }
 
-::LLMEngineAPI::ProviderType LLMEngine::LLMEngine::getProviderType() const {
+LLMAPI::ProviderType LLMEngine::LLMEngine::getProviderType() const {
     return provider_type_;
 }
 
-bool LLMEngine::LLMEngine::isOnlineProvider() const {
-    return provider_type_ != ::LLMEngineAPI::ProviderType::OLLAMA;
+bool ::LLMEngine::LLMEngine::isOnlineProvider() const {
+    return provider_type_ != LLMAPI::ProviderType::OLLAMA;
 }
 
-void LLMEngine::LLMEngine::setLogger(std::shared_ptr<::LLMEngine::Logger> logger) {
+void ::LLMEngine::LLMEngine::setLogger(std::shared_ptr<LLM::Logger> logger) {
     if (logger) {
         logger_ = std::move(logger);
     }
 }
 
-bool LLMEngine::LLMEngine::setTempDirectory(const std::string& tmp_dir) {
+bool ::LLMEngine::LLMEngine::setTempDirectory(const std::string& tmp_dir) {
     // Only accept directories within the active provider's root to respect dependency injection
-    const std::string allowed_root = temp_dir_provider_ ? temp_dir_provider_->getTempDir() : ::LLMEngine::DefaultTempDirProvider().getTempDir();
+    const std::string allowed_root = temp_dir_provider_ ? temp_dir_provider_->getTempDir() : LLM::DefaultTempDirProvider().getTempDir();
     
     TempDirectoryService service;
     if (service.validatePathWithinRoot(tmp_dir, allowed_root, logger_.get())) {

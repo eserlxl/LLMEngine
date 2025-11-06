@@ -111,7 +111,13 @@ namespace LLMEngine::Utils {
     }
 
     // Internal helper function to execute command with pre-parsed arguments
-    // This is shared by both execCommand overloads - no validation is performed here
+    // This is shared by both execCommand overloads
+    // SECURITY: Extensive validation is performed here to prevent command injection:
+    // - Argument count and length limits
+    // - Regex-based character whitelist (alphanumeric, spaces, hyphens, underscores, dots, slashes)
+    // - Control character rejection (newlines, tabs, carriage returns)
+    // - Shell metacharacter rejection (|, &, ;, $, `, <, >, parentheses, brackets, wildcards)
+    // - Multiple redundant checks for defense in depth
     std::vector<std::string> execCommandImpl(const std::vector<std::string>& args, ::LLMEngine::Logger* logger, const std::string& cmd_str_for_logging) {
         std::vector<std::string> output;
         

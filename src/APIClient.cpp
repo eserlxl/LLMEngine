@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
+#include <iostream>
 
 namespace LLMEngineAPI {
 
@@ -130,8 +131,17 @@ ProviderType APIClientFactory::stringToProviderType(std::string_view provider_na
     if (def_lower == "ollama") return ProviderType::OLLAMA;
     if (def_lower == "gemini") return ProviderType::GEMINI;
     
-    // Last resort: use Ollama as safe default only if default provider is also invalid
-    return ProviderType::OLLAMA;
+    // SECURITY: Fail fast on invalid default provider configuration
+    // Falling back to Ollama can route workloads to an unintended local service,
+    // potentially exposing secrets to the wrong endpoint. Treat this as a configuration error.
+    std::string error_msg = "Invalid default provider configuration: '" + def + 
+                           "'. Supported providers: qwen, openai, anthropic, ollama, gemini. "
+                           "This is a configuration error and must be fixed to prevent unintended provider selection.";
+    
+    // Log loudly before throwing (use stderr since getLogger() is private)
+    std::cerr << "LLMEngine ERROR: " << error_msg << std::endl;
+    
+    throw std::runtime_error(error_msg);
 }
 
 std::string APIClientFactory::providerTypeToString(ProviderType type) {
