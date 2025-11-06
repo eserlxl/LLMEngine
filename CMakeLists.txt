@@ -487,7 +487,6 @@ install(DIRECTORY include/LLMEngine/
 # Compatibility headers go to include root (so both <LLMEngine.hpp> and <LLMEngine/LLMEngine.hpp> work)
 install(FILES
     include/LLMEngine.hpp
-    include/APIClient.hpp
     include/Utils.hpp
     include/Logger.hpp
     include/RequestLogger.hpp
