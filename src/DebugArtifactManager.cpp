@@ -107,7 +107,7 @@ bool DebugArtifactManager::writeAnalysisArtifacts(std::string_view analysis_type
             // Remove any path separators outright and sanitize characters
             for (char& ch : name) {
                 // Only allow ASCII alphanumeric and safe punctuation
-                unsigned char uch = static_cast<unsigned char>(ch);
+                auto uch = static_cast<unsigned char>(ch);
                 if (!(std::isalnum(uch) || ch == '-' || ch == '_' || ch == '.')) {
                     ch = '_';
                 }
