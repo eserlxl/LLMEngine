@@ -1,0 +1,54 @@
+# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of LLMEngine and is licensed under
+# the GNU General Public License v3.0 or later.
+# See the LICENSE file in the project root for details.
+
+# Pre-commit hooks configuration
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: check-case-conflict
+
+  # C++ formatting with clang-format
+  - repo: https://github.com/pocc/pre-commit-hooks
+    rev: v1.3.5
+    hooks:
+      - id: clang-format
+        args: ['-i']
+        files: \.(cpp|hpp|c|h|cc|cxx|hxx)$
+        types: [file]
+
+  # SPDX license header check for C++ files
+  - repo: local
+    hooks:
+      - id: spdx-header-check
+        name: Check SPDX license headers in public headers
+        entry: bash -c 'for f in "$@"; do if ! grep -q "SPDX-License-Identifier: GPL-3.0-or-later" "$f" 2>/dev/null; then echo "Missing SPDX header in: $f"; exit 1; fi; done' --
+        language: system
+        files: ^include/.*\.(hpp|h)$
+        pass_filenames: true
+
+  # clang-tidy (optional, can be slow)
+  # Uncomment to enable clang-tidy checks
+  # - repo: https://github.com/pocc/pre-commit-hooks
+  #   rev: v1.3.5
+  #   hooks:
+  #     - id: clang-tidy
+  #       args: ['--config-file=.clang-tidy']
+  #       files: \.(cpp|hpp|c|h|cc|cxx|hxx)$
+  #       types: [file]
+

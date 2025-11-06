@@ -7,19 +7,60 @@
 
 # CODEOWNERS ensures reviewers are auto-assigned
 # See: https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Ownership Map (per code review plan):
+# - Security and Redaction: Security Owners
+# - HTTP Clients and Retry: Client Owners + Reliability Owner
+# - Build and CI: Build Owner
+# - Public API: API Owner
+# - Docs: Docs Owner
 
 # Default owner
 *  @eserlxl
 
+# Security and Redaction (Security Owners)
+# Changes to redaction logic and sensitive field lists require security review
+src/RequestLogger.cpp                    @eserlxl
+include/LLMEngine/SensitiveFields.hpp    @eserlxl
+test/test_request_logger.cpp             @eserlxl
+test/test_tempdir_hardening.cpp          @eserlxl
+
+# HTTP Clients and Retry (Client Owners + Reliability Owner)
+# Provider clients and retry/backoff policy
+src/GeminiClient.cpp                     @eserlxl
+src/AnthropicClient.cpp                  @eserlxl
+src/OllamaClient.cpp                     @eserlxl
+src/ChatCompletionRequestHelper.hpp      @eserlxl
+src/APIClientCommon.hpp                  @eserlxl
+src/Backoff.hpp                          @eserlxl
+test/test_retry_policy.cpp               @eserlxl
+
+# Build and CI (Build Owner)
+# CMake configuration, workflows, build system
+CMakeLists.txt                           @eserlxl
+cmake/**                                 @eserlxl
+.github/workflows/**                     @eserlxl
+.github/actions/**                       @eserlxl
+
+# Public API (API Owner)
+# Public headers, versioning, deprecation policy
+include/LLMEngine/LLMEngine.hpp          @eserlxl
+include/LLMEngine/HttpStatus.hpp         @eserlxl
+include/LLMEngine/APIClient.hpp          @eserlxl
+include/LLMEngine/**                     @eserlxl
+
+# Docs (Docs Owner)
+# Documentation, README, examples
+README.md                                @eserlxl
+docs/**                                  @eserlxl
+QUICKSTART.md                            @eserlxl
+examples/**                              @eserlxl
+
 # CI/workflows
-.github/**  @eserlxl
+.github/**                               @eserlxl
 
-# C/C++ sources
-src/**       @eserlxl
-include/**   @eserlxl
-
-# Docs
-README.md    @eserlxl
-doc/**       @eserlxl
+# C/C++ sources (general)
+src/**                                   @eserlxl
+include/**                               @eserlxl
 
 

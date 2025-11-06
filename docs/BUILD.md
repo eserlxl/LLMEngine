@@ -23,6 +23,43 @@ brew install cmake openssl nlohmann-json cpr
 
 ---
 
+## 🚀 Build Acceleration with ccache
+
+ccache (compiler cache) can significantly speed up rebuilds by caching compilation results. LLMEngine's CMake configuration automatically detects and uses ccache if available.
+
+### Local Setup
+
+**Install ccache:**
+
+```bash
+# Ubuntu/Debian
+sudo apt install ccache
+
+# Arch Linux
+sudo pacman -S ccache
+
+# macOS (Homebrew)
+brew install ccache
+```
+
+**Configure ccache (optional):**
+
+```bash
+# Set cache size (default: 5GB)
+ccache -M 10G
+
+# Show statistics
+ccache -s
+```
+
+CMake will automatically use ccache if it's found in your PATH. No additional configuration needed.
+
+### CI Usage
+
+CI runners automatically use ccache when available. The cache is preserved between builds to accelerate compilation.
+
+---
+
 ## 🧰 Build Presets
 
 The repo includes a `CMakePresets.json` file with ready-to-use presets:
