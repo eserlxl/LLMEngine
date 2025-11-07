@@ -10,6 +10,7 @@
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/HttpStatus.hpp"
 
+#include <atomic>
 #include <nlohmann/json.hpp>
 
 namespace LLMEngineAPI {
@@ -57,10 +58,16 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
         if (!verify_ssl) {
             // Log when TLS verification is disabled (Ollama defaults to false for local use)
             // This helps prevent accidental use in production environments
-            std::cerr
-                << "[LLMEngine SECURITY WARNING] TLS verification is DISABLED for Ollama request. "
-                << "This is acceptable for local development but should be enabled in "
-                   "production.\n";
+            // Use static flag to print warning only once per process
+            static std::atomic<bool> warning_printed{false};
+            bool expected = false;
+            if (warning_printed.compare_exchange_strong(expected, true)) {
+                std::cerr
+                    << "[LLMEngine SECURITY WARNING] TLS verification is DISABLED for Ollama "
+                       "request. "
+                    << "This is acceptable for local development but should be enabled in "
+                       "production.\n";
+            }
         }
 
         auto post_json = [&, verify_ssl](const std::string& url,
