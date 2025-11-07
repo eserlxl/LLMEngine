@@ -419,8 +419,8 @@ bool APIConfigManager::loadConfig(std::string_view config_path) {
         return true;
     } catch (const nlohmann::json::parse_error& e) {
         logger->log(::LLMEngine::LogLevel::Error,
-                    std::string("JSON parse error in config file: ") + e.what()
-                        + " at position " + std::to_string(e.byte));
+                    std::string("JSON parse error in config file: ") + e.what() + " at position "
+                        + std::to_string(e.byte));
         config_loaded_ = false;
         config_ = nlohmann::json{}; // Clear stale configuration
         return false;

@@ -62,11 +62,10 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             static std::atomic<bool> warning_printed{false};
             bool expected = false;
             if (warning_printed.compare_exchange_strong(expected, true)) {
-                std::cerr
-                    << "[LLMEngine SECURITY WARNING] TLS verification is DISABLED for Ollama "
-                       "request. "
-                    << "This is acceptable for local development but should be enabled in "
-                       "production.\n";
+                std::cerr << "[LLMEngine SECURITY WARNING] TLS verification is DISABLED for Ollama "
+                             "request. "
+                          << "This is acceptable for local development but should be enabled in "
+                             "production.\n";
             }
         }
 
