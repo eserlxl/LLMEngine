@@ -3,7 +3,7 @@ rules:
   # This YAML file provides structured configuration for automatic code formatting enforcement
 
   formatting:
-    tool: "/opt/clang-format-static/clang-format-14"
+    tool: "clang-format"
     config_file: ".clang-format"
     style: "LLVM"
     
@@ -68,7 +68,7 @@ rules:
       workflow_file: ".github/workflows/ci.yml"
       job_name: "format-check"
       fail_on_unformatted: true  # Fail CI if files aren't formatted
-      check_command: "/opt/clang-format-static/clang-format-14 --style=file --dry-run --Werror"
+      check_command: "clang-format --style=file --dry-run --Werror"
 
   commands:
     # Manual formatting commands
@@ -81,9 +81,9 @@ rules:
         -not -path "./build_test*" \
         -not -path "./build-clang-tidy*" \
         -not -path "./Testing*" \
-        -exec /opt/clang-format-static/clang-format-14 -i {} +
+        -exec clang-format -i {} +
     
-    format_single: "/opt/clang-format-static/clang-format-14 -i {file}"
+    format_single: "clang-format -i {file}"
     
     check_formatting: |
       find . -type f \( -name "*.cpp" -o -name "*.hpp" \) \
@@ -94,7 +94,7 @@ rules:
         -not -path "./build_test*" \
         -not -path "./build-clang-tidy*" \
         -not -path "./Testing*" \
-        -exec /opt/clang-format-static/clang-format-14 --style=file --dry-run --Werror {} +
+        -exec clang-format --style=file --dry-run --Werror {} +
 
   workflow:
     # When to apply formatting

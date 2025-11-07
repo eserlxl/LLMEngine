@@ -58,23 +58,23 @@ Formatting enforcement is configured in `formatting-enforcement.yaml`. See that 
 - name: Check formatting
   run: |
     find src include test -name "*.cpp" -o -name "*.hpp" | \
-      xargs /opt/clang-format-static/clang-format-14 --dry-run --Werror
+      xargs clang-format --dry-run --Werror
 ```
 
 ### Manual Formatting
 
-All local formatting must use the pinned binary `/opt/clang-format-static/clang-format-14` to ensure parity with CI.
+Use the default `clang-format` command to ensure parity with CI (which uses the default clang-format on GitHub runners).
 
 Format all files:
 
 ```bash
-find src include test -name "*.cpp" -o -name "*.hpp" | xargs /opt/clang-format-static/clang-format-14 -i
+find src include test -name "*.cpp" -o -name "*.hpp" | xargs clang-format -i
 ```
 
 Format single file:
 
 ```bash
-/opt/clang-format-static/clang-format-14 -i path/to/file.cpp
+clang-format -i path/to/file.cpp
 ```
 
 ## clang-tidy
@@ -239,7 +239,7 @@ Consider adding pre-commit hooks for formatting:
 # Format staged files
 git diff --cached --name-only --diff-filter=ACM | \
   grep -E '\.(cpp|hpp)$' | \
-  xargs /opt/clang-format-static/clang-format-14 -i
+  xargs clang-format -i
 
 # Re-stage formatted files
 git add -u

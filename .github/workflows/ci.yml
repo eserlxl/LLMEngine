@@ -235,34 +235,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check default clang-format version
+      - name: Verify clang-format is available
         run: |
-          echo "Checking available clang-format versions on GitHub runner..."
-          if command -v clang-format >/dev/null 2>&1; then
-            echo "Default clang-format found at: $(command -v clang-format)"
-            clang-format --version
-          else
-            echo "No default clang-format found on runner"
+          if ! command -v clang-format >/dev/null 2>&1; then
+            echo "Error: clang-format not found on runner"
+            exit 1
           fi
-          echo ""
-          echo "Checking available clang-format packages:"
-          apt-cache search clang-format | grep "^clang-format" | head -20 || true
-
-      - name: Install clang-format
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang-format-14
-          echo "Installed clang-format-14:"
-          clang-format-14 --version
+          echo "Using clang-format at: $(command -v clang-format)"
+          clang-format --version
 
       - name: Check code formatting
         run: |
           # Find all C++ source files and verify formatting using .clang-format
           find src include test examples -name "*.cpp" -o -name "*.hpp" | while read -r file; do
             if [ -f "$file" ]; then
-              clang-format-14 --style=file --dry-run --Werror "$file" || {
+              clang-format --style=file --dry-run --Werror "$file" || {
                 echo "Error: $file is not properly formatted"
-                echo "Run: clang-format-14 --style=file -i $file"
+                echo "Run: clang-format --style=file -i $file"
                 exit 1
               }
             fi
