@@ -110,6 +110,14 @@ Its configuration-driven design allows rapid experimentation and reliable runtim
 - **Command execution**: The `execCommand()` function is disabled on Windows due to POSIX dependencies (`posix_spawn` API). The function will return an empty result set with an error log when called on Windows. For Windows compatibility, consider using alternative command execution methods or the vector-based `execCommand()` overload with a custom implementation.
 - **Other limitations**: Some POSIX-specific features may not work correctly on Windows. Testing and contributions for Windows support are welcome.
 
+### Build and Install
+
+```bash
+git clone https://github.com/eserlxl/LLMEngine
+cd LLMEngine
+./build.sh
+```
+
 ### Minimal Example
 
 ```cpp
@@ -119,13 +127,39 @@ Its configuration-driven design allows rapid experimentation and reliable runtim
 using namespace LLMEngine;
 
 int main() {
+    // Set API key via environment variable
     const char* api_key = std::getenv("QWEN_API_KEY");
+    
+    // Create engine instance
     LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash");
+    
+    // Make a request
     auto result = engine.analyze("Explain quantum computing simply:", {}, "demo");
-    std::cout << result.content << std::endl;
+    
+    if (result.success) {
+        std::cout << result.content << std::endl;
+    } else {
+        std::cerr << "Error: " << result.errorMessage << std::endl;
+    }
+    
     return 0;
 }
 ```
+
+### Custom Config File Path
+
+For information on using custom configuration file paths, see [docs/CUSTOM_CONFIG_PATH.md](docs/CUSTOM_CONFIG_PATH.md).
+
+### Set API Keys
+
+```bash
+export QWEN_API_KEY="sk-your-qwen-key"
+export OPENAI_API_KEY="sk-your-openai-key"
+export ANTHROPIC_API_KEY="sk-your-anthropic-key"
+export GEMINI_API_KEY="your-gemini-api-key"
+```
+
+For more examples and detailed usage, see [QUICKSTART.md](QUICKSTART.md).
 
 [↑ Back to top](#llmengine)
 
@@ -385,6 +419,7 @@ For detailed information about build presets, CMake options, and build configura
 | [QUICKSTART.md](QUICKSTART.md) | Getting started guide |
 | [docs/BUILD.md](docs/BUILD.md) | Build presets and CMake options |
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Configuration structure |
+| [docs/CUSTOM_CONFIG_PATH.md](docs/CUSTOM_CONFIG_PATH.md) | Setting custom config file paths |
 | [docs/PROVIDERS.md](docs/PROVIDERS.md) | Provider details |
 | [docs/API_REFERENCE.md](docs/API_REFERENCE.md) | Generated Doxygen API |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture overview |

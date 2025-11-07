@@ -148,13 +148,100 @@ Edit `config/api_config.json` to customize:
 - Timeout settings
 - Retry configuration
 
-**Custom Config Path**: The default config file path can be changed programmatically:
+### Using Provider Names (Config-based)
+
+Instead of using provider enums, you can use provider names that are resolved via the configuration file:
+
 ```cpp
-auto& config_mgr = ::LLMEngineAPI::APIConfigManager::getInstance();
-config_mgr.setDefaultConfigPath("/custom/path/api_config.json");
-config_mgr.loadConfig();  // Uses the custom path
+#include "LLMEngine/LLMEngine.hpp"
+
+using namespace LLMEngine;
+
+// Uses config file to resolve provider settings
+LLMEngine engine("qwen", api_key, "qwen-flash");
+
+// Or use default model from config
+LLMEngine engine2("qwen", api_key);
 ```
-See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for more details.
+
+This approach allows the configuration file to define provider endpoints, default models, and other settings, making it easier to switch between environments or providers without code changes.
+
+### Custom Config File Path
+
+The default config file path can be changed programmatically. This is useful when you need to:
+- Use different config files for different environments (dev, staging, production)
+- Store config files in custom locations
+- Support multiple configuration files for different tenants
+
+**Method 1: Set Default Config Path**
+
+```cpp
+#include "LLMEngine/APIClient.hpp"
+
+using namespace LLMEngineAPI;
+
+// Get the singleton config manager instance
+auto& config_mgr = APIConfigManager::getInstance();
+
+// Set a custom default path
+config_mgr.setDefaultConfigPath("/custom/path/api_config.json");
+
+// Query the current default path
+std::string path = config_mgr.getDefaultConfigPath();
+
+// Load using the default path
+config_mgr.loadConfig();  // Uses "/custom/path/api_config.json"
+```
+
+**Method 2: Explicit Path in loadConfig()**
+
+```cpp
+auto& config_mgr = APIConfigManager::getInstance();
+
+// Load from a specific path (overrides default)
+bool success = config_mgr.loadConfig("/another/path/config.json");
+
+if (!success) {
+    // Handle configuration load failure
+    std::cerr << "Failed to load configuration\n";
+}
+```
+
+**Method 3: Dependency Injection via Constructor**
+
+```cpp
+#include "LLMEngine/LLMEngine.hpp"
+#include "LLMEngine/APIClient.hpp"
+
+using namespace LLMEngine;
+using namespace LLMEngineAPI;
+
+// Set up custom config path
+auto& config_mgr = APIConfigManager::getInstance();
+config_mgr.setDefaultConfigPath("/custom/path/api_config.json");
+config_mgr.loadConfig();
+
+// Wrap singleton in shared_ptr (with no-op deleter since it's a singleton)
+auto config_manager = std::shared_ptr<IConfigManager>(
+    &config_mgr, 
+    [](IConfigManager*) {}  // No-op deleter
+);
+
+// Pass to LLMEngine constructor
+LLMEngine::LLMEngine engine(
+    "qwen",           // provider_name
+    "",               // api_key (optional)
+    "",               // model (optional, uses config default)
+    {},               // model_params
+    24,               // log_retention_hours
+    false,            // debug
+    config_manager    // custom config manager
+);
+```
+
+For comprehensive documentation on setting custom config paths, including thread safety, API reference, and best practices, see [docs/CUSTOM_CONFIG_PATH.md](docs/CUSTOM_CONFIG_PATH.md).
+
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for complete configuration details.
 
 Example:
 ```json
@@ -315,6 +402,7 @@ export QWEN_API_KEY="sk-your-key"
 
 - **Full Documentation**: See [README.md](README.md) for overview and [docs/API_REFERENCE.md](docs/API_REFERENCE.md) for API details
 - **Configuration**: See [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
+- **Custom Config Paths**: See [docs/CUSTOM_CONFIG_PATH.md](docs/CUSTOM_CONFIG_PATH.md)
 - **Providers**: See [docs/PROVIDERS.md](docs/PROVIDERS.md)
 - **Security**: See [docs/SECURITY.md](docs/SECURITY.md)
 - **Performance**: See [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
