@@ -385,14 +385,18 @@ bool APIConfigManager::loadConfig(std::string_view config_path) {
         path = std::string(config_path);
     }
 
+    // Get logger BEFORE acquiring exclusive lock to avoid deadlock
+    // (getLogger() needs a shared lock, which would conflict with exclusive lock)
+    auto logger = getLogger();
+
     // Exclusive lock for writing configuration
     std::unique_lock<std::shared_mutex> lock(mutex_);
 
     try {
         std::ifstream file(path);
         if (!file.is_open()) {
-            getLogger()->log(::LLMEngine::LogLevel::Error,
-                             std::string("Could not open config file: ") + path);
+            logger->log(::LLMEngine::LogLevel::Error,
+                        std::string("Could not open config file: ") + path);
             config_loaded_ = false;
             config_ = nlohmann::json{}; // Clear stale configuration
             return false;
@@ -402,7 +406,6 @@ bool APIConfigManager::loadConfig(std::string_view config_path) {
         file >> loaded_config;
 
         // Validate configuration before accepting it
-        auto logger = getLogger();
         if (!validateConfig(loaded_config, logger.get())) {
             logger->log(::LLMEngine::LogLevel::Error,
                         "Config validation failed, using empty configuration");
@@ -415,15 +418,15 @@ bool APIConfigManager::loadConfig(std::string_view config_path) {
         config_loaded_ = true;
         return true;
     } catch (const nlohmann::json::parse_error& e) {
-        getLogger()->log(::LLMEngine::LogLevel::Error,
-                         std::string("JSON parse error in config file: ") + e.what()
-                             + " at position " + std::to_string(e.byte));
+        logger->log(::LLMEngine::LogLevel::Error,
+                    std::string("JSON parse error in config file: ") + e.what()
+                        + " at position " + std::to_string(e.byte));
         config_loaded_ = false;
         config_ = nlohmann::json{}; // Clear stale configuration
         return false;
     } catch (const std::exception& e) {
-        getLogger()->log(::LLMEngine::LogLevel::Error,
-                         std::string("Failed to load config: ") + e.what());
+        logger->log(::LLMEngine::LogLevel::Error,
+                    std::string("Failed to load config: ") + e.what());
         config_loaded_ = false;
         config_ = nlohmann::json{}; // Clear stale configuration
         return false;
