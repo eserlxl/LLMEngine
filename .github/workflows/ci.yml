@@ -235,10 +235,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check default clang-format version
+        run: |
+          echo "Checking available clang-format versions on GitHub runner..."
+          if command -v clang-format >/dev/null 2>&1; then
+            echo "Default clang-format found at: $(command -v clang-format)"
+            clang-format --version
+          else
+            echo "No default clang-format found on runner"
+          fi
+          echo ""
+          echo "Checking available clang-format packages:"
+          apt-cache search clang-format | grep "^clang-format" | head -20 || true
+
       - name: Install clang-format
         run: |
           sudo apt-get update
           sudo apt-get install -y clang-format-14
+          echo "Installed clang-format-14:"
+          clang-format-14 --version
 
       - name: Check code formatting
         run: |
