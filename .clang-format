@@ -5,7 +5,7 @@ IndentWidth: 4
 TabWidth: 4
 UseTab: Never
 ColumnLimit: 100
-AccessModifierOffset: -4
+AccessModifierOffset: -2
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
@@ -21,9 +21,9 @@ AllowShortLoopsOnASingleLine: false
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
-AlwaysBreakTemplateDeclarations: Yes
-BinPackArguments: true
-BinPackParameters: true
+AlwaysBreakTemplateDeclarations: MultiLine
+BinPackArguments: false
+BinPackParameters: false
 BraceWrapping:
   AfterClass: false
   AfterControlStatement: false
@@ -40,7 +40,7 @@ BraceWrapping:
   SplitEmptyFunction: true
   SplitEmptyRecord: true
   SplitEmptyNamespace: true
-BreakBeforeBinaryOperators: None
+BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Attach
 BreakBeforeInheritanceComma: false
 BreakInheritanceList: BeforeColon
@@ -63,15 +63,17 @@ ForEachMacros:
   - foreach
   - Q_FOREACH
   - BOOST_FOREACH
-IncludeBlocks: Preserve
+IncludeBlocks: Regroup
 IncludeCategories:
-  - Regex: '^"(llvm|llvm-c|clang|clang-c)/'
-    Priority: 2
-  - Regex: '^(<|"(gtest|gmock|isl|json)/)'
-    Priority: 3
-  - Regex: '.*'
+  - Regex: '^[^"<].*'
     Priority: 1
-IncludeIsMainRegex: '(Test)?$'
+  - Regex: '^"(gtest|gmock)/'
+    Priority: 2
+  - Regex: '^"(llvm|llvm-c|clang|clang-c)/'
+    Priority: 3
+  - Regex: '^".*"'
+    Priority: 4
+IncludeIsMainRegex: '([-_]?test)?$'
 IndentCaseLabels: true
 IndentPPDirectives: None
 IndentWrappedFunctionNames: false
@@ -106,7 +108,7 @@ SpaceBeforeRangeBasedForLoopColon: true
 SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 1
 SpacesInAngles: false
-SpacesInContainerLiterals: true
+SpacesInContainerLiterals: false
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
