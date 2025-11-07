@@ -19,28 +19,28 @@ jobs:
             build_type: Debug
             sanitizers: true
             cmake_preset: debug
-            cmake_options: "-DDEBUG_MODE=ON -DENABLE_SANITIZERS=ON -DWARNING_MODE=ON"
+            cmake_options: "-DDEBUG_MODE=ON -DPERFORMANCE_BUILD=OFF -DENABLE_SANITIZERS=ON -DWARNING_MODE=ON"
             os: ubuntu-22.04
           - compiler: gcc
             compiler_version: "12"
             build_type: Release
             sanitizers: false
             cmake_preset: release
-            cmake_options: "-DPERFORMANCE_BUILD=ON -DWARNING_MODE=ON"
+            cmake_options: "-DDEBUG_MODE=OFF -DPERFORMANCE_BUILD=ON -DWARNING_MODE=ON"
             os: ubuntu-22.04
           - compiler: clang
             compiler_version: "14"
             build_type: Debug
             sanitizers: true
             cmake_preset: debug
-            cmake_options: "-DDEBUG_MODE=ON -DENABLE_SANITIZERS=ON -DWARNING_MODE=ON"
+            cmake_options: "-DDEBUG_MODE=ON -DPERFORMANCE_BUILD=OFF -DENABLE_SANITIZERS=ON -DWARNING_MODE=ON"
             os: ubuntu-22.04
           - compiler: clang
             compiler_version: "15"
             build_type: Release
             sanitizers: false
             cmake_preset: release
-            cmake_options: "-DPERFORMANCE_BUILD=ON -DWARNING_MODE=ON"
+            cmake_options: "-DDEBUG_MODE=OFF -DPERFORMANCE_BUILD=ON -DWARNING_MODE=ON"
             os: ubuntu-22.04
 
     steps:
