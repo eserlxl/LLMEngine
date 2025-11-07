@@ -63,7 +63,15 @@ Formatting enforcement is configured in `formatting-enforcement.yaml`. See that 
 
 ### Manual Formatting
 
-CI uses the default `clang-format` command available on GitHub runners (after updating the package list). For local development, use the `clang-format` command to ensure parity with CI.
+CI installs and uses `clang-format-20` (the maximum available version on GitHub runners). For local development, use the highest available version (preferably 20 or 21) to ensure parity with CI.
+
+**Recommended**: Install `clang-format-20` or `clang-format-21` locally:
+```bash
+# On Ubuntu/Debian
+sudo apt-get install -y clang-format-20
+# Or if version 21 is available in your distribution
+sudo apt-get install -y clang-format-21
+```
 
 Format all files:
 
@@ -76,6 +84,8 @@ Format single file:
 ```bash
 clang-format -i path/to/file.cpp
 ```
+
+**Note**: If you have a versioned binary installed (e.g., `clang-format-20` or `clang-format-21`), you can use it directly or create a symlink to ensure the `clang-format` command uses the correct version.
 
 ## clang-tidy
 
