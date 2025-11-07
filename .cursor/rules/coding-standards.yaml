@@ -62,10 +62,15 @@ rules:
 
   code_quality:
     # See 80-formatting.md for formatting and static analysis guidelines
+    # See formatting-enforcement.yaml for detailed formatting enforcement configuration
     formatting:
       use_clang_format: true
       style: "LLVM"  # Matches .clang-format configuration
-      column_limit: 120
+      column_limit: 100  # Updated to match current .clang-format
+      indent_width: 4  # Updated to match current .clang-format
+      config_file: ".clang-format"
+      format_on_save: true
+      format_on_commit: true
     static_analysis:
       use_clang_tidy: true  # See .clang-tidy for enabled checks
       enable_checks:

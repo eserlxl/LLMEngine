@@ -24,11 +24,12 @@ repos:
       - id: check-case-conflict
 
   # C++ formatting with clang-format
+  # Automatically formats all .cpp and .hpp files using .clang-format
   - repo: https://github.com/pocc/pre-commit-hooks
     rev: v1.3.5
     hooks:
       - id: clang-format
-        args: ['-i']
+        args: ['-i', '--style=file']
         files: \.(cpp|hpp|c|h|cc|cxx|hxx)$
         types: [file]
 

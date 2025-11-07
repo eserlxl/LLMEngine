@@ -10,8 +10,8 @@ This document defines code formatting and static analysis rules for LLMEngine. T
 
 - **Style**: LLVM baseline with project-specific tweaks
 - **File**: `.clang-format` in project root
-- **Column limit**: 120 characters
-- **Indentation**: 2 spaces (no tabs)
+- **Column limit**: 100 characters
+- **Indentation**: 4 spaces (no tabs)
 
 ### Current Configuration
 
@@ -20,25 +20,33 @@ The project uses the following `.clang-format` settings:
 ```
 BasedOnStyle: LLVM
 Language: Cpp
-IndentWidth: 2
-TabWidth: 2
+IndentWidth: 4
+TabWidth: 4
 UseTab: Never
-ColumnLimit: 120
+ColumnLimit: 100
+AccessModifierOffset: -2
+BreakBeforeBinaryOperators: NonAssignment
+AlwaysBreakTemplateDeclarations: MultiLine
+BinPackArguments: false
+BinPackParameters: false
+IncludeBlocks: Regroup
 DerivePointerAlignment: false
 PointerAlignment: Left
 ReflowComments: true
 SortIncludes: true
-IncludeBlocks: Regroup
 SpaceBeforeParens: ControlStatements
 AllowShortFunctionsOnASingleLine: Empty
+SpacesInContainerLiterals: false
 ```
 
 ### Formatting Enforcement
 
+Formatting enforcement is configured in `formatting-enforcement.yaml`. See that file for detailed configuration.
+
 #### In IDE (Cursor)
 
-- **Format on save**: Enable automatic formatting on save
-- **Format on paste**: Enable automatic formatting on paste
+- **Format on save**: Automatic formatting on save (enforced via formatting-enforcement.yaml)
+- **Format on paste**: Automatic formatting on paste
 - **Format selection**: Use `Shift+Alt+F` (or equivalent) to format selection
 
 #### In CI
@@ -212,9 +220,9 @@ clang-format will sort includes within each block.
 
 ### Line Length
 
-- **Limit**: 120 characters
+- **Limit**: 100 characters
 - **Break long lines**: Break at logical points (operators, commas)
-- **Indentation**: Proper indentation for continuation lines
+- **Indentation**: Proper indentation for continuation lines (4 spaces)
 
 ## Static Analysis Integration
 
@@ -243,12 +251,20 @@ git add -u
 
 ## Summary
 
-1. **clang-format**: LLVM style, 120 cols, 2-space indent
-2. **Format on save**: Enable in IDE
-3. **Format check**: Verify in CI
-4. **clang-tidy**: Comprehensive checks enabled
-5. **Suppressions**: Document and justify suppressions
-6. **CI integration**: Format and analysis checks in CI
+1. **clang-format**: LLVM style, 100 cols, 4-space indent
+2. **Format on save**: Automatic in IDE (configured via formatting-enforcement.yaml)
+3. **Pre-commit hooks**: Automatic formatting on commit
+4. **Format check**: Verify in CI
+5. **clang-tidy**: Comprehensive checks enabled
+6. **Suppressions**: Document and justify suppressions
+7. **CI integration**: Format and analysis checks in CI
+
+## Configuration Files
+
+- **`.clang-format`**: Main formatting configuration file
+- **`formatting-enforcement.yaml`**: Enforcement rules and settings
+- **`.pre-commit-config.yaml`**: Pre-commit hook configuration
+- **`.github/workflows/ci.yml`**: CI format checking
 
 ## References
 

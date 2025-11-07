@@ -1,0 +1,109 @@
+rules:
+  # See 80-formatting.md for comprehensive formatting guidelines
+  # This YAML file provides structured configuration for automatic code formatting enforcement
+
+  formatting:
+    tool: "clang-format"
+    config_file: ".clang-format"
+    style: "LLVM"
+    
+    # File patterns to format
+    file_patterns:
+      - "*.cpp"
+      - "*.hpp"
+      - "*.c"
+      - "*.h"
+      - "*.cc"
+      - "*.cxx"
+      - "*.hxx"
+    
+    # Directories to exclude from formatting
+    exclude_directories:
+      - "build*"
+      - "build_check*"
+      - "build_make*"
+      - "build_make_fresh*"
+      - "build_test*"
+      - "build-clang-tidy*"
+      - "Testing*"
+      - "_deps*"
+    
+    # Current formatting configuration (matches .clang-format)
+    configuration:
+      indent_width: 4
+      tab_width: 4
+      use_tabs: false
+      column_limit: 100
+      access_modifier_offset: -2
+      break_before_binary_operators: "NonAssignment"
+      always_break_template_declarations: "MultiLine"
+      bin_pack_arguments: false
+      bin_pack_parameters: false
+      include_blocks: "Regroup"
+      pointer_alignment: "Left"
+      reflow_comments: true
+      sort_includes: true
+      space_before_parens: "ControlStatements"
+      allow_short_functions_on_single_line: "Empty"
+      spaces_in_container_literals: false
+
+  enforcement:
+    # IDE/Editor enforcement
+    ide:
+      format_on_save: true
+      format_on_paste: true
+      format_selection: true
+      auto_format: true
+    
+    # Pre-commit hook enforcement
+    pre_commit:
+      enabled: true
+      hook_file: ".pre-commit-config.yaml"
+      auto_format_staged: true
+      fail_on_unformatted: false  # Format automatically, don't fail
+    
+    # CI/CD enforcement
+    ci:
+      enabled: true
+      workflow_file: ".github/workflows/ci.yml"
+      job_name: "format-check"
+      fail_on_unformatted: true  # Fail CI if files aren't formatted
+      check_command: "clang-format --style=file --dry-run --Werror"
+
+  commands:
+    # Manual formatting commands
+    format_all: |
+      find . -type f \( -name "*.cpp" -o -name "*.hpp" \) \
+        -not -path "./build*" \
+        -not -path "./build_check*" \
+        -not -path "./build_make*" \
+        -not -path "./build_make_fresh*" \
+        -not -path "./build_test*" \
+        -not -path "./build-clang-tidy*" \
+        -not -path "./Testing*" \
+        -exec clang-format -i {} +
+    
+    format_single: "clang-format -i {file}"
+    
+    check_formatting: |
+      find . -type f \( -name "*.cpp" -o -name "*.hpp" \) \
+        -not -path "./build*" \
+        -not -path "./build_check*" \
+        -not -path "./build_make*" \
+        -not -path "./build_make_fresh*" \
+        -not -path "./build_test*" \
+        -not -path "./build-clang-tidy*" \
+        -not -path "./Testing*" \
+        -exec clang-format --style=file --dry-run --Werror {} +
+
+  workflow:
+    # When to apply formatting
+    apply_before_save: true
+    apply_after_paste: true
+    apply_before_commit: true
+    apply_in_ci: true
+    
+    # Integration points
+    integrate_with_build: true  # Format before building (see cxx-strict-build-before-commit.yaml)
+    integrate_with_tests: false  # Formatting check separate from tests
+
