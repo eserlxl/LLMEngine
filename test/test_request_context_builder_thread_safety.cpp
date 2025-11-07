@@ -5,9 +5,9 @@
 // and is licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/RequestContextBuilder.hpp"
 #include "LLMEngine/IModelContext.hpp"
 #include "LLMEngine/Logger.hpp"
+#include "LLMEngine/RequestContextBuilder.hpp"
 #include "LLMEngine/TempDirectoryService.hpp"
 
 #include <atomic>
@@ -38,14 +38,30 @@ class MockModelContext : public IModelContext {
         std::filesystem::remove_all(temp_dir_, ec);
     }
 
-    std::string getTempDirectory() const override { return temp_dir_; }
-    std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override { return nullptr; }
-    std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override { return nullptr; }
-    const nlohmann::json& getModelParams() const override { return model_params_; }
-    bool areDebugFilesEnabled() const override { return false; }
-    std::shared_ptr<IArtifactSink> getArtifactSink() const override { return nullptr; }
-    int getLogRetentionHours() const override { return 24; }
-    std::shared_ptr<Logger> getLogger() const override { return nullptr; }
+    std::string getTempDirectory() const override {
+        return temp_dir_;
+    }
+    std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override {
+        return nullptr;
+    }
+    std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override {
+        return nullptr;
+    }
+    const nlohmann::json& getModelParams() const override {
+        return model_params_;
+    }
+    bool areDebugFilesEnabled() const override {
+        return false;
+    }
+    std::shared_ptr<IArtifactSink> getArtifactSink() const override {
+        return nullptr;
+    }
+    int getLogRetentionHours() const override {
+        return 24;
+    }
+    std::shared_ptr<Logger> getLogger() const override {
+        return nullptr;
+    }
     void prepareTempDirectory() const override {}
 
   private:
@@ -70,8 +86,13 @@ void testConcurrentDirectoryGeneration() {
     auto start_time = std::chrono::steady_clock::now();
 
     for (int i = 0; i < num_threads; ++i) {
-        threads.emplace_back([&context, &completed, &errors, &dir_names_mutex, &generated_dirs,
-                              iterations_per_thread, i]() {
+        threads.emplace_back([&context,
+                              &completed,
+                              &errors,
+                              &dir_names_mutex,
+                              &generated_dirs,
+                              iterations_per_thread,
+                              i]() {
             try {
                 for (int j = 0; j < iterations_per_thread; ++j) {
                     nlohmann::json input;
@@ -81,8 +102,9 @@ void testConcurrentDirectoryGeneration() {
                     // Verify directory name is unique
                     std::lock_guard<std::mutex> lock(dir_names_mutex);
                     if (generated_dirs.find(ctx.requestTmpDir) != generated_dirs.end()) {
-                        std::cerr << "ERROR: Duplicate directory name detected: " << ctx.requestTmpDir
-                                  << " (thread " << i << ", iteration " << j << ")\n";
+                        std::cerr << "ERROR: Duplicate directory name detected: "
+                                  << ctx.requestTmpDir << " (thread " << i << ", iteration " << j
+                                  << ")\n";
                         ++errors;
                     } else {
                         generated_dirs.insert(ctx.requestTmpDir);
@@ -136,13 +158,18 @@ void testRapidConcurrentInitialization() {
 
     // Create all threads at once to maximize concurrent RNG initialization
     for (int i = 0; i < num_threads; ++i) {
-        threads.emplace_back([&context, &completed, &errors, &dir_names_mutex, &generated_dirs,
-                              iterations_per_thread, i]() {
+        threads.emplace_back([&context,
+                              &completed,
+                              &errors,
+                              &dir_names_mutex,
+                              &generated_dirs,
+                              iterations_per_thread,
+                              i]() {
             try {
                 for (int j = 0; j < iterations_per_thread; ++j) {
                     nlohmann::json input;
-                    RequestContext ctx = RequestContextBuilder::build(
-                        context, "test", input, "test", "chat", false);
+                    RequestContext ctx =
+                        RequestContextBuilder::build(context, "test", input, "test", "chat", false);
 
                     std::lock_guard<std::mutex> lock(dir_names_mutex);
                     if (generated_dirs.find(ctx.requestTmpDir) != generated_dirs.end()) {
@@ -191,4 +218,3 @@ int main() {
         return 1;
     }
 }
-

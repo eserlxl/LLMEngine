@@ -64,22 +64,22 @@ bool parseDisableDebugFilesEnv() {
     if (env_value == nullptr) {
         return false; // Variable not set, enable debug files
     }
-    
+
     // Empty string means enable debug files
     if (env_value[0] == '\0') {
         return false;
     }
-    
+
     // Check for explicit "false" values (case-insensitive)
     std::string value(env_value);
     // Convert to lowercase for comparison
-    std::transform(value.begin(), value.end(), value.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    
+    std::transform(
+        value.begin(), value.end(), value.begin(), [](unsigned char c) { return std::tolower(c); });
+
     if (value == "0" || value == "false" || value == "no" || value == "off") {
         return false; // Explicitly enable debug files
     }
-    
+
     // Any other value (including "1", "true", "yes", "on") disables debug files
     return true;
 }

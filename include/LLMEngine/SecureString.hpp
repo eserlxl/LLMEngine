@@ -80,7 +80,9 @@ class LLMENGINE_EXPORT SecureString {
     /**
      * @brief Destructor - scrubs memory before destruction.
      */
-    ~SecureString() { scrub(); }
+    ~SecureString() {
+        scrub();
+    }
 
     /**
      * @brief Copy assignment.
@@ -108,27 +110,37 @@ class LLMENGINE_EXPORT SecureString {
     /**
      * @brief Get a string_view of the data.
      */
-    [[nodiscard]] std::string_view view() const noexcept { return data_; }
+    [[nodiscard]] std::string_view view() const noexcept {
+        return data_;
+    }
 
     /**
      * @brief Get a C-string pointer (null-terminated).
      */
-    [[nodiscard]] const char* c_str() const noexcept { return data_.c_str(); }
+    [[nodiscard]] const char* c_str() const noexcept {
+        return data_.c_str();
+    }
 
     /**
      * @brief Get the underlying std::string (creates a copy).
      */
-    [[nodiscard]] std::string str() const { return data_; }
+    [[nodiscard]] std::string str() const {
+        return data_;
+    }
 
     /**
      * @brief Check if the string is empty.
      */
-    [[nodiscard]] bool empty() const noexcept { return data_.empty(); }
+    [[nodiscard]] bool empty() const noexcept {
+        return data_.empty();
+    }
 
     /**
      * @brief Get the size of the string.
      */
-    [[nodiscard]] size_t size() const noexcept { return data_.size(); }
+    [[nodiscard]] size_t size() const noexcept {
+        return data_.size();
+    }
 
     /**
      * @brief Explicitly scrub the memory (called automatically on destruction).
@@ -146,11 +158,12 @@ class LLMENGINE_EXPORT SecureString {
     /**
      * @brief Clear and scrub the string immediately.
      */
-    void clear() noexcept { scrub(); }
+    void clear() noexcept {
+        scrub();
+    }
 
   private:
     std::string data_;
 };
 
 } // namespace LLMEngine
-

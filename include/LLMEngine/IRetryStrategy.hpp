@@ -52,10 +52,13 @@ class LLMENGINE_EXPORT IRetryStrategy {
      *
      * @param attempt Current attempt number (1-based, so first attempt is 1)
      * @param http_status_code HTTP status code from the response (0 if no response)
-     * @param is_network_error True if the error was a network-level failure (timeout, connection error, etc.)
+     * @param is_network_error True if the error was a network-level failure (timeout, connection
+     * error, etc.)
      * @return True if the request should be retried, false otherwise
      */
-    [[nodiscard]] virtual bool shouldRetry(int attempt, int http_status_code, bool is_network_error) const = 0;
+    [[nodiscard]] virtual bool shouldRetry(int attempt,
+                                           int http_status_code,
+                                           bool is_network_error) const = 0;
 
     /**
      * @brief Get the delay in milliseconds before the next retry attempt.
@@ -107,7 +110,9 @@ class LLMENGINE_EXPORT DefaultRetryStrategy : public IRetryStrategy {
     DefaultRetryStrategy(int max_attempts, int base_delay_ms, int max_delay_ms)
         : max_attempts_(max_attempts), base_delay_ms_(base_delay_ms), max_delay_ms_(max_delay_ms) {}
 
-    [[nodiscard]] bool shouldRetry(int attempt, int http_status_code, bool is_network_error) const override {
+    [[nodiscard]] bool shouldRetry(int attempt,
+                                   int http_status_code,
+                                   bool is_network_error) const override {
         if (attempt >= max_attempts_) {
             return false;
         }
@@ -140,7 +145,9 @@ class LLMENGINE_EXPORT DefaultRetryStrategy : public IRetryStrategy {
         return static_cast<int>(delay);
     }
 
-    [[nodiscard]] int getMaxAttempts() const override { return max_attempts_; }
+    [[nodiscard]] int getMaxAttempts() const override {
+        return max_attempts_;
+    }
 
   private:
     int max_attempts_;
@@ -155,10 +162,15 @@ class LLMENGINE_EXPORT DefaultRetryStrategy : public IRetryStrategy {
  */
 class LLMENGINE_EXPORT NoRetryStrategy : public IRetryStrategy {
   public:
-    [[nodiscard]] bool shouldRetry(int, int, bool) const override { return false; }
-    [[nodiscard]] int getDelayMs(int) const override { return 0; }
-    [[nodiscard]] int getMaxAttempts() const override { return 1; }
+    [[nodiscard]] bool shouldRetry(int, int, bool) const override {
+        return false;
+    }
+    [[nodiscard]] int getDelayMs(int) const override {
+        return 0;
+    }
+    [[nodiscard]] int getMaxAttempts() const override {
+        return 1;
+    }
 };
 
 } // namespace LLMEngine
-
