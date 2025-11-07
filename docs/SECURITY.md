@@ -20,6 +20,32 @@ export OPENAI_API_KEY="sk-your-openai-key"
 - **Fail-fast behavior**: If no API key is found for a provider that requires one (all except Ollama), the library throws a `std::runtime_error` instead of proceeding silently. This prevents silent failures in headless or hardened deployments.
 - If a key is found in `api_config.json` but not in environment variables, a warning is emitted to stderr. For production, ensure keys are provided via environment variables to avoid this fallback.
 
+### API Key Lifetime and Memory Management
+
+**Current Implementation:**
+- API keys are stored as `std::string` in `LLMEngine` instances for the lifetime of the engine.
+- Keys are resolved once at construction time and remain in memory until the engine is destroyed.
+- Keys are passed to API clients via `std::string_view` to avoid unnecessary copies during request execution.
+
+**Security Considerations:**
+- API keys persist in memory for the entire lifetime of the `LLMEngine` instance.
+- Memory may be swapped to disk by the operating system, potentially exposing keys in swap files.
+- For enhanced security, consider using `SecureString` (see below) for temporary key storage, or minimize the lifetime of `LLMEngine` instances that hold sensitive keys.
+
+**SecureString Wrapper (Optional):**
+The library provides a `SecureString` class (`LLMEngine/SecureString.hpp`) that automatically scrubs memory on destruction:
+
+```cpp
+#include "LLMEngine/SecureString.hpp"
+
+// Store API key in SecureString for temporary use
+SecureString api_key("sk-your-key");
+// Use api_key.view() or api_key.c_str() as needed
+// Memory is automatically scrubbed when api_key goes out of scope
+```
+
+**Note:** `SecureString` is a defense-in-depth measure and does not guarantee complete security. The compiler may optimize away scrubbing, or memory may be copied elsewhere. For maximum security, prefer environment variables and minimize the lifetime of objects holding secrets.
+
 ## Debug Mode and Sensitive Data
 
 When debug mode is enabled (`debug=true`), LLMEngine writes response artifacts to `/tmp/llmengine`.

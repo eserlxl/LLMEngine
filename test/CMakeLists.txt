@@ -206,6 +206,9 @@ target_link_libraries(test_api_config_manager PRIVATE LLMEngine llmengine::compi
 add_executable(test_api_config_manager_thread_safety test_api_config_manager_thread_safety.cpp)
 target_link_libraries(test_api_config_manager_thread_safety PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 
+add_executable(test_request_context_builder_thread_safety test_request_context_builder_thread_safety.cpp)
+target_link_libraries(test_request_context_builder_thread_safety PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+
 add_executable(test_api_client_factory test_api_client_factory.cpp)
 target_link_libraries(test_api_client_factory PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 
@@ -398,6 +401,7 @@ if (BUILD_TESTING)
   add_test(NAME test_api COMMAND test_api)
   add_test(NAME test_api_config_manager COMMAND test_api_config_manager)
   add_test(NAME test_api_config_manager_thread_safety COMMAND test_api_config_manager_thread_safety)
+  add_test(NAME test_request_context_builder_thread_safety COMMAND test_request_context_builder_thread_safety)
   add_test(NAME test_api_client_factory COMMAND test_api_client_factory)
   add_test(NAME test_provider_type_mapping COMMAND test_provider_type_mapping)
   add_test(NAME test_llmengine_construction COMMAND test_llmengine_construction)

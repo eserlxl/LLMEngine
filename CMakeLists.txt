@@ -285,6 +285,7 @@ add_library(${PROJECT_NAME}
     src/TempDirectoryService.cpp
     src/ArtifactSink.cpp
     src/RequestExecutor.cpp
+    src/RetryableRequestExecutor.cpp
 )
 
 # Versioning for shared libraries
