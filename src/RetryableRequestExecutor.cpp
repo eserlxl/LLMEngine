@@ -5,6 +5,7 @@
 // the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
+#include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/IRequestExecutor.hpp"
 #include "LLMEngine/IRetryStrategy.hpp"
 #include "LLMEngine/HttpStatus.hpp"
