@@ -58,7 +58,8 @@ class LogoGenerator {
     void generateLogo(const std::string& description,
                       const std::string& format = "png",
                       const std::string& filename = "") {
-        std::cout << "\n🎨 Generating logo from description: \"" << description << "\"" << std::endl;
+        std::cout << "\n🎨 Generating logo from description: \"" << description << "\""
+                  << std::endl;
 
         try {
             // Create detailed prompt for logo generation

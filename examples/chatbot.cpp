@@ -53,9 +53,8 @@ class ChatBot {
     }
 
     void startConversation() {
-        std::cout
-            << "\n🤖 ChatBot started! Type 'quit', 'exit', or 'bye' to end the conversation."
-            << std::endl;
+        std::cout << "\n🤖 ChatBot started! Type 'quit', 'exit', or 'bye' to end the conversation."
+                  << std::endl;
         std::cout
             << "💡 Try: 'help' for commands, 'clear' to clear history, 'save' to save conversation"
             << std::endl;

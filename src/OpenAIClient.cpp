@@ -20,7 +20,7 @@ class OpenAIClient::Impl : public OpenAICompatibleClient {
   public:
     Impl(const std::string& api_key, const std::string& model)
         : OpenAICompatibleClient(
-            api_key, model, std::string(::LLMEngine::Constants::DefaultUrls::OPENAI_BASE)) {}
+              api_key, model, std::string(::LLMEngine::Constants::DefaultUrls::OPENAI_BASE)) {}
 };
 
 OpenAIClient::OpenAIClient(const std::string& api_key, const std::string& model)
