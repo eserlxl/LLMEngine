@@ -210,7 +210,6 @@ jobs:
             ${{ matrix.cmake_options }} \
             -DBUILD_TESTING=ON \
             -DENABLE_EXAMPLES=ON \
-            -DWARNING_MODE=ON \
             -DWERROR=ON
           # Verify CMake selected the correct compiler
           echo "CMake detected compiler:"

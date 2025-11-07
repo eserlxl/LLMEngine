@@ -39,26 +39,26 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # Avoid global runtime output directory; use per-target properties instead
 
 # ---- Options -----------------------------------------------------------------
-option(DEBUG_MODE                 "Enable debug build flags"                       ON)
-option(PERFORMANCE_BUILD          "Enable performance-optimized flags"             OFF)
+option(DEBUG_MODE                 "Enable debug build flags"                       OFF)
+option(PERFORMANCE_BUILD          "Enable performance-optimized flags"             ON)
 option(WARNING_MODE               "Enable extra warnings"                          ON)
 option(BUILD_TESTING              "Build tests and enable CTest"                   ON)
 option(ENABLE_EXAMPLES            "Build example programs"                          ON)
 option(ENABLE_NATIVE_OPTIMIZATION "Use -march=native/-mtune=native in performance" OFF)
-option(ENABLE_SANITIZERS          "Enable Address/Undefined sanitizers in debug"    ON)
+option(ENABLE_SANITIZERS          "Enable Address/Undefined sanitizers in debug"    OFF)
 option(BUILD_SHARED_LIBS          "Build shared instead of static libraries"       OFF)
 option(ENABLE_CLANG_TIDY          "Run clang-tidy if available"                     OFF)
-option(ENABLE_COVERAGE            "Enable coverage flags in Debug (GCC/Clang)"     ON)
+option(ENABLE_COVERAGE            "Enable coverage flags in Debug (GCC/Clang)"     OFF)
 option(ENABLE_DOXYGEN             "Enable Doxygen documentation target"            OFF)
 option(WERROR                     "Treat warnings as errors (for CI builds)"       OFF)
 option(LLM_DISABLE_FETCHCONTENT   "Disable FetchContent; require system packages"  OFF)
 option(LLMENGINE_ENABLE_VISIBILITY_HIDDEN "Enable -fvisibility=hidden for shared builds" ON)
 
 # Fine-grained toggles (optional; override ENABLE_SANITIZERS when set)
-option(LLM_ENABLE_ASAN "Enable AddressSanitizer" ON)
-option(LLM_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" ON)
+option(LLM_ENABLE_ASAN "Enable AddressSanitizer" OFF)
+option(LLM_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
 option(LLM_ENABLE_MSAN "Enable MemorySanitizer (Clang-only)" OFF)
-option(LLM_ENABLE_TSAN "Enable ThreadSanitizer" ON)
+option(LLM_ENABLE_TSAN "Enable ThreadSanitizer" OFF)
 option(LLM_ENABLE_LTO  "Force enable IPO/LTO when supported" OFF)
 
 # Mutually exclusive modes sanity check
