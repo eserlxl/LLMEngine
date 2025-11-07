@@ -67,8 +67,8 @@ class ImageGenerator {
                        const std::string& image_type = "artwork",
                        const std::string& format = "png",
                        const std::string& filename = "") {
-        std::cout << "\n🎨 Generating " << image_type << " image from description: \""
-                  << description << "\"" << std::endl;
+        std::cout << "\n🎨 Generating " << image_type << " image from description: \"" << description
+                  << "\"" << std::endl;
 
         try {
             // Create prompt for SVG generation
@@ -362,7 +362,8 @@ class ImageGenerator {
 
         // Validate SVG content
         if (!isValidSVG(svg_content)) {
-            std::cerr << "⚠️  Warning: Generated improved SVG content may not be valid" << std::endl;
+            std::cerr << "⚠️  Warning: Generated improved SVG content may not be valid"
+                      << std::endl;
         }
 
         // Generate filename if not provided
@@ -1039,9 +1040,8 @@ int main(int argc, char* argv[]) {
 
                         std::ifstream prompt_stream(prompt_file);
                         if (!prompt_stream.is_open()) {
-                            std::cerr
-                                << "❌ Failed to open improvement prompt file: " << prompt_file
-                                << std::endl;
+                            std::cerr << "❌ Failed to open improvement prompt file: " << prompt_file
+                                      << std::endl;
                             return 1;
                         }
 

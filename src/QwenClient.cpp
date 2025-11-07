@@ -20,7 +20,7 @@ class QwenClient::Impl : public OpenAICompatibleClient {
   public:
     Impl(const std::string& api_key, const std::string& model)
         : OpenAICompatibleClient(
-              api_key, model, std::string(::LLMEngine::Constants::DefaultUrls::QWEN_BASE)) {}
+            api_key, model, std::string(::LLMEngine::Constants::DefaultUrls::QWEN_BASE)) {}
 };
 
 QwenClient::QwenClient(const std::string& api_key, const std::string& model)
