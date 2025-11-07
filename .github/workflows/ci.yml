@@ -235,15 +235,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install clang-format-20
+      - name: Update package list and verify clang-format
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-format-20
-          # Create symlink to ensure 'clang-format' points to version 20
-          sudo ln -sf /usr/bin/clang-format-20 /usr/local/bin/clang-format || true
-          echo "Installed clang-format-20:"
-          clang-format-20 --version
-          echo ""
+          if ! command -v clang-format >/dev/null 2>&1; then
+            echo "Error: clang-format not found on runner"
+            exit 1
+          fi
           echo "Using clang-format at: $(command -v clang-format)"
           clang-format --version
 
