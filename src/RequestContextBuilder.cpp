@@ -39,12 +39,12 @@ thread_local std::mt19937_64 rng = []() {
     const auto timestamp =
         static_cast<uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
     const uint64_t thread_hash = thread_offset;
-    
+
     // Create seed sequence from thread-safe sources
-    std::seed_seq seed{timestamp, static_cast<uint64_t>(rd()), static_cast<uint64_t>(rd()),
-                       thread_hash};
+    std::seed_seq seed{
+        timestamp, static_cast<uint64_t>(rd()), static_cast<uint64_t>(rd()), thread_hash};
     std::mt19937_64 local_rng(seed);
-    
+
     // Warm up the RNG to mix state
     constexpr int rng_warmup_rounds = 10;
     for (int i = 0; i < rng_warmup_rounds; ++i) {
