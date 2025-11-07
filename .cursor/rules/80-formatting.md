@@ -58,34 +58,27 @@ Formatting enforcement is configured in `formatting-enforcement.yaml`. See that 
 - name: Check formatting
   run: |
     find src include test -name "*.cpp" -o -name "*.hpp" | \
-      xargs clang-format --dry-run --Werror
+      xargs /opt/clang-format-static/clang-format-20 --dry-run --Werror
 ```
 
 ### Manual Formatting
 
-CI installs and uses `clang-format-20` (the maximum available version on GitHub runners). For local development, use the highest available version (preferably 20 or 21) to ensure parity with CI.
-
-**Recommended**: Install `clang-format-20` or `clang-format-21` locally:
-```bash
-# On Ubuntu/Debian
-sudo apt-get install -y clang-format-20
-# Or if version 21 is available in your distribution
-sudo apt-get install -y clang-format-21
-```
+CI installs and uses `clang-format-20` (the maximum available version on GitHub runners). For local development, use `/opt/clang-format-static/clang-format-20` to ensure exact parity with CI.
 
 Format all files:
 
 ```bash
-find src include test -name "*.cpp" -o -name "*.hpp" | xargs clang-format -i
+find src include test examples -name "*.cpp" -o -name "*.hpp" | \
+  xargs /opt/clang-format-static/clang-format-20 --style=file -i
 ```
 
 Format single file:
 
 ```bash
-clang-format -i path/to/file.cpp
+/opt/clang-format-static/clang-format-20 --style=file -i path/to/file.cpp
 ```
 
-**Note**: If you have a versioned binary installed (e.g., `clang-format-20` or `clang-format-21`), you can use it directly or create a symlink to ensure the `clang-format` command uses the correct version.
+**Note**: The formatter is located at `/opt/clang-format-static/clang-format-20`. This ensures consistent formatting across all environments and matches the version used in CI (clang-format-20).
 
 ## clang-tidy
 
@@ -249,7 +242,7 @@ Consider adding pre-commit hooks for formatting:
 # Format staged files
 git diff --cached --name-only --diff-filter=ACM | \
   grep -E '\.(cpp|hpp)$' | \
-  xargs clang-format -i
+  xargs /opt/clang-format-static/clang-format-20 --style=file -i
 
 # Re-stage formatted files
 git add -u
