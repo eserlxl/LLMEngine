@@ -10,6 +10,7 @@
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/HttpStatus.hpp"
+
 #include <cpr/cpr.h>
 #include <map>
 #include <nlohmann/json.hpp>
@@ -66,12 +67,18 @@ struct ChatCompletionRequestHelper {
      * @param exponential_retry Whether to use exponential backoff (default: true)
      * @return APIResponse with parsed content or error details
      */
-    template <typename PayloadBuilder, typename UrlBuilder, typename HeaderBuilder,
+    template <typename PayloadBuilder,
+              typename UrlBuilder,
+              typename HeaderBuilder,
               typename ResponseParser>
-    static APIResponse execute(const nlohmann::json& default_params, const nlohmann::json& params,
-                               PayloadBuilder&& buildPayload, UrlBuilder&& buildUrl,
-                               HeaderBuilder&& buildHeaders, ResponseParser&& parseResponse,
-                               bool exponential_retry = true, const IConfigManager* cfg = nullptr) {
+    static APIResponse execute(const nlohmann::json& default_params,
+                               const nlohmann::json& params,
+                               PayloadBuilder&& buildPayload,
+                               UrlBuilder&& buildUrl,
+                               HeaderBuilder&& buildHeaders,
+                               ResponseParser&& parseResponse,
+                               bool exponential_retry = true,
+                               const IConfigManager* cfg = nullptr) {
 
         APIResponse response;
         response.success = false;
@@ -101,9 +108,9 @@ struct ChatCompletionRequestHelper {
 
             // Get timeout from params or use config default
             int timeout_seconds = 0;
-            if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)) &&
-                params.at(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))
-                    .is_number_integer()) {
+            if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))
+                && params.at(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))
+                       .is_number_integer()) {
                 timeout_seconds =
                     params.at(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))
                         .get<int>();
@@ -118,8 +125,8 @@ struct ChatCompletionRequestHelper {
 
             // Optional connect timeout override in milliseconds
             int connect_timeout_ms = 0;
-            if (params.contains("connect_timeout_ms") &&
-                params.at("connect_timeout_ms").is_number_integer()) {
+            if (params.contains("connect_timeout_ms")
+                && params.at("connect_timeout_ms").is_number_integer()) {
                 connect_timeout_ms = params.at("connect_timeout_ms").get<int>();
             }
             if (connect_timeout_ms < 0)
@@ -158,12 +165,16 @@ struct ChatCompletionRequestHelper {
             // Execute request with retries
             cpr::Response cpr_response = sendWithRetries(rs, [&]() {
                 if (connect_timeout_ms > 0) {
-                    return cpr::Post(cpr::Url{url}, cpr_headers, cpr::Body{serialized_body},
+                    return cpr::Post(cpr::Url{url},
+                                     cpr_headers,
+                                     cpr::Body{serialized_body},
                                      cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
                                      cpr::VerifySsl{verify_ssl},
                                      cpr::ConnectTimeout{connect_timeout_ms});
                 } else {
-                    return cpr::Post(cpr::Url{url}, cpr_headers, cpr::Body{serialized_body},
+                    return cpr::Post(cpr::Url{url},
+                                     cpr_headers,
+                                     cpr::Body{serialized_body},
                                      cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
                                      cpr::VerifySsl{verify_ssl});
                 }
@@ -223,8 +234,8 @@ struct ChatCompletionRequestHelper {
                 response.error_message = error_msg;
 
                 // Classify error based on HTTP status code
-                if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED ||
-                    cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
+                if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
+                    || cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
                     response.error_code = LLMEngine::LLMEngineErrorCode::Auth;
                 } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
                     response.error_code = LLMEngine::LLMEngineErrorCode::RateLimited;
@@ -240,8 +251,8 @@ struct ChatCompletionRequestHelper {
             }
 
         } catch (const nlohmann::json::parse_error& e) {
-            response.error_message = "JSON parse error at position " + std::to_string(e.byte) +
-                                     ": " + std::string(e.what());
+            response.error_message = "JSON parse error at position " + std::to_string(e.byte) + ": "
+                                     + std::string(e.what());
             response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
         } catch (const std::exception& e) {
             response.error_message = "Network error: " + std::string(e.what());

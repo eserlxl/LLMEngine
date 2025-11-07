@@ -4,6 +4,7 @@
 // Tests for RequestLogger redaction functions with edge cases
 
 #include "LLMEngine/RequestLogger.hpp"
+
 #include <cassert>
 #include <chrono>
 #include <iostream>
@@ -22,19 +23,19 @@ void testUrlRedactionBasic() {
     // Test 2: Simple sensitive parameter
     std::string url2 = "https://api.example.com/endpoint?api_key=secret123";
     std::string result2 = RequestLogger::redactUrl(url2);
-    assert(result2.find("api_key=<REDACTED>") != std::string::npos &&
-           "Sensitive param should be redacted");
+    assert(result2.find("api_key=<REDACTED>") != std::string::npos
+           && "Sensitive param should be redacted");
     assert(result2.find("secret123") == std::string::npos && "Secret should not appear");
 
     // Test 3: Multiple parameters, one sensitive
     std::string url3 =
         "https://api.example.com/endpoint?model=gpt-4&api_key=secret&temperature=0.7";
     std::string result3 = RequestLogger::redactUrl(url3);
-    assert(result3.find("api_key=<REDACTED>") != std::string::npos &&
-           "Sensitive param should be redacted");
+    assert(result3.find("api_key=<REDACTED>") != std::string::npos
+           && "Sensitive param should be redacted");
     assert(result3.find("model=gpt-4") != std::string::npos && "Non-sensitive param should remain");
-    assert(result3.find("temperature=0.7") != std::string::npos &&
-           "Non-sensitive param should remain");
+    assert(result3.find("temperature=0.7") != std::string::npos
+           && "Non-sensitive param should remain");
 
     std::cout << "  ✓ Basic URL redaction tests passed\n";
 }
@@ -63,17 +64,17 @@ void testUrlRedactionEncodedDelimiters() {
     std::string url4 = "https://api.example.com/endpoint?api_key=secret#anchor";
     std::string result4 = RequestLogger::redactUrl(url4);
     assert(result4.find("#anchor") != std::string::npos && "Fragment should be preserved");
-    assert(result4.find("api_key=<REDACTED>") != std::string::npos &&
-           "Should still redact sensitive params");
+    assert(result4.find("api_key=<REDACTED>") != std::string::npos
+           && "Should still redact sensitive params");
 
     // Test 5: Semicolon-separated parameters (RFC 1866)
     std::string url5 =
         "https://api.example.com/endpoint?param1=value1;api_key=secret;param2=value2";
     std::string result5 = RequestLogger::redactUrl(url5);
-    assert(result5.find("api_key=<REDACTED>") != std::string::npos &&
-           "Should handle semicolon separators");
-    assert(result5.find("param1=value1") != std::string::npos &&
-           "Should preserve non-sensitive params");
+    assert(result5.find("api_key=<REDACTED>") != std::string::npos
+           && "Should handle semicolon separators");
+    assert(result5.find("param1=value1") != std::string::npos
+           && "Should preserve non-sensitive params");
 
     std::cout << "  ✓ Encoded delimiter tests passed\n";
 }
@@ -85,8 +86,8 @@ void testUrlRedactionEdgeCases() {
     std::string url1 = "https://api.example.com/endpoint?flag&api_key=secret";
     std::string result1 = RequestLogger::redactUrl(url1);
     assert(result1.find("flag") != std::string::npos && "Flag should remain");
-    assert(result1.find("api_key=<REDACTED>") != std::string::npos &&
-           "Sensitive param should be redacted");
+    assert(result1.find("api_key=<REDACTED>") != std::string::npos
+           && "Sensitive param should be redacted");
 
     // Test 2: Empty query string
     std::string url2 = "https://api.example.com/endpoint?";
@@ -96,16 +97,16 @@ void testUrlRedactionEdgeCases() {
     // Test 3: Multiple equals signs in value
     std::string url3 = "https://api.example.com/endpoint?api_key=a=b=c";
     std::string result3 = RequestLogger::redactUrl(url3);
-    assert(result3.find("api_key=<REDACTED>") != std::string::npos &&
-           "Should handle complex values");
+    assert(result3.find("api_key=<REDACTED>") != std::string::npos
+           && "Should handle complex values");
 
     // Test 4: Case-insensitive sensitive parameter matching
     std::string url4 = "https://api.example.com/endpoint?API_KEY=secret&Token=abc123";
     std::string result4 = RequestLogger::redactUrl(url4);
-    assert(result4.find("API_KEY=<REDACTED>") != std::string::npos &&
-           "Should match case-insensitively");
-    assert(result4.find("Token=<REDACTED>") != std::string::npos &&
-           "Should match token case-insensitively");
+    assert(result4.find("API_KEY=<REDACTED>") != std::string::npos
+           && "Should match case-insensitively");
+    assert(result4.find("Token=<REDACTED>") != std::string::npos
+           && "Should match token case-insensitively");
 
     std::cout << "  ✓ Edge case tests passed\n";
 }
@@ -118,8 +119,8 @@ void testHeaderRedaction() {
                                                    {"Content-Type", "application/json"}};
     auto result1 = RequestLogger::redactHeaders(headers1);
     // Authorization is not on allowlist, so should be omitted entirely (default-deny)
-    assert(result1.find("Authorization") == result1.end() &&
-           "Non-allowed sensitive header should be omitted");
+    assert(result1.find("Authorization") == result1.end()
+           && "Non-allowed sensitive header should be omitted");
     assert(result1["Content-Type"] == "application/json" && "Allowed header should remain");
 
     // Test 2: Case-insensitive matching for allowlist
@@ -147,10 +148,10 @@ void testHeaderRedaction() {
                                                    {"Accept-Encoding", "gzip"}};
     auto result4 = RequestLogger::redactHeaders(headers4);
     assert(result4.find("Content-Type") != result4.end() && "Allowed header should be present");
-    assert(result4.find("Authorization") == result4.end() &&
-           "Non-allowed header should be omitted");
-    assert(result4.find("X-Custom-Header") == result4.end() &&
-           "Non-allowed header should be omitted");
+    assert(result4.find("Authorization") == result4.end()
+           && "Non-allowed header should be omitted");
+    assert(result4.find("X-Custom-Header") == result4.end()
+           && "Non-allowed header should be omitted");
     assert(result4.find("Accept-Encoding") != result4.end() && "Allowed header should be present");
 
     // Test 5: Empty header map
@@ -163,8 +164,8 @@ void testHeaderRedaction() {
         {"Content-Type", "application/json; charset=utf-8"},
         {"User-Agent", "LLMEngine/1.0 (Linux)"}};
     auto result6 = RequestLogger::redactHeaders(headers6);
-    assert(result6["Content-Type"] == "application/json; charset=utf-8" &&
-           "Should preserve special chars in values");
+    assert(result6["Content-Type"] == "application/json; charset=utf-8"
+           && "Should preserve special chars in values");
     assert(result6["User-Agent"] == "LLMEngine/1.0 (Linux)" && "Should preserve special chars");
 
     // Test 7: Multiple headers with same allowlist status
@@ -202,8 +203,8 @@ void testTextRedaction() {
     std::string text3b = "api_key='secret123'";
     std::string result3b = RequestLogger::redactText(text3b);
     assert(result3b.find("api_key=") != std::string::npos && "Key should remain");
-    assert(result3b.find("<REDACTED>") != std::string::npos &&
-           "Single-quoted value should be redacted");
+    assert(result3b.find("<REDACTED>") != std::string::npos
+           && "Single-quoted value should be redacted");
 
     // Test 4: Nested quotes (escaped quotes)
     std::string text4 = "api_key=\"secret\\\"value\"";
@@ -240,8 +241,8 @@ void testTextRedaction() {
     std::string text8 = "api_key=secret@123#value";
     std::string result8 = RequestLogger::redactText(text8);
     assert(result8.find("api_key=") != std::string::npos && "Key should remain");
-    assert(result8.find("<REDACTED>") != std::string::npos &&
-           "Value with special chars should be redacted");
+    assert(result8.find("<REDACTED>") != std::string::npos
+           && "Value with special chars should be redacted");
 
     // Test 9: Whitespace handling
     std::string text9 = "api_key = secret123";
@@ -252,8 +253,8 @@ void testTextRedaction() {
     std::string text10 = "api_key=secret,value";
     std::string result10 = RequestLogger::redactText(text10);
     assert(result10.find("api_key=") != std::string::npos && "Key should remain");
-    assert(result10.find("<REDACTED>") != std::string::npos &&
-           "Value with delimiter should be redacted");
+    assert(result10.find("<REDACTED>") != std::string::npos
+           && "Value with delimiter should be redacted");
 
     std::cout << "  ✓ Text redaction tests passed\n";
 }
@@ -289,10 +290,10 @@ void testFormatRequest() {
         "POST", "https://api.example.com/endpoint?api_key=secret", headers);
 
     assert(result.find("POST") != std::string::npos && "Should include method");
-    assert(result.find("https://api.example.com/endpoint") != std::string::npos &&
-           "Should include URL");
-    assert(result.find("api_key=<REDACTED>") != std::string::npos &&
-           "URL params should be redacted");
+    assert(result.find("https://api.example.com/endpoint") != std::string::npos
+           && "Should include URL");
+    assert(result.find("api_key=<REDACTED>") != std::string::npos
+           && "URL params should be redacted");
     assert(result.find("Content-Type") != std::string::npos && "Should include headers");
     // Authorization should not appear (default-deny policy)
 
@@ -306,8 +307,8 @@ void testUrlRedactionFragmentHandling() {
     std::string url1 = "https://api.example.com/endpoint?api_key=secret#section1";
     std::string result1 = RequestLogger::redactUrl(url1);
     assert(result1.find("#section1") != std::string::npos && "Fragment should be preserved");
-    assert(result1.find("api_key=<REDACTED>") != std::string::npos &&
-           "Should redact before fragment");
+    assert(result1.find("api_key=<REDACTED>") != std::string::npos
+           && "Should redact before fragment");
 
     // Test 2: Fragment without query params
     std::string url2 = "https://api.example.com/endpoint#section1";
@@ -329,17 +330,17 @@ void testUrlRedactionSemicolonSeparators() {
     std::string url1 =
         "https://api.example.com/endpoint?param1=value1;api_key=secret;param2=value2";
     std::string result1 = RequestLogger::redactUrl(url1);
-    assert(result1.find("api_key=<REDACTED>") != std::string::npos &&
-           "Should handle semicolon separators");
-    assert(result1.find("param1=value1") != std::string::npos &&
-           "Should preserve non-sensitive params");
+    assert(result1.find("api_key=<REDACTED>") != std::string::npos
+           && "Should handle semicolon separators");
+    assert(result1.find("param1=value1") != std::string::npos
+           && "Should preserve non-sensitive params");
 
     // Test 2: Mixed & and ; separators
     std::string url2 =
         "https://api.example.com/endpoint?param1=value1&api_key=secret;param2=value2";
     std::string result2 = RequestLogger::redactUrl(url2);
-    assert(result2.find("api_key=<REDACTED>") != std::string::npos &&
-           "Should handle mixed separators");
+    assert(result2.find("api_key=<REDACTED>") != std::string::npos
+           && "Should handle mixed separators");
 
     std::cout << "  ✓ Semicolon separator tests passed\n";
 }
@@ -377,8 +378,8 @@ void testPerformanceLargePayloads() {
     end = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
-    assert(result_headers.find("Content-Type") != result_headers.end() &&
-           "Should process large header map");
+    assert(result_headers.find("Content-Type") != result_headers.end()
+           && "Should process large header map");
     assert(duration.count() < 5000 && "Should process large headers quickly (< 5ms)");
 
     std::cout << "  ✓ Performance tests passed\n";

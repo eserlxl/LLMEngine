@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine.hpp"
+
 #include <algorithm>
 #include <ctime>
 #include <filesystem>
@@ -19,14 +20,16 @@
 using namespace LLMEngine;
 
 class TextProcessor {
-private:
+  private:
     std::unique_ptr<LLMEngine::LLMEngine> engine_;
     bool debug_mode_;
     std::string mode_;
 
-public:
-    TextProcessor(const std::string& provider_name, const std::string& api_key,
-                  const std::string& model = "", bool debug = false,
+  public:
+    TextProcessor(const std::string& provider_name,
+                  const std::string& api_key,
+                  const std::string& model = "",
+                  bool debug = false,
                   const std::string& mode = "chat")
         : debug_mode_(debug), mode_(mode) {
         try {
@@ -39,8 +42,8 @@ public:
                 {"presence_penalty", 0.0}   // No penalty for introducing concepts
             };
 
-            engine_ = std::make_unique<LLMEngine::LLMEngine>(provider_name, api_key, model,
-                                                             text_params, 24, debug);
+            engine_ = std::make_unique<LLMEngine::LLMEngine>(
+                provider_name, api_key, model, text_params, 24, debug);
             std::cout << "✓ TextProcessor initialized with " << engine_->getProviderName() << " ("
                       << (engine_->isOnlineProvider() ? "Online" : "Local") << ")"
                       << " in " << mode_ << " mode" << std::endl;
@@ -109,10 +112,10 @@ public:
         std::cout << std::string(50, '=') << std::endl;
 
         try {
-            std::string prompt = "Extract the " + std::to_string(max_keywords) +
-                                 " most important keywords from the following text. "
-                                 "Return them as a numbered list with brief explanations of why "
-                                 "each keyword is important.";
+            std::string prompt = "Extract the " + std::to_string(max_keywords)
+                                 + " most important keywords from the following text. "
+                                   "Return them as a numbered list with brief explanations of why "
+                                   "each keyword is important.";
             nlohmann::json input = {{"text", text}};
 
             AnalysisResult result = engine_->analyze(prompt, input, "keyword_extraction", mode_);
@@ -136,10 +139,10 @@ public:
         std::cout << std::string(50, '=') << std::endl;
 
         try {
-            std::string prompt = "Translate the following text to " + target_language +
-                                 ". Maintain the original meaning, tone, and style. "
-                                 "If the text is already in " +
-                                 target_language + ", provide a polished version.";
+            std::string prompt = "Translate the following text to " + target_language
+                                 + ". Maintain the original meaning, tone, and style. "
+                                   "If the text is already in "
+                                 + target_language + ", provide a polished version.";
             nlohmann::json input = {{"text", text}};
 
             AnalysisResult result = engine_->analyze(prompt, input, "translation", mode_);
@@ -192,10 +195,10 @@ public:
 
         try {
             std::string prompt =
-                "Generate " + std::to_string(num_questions) +
-                " thoughtful questions about the following text. "
-                "Include questions that test understanding, analysis, and critical thinking. "
-                "Make them specific and relevant to the content.";
+                "Generate " + std::to_string(num_questions)
+                + " thoughtful questions about the following text. "
+                  "Include questions that test understanding, analysis, and critical thinking. "
+                  "Make them specific and relevant to the content.";
             nlohmann::json input = {{"text", text}};
 
             AnalysisResult result = engine_->analyze(prompt, input, "question_generation", mode_);
@@ -250,7 +253,7 @@ public:
         }
     }
 
-private:
+  private:
     std::string readFile(const std::string& filepath) {
         std::ifstream file(filepath);
         if (!file.is_open()) {
@@ -264,9 +267,24 @@ private:
 
     std::vector<std::string> findTextFiles(const std::string& dirpath) {
         std::vector<std::string> files;
-        std::vector<std::string> extensions = {".txt", ".md",   ".rst", ".doc", ".docx", ".pdf",
-                                               ".rtf", ".odt",  ".tex", ".log", ".csv",  ".json",
-                                               ".xml", ".yaml", ".yml", ".ini", ".cfg",  ".conf"};
+        std::vector<std::string> extensions = {".txt",
+                                               ".md",
+                                               ".rst",
+                                               ".doc",
+                                               ".docx",
+                                               ".pdf",
+                                               ".rtf",
+                                               ".odt",
+                                               ".tex",
+                                               ".log",
+                                               ".csv",
+                                               ".json",
+                                               ".xml",
+                                               ".yaml",
+                                               ".yml",
+                                               ".ini",
+                                               ".cfg",
+                                               ".conf"};
 
         try {
             for (const auto& entry : std::filesystem::recursive_directory_iterator(dirpath)) {
@@ -286,7 +304,8 @@ private:
         return files;
     }
 
-    void saveToFile(const std::string& filepath, const std::string& content,
+    void saveToFile(const std::string& filepath,
+                    const std::string& content,
                     const std::string& type) {
         std::ofstream file(filepath);
         if (file.is_open()) {

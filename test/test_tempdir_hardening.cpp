@@ -8,6 +8,7 @@
 #include "LLMEngine/ITempDirProvider.hpp"
 #include "LLMEngine/LLMEngine.hpp"
 #include "LLMEngine/Logger.hpp"
+
 #include <cassert>
 #include <filesystem>
 #include <fstream>
@@ -21,7 +22,7 @@ namespace fs = std::filesystem;
 
 // Test helper to create a temporary test directory
 class TestTempDir {
-public:
+  public:
     explicit TestTempDir(const std::string& prefix = "llmengine_test_") {
         char template_path[] = "/tmp/llmengine_test_XXXXXX";
         char* dir = mkdtemp(template_path);
@@ -42,7 +43,7 @@ public:
         return path_;
     }
 
-private:
+  private:
     std::string path_;
 };
 

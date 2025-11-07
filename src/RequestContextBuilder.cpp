@@ -1,9 +1,11 @@
 #include "LLMEngine/RequestContextBuilder.hpp"
+
 #include "LLMEngine/DebugArtifactManager.hpp"
 #include "LLMEngine/IArtifactSink.hpp"
 #include "LLMEngine/IModelContext.hpp"
 #include "LLMEngine/ParameterMerger.hpp"
 #include "LLMEngine/PromptBuilder.hpp"
+
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -28,7 +30,8 @@ std::mt19937_64 process_rng = []() {
     std::random_device rd;
     std::seed_seq seed{
         static_cast<uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count()),
-        static_cast<uint64_t>(rd()), static_cast<uint64_t>(rd())};
+        static_cast<uint64_t>(rd()),
+        static_cast<uint64_t>(rd())};
     return std::mt19937_64(seed);
 }();
 
@@ -94,9 +97,11 @@ std::string generateUniqueRequestDirName(const std::filesystem::path& base) {
 }
 } // namespace
 
-RequestContext RequestContextBuilder::build(const IModelContext& context, std::string_view prompt,
+RequestContext RequestContextBuilder::build(const IModelContext& context,
+                                            std::string_view prompt,
                                             const nlohmann::json& input,
-                                            std::string_view analysis_type, std::string_view mode,
+                                            std::string_view analysis_type,
+                                            std::string_view mode,
                                             bool prepend_terse_instruction) {
     RequestContext ctx;
     ctx.analysisType = std::string(analysis_type);
@@ -142,9 +147,10 @@ RequestContext RequestContextBuilder::build(const IModelContext& context, std::s
     if (ctx.writeDebugFiles && context.getArtifactSink()) {
         context.prepareTempDirectory(); // Ensure base directory exists (cached, idempotent)
         auto loggerPtr = context.getLogger() ? context.getLogger().get() : nullptr;
-        ctx.debugManager =
-            context.getArtifactSink()->create(ctx.requestTmpDir, context.getTempDirectory(),
-                                              context.getLogRetentionHours(), loggerPtr);
+        ctx.debugManager = context.getArtifactSink()->create(ctx.requestTmpDir,
+                                                             context.getTempDirectory(),
+                                                             context.getLogRetentionHours(),
+                                                             loggerPtr);
         if (ctx.debugManager) {
             ctx.debugManager->ensureRequestDirectory();
         }

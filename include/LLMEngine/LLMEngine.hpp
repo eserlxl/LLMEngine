@@ -17,6 +17,7 @@
 #include "LLMEngine/LLMEngineExport.hpp"
 #include "LLMEngine/Logger.hpp"
 #include "LLMEngine/PromptBuilder.hpp"
+
 #include <functional>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -71,7 +72,7 @@ namespace LLMEngine {
  * ```
  */
 class LLMENGINE_EXPORT LLMEngine : public IModelContext {
-public:
+  public:
     // Constructor for API-based providers
     /**
      * @brief Construct an engine for an online provider.
@@ -82,9 +83,12 @@ public:
      * @param log_retention_hours Hours to keep debug artifacts.
      * @param debug Enable response artifact logging.
      */
-    LLMEngine(::LLMEngineAPI::ProviderType provider_type, std::string_view api_key,
-              std::string_view model, const nlohmann::json& model_params = {},
-              int log_retention_hours = 24, bool debug = false);
+    LLMEngine(::LLMEngineAPI::ProviderType provider_type,
+              std::string_view api_key,
+              std::string_view model,
+              const nlohmann::json& model_params = {},
+              int log_retention_hours = 24,
+              bool debug = false);
 
     // Constructor using config file
     /**
@@ -99,9 +103,12 @@ public:
      *                       uses APIConfigManager::getInstance() singleton. This parameter
      *                       enables dependency injection for testing and custom configurations.
      */
-    LLMEngine(std::string_view provider_name, std::string_view api_key = "",
-              std::string_view model = "", const nlohmann::json& model_params = {},
-              int log_retention_hours = 24, bool debug = false,
+    LLMEngine(std::string_view provider_name,
+              std::string_view api_key = "",
+              std::string_view model = "",
+              const nlohmann::json& model_params = {},
+              int log_retention_hours = 24,
+              bool debug = false,
               const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager = nullptr);
 
     // Dependency injection constructor for tests and advanced usage
@@ -124,7 +131,8 @@ public:
      *                          thread-safe if shared across multiple LLMEngine instances.
      */
     LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
-              const nlohmann::json& model_params = {}, int log_retention_hours = 24,
+              const nlohmann::json& model_params = {},
+              int log_retention_hours = 24,
               bool debug = false,
               const std::shared_ptr<ITempDirProvider>& temp_dir_provider = nullptr);
 
@@ -183,7 +191,8 @@ public:
      * auto result = engine.analyze("Review this code", input, "code_review", "chat", false);
      * ```
      */
-    [[nodiscard]] AnalysisResult analyze(std::string_view prompt, const nlohmann::json& input,
+    [[nodiscard]] AnalysisResult analyze(std::string_view prompt,
+                                         const nlohmann::json& input,
                                          std::string_view analysis_type,
                                          std::string_view mode = "chat",
                                          bool prepend_terse_instruction = true) const;
@@ -313,7 +322,7 @@ public:
         }
     }
 
-private:
+  private:
     void initializeAPIClient();
     void ensureSecureTmpDir() const;
 

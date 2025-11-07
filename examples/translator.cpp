@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine.hpp"
+
 #include <algorithm>
 #include <ctime>
 #include <filesystem>
@@ -20,7 +21,7 @@
 using namespace LLMEngine;
 
 class Translator {
-private:
+  private:
     std::unique_ptr<LLMEngine::LLMEngine> engine_;
     bool debug_mode_;
     std::string mode_;
@@ -28,9 +29,12 @@ private:
     // Language mapping for better user experience
     std::map<std::string, std::string> language_map_;
 
-public:
-    Translator(const std::string& provider_name, const std::string& api_key,
-               const std::string& model = "", bool debug = false, const std::string& mode = "chat")
+  public:
+    Translator(const std::string& provider_name,
+               const std::string& api_key,
+               const std::string& model = "",
+               bool debug = false,
+               const std::string& mode = "chat")
         : debug_mode_(debug), mode_(mode) {
         try {
             // Configure parameters optimized for translation
@@ -42,8 +46,8 @@ public:
                 {"presence_penalty", 0.0}   // No penalty for introducing concepts
             };
 
-            engine_ = std::make_unique<LLMEngine::LLMEngine>(provider_name, api_key, model,
-                                                             translation_params, 24, debug);
+            engine_ = std::make_unique<LLMEngine::LLMEngine>(
+                provider_name, api_key, model, translation_params, 24, debug);
             std::cout << "✓ Translator initialized with " << engine_->getProviderName() << " ("
                       << (engine_->isOnlineProvider() ? "Online" : "Local") << ")"
                       << " in " << mode_ << " mode" << std::endl;
@@ -55,7 +59,8 @@ public:
         }
     }
 
-    void translateText(const std::string& text, const std::string& target_language,
+    void translateText(const std::string& text,
+                       const std::string& target_language,
                        const std::string& source_language = "auto") {
         if (text.empty()) {
             std::cerr << "❌ No text provided for translation!" << std::endl;
@@ -83,7 +88,8 @@ public:
         }
     }
 
-    void translateFile(const std::string& filepath, const std::string& target_language,
+    void translateFile(const std::string& filepath,
+                       const std::string& target_language,
                        const std::string& output_file = "") {
         if (!std::filesystem::exists(filepath)) {
             std::cerr << "❌ File not found: " << filepath << std::endl;
@@ -107,7 +113,8 @@ public:
         }
     }
 
-    void batchTranslate(const std::string& input_dir, const std::string& target_language,
+    void batchTranslate(const std::string& input_dir,
+                        const std::string& target_language,
                         const std::string& output_dir = "") {
         if (!std::filesystem::exists(input_dir) || !std::filesystem::is_directory(input_dir)) {
             std::cerr << "❌ Directory not found: " << input_dir << std::endl;
@@ -131,11 +138,11 @@ public:
             std::string content = readFile(file);
             if (!content.empty()) {
                 std::string output_file = output_dir.empty()
-                                              ? std::filesystem::path(file).stem().string() + "_" +
-                                                    target_language + ".txt"
-                                              : output_dir + "/" +
-                                                    std::filesystem::path(file).stem().string() +
-                                                    "_" + target_language + ".txt";
+                                              ? std::filesystem::path(file).stem().string() + "_"
+                                                    + target_language + ".txt"
+                                              : output_dir + "/"
+                                                    + std::filesystem::path(file).stem().string()
+                                                    + "_" + target_language + ".txt";
 
                 translateText(content, target_language);
                 saveTranslation(content, target_language, output_file);
@@ -213,7 +220,7 @@ public:
         std::cout << std::endl;
     }
 
-private:
+  private:
     void initializeLanguageMap() {
         language_map_ = {{"en", "English"},     {"es", "Spanish"},    {"fr", "French"},
                          {"de", "German"},      {"it", "Italian"},    {"pt", "Portuguese"},
@@ -284,8 +291,8 @@ private:
 
     std::vector<std::string> findTextFiles(const std::string& dirpath) {
         std::vector<std::string> files;
-        std::vector<std::string> extensions = {".txt",  ".md",  ".rst", ".doc",
-                                               ".docx", ".rtf", ".odt", ".tex"};
+        std::vector<std::string> extensions = {
+            ".txt", ".md", ".rst", ".doc", ".docx", ".rtf", ".odt", ".tex"};
 
         try {
             for (const auto& entry : std::filesystem::recursive_directory_iterator(dirpath)) {
@@ -305,7 +312,8 @@ private:
         return files;
     }
 
-    void saveTranslation(const std::string& original_text, const std::string& target_language,
+    void saveTranslation(const std::string& original_text,
+                         const std::string& target_language,
                          const std::string& output_file) {
         std::ofstream file(output_file);
         if (file.is_open()) {

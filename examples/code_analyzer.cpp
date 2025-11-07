@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine.hpp"
+
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -17,14 +18,16 @@
 using namespace LLMEngine;
 
 class CodeAnalyzer {
-private:
+  private:
     std::unique_ptr<LLMEngine::LLMEngine> engine_;
     bool debug_mode_;
     std::string mode_;
 
-public:
-    CodeAnalyzer(const std::string& provider_name, const std::string& api_key,
-                 const std::string& model = "", bool debug = false,
+  public:
+    CodeAnalyzer(const std::string& provider_name,
+                 const std::string& api_key,
+                 const std::string& model = "",
+                 bool debug = false,
                  const std::string& mode = "chat")
         : debug_mode_(debug), mode_(mode) {
         try {
@@ -39,8 +42,8 @@ public:
 
             // Use a more capable model for code analysis
             std::string analysis_model = model.empty() ? "qwen-max" : model;
-            engine_ = std::make_unique<LLMEngine::LLMEngine>(provider_name, api_key, analysis_model,
-                                                             analysis_params, 24, debug);
+            engine_ = std::make_unique<LLMEngine::LLMEngine>(
+                provider_name, api_key, analysis_model, analysis_params, 24, debug);
             std::cout << "✓ CodeAnalyzer initialized with " << engine_->getProviderName() << " ("
                       << (engine_->isOnlineProvider() ? "Online" : "Local") << ")"
                       << " in " << mode_ << " mode" << std::endl;
@@ -141,7 +144,7 @@ public:
         }
     }
 
-private:
+  private:
     std::string readFile(const std::string& filepath) {
         std::ifstream file(filepath);
         if (!file.is_open()) {
@@ -229,33 +232,33 @@ private:
 
     std::string buildAnalysisPrompt(const std::string& analysis_type, const std::string& language) {
         if (analysis_type == "security") {
-            return "Perform a comprehensive security analysis of this " + language +
-                   " code. Look for vulnerabilities, security anti-patterns, input validation "
-                   "issues, authentication/authorization problems, and suggest security "
-                   "improvements.";
+            return "Perform a comprehensive security analysis of this " + language
+                   + " code. Look for vulnerabilities, security anti-patterns, input validation "
+                     "issues, authentication/authorization problems, and suggest security "
+                     "improvements.";
         } else if (analysis_type == "performance") {
-            return "Analyze this " + language +
-                   " code for performance issues. Identify bottlenecks, inefficient algorithms, "
-                   "memory leaks, resource management problems, and suggest optimizations.";
+            return "Analyze this " + language
+                   + " code for performance issues. Identify bottlenecks, inefficient algorithms, "
+                     "memory leaks, resource management problems, and suggest optimizations.";
         } else if (analysis_type == "style") {
-            return "Review this " + language +
-                   " code for style and best practices. Check naming conventions, code "
-                   "organization, documentation, readability, and suggest improvements following " +
-                   language + " best practices.";
+            return "Review this " + language
+                   + " code for style and best practices. Check naming conventions, code "
+                     "organization, documentation, readability, and suggest improvements following "
+                   + language + " best practices.";
         } else if (analysis_type == "bugs") {
-            return "Find bugs and potential issues in this " + language +
-                   " code. Look for logic errors, edge cases, null pointer dereferences, array "
-                   "bounds issues, and other common programming mistakes.";
+            return "Find bugs and potential issues in this " + language
+                   + " code. Look for logic errors, edge cases, null pointer dereferences, array "
+                     "bounds issues, and other common programming mistakes.";
         } else { // comprehensive
-            return "Perform a comprehensive code review of this " + language +
-                   " code. Analyze:\n"
-                   "1. Code quality and style\n"
-                   "2. Potential bugs and issues\n"
-                   "3. Security vulnerabilities\n"
-                   "4. Performance considerations\n"
-                   "5. Best practices adherence\n"
-                   "6. Maintainability and readability\n"
-                   "Provide specific recommendations for improvement.";
+            return "Perform a comprehensive code review of this " + language
+                   + " code. Analyze:\n"
+                     "1. Code quality and style\n"
+                     "2. Potential bugs and issues\n"
+                     "3. Security vulnerabilities\n"
+                     "4. Performance considerations\n"
+                     "5. Best practices adherence\n"
+                     "6. Maintainability and readability\n"
+                     "Provide specific recommendations for improvement.";
         }
     }
 
@@ -284,7 +287,8 @@ private:
         return files;
     }
 
-    void saveAnalysis(const std::string& filepath, const std::string& analysis,
+    void saveAnalysis(const std::string& filepath,
+                      const std::string& analysis,
                       const std::string& analysis_type) {
         std::string filename =
             std::filesystem::path(filepath).stem().string() + "_analysis_" + analysis_type + ".txt";

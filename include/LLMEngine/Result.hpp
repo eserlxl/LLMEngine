@@ -10,9 +10,8 @@ namespace LLMEngine {
 
 // A tiny Expected-like result type for non-exception error propagation.
 // Header-only; does not impose ABI changes on consumers.
-template <typename T, typename E>
-class Result {
-public:
+template <typename T, typename E> class Result {
+  public:
     static Result ok(T value) {
         return Result(std::in_place_index<0>, std::move(value));
     }
@@ -74,16 +73,14 @@ public:
      * @param f Function to apply to the value
      * @return Result with mapped value, or original error
      */
-    template <typename U, typename F>
-    Result<U, E> map(F&& f) const& {
+    template <typename U, typename F> Result<U, E> map(F&& f) const& {
         if (hasValue()) {
             return Result<U, E>::ok(f(value()));
         }
         return Result<U, E>::err(error());
     }
 
-    template <typename U, typename F>
-    Result<U, E> map(F&& f) && {
+    template <typename U, typename F> Result<U, E> map(F&& f) && {
         if (hasValue()) {
             return Result<U, E>::ok(f(std::move(value())));
         }
@@ -96,16 +93,14 @@ public:
      * @param f Function that takes value and returns Result<U, E>
      * @return Result from f, or original error
      */
-    template <typename U, typename F>
-    Result<U, E> andThen(F&& f) const& {
+    template <typename U, typename F> Result<U, E> andThen(F&& f) const& {
         if (hasValue()) {
             return f(value());
         }
         return Result<U, E>::err(error());
     }
 
-    template <typename U, typename F>
-    Result<U, E> andThen(F&& f) && {
+    template <typename U, typename F> Result<U, E> andThen(F&& f) && {
         if (hasValue()) {
             return f(std::move(value()));
         }
@@ -123,9 +118,8 @@ public:
         return hasValue() ? std::move(value()) : default_value;
     }
 
-private:
-    template <std::size_t I>
-    struct InPlaceTag {};
+  private:
+    template <std::size_t I> struct InPlaceTag {};
 
     template <std::size_t I, typename... Args>
     explicit Result(std::in_place_index_t<I>, Args&&... args) : which_(I) {
@@ -174,7 +168,7 @@ private:
         return *this;
     }
 
-public:
+  public:
     ~Result() {
         if (which_ == 0) {
             v_.value.~T();

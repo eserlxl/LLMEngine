@@ -6,6 +6,7 @@
 // fuzz_response_parsing Or use CMake with ENABLE_FUZZ=ON (see test/CMakeLists.txt)
 
 #include "LLMEngine/ResponseParser.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <string>

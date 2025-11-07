@@ -5,6 +5,7 @@
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/DebugArtifactManager.hpp"
 #include "LLMEngine/Utils.hpp"
+
 #include <cassert>
 #include <chrono>
 #include <filesystem>
@@ -68,8 +69,8 @@ int main() {
         const auto now = std::chrono::system_clock::now();
         const auto oldTime = now - std::chrono::hours(48);
         auto toFileClock = std::chrono::time_point_cast<std::filesystem::file_time_type::duration>(
-            oldTime - std::chrono::system_clock::now() +
-            std::filesystem::file_time_type::clock::now());
+            oldTime - std::chrono::system_clock::now()
+            + std::filesystem::file_time_type::clock::now());
         std::filesystem::last_write_time(oldPath, toFileClock, ec);
 
         DebugArtifacts::cleanupOld(baseDir, /*hours*/ 24);
@@ -143,8 +144,8 @@ int main() {
         assert(mgr2.writeAnalysisArtifacts("test/../analysis", "think", "content"));
         // Should sanitize to safe filename
         const std::string sanitizedPath = requestDir2 + "/test___analysis_think.txt";
-        assert(fs::exists(sanitizedPath, ec) ||
-               fs::exists(requestDir2 + "/analysis_think.txt", ec));
+        assert(fs::exists(sanitizedPath, ec)
+               || fs::exists(requestDir2 + "/analysis_think.txt", ec));
 
         std::cout << "✓ DebugArtifactManager sanitization test passed\n";
     }

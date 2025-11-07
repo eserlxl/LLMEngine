@@ -7,6 +7,7 @@
 
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
+
 #include <nlohmann/json.hpp>
 #include <string_view>
 
@@ -20,7 +21,7 @@ struct Logger; // Forward declaration
  * are present. This service encapsulates parameter merging logic.
  */
 class LLMENGINE_EXPORT ParameterMerger {
-public:
+  public:
     /**
      * @brief Merge base model parameters with input overrides.
      *
@@ -49,7 +50,8 @@ public:
      * ```
      */
     [[nodiscard]] static nlohmann::json merge(const nlohmann::json& base_params,
-                                              const nlohmann::json& input, std::string_view mode);
+                                              const nlohmann::json& input,
+                                              std::string_view mode);
 
     /**
      * @brief Merge into an output object to avoid copies when unchanged.
@@ -77,8 +79,11 @@ public:
      * }
      * ```
      */
-    static bool mergeInto(const nlohmann::json& base_params, const nlohmann::json& input,
-                          std::string_view mode, nlohmann::json& out, Logger* logger = nullptr);
+    static bool mergeInto(const nlohmann::json& base_params,
+                          const nlohmann::json& input,
+                          std::string_view mode,
+                          nlohmann::json& out,
+                          Logger* logger = nullptr);
 };
 
 } // namespace LLMEngine

@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine.hpp"
+
 #include <algorithm>
 #include <cstdlib>
 #include <ctime>
@@ -21,7 +22,7 @@
 using namespace LLMEngine;
 
 class ImageGenerator {
-private:
+  private:
     std::unique_ptr<LLMEngine::LLMEngine> engine_;
     bool debug_mode_;
     std::string output_dir_;
@@ -29,9 +30,11 @@ private:
     // Image type configurations
     std::map<std::string, std::string> image_types_;
 
-public:
-    ImageGenerator(const std::string& provider_name, const std::string& api_key,
-                   const std::string& model = "", bool debug = false)
+  public:
+    ImageGenerator(const std::string& provider_name,
+                   const std::string& api_key,
+                   const std::string& model = "",
+                   bool debug = false)
         : debug_mode_(debug) {
         try {
             // Configure parameters optimized for creative image generation
@@ -44,8 +47,8 @@ public:
                 {"think", true}             // Enable chain of thought reasoning
             };
 
-            engine_ = std::make_unique<LLMEngine::LLMEngine>(provider_name, api_key, model,
-                                                             image_params, 24, debug);
+            engine_ = std::make_unique<LLMEngine::LLMEngine>(
+                provider_name, api_key, model, image_params, 24, debug);
             output_dir_ = "generated_images";
             std::filesystem::create_directories(output_dir_);
 
@@ -60,8 +63,10 @@ public:
         }
     }
 
-    void generateImage(const std::string& description, const std::string& image_type = "artwork",
-                       const std::string& format = "png", const std::string& filename = "") {
+    void generateImage(const std::string& description,
+                       const std::string& image_type = "artwork",
+                       const std::string& format = "png",
+                       const std::string& filename = "") {
         std::cout << "\n🎨 Generating " << image_type << " image from description: \""
                   << description << "\"" << std::endl;
 
@@ -143,7 +148,8 @@ public:
         }
     }
 
-    void improveSVG(const std::string& svg_path, const std::string& improvement_prompt,
+    void improveSVG(const std::string& svg_path,
+                    const std::string& improvement_prompt,
                     const std::string& output_filename = "") {
         std::cout << "\n🔧 Improving SVG file: " << svg_path << std::endl;
         std::cout << "📝 Improvement prompt: \"" << improvement_prompt << "\"" << std::endl;
@@ -178,8 +184,8 @@ public:
             std::string improved_svg_content = result.content;
 
             // Process the improved SVG response
-            processImprovedSVGResponse(improved_svg_content, svg_path, improvement_prompt,
-                                       output_filename);
+            processImprovedSVGResponse(
+                improved_svg_content, svg_path, improvement_prompt, output_filename);
 
             std::cout << "🎉 SVG improvement completed!" << std::endl;
             std::cout << "📁 Output directory: " << output_dir_ << std::endl;
@@ -232,7 +238,7 @@ public:
         std::cout << std::endl;
     }
 
-private:
+  private:
     void initializeImageTypes() {
         image_types_["artwork"] = "General artistic illustrations and paintings";
         image_types_["logo"] = "Professional logos and brand designs";
@@ -344,7 +350,8 @@ private:
         return prompt.str();
     }
 
-    void processImprovedSVGResponse(const std::string& content, const std::string& original_path,
+    void processImprovedSVGResponse(const std::string& content,
+                                    const std::string& original_path,
                                     const std::string& improvement_prompt,
                                     const std::string& filename) {
         std::cout << "📋 Generated improved SVG content:" << std::endl;
@@ -366,8 +373,9 @@ private:
 
         // If filename is provided and contains path, use it directly; otherwise use output
         // directory
-        if (!filename.empty() &&
-            (filename.find('/') != std::string::npos || filename.find('\\') != std::string::npos)) {
+        if (!filename.empty()
+            && (filename.find('/') != std::string::npos
+                || filename.find('\\') != std::string::npos)) {
             output_path = filename;
         } else {
             output_path = output_dir_ + "/" + output_filename;
@@ -405,13 +413,13 @@ private:
             std::transform(lower_word.begin(), lower_word.end(), lower_word.begin(), ::tolower);
 
             // Skip common words that don't add meaning
-            if (lower_word != "a" && lower_word != "an" && lower_word != "the" &&
-                lower_word != "and" && lower_word != "or" && lower_word != "but" &&
-                lower_word != "with" && lower_word != "for" && lower_word != "of" &&
-                lower_word != "in" && lower_word != "on" && lower_word != "at" &&
-                lower_word != "to" && lower_word != "from" && lower_word != "by" &&
-                lower_word != "make" && lower_word != "add" && lower_word != "change" &&
-                lower_word != "improve" && lower_word != "enhance" && lower_word != "update") {
+            if (lower_word != "a" && lower_word != "an" && lower_word != "the"
+                && lower_word != "and" && lower_word != "or" && lower_word != "but"
+                && lower_word != "with" && lower_word != "for" && lower_word != "of"
+                && lower_word != "in" && lower_word != "on" && lower_word != "at"
+                && lower_word != "to" && lower_word != "from" && lower_word != "by"
+                && lower_word != "make" && lower_word != "add" && lower_word != "change"
+                && lower_word != "improve" && lower_word != "enhance" && lower_word != "update") {
                 words.push_back(word);
             }
         }
@@ -446,8 +454,10 @@ private:
         return filename_ss.str();
     }
 
-    void processSVGResponse(const std::string& content, const std::string& description,
-                            const std::string& image_type, const std::string& filename) {
+    void processSVGResponse(const std::string& content,
+                            const std::string& description,
+                            const std::string& image_type,
+                            const std::string& filename) {
         std::cout << "📋 Generated SVG content:" << std::endl;
         std::cout << content << std::endl;
 
@@ -466,8 +476,9 @@ private:
 
         // If filename is provided and contains path, use it directly; otherwise use output
         // directory
-        if (!filename.empty() &&
-            (filename.find('/') != std::string::npos || filename.find('\\') != std::string::npos)) {
+        if (!filename.empty()
+            && (filename.find('/') != std::string::npos
+                || filename.find('\\') != std::string::npos)) {
             output_path = filename;
         } else {
             output_path = output_dir_ + "/" + output_filename;
@@ -489,13 +500,13 @@ private:
 
     bool isSVGContent(const std::string& content) {
         std::string lower_content = content;
-        std::transform(lower_content.begin(), lower_content.end(), lower_content.begin(),
-                       ::tolower);
+        std::transform(
+            lower_content.begin(), lower_content.end(), lower_content.begin(), ::tolower);
 
-        return (lower_content.find("<?xml") != std::string::npos &&
-                lower_content.find("<svg") != std::string::npos) ||
-               (lower_content.find("<svg") != std::string::npos &&
-                lower_content.find("</svg>") != std::string::npos);
+        return (lower_content.find("<?xml") != std::string::npos
+                && lower_content.find("<svg") != std::string::npos)
+               || (lower_content.find("<svg") != std::string::npos
+                   && lower_content.find("</svg>") != std::string::npos);
     }
 
     bool isASCIIArt(const std::string& content) {
@@ -509,8 +520,8 @@ private:
             total_lines++;
             if (line.length() > 10) { // Reasonable length for ASCII art
                 // Check for common ASCII art characters
-                if (line.find_first_of("█▄▀▐▌▀▄█▓▒░┌┐└┘├┤┬┴┼╔╗╚╝╠╣╦╩╬") != std::string::npos ||
-                    line.find_first_of("+-|/\\*#@$%&") != std::string::npos) {
+                if (line.find_first_of("█▄▀▐▌▀▄█▓▒░┌┐└┘├┤┬┴┼╔╗╚╝╠╣╦╩╬") != std::string::npos
+                    || line.find_first_of("+-|/\\*#@$%&") != std::string::npos) {
                     lines_with_patterns++;
                 }
             }
@@ -527,9 +538,9 @@ private:
         trimmed.erase(trimmed.find_last_not_of(" \t\n\r") + 1);
 
         // Check for data URL format
-        if (trimmed.find("data:image/png;base64,") != std::string::npos ||
-            trimmed.find("data:image/jpeg;base64,") != std::string::npos ||
-            trimmed.find("data:image/jpg;base64,") != std::string::npos) {
+        if (trimmed.find("data:image/png;base64,") != std::string::npos
+            || trimmed.find("data:image/jpeg;base64,") != std::string::npos
+            || trimmed.find("data:image/jpg;base64,") != std::string::npos) {
             return true;
         }
 
@@ -557,8 +568,8 @@ private:
         // Check for data URL format
         if (trimmed.find("data:image/png;base64,") != std::string::npos) {
             return "png";
-        } else if (trimmed.find("data:image/jpeg;base64,") != std::string::npos ||
-                   trimmed.find("data:image/jpg;base64,") != std::string::npos) {
+        } else if (trimmed.find("data:image/jpeg;base64,") != std::string::npos
+                   || trimmed.find("data:image/jpg;base64,") != std::string::npos) {
             return "jpeg";
         }
 
@@ -581,8 +592,10 @@ private:
         return trimmed;
     }
 
-    void processBase64ImageContent(const std::string& content, const std::string& description,
-                                   const std::string& image_type, const std::string& filename) {
+    void processBase64ImageContent(const std::string& content,
+                                   const std::string& description,
+                                   const std::string& image_type,
+                                   const std::string& filename) {
         std::cout << "🎨 Detected base64 image content" << std::endl;
 
         // Detect the image format
@@ -647,8 +660,10 @@ private:
         return decoded;
     }
 
-    void processASCIIArt(const std::string& content, const std::string& description,
-                         const std::string& image_type, const std::string& filename) {
+    void processASCIIArt(const std::string& content,
+                         const std::string& description,
+                         const std::string& image_type,
+                         const std::string& filename) {
         std::cout << "🎨 Detected ASCII art content" << std::endl;
 
         // Generate filename if not provided
@@ -665,8 +680,10 @@ private:
         }
     }
 
-    void processTextDescription(const std::string& content, const std::string& description,
-                                const std::string& image_type, const std::string& filename) {
+    void processTextDescription(const std::string& content,
+                                const std::string& description,
+                                const std::string& image_type,
+                                const std::string& filename) {
         std::cout << "📝 Detected text description content" << std::endl;
 
         // Generate filename if not provided
@@ -685,7 +702,8 @@ private:
         }
     }
 
-    std::string generateFilename(const std::string& description, const std::string& image_type,
+    std::string generateFilename(const std::string& description,
+                                 const std::string& image_type,
                                  const std::string& format) {
         // Extract key words from description
         std::stringstream ss(description);
@@ -699,13 +717,13 @@ private:
             std::transform(lower_word.begin(), lower_word.end(), lower_word.begin(), ::tolower);
 
             // Skip common words that don't add meaning
-            if (lower_word != "a" && lower_word != "an" && lower_word != "the" &&
-                lower_word != "and" && lower_word != "or" && lower_word != "but" &&
-                lower_word != "with" && lower_word != "for" && lower_word != "of" &&
-                lower_word != "in" && lower_word != "on" && lower_word != "at" &&
-                lower_word != "to" && lower_word != "from" && lower_word != "by" &&
-                lower_word != "image" && lower_word != "picture" && lower_word != "design" &&
-                lower_word != "artwork" && lower_word != "illustration") {
+            if (lower_word != "a" && lower_word != "an" && lower_word != "the"
+                && lower_word != "and" && lower_word != "or" && lower_word != "but"
+                && lower_word != "with" && lower_word != "for" && lower_word != "of"
+                && lower_word != "in" && lower_word != "on" && lower_word != "at"
+                && lower_word != "to" && lower_word != "from" && lower_word != "by"
+                && lower_word != "image" && lower_word != "picture" && lower_word != "design"
+                && lower_word != "artwork" && lower_word != "illustration") {
                 words.push_back(word);
             }
         }
@@ -779,12 +797,13 @@ private:
 
     bool isValidSVG(const std::string& content) {
         // Basic SVG validation
-        return content.find("<?xml") != std::string::npos &&
-               content.find("<svg") != std::string::npos &&
-               content.find("</svg>") != std::string::npos;
+        return content.find("<?xml") != std::string::npos
+               && content.find("<svg") != std::string::npos
+               && content.find("</svg>") != std::string::npos;
     }
 
-    void convertToPNG(const std::string& svg_path, const std::string& png_path,
+    void convertToPNG(const std::string& svg_path,
+                      const std::string& png_path,
                       bool keep_svg = false) {
         // Use ImageMagick to convert SVG to PNG
         std::string convert_cmd = "convert " + svg_path + " " + png_path;
@@ -1033,8 +1052,8 @@ int main(int argc, char* argv[]) {
                         improvement_prompt = prompt_buffer.str();
 
                         // Remove trailing whitespace
-                        improvement_prompt.erase(improvement_prompt.find_last_not_of(" \t\n\r") +
-                                                 1);
+                        improvement_prompt.erase(improvement_prompt.find_last_not_of(" \t\n\r")
+                                                 + 1);
 
                         if (improvement_prompt.empty()) {
                             std::cerr << "❌ Improvement prompt file is empty: " << prompt_file

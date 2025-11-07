@@ -7,6 +7,7 @@
 
 #include "../src/ChatCompletionRequestHelper.hpp"
 #include "LLMEngine/Constants.hpp"
+
 #include <cassert>
 #include <iostream>
 #include <nlohmann/json.hpp>

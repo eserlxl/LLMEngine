@@ -7,6 +7,7 @@
 
 #include "LLMEngine/LLMEngine.hpp"
 #include "support/FakeAPIClient.hpp"
+
 #include <cassert>
 #include <iostream>
 
@@ -16,7 +17,9 @@ using namespace LLMEngine;
 int main() {
     // Construct with DI client
     auto fake = std::make_unique<FakeAPIClient>(ProviderType::OPENAI, "FakeOpenAI");
-    LLMEngine::LLMEngine engine(std::move(fake), /*model_params*/ {}, /*log_retention_hours*/ 1,
+    LLMEngine::LLMEngine engine(std::move(fake),
+                                /*model_params*/ {},
+                                /*log_retention_hours*/ 1,
                                 /*debug*/ false);
 
     // Smoke test analyze (uses FakeAPIClient)

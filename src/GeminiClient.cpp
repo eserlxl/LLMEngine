@@ -9,6 +9,7 @@
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/HttpStatus.hpp"
+
 #include <nlohmann/json.hpp>
 
 namespace LLMEngineAPI {
@@ -21,7 +22,8 @@ GeminiClient::GeminiClient(const std::string& api_key, const std::string& model)
                        {"top_p", ::LLMEngine::Constants::DefaultValues::TOP_P}};
 }
 
-APIResponse GeminiClient::sendRequest(std::string_view prompt, const nlohmann::json& input,
+APIResponse GeminiClient::sendRequest(std::string_view prompt,
+                                      const nlohmann::json& input,
                                       const nlohmann::json& params) const {
     APIResponse response;
     response.success = false;
@@ -36,8 +38,8 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt, const nlohmann::j
 
         // Compose user content; prepend optional system_prompt
         std::string user_text;
-        if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)) &&
-            input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)].is_string()) {
+        if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))
+            && input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)].is_string()) {
             user_text += input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
                              .get<std::string>();
             if (!user_text.empty() && user_text.back() != '\n')
@@ -51,9 +53,10 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt, const nlohmann::j
              nlohmann::json::array({nlohmann::json{
                  {"role", "user"},
                  {"parts", nlohmann::json::array({nlohmann::json{{"text", user_text}}})}}})},
-            {"generationConfig", nlohmann::json{{"temperature", request_params["temperature"]},
-                                                {"maxOutputTokens", request_params["max_tokens"]},
-                                                {"topP", request_params["top_p"]}}}};
+            {"generationConfig",
+             nlohmann::json{{"temperature", request_params["temperature"]},
+                            {"maxOutputTokens", request_params["max_tokens"]},
+                            {"topP", request_params["top_p"]}}}};
 
         // Get timeout from params or use config default
         int timeout_seconds = 0;
@@ -82,7 +85,8 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt, const nlohmann::j
                                                {"x-goog-api-key", api_key_}};
         maybeLogRequest("POST", url, hdr);
         cpr::Response cpr_response = sendWithRetries(rs, [&]() {
-            return cpr::Post(cpr::Url{url}, cpr::Header{hdr.begin(), hdr.end()},
+            return cpr::Post(cpr::Url{url},
+                             cpr::Header{hdr.begin(), hdr.end()},
                              cpr::Body{payload.dump()},
                              cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
                              cpr::VerifySsl{verify_ssl});
@@ -97,13 +101,13 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt, const nlohmann::j
             } else {
                 try {
                     response.raw_response = nlohmann::json::parse(cpr_response.text);
-                    if (response.raw_response.contains("candidates") &&
-                        response.raw_response["candidates"].is_array() &&
-                        !response.raw_response["candidates"].empty()) {
+                    if (response.raw_response.contains("candidates")
+                        && response.raw_response["candidates"].is_array()
+                        && !response.raw_response["candidates"].empty()) {
                         const auto& cand = response.raw_response["candidates"][0];
                         std::string aggregated;
-                        if (cand.contains("content") && cand["content"].contains("parts") &&
-                            cand["content"]["parts"].is_array()) {
+                        if (cand.contains("content") && cand["content"].contains("parts")
+                            && cand["content"]["parts"].is_array()) {
                             for (const auto& part : cand["content"]["parts"]) {
                                 if (part.contains("text") && part["text"].is_string()) {
                                     aggregated += part["text"].get<std::string>();
@@ -129,8 +133,8 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt, const nlohmann::j
         } else {
             response.error_message =
                 "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
-            if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED ||
-                cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
+            if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
+                || cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
                 response.error_code = LLMEngine::LLMEngineErrorCode::Auth;
             } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
                 response.error_code = LLMEngine::LLMEngineErrorCode::RateLimited;

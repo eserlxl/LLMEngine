@@ -9,6 +9,7 @@
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/LLMEngineExport.hpp"
 #include "LLMEngine/Logger.hpp"
+
 #include <memory>
 #include <string>
 #include <string_view>
@@ -60,7 +61,7 @@ namespace LLMEngine {
  * ```
  */
 class LLMENGINE_EXPORT ProviderBootstrap {
-public:
+  public:
     /**
      * @brief Result of provider bootstrap process.
      */
@@ -87,7 +88,9 @@ public:
      * @throws std::runtime_error if provider not found or configuration invalid.
      */
     static BootstrapResult bootstrap(
-        std::string_view provider_name, std::string_view api_key = "", std::string_view model = "",
+        std::string_view provider_name,
+        std::string_view api_key = "",
+        std::string_view model = "",
         const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager = nullptr,
         Logger* logger = nullptr);
 
@@ -118,7 +121,7 @@ public:
      */
     static std::string getApiKeyEnvVarName(::LLMEngineAPI::ProviderType provider_type);
 
-private:
+  private:
     ProviderBootstrap() = delete; // Static class, no instances
 };
 

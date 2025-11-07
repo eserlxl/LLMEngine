@@ -7,6 +7,7 @@
 
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
+
 #include <map>
 #include <string>
 #include <string_view>
@@ -24,7 +25,7 @@ enum class LogLevel;
  * to prevent accidental credential leakage in logs.
  */
 class LLMENGINE_EXPORT RequestLogger {
-public:
+  public:
     /**
      * @brief Redact sensitive query parameters from a URL.
      *
@@ -58,7 +59,8 @@ public:
      * @param headers Request headers
      * @return Safe log message string with redactions applied
      */
-    static std::string formatRequest(std::string_view method, std::string_view url,
+    static std::string formatRequest(std::string_view method,
+                                     std::string_view url,
                                      const std::map<std::string, std::string>& headers);
 
     /**
@@ -96,7 +98,7 @@ public:
      */
     static void logSafe(Logger* logger, LogLevel level, std::string_view message);
 
-private:
+  private:
     // Check if a header name is sensitive (case-insensitive)
     // Uses O(1) hash lookup internally
     static bool isSensitiveHeader(std::string_view header_name);

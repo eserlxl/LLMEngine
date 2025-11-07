@@ -6,9 +6,11 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/ProviderBootstrap.hpp"
+
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/IConfigManager.hpp"
+
 #include <cstdlib>
 #include <cstring>
 #include <stdexcept>
@@ -16,8 +18,11 @@
 namespace LLMEngine {
 
 ProviderBootstrap::BootstrapResult ProviderBootstrap::bootstrap(
-    std::string_view provider_name, std::string_view api_key, std::string_view model,
-    const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager, Logger* logger) {
+    std::string_view provider_name,
+    std::string_view api_key,
+    std::string_view model,
+    const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager,
+    Logger* logger) {
 
     BootstrapResult result;
 
@@ -84,7 +89,8 @@ ProviderBootstrap::BootstrapResult ProviderBootstrap::bootstrap(
 
 std::string ProviderBootstrap::resolveApiKey(::LLMEngineAPI::ProviderType provider_type,
                                              std::string_view api_key_from_param,
-                                             std::string_view api_key_from_config, Logger* logger) {
+                                             std::string_view api_key_from_config,
+                                             Logger* logger) {
 
     std::string env_var_name = getApiKeyEnvVarName(provider_type);
 
@@ -106,9 +112,9 @@ std::string ProviderBootstrap::resolveApiKey(::LLMEngineAPI::ProviderType provid
     std::string api_key = std::string(api_key_from_config);
     if (!api_key.empty() && logger) {
         logger->log(LogLevel::Warn,
-                    std::string("Using API key from config file. For production use, ") +
-                        "set the " + env_var_name + " environment variable instead. " +
-                        "Storing credentials in config files is a security risk.");
+                    std::string("Using API key from config file. For production use, ") + "set the "
+                        + env_var_name + " environment variable instead. "
+                        + "Storing credentials in config files is a security risk.");
     }
     return api_key;
 }

@@ -9,6 +9,7 @@
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Constants.hpp"
 #include "OpenAICompatibleClient.hpp"
+
 #include <memory>
 #include <nlohmann/json.hpp>
 
@@ -16,10 +17,10 @@ namespace LLMEngineAPI {
 
 // PIMPL implementation - OpenAICompatibleClient is not an APIClient, just a helper
 class OpenAIClient::Impl : public OpenAICompatibleClient {
-public:
+  public:
     Impl(const std::string& api_key, const std::string& model)
-        : OpenAICompatibleClient(api_key, model,
-                                 std::string(::LLMEngine::Constants::DefaultUrls::OPENAI_BASE)) {}
+        : OpenAICompatibleClient(
+              api_key, model, std::string(::LLMEngine::Constants::DefaultUrls::OPENAI_BASE)) {}
 };
 
 OpenAIClient::OpenAIClient(const std::string& api_key, const std::string& model)
@@ -27,14 +28,16 @@ OpenAIClient::OpenAIClient(const std::string& api_key, const std::string& model)
 
 OpenAIClient::~OpenAIClient() = default;
 
-APIResponse OpenAIClient::sendRequest(std::string_view prompt, const nlohmann::json& input,
+APIResponse OpenAIClient::sendRequest(std::string_view prompt,
+                                      const nlohmann::json& input,
                                       const nlohmann::json& params) const {
     // Build messages array using shared helper
     const nlohmann::json messages = ChatMessageBuilder::buildMessages(prompt, input);
 
     // Use shared request helper for common lifecycle
     return ChatCompletionRequestHelper::execute(
-        impl_->getDefaultParams(), params,
+        impl_->getDefaultParams(),
+        params,
         // Build payload using base class method
         [&](const nlohmann::json& request_params) {
             return impl_->buildPayload(messages, request_params);
@@ -45,7 +48,8 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt, const nlohmann::j
         [&]() { return impl_->getHeaders(); },
         // Parse response using base class method
         OpenAICompatibleClient::parseOpenAIResponse,
-        /*exponential_retry*/ true, impl_->getConfig());
+        /*exponential_retry*/ true,
+        impl_->getConfig());
 }
 
 void OpenAIClient::setConfig(std::shared_ptr<IConfigManager> cfg) {

@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "OpenAICompatibleClient.hpp"
+
 #include <string>
 
 namespace LLMEngineAPI {
@@ -15,7 +16,8 @@ constexpr size_t CHAT_COMPLETIONS_PATH_LENGTH = 18; // "/chat/completions" = 18 
 constexpr size_t BEARER_PREFIX_LENGTH = 7;          // "Bearer " = 7 chars
 } // namespace
 
-OpenAICompatibleClient::OpenAICompatibleClient(const std::string& api_key, const std::string& model,
+OpenAICompatibleClient::OpenAICompatibleClient(const std::string& api_key,
+                                               const std::string& model,
                                                const std::string& base_url)
     : api_key_(api_key), model_(model), base_url_(base_url) {
     // Initialize default parameters
@@ -61,8 +63,8 @@ nlohmann::json OpenAICompatibleClient::buildPayload(const nlohmann::json& messag
 
 void OpenAICompatibleClient::parseOpenAIResponse(APIResponse& response,
                                                  const std::string& /*unused*/) {
-    if (response.raw_response.contains("choices") && response.raw_response["choices"].is_array() &&
-        !response.raw_response["choices"].empty()) {
+    if (response.raw_response.contains("choices") && response.raw_response["choices"].is_array()
+        && !response.raw_response["choices"].empty()) {
 
         auto choice = response.raw_response["choices"][0];
         if (choice.contains("message") && choice["message"].contains("content")) {

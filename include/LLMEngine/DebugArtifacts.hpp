@@ -3,12 +3,13 @@
 
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
+
 #include <nlohmann/json.hpp>
 #include <string>
 #include <string_view>
 
 class LLMENGINE_EXPORT DebugArtifacts {
-public:
+  public:
     // Write JSON to path. When redactSecrets is true, common secret fields are masked.
     // Returns true on success, false on failure (no-throw).
     static bool writeJson(const std::string& path, const nlohmann::json& json, bool redactSecrets);
@@ -20,7 +21,7 @@ public:
     // Remove files older than the given hours in dir. No-throw best-effort.
     static void cleanupOld(const std::string& dir, int hours);
 
-private:
+  private:
     static nlohmann::json redactJson(const nlohmann::json& j);
     static std::string redactText(std::string_view text);
 };

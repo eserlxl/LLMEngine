@@ -5,6 +5,7 @@
 
 #include "LLMEngine/Backoff.hpp"
 #include "LLMEngine/Constants.hpp"
+
 #include <atomic>
 #include <cassert>
 #include <chrono>
@@ -118,8 +119,8 @@ void testTimeoutPropagation() {
     // if (timeout_seconds > 600) timeout_seconds = 600;
 
     // We verify this indirectly by checking the constants exist
-    assert(Constants::DefaultValues::MAX_BACKOFF_DELAY_MS > 0 &&
-           "MAX_BACKOFF_DELAY_MS should be defined");
+    assert(Constants::DefaultValues::MAX_BACKOFF_DELAY_MS > 0
+           && "MAX_BACKOFF_DELAY_MS should be defined");
 
     std::cout << "  ✓ Timeout propagation tests (verified in implementation)\n";
 }

@@ -8,6 +8,7 @@
 #include "LLMEngine.hpp"
 #include "LLMEngine/ResponseParser.hpp"
 #include "Utils.hpp"
+
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -30,12 +31,19 @@ int main() {
         bool debug = true; // Enable debug mode for testing
 
         // Create model parameters payload
-        nlohmann::json model_params = {
-            {"temperature", 0.7}, {"think", false}, {"context_window", 10000},
-            {"top_p", 0.9},       {"top_k", 40},    {"min_p", 0.05}};
+        nlohmann::json model_params = {{"temperature", 0.7},
+                                       {"think", false},
+                                       {"context_window", 10000},
+                                       {"top_p", 0.9},
+                                       {"top_k", 40},
+                                       {"min_p", 0.05}};
 
-        LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", model, model_params,
-                                    log_retention_hours, debug);
+        LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA,
+                                    "",
+                                    model,
+                                    model_params,
+                                    log_retention_hours,
+                                    debug);
         std::cout << "✓ LLMEngine initialized successfully with payload" << std::endl;
 
         // Test 1.5: Test optional parameters (empty payload)
@@ -43,8 +51,12 @@ int main() {
 
         // Create engine with empty payload to test default behavior
         nlohmann::json empty_params = {};
-        LLMEngine::LLMEngine engine_empty(::LLMEngineAPI::ProviderType::OLLAMA, "", model,
-                                          empty_params, log_retention_hours, debug);
+        LLMEngine::LLMEngine engine_empty(::LLMEngineAPI::ProviderType::OLLAMA,
+                                          "",
+                                          model,
+                                          empty_params,
+                                          log_retention_hours,
+                                          debug);
         std::cout << "✓ LLMEngine with empty payload initialized successfully" << std::endl;
         std::cout << "Note: Empty payload means Ollama will use all default values" << std::endl;
 
@@ -53,8 +65,12 @@ int main() {
 
         // Create engine with only some parameters
         nlohmann::json partial_params = {{"temperature", 0.5}, {"top_p", 0.8}};
-        LLMEngine::LLMEngine engine_partial(::LLMEngineAPI::ProviderType::OLLAMA, "", model,
-                                            partial_params, log_retention_hours, debug);
+        LLMEngine::LLMEngine engine_partial(::LLMEngineAPI::ProviderType::OLLAMA,
+                                            "",
+                                            model,
+                                            partial_params,
+                                            log_retention_hours,
+                                            debug);
         std::cout << "✓ LLMEngine with partial payload initialized successfully" << std::endl;
         std::cout << "Note: Only specified parameters will be sent to Ollama" << std::endl;
 

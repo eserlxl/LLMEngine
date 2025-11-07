@@ -6,8 +6,10 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/RequestLogger.hpp"
+
 #include "LLMEngine/Logger.hpp"
 #include "LLMEngine/SensitiveFields.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <ranges>
@@ -197,7 +199,8 @@ std::map<std::string, std::string> RequestLogger::redactHeaders(
     return redacted;
 }
 
-std::string RequestLogger::formatRequest(std::string_view method, std::string_view url,
+std::string RequestLogger::formatRequest(std::string_view method,
+                                         std::string_view url,
                                          const std::map<std::string, std::string>& headers) {
     std::ostringstream oss;
     oss << method << " " << redactUrl(url) << "\n";
@@ -229,8 +232,8 @@ bool RequestLogger::isSensitiveHeader(std::string_view header_name) {
 
 std::string RequestLogger::redactText(std::string_view text) {
     // Heuristic redaction of key=value, key: value patterns for sensitive keywords (linear pass)
-    static const std::vector<std::string> keywords = {"api",     "key",    "token",    "secret",
-                                                      "refresh", "client", "password", "passwd"};
+    static const std::vector<std::string> keywords = {
+        "api", "key", "token", "secret", "refresh", "client", "password", "passwd"};
     const std::string src(text);
     const std::string lower = toLower(src);
     std::string out;
@@ -244,9 +247,9 @@ std::string RequestLogger::redactText(std::string_view text) {
             if (i + kw.size() <= lower.size() && lower.compare(i, kw.size(), kw) == 0) {
                 size_t pos = i + kw.size();
                 // Consume identifier tail like _secret or Token etc.
-                while (
-                    pos < lower.size() &&
-                    (std::isalnum(static_cast<unsigned char>(lower[pos])) || lower[pos] == '_')) {
+                while (pos < lower.size()
+                       && (std::isalnum(static_cast<unsigned char>(lower[pos]))
+                           || lower[pos] == '_')) {
                     pos++;
                 }
                 size_t j = pos;
@@ -270,9 +273,8 @@ std::string RequestLogger::redactText(std::string_view text) {
                         if (v < src.size())
                             v++; // include closing quote
                     } else {
-                        while (v < src.size() &&
-                               !std::isspace(static_cast<unsigned char>(src[v])) && src[v] != ',' &&
-                               src[v] != ';') {
+                        while (v < src.size() && !std::isspace(static_cast<unsigned char>(src[v]))
+                               && src[v] != ',' && src[v] != ';') {
                             v++;
                         }
                     }

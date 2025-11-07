@@ -9,6 +9,7 @@
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/HttpStatus.hpp"
+
 #include <nlohmann/json.hpp>
 
 namespace LLMEngineAPI {
@@ -22,7 +23,8 @@ OllamaClient::OllamaClient(const std::string& base_url, const std::string& model
                        {"context_window", ::LLMEngine::Constants::DefaultValues::CONTEXT_WINDOW}};
 }
 
-APIResponse OllamaClient::sendRequest(std::string_view prompt, const nlohmann::json& input,
+APIResponse OllamaClient::sendRequest(std::string_view prompt,
+                                      const nlohmann::json& input,
                                       const nlohmann::json& params) const {
     APIResponse response;
     response.success = false;
@@ -61,12 +63,14 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt, const nlohmann::j
                    "production.\n";
         }
 
-        auto post_json = [&, verify_ssl](const std::string& url, const nlohmann::json& payload,
+        auto post_json = [&, verify_ssl](const std::string& url,
+                                         const nlohmann::json& payload,
                                          int timeout_seconds) -> cpr::Response {
             std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}};
             maybeLogRequest("POST", url, hdr);
             return sendWithRetries(rs, [&, verify_ssl]() {
-                return cpr::Post(cpr::Url{url}, cpr::Header{hdr.begin(), hdr.end()},
+                return cpr::Post(cpr::Url{url},
+                                 cpr::Header{hdr.begin(), hdr.end()},
                                  cpr::Body{payload.dump()},
                                  cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
                                  cpr::VerifySsl{verify_ssl});
@@ -75,8 +79,8 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt, const nlohmann::j
 
         auto set_error_from_http = [&](APIResponse& out, const cpr::Response& r) {
             out.error_message = "HTTP " + std::to_string(r.status_code) + ": " + r.text;
-            if (r.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED ||
-                r.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
+            if (r.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
+                || r.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
                 out.error_code = LLMEngine::LLMEngineErrorCode::Auth;
             } else if (r.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
                 out.error_code = LLMEngine::LLMEngineErrorCode::RateLimited;
@@ -89,8 +93,8 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt, const nlohmann::j
 
         // Check if we should use generate mode instead of chat mode
         bool use_generate = false;
-        if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::MODE)) &&
-            params[std::string(::LLMEngine::Constants::JsonKeys::MODE)] == "generate") {
+        if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::MODE))
+            && params[std::string(::LLMEngine::Constants::JsonKeys::MODE)] == "generate") {
             use_generate = true;
         }
 
@@ -126,8 +130,8 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt, const nlohmann::j
                             response.error_message = "No response content in generate API response";
                         }
                     } catch (const nlohmann::json::parse_error& e) {
-                        response.error_message = "JSON parse error: " + std::string(e.what()) +
-                                                 " - Response: " + cpr_response.text;
+                        response.error_message = "JSON parse error: " + std::string(e.what())
+                                                 + " - Response: " + cpr_response.text;
                         response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                     }
                 }
@@ -142,8 +146,9 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt, const nlohmann::j
             if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))) {
                 messages.push_back(
                     {{"role", "system"},
-                     {"content", input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
-                                     .get<std::string>()}});
+                     {"content",
+                      input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
+                          .get<std::string>()}});
             }
 
             // Add user message
@@ -172,8 +177,8 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt, const nlohmann::j
                     try {
                         response.raw_response = nlohmann::json::parse(cpr_response.text);
 
-                        if (response.raw_response.contains("message") &&
-                            response.raw_response["message"].contains("content")) {
+                        if (response.raw_response.contains("message")
+                            && response.raw_response["message"].contains("content")) {
                             response.content =
                                 response.raw_response["message"]["content"].get<std::string>();
                             response.success = true;
@@ -181,8 +186,8 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt, const nlohmann::j
                             response.error_message = "No content in response";
                         }
                     } catch (const nlohmann::json::parse_error& e) {
-                        response.error_message = "JSON parse error: " + std::string(e.what()) +
-                                                 " - Response: " + cpr_response.text;
+                        response.error_message = "JSON parse error: " + std::string(e.what())
+                                                 + " - Response: " + cpr_response.text;
                     }
                 }
             } else {

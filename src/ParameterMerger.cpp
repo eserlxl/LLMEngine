@@ -6,12 +6,14 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/ParameterMerger.hpp"
+
 #include "LLMEngine/Logger.hpp"
 
 namespace LLMEngine {
 
 nlohmann::json ParameterMerger::merge(const nlohmann::json& base_params,
-                                      const nlohmann::json& input, std::string_view mode) {
+                                      const nlohmann::json& input,
+                                      std::string_view mode) {
     nlohmann::json out;
     const bool changed = mergeInto(base_params, input, mode, out, nullptr);
     if (!changed) {
@@ -20,8 +22,11 @@ nlohmann::json ParameterMerger::merge(const nlohmann::json& base_params,
     return out;
 }
 
-bool ParameterMerger::mergeInto(const nlohmann::json& base_params, const nlohmann::json& input,
-                                std::string_view mode, nlohmann::json& out, Logger* logger) {
+bool ParameterMerger::mergeInto(const nlohmann::json& base_params,
+                                const nlohmann::json& input,
+                                std::string_view mode,
+                                nlohmann::json& out,
+                                Logger* logger) {
     // Allow-list of overridable keys and expected types
     static const std::vector<std::pair<const char*, nlohmann::json::value_t>> allowed_keys = {
         {"max_tokens", nlohmann::json::value_t::number_integer},
@@ -57,8 +62,8 @@ bool ParameterMerger::mergeInto(const nlohmann::json& base_params, const nlohman
             continue;
         const nlohmann::json& val = *it;
         // Accept integer where float expected if convertible
-        if (expected == nlohmann::json::value_t::number_float &&
-            (val.is_number_float() || val.is_number_integer())) {
+        if (expected == nlohmann::json::value_t::number_float
+            && (val.is_number_float() || val.is_number_integer())) {
             out[key] = val.get<double>();
             continue;
         }
@@ -79,9 +84,10 @@ bool ParameterMerger::mergeInto(const nlohmann::json& base_params, const nlohman
                         expected_type_str = "unknown";
                         break;
                 }
-                logger->log(LogLevel::Warn, "Parameter override '" + std::string(key) +
-                                                "' has incorrect type (expected " +
-                                                expected_type_str + "), ignoring override");
+                logger->log(LogLevel::Warn,
+                            "Parameter override '" + std::string(key)
+                                + "' has incorrect type (expected " + expected_type_str
+                                + "), ignoring override");
             }
         }
     }

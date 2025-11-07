@@ -7,6 +7,7 @@
 
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
+
 #include <string>
 
 // Forward declaration
@@ -57,7 +58,7 @@ namespace LLMEngine {
  * ```
  */
 class LLMENGINE_EXPORT TempDirectoryService {
-public:
+  public:
     /**
      * @brief Result of directory operations.
      */

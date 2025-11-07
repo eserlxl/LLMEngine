@@ -6,10 +6,12 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/DebugArtifactManager.hpp"
+
 #include "DebugArtifacts.hpp"
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/Logger.hpp"
+
 #include <cctype>
 #include <chrono>
 #include <cstdlib>
@@ -17,8 +19,10 @@
 
 namespace LLMEngine {
 
-DebugArtifactManager::DebugArtifactManager(std::string request_tmp_dir, std::string base_tmp_dir,
-                                           int log_retention_hours, Logger* logger)
+DebugArtifactManager::DebugArtifactManager(std::string request_tmp_dir,
+                                           std::string base_tmp_dir,
+                                           int log_retention_hours,
+                                           Logger* logger)
     : request_tmp_dir_(std::move(request_tmp_dir)), base_tmp_dir_(std::move(base_tmp_dir)),
       log_retention_hours_(log_retention_hours), logger_(logger), directory_created_(false),
       cleanup_time_initialized_(false) {}
@@ -130,8 +134,8 @@ bool DebugArtifactManager::writeAnalysisArtifacts(std::string_view analysis_type
         const std::string safe_analysis_name = sanitize_name(std::string(analysis_type));
 
         // Write think section
-        std::string think_filepath = request_tmp_dir_ + "/" + safe_analysis_name +
-                                     std::string(Constants::DebugArtifacts::THINK_TXT_SUFFIX);
+        std::string think_filepath = request_tmp_dir_ + "/" + safe_analysis_name
+                                     + std::string(Constants::DebugArtifacts::THINK_TXT_SUFFIX);
         bool think_success =
             DebugArtifacts::writeText(think_filepath, think_section, /*redactSecrets*/ true);
 
@@ -142,8 +146,8 @@ bool DebugArtifactManager::writeAnalysisArtifacts(std::string_view analysis_type
         }
 
         // Write remaining section
-        std::string content_filepath = request_tmp_dir_ + "/" + safe_analysis_name +
-                                       std::string(Constants::DebugArtifacts::CONTENT_TXT_SUFFIX);
+        std::string content_filepath = request_tmp_dir_ + "/" + safe_analysis_name
+                                       + std::string(Constants::DebugArtifacts::CONTENT_TXT_SUFFIX);
         bool content_success =
             DebugArtifacts::writeText(content_filepath, remaining_section, /*redactSecrets*/ true);
 

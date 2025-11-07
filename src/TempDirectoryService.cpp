@@ -6,7 +6,9 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/TempDirectoryService.hpp"
+
 #include "LLMEngine/Logger.hpp"
+
 #include <filesystem>
 #include <system_error>
 
@@ -48,13 +50,15 @@ TempDirectoryService::DirectoryResult TempDirectoryService::ensureSecureDirector
     if (std::filesystem::exists(directory_path)) {
         std::error_code ec_perm;
         std::filesystem::permissions(directory_path,
-                                     std::filesystem::perms::owner_read |
-                                         std::filesystem::perms::owner_write |
-                                         std::filesystem::perms::owner_exec,
-                                     std::filesystem::perm_options::replace, ec_perm);
+                                     std::filesystem::perms::owner_read
+                                         | std::filesystem::perms::owner_write
+                                         | std::filesystem::perms::owner_exec,
+                                     std::filesystem::perm_options::replace,
+                                     ec_perm);
         if (ec_perm && logger) {
-            logger->log(LogLevel::Warn, std::string("Failed to set permissions on ") +
-                                            directory_path + ": " + ec_perm.message());
+            logger->log(LogLevel::Warn,
+                        std::string("Failed to set permissions on ") + directory_path + ": "
+                            + ec_perm.message());
         }
     }
 
@@ -63,7 +67,8 @@ TempDirectoryService::DirectoryResult TempDirectoryService::ensureSecureDirector
 }
 
 bool TempDirectoryService::validatePathWithinRoot(const std::string& requested_path,
-                                                  const std::string& allowed_root, Logger* logger) {
+                                                  const std::string& allowed_root,
+                                                  Logger* logger) {
 
     try {
         const std::filesystem::path default_root =
@@ -96,8 +101,8 @@ bool TempDirectoryService::validatePathWithinRoot(const std::string& requested_p
     } catch (...) {
         if (logger) {
             logger->log(LogLevel::Error,
-                        std::string("Failed to validate temp directory due to path error: ") +
-                            requested_path);
+                        std::string("Failed to validate temp directory due to path error: ")
+                            + requested_path);
         }
         return false;
     }

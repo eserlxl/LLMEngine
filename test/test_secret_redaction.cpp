@@ -7,6 +7,7 @@
 
 #include "LLMEngine/Logger.hpp"
 #include "LLMEngine/RequestLogger.hpp"
+
 #include <cassert>
 #include <iostream>
 #include <sstream>
@@ -14,7 +15,7 @@
 
 // Test logger that captures output
 class TestLogger : public LLMEngine::Logger {
-public:
+  public:
     void log(LLMEngine::LogLevel level, std::string_view message) override {
         last_message_ = std::string(message);
         last_level_ = level;

@@ -14,6 +14,7 @@
 #include "LLMEngine/ResponseParser.hpp"
 #include "LLMEngine/Utils.hpp"
 #include "OpenAICompatibleClient.hpp"
+
 #include <cassert>
 #include <filesystem>
 #include <iostream>
@@ -25,7 +26,7 @@ using namespace LLMEngineAPI;
 
 // Mock logger for testing
 class TestLogger : public Logger {
-public:
+  public:
     void log(LogLevel level, const std::string& message) override {
         last_level_ = level;
         last_message_ = message;

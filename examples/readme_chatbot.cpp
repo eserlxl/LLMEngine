@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine.hpp"
+
 #include <algorithm>
 #include <cpr/cpr.h>
 #include <ctime>
@@ -21,16 +22,18 @@
 using namespace LLMEngine;
 
 class ReadmeChatBot {
-private:
+  private:
     std::unique_ptr<LLMEngine::LLMEngine> engine_;
     std::string readme_content_;
     std::string project_url_;
     std::string project_name_;
     bool debug_mode_;
 
-public:
-    ReadmeChatBot(const std::string& provider_name, const std::string& api_key,
-                  const std::string& model = "", bool debug = false)
+  public:
+    ReadmeChatBot(const std::string& provider_name,
+                  const std::string& api_key,
+                  const std::string& model = "",
+                  bool debug = false)
         : debug_mode_(debug) {
         try {
             // Configure parameters optimized for chat interactions
@@ -43,8 +46,8 @@ public:
                 {"think", true}             // Enable chain of thought reasoning
             };
 
-            engine_ = std::make_unique<LLMEngine::LLMEngine>(provider_name, api_key, model,
-                                                             chat_params, 24, debug);
+            engine_ = std::make_unique<LLMEngine::LLMEngine>(
+                provider_name, api_key, model, chat_params, 24, debug);
             std::cout << "✓ ReadmeChatBot initialized with " << engine_->getProviderName() << " ("
                       << (engine_->isOnlineProvider() ? "Online" : "Local") << ")" << std::endl;
         } catch (const std::exception& e) {
@@ -181,7 +184,7 @@ public:
         }
     }
 
-private:
+  private:
     std::string normalizeGitHubUrl(const std::string& url) {
         std::string normalized = url;
 
@@ -200,7 +203,8 @@ private:
                 } else {
                     // Convert to raw URL
                     normalized =
-                        std::regex_replace(normalized, std::regex("github\\.com/([^/]+)/([^/]+)"),
+                        std::regex_replace(normalized,
+                                           std::regex("github\\.com/([^/]+)/([^/]+)"),
                                            "raw.githubusercontent.com/$1/$2/main/README.md");
                 }
             }

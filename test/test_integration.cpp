@@ -10,6 +10,7 @@
 #include "LLMEngine/IConfigManager.hpp"
 #include "LLMEngine/LLMEngine.hpp"
 #include "support/FakeAPIClient.hpp"
+
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -57,7 +58,7 @@ struct EnvBackup {
 
 // Mock config manager for testing credential resolution
 class MockConfigManager : public IConfigManager {
-public:
+  public:
     nlohmann::json config_json;
     bool config_loaded = false;
 
@@ -71,8 +72,8 @@ public:
         return true;
     }
     nlohmann::json getProviderConfig(std::string_view provider_name) const override {
-        if (config_json.contains("providers") &&
-            config_json["providers"].contains(std::string(provider_name))) {
+        if (config_json.contains("providers")
+            && config_json["providers"].contains(std::string(provider_name))) {
             return config_json["providers"][std::string(provider_name)];
         }
         return nlohmann::json{};
@@ -178,10 +179,11 @@ class FailingAPIClient : public APIClient {
     int attempt_count_ = 0;
     int fail_until_attempt_ = 2; // Fail first 2 attempts, succeed on 3rd
 
-public:
+  public:
     FailingAPIClient() = default;
 
-    APIResponse sendRequest(std::string_view, const nlohmann::json&,
+    APIResponse sendRequest(std::string_view,
+                            const nlohmann::json&,
                             const nlohmann::json&) const override {
         // Note: This is a simplified test - real retry logic is in APIClientCommon
         // We can't easily test the retry mechanism here without mocking HTTP calls
@@ -255,10 +257,11 @@ void testAnalyzeErrorPaths() {
 
         // Create a fake client that returns errors
         class ErrorAPIClient : public FakeAPIClient {
-        public:
+          public:
             ErrorAPIClient() : FakeAPIClient(ProviderType::QWEN, "ErrorClient") {}
 
-            APIResponse sendRequest(std::string_view, const nlohmann::json&,
+            APIResponse sendRequest(std::string_view,
+                                    const nlohmann::json&,
                                     const nlohmann::json&) const override {
                 APIResponse resp;
                 resp.success = false;
@@ -287,10 +290,11 @@ void testAnalyzeErrorPaths() {
         std::cout << "\n3. Testing timeout error handling..." << std::endl;
 
         class TimeoutAPIClient : public FakeAPIClient {
-        public:
+          public:
             TimeoutAPIClient() : FakeAPIClient(ProviderType::QWEN, "TimeoutClient") {}
 
-            APIResponse sendRequest(std::string_view, const nlohmann::json&,
+            APIResponse sendRequest(std::string_view,
+                                    const nlohmann::json&,
                                     const nlohmann::json&) const override {
                 APIResponse resp;
                 resp.success = false;
@@ -315,10 +319,11 @@ void testAnalyzeErrorPaths() {
         std::cout << "\n4. Testing authentication error handling..." << std::endl;
 
         class AuthErrorAPIClient : public FakeAPIClient {
-        public:
+          public:
             AuthErrorAPIClient() : FakeAPIClient(ProviderType::QWEN, "AuthErrorClient") {}
 
-            APIResponse sendRequest(std::string_view, const nlohmann::json&,
+            APIResponse sendRequest(std::string_view,
+                                    const nlohmann::json&,
                                     const nlohmann::json&) const override {
                 APIResponse resp;
                 resp.success = false;

@@ -17,7 +17,8 @@ void FakeAPIClient::setNextResponse(const APIResponse& response) {
     has_custom_response_ = true;
 }
 
-APIResponse FakeAPIClient::sendRequest(std::string_view prompt, const nlohmann::json& input,
+APIResponse FakeAPIClient::sendRequest(std::string_view prompt,
+                                       const nlohmann::json& input,
                                        const nlohmann::json& params) const {
     if (has_custom_response_) {
         has_custom_response_ = false;

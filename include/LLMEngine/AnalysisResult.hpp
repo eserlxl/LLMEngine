@@ -8,6 +8,7 @@
 #pragma once
 #include "LLMEngine/ErrorCodes.hpp"
 #include "LLMEngine/LLMEngineExport.hpp"
+
 #include <string>
 
 namespace LLMEngine {
@@ -46,10 +47,11 @@ struct LLMENGINE_EXPORT AnalysisResult {
      * @brief Check if the result is a retriable error (network, timeout, server, rate limit).
      */
     [[nodiscard]] bool isRetriableError() const {
-        return !success && (errorCode == LLMEngineErrorCode::Network ||
-                            errorCode == LLMEngineErrorCode::Timeout ||
-                            errorCode == LLMEngineErrorCode::Server ||
-                            errorCode == LLMEngineErrorCode::RateLimited);
+        return !success
+               && (errorCode == LLMEngineErrorCode::Network
+                   || errorCode == LLMEngineErrorCode::Timeout
+                   || errorCode == LLMEngineErrorCode::Server
+                   || errorCode == LLMEngineErrorCode::RateLimited);
     }
 };
 

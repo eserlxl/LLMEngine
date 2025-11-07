@@ -1,4 +1,5 @@
 #include "LLMEngine/ResponseHandler.hpp"
+
 #include "LLMEngine/APIClient.hpp" // Include before RequestLogger to get APIResponse definition
 #include "LLMEngine/AnalysisResult.hpp"
 #include "LLMEngine/DebugArtifactManager.hpp"
@@ -53,7 +54,8 @@ static LLMEngineErrorCode classifyErrorCode(LLMEngineErrorCode api_error, int st
 AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_response,
                                        DebugArtifactManager* debug_mgr,
                                        const std::string& request_tmp_dir,
-                                       std::string_view /*analysis_type*/, bool write_debug_files,
+                                       std::string_view /*analysis_type*/,
+                                       bool write_debug_files,
                                        Logger* logger) {
     // Write API response artifact with exception safety
     // If artifact writing fails, log the error but continue processing
@@ -66,11 +68,12 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
             debug_mgr->performCleanup();
         } catch (const std::exception& e) {
             RequestLogger::logSafe(
-                logger, LogLevel::Warn,
+                logger,
+                LogLevel::Warn,
                 std::string("Failed to write API response artifact: ") + e.what());
         } catch (...) {
-            RequestLogger::logSafe(logger, LogLevel::Warn,
-                                   "Failed to write API response artifact: unknown error");
+            RequestLogger::logSafe(
+                logger, LogLevel::Warn, "Failed to write API response artifact: unknown error");
         }
     }
 
@@ -87,11 +90,12 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
 
         // Use safe logging to ensure secrets are redacted (though enhanced_error is already
         // redacted)
-        RequestLogger::logSafe(logger, LogLevel::Error,
-                               std::string("API error: ") + enhanced_error);
+        RequestLogger::logSafe(
+            logger, LogLevel::Error, std::string("API error: ") + enhanced_error);
         if (logger && write_debug_files && debug_mgr) {
-            logger->log(LogLevel::Info, std::string("Error response saved to ") + request_tmp_dir +
-                                            "/api_response_error.json");
+            logger->log(LogLevel::Info,
+                        std::string("Error response saved to ") + request_tmp_dir
+                            + "/api_response_error.json");
         }
         // Classify error code (now using unified LLMEngineErrorCode)
         LLMEngineErrorCode error_code =
@@ -113,11 +117,12 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
             debug_mgr->writeFullResponse(full_response);
         } catch (const std::exception& e) {
             RequestLogger::logSafe(
-                logger, LogLevel::Warn,
+                logger,
+                LogLevel::Warn,
                 std::string("Failed to write full response artifact: ") + e.what());
         } catch (...) {
-            RequestLogger::logSafe(logger, LogLevel::Warn,
-                                   "Failed to write full response artifact: unknown error");
+            RequestLogger::logSafe(
+                logger, LogLevel::Warn, "Failed to write full response artifact: unknown error");
         }
     }
 

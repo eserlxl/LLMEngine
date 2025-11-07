@@ -8,6 +8,7 @@
 #include "LLMEngine.hpp"
 #include "LLMEngine/APIClient.hpp"
 #include "Utils.hpp"
+
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -108,8 +109,8 @@ void testLLMEngineWithQwen() {
 
         nlohmann::json model_params = {{"temperature", 0.7}};
 
-        LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash",
-                                    model_params, 24, true);
+        LLMEngine::LLMEngine engine(
+            ::LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash", model_params, 24, true);
         std::cout << "✓ LLMEngine initialized with Qwen" << std::endl;
         std::cout << "  Provider: " << engine.getProviderName() << std::endl;
         std::cout << "  Is online: " << (engine.isOnlineProvider() ? "Yes" : "No") << std::endl;
@@ -157,8 +158,8 @@ void testLLMEngineOllamaProvider() {
         std::string model = "llama2";
         nlohmann::json model_params = {{"temperature", 0.7}, {"top_p", 0.9}};
 
-        LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", model, model_params,
-                                    24, true);
+        LLMEngine::LLMEngine engine(
+            ::LLMEngineAPI::ProviderType::OLLAMA, "", model, model_params, 24, true);
         std::cout << "✓ LLMEngine initialized with Ollama provider" << std::endl;
         std::cout << "  Provider: " << engine.getProviderName() << std::endl;
         std::cout << "  Is online: " << (engine.isOnlineProvider() ? "Yes" : "No") << std::endl;

@@ -7,6 +7,7 @@
 
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
+
 #include <string>
 #include <string_view>
 
@@ -19,7 +20,7 @@ namespace LLMEngine {
  * to be composed into the analysis pipeline.
  */
 class LLMENGINE_EXPORT IPromptBuilder {
-public:
+  public:
     virtual ~IPromptBuilder() = default;
 
     /**
@@ -41,7 +42,7 @@ public:
  * The system instruction is cached as a static constant to avoid repeated allocations.
  */
 class LLMENGINE_EXPORT TersePromptBuilder : public IPromptBuilder {
-public:
+  public:
     [[nodiscard]] std::string buildPrompt(std::string_view prompt) const override {
         // Cache the system instruction as a static constant to avoid repeated allocations
         static const std::string system_instruction =
@@ -63,7 +64,7 @@ public:
  * Useful for evaluation or when precise prompt control is needed.
  */
 class LLMENGINE_EXPORT PassthroughPromptBuilder : public IPromptBuilder {
-public:
+  public:
     [[nodiscard]] std::string buildPrompt(std::string_view prompt) const override {
         return std::string(prompt);
     }

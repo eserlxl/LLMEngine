@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/APIClient.hpp"
+
 #include <atomic>
 #include <cassert>
 #include <chrono>

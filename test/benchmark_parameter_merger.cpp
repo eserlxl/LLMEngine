@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/ParameterMerger.hpp"
+
 #include <benchmark/benchmark.h>
 #include <nlohmann/json.hpp>
 

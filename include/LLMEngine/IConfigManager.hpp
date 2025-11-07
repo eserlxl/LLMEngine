@@ -7,6 +7,7 @@
 
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
+
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -38,7 +39,7 @@ namespace LLMEngineAPI {
  * on the use case. The interface does not prescribe ownership semantics.
  */
 class LLMENGINE_EXPORT IConfigManager {
-public:
+  public:
     virtual ~IConfigManager() = default;
 
     /**

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "DebugArtifacts.hpp"
+
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
@@ -27,10 +28,11 @@ static bool atomic_write(const std::string& path, const std::string& data) {
                 if (!ec) {
                     std::error_code ec_perm;
                     std::filesystem::permissions(dir_path,
-                                                 std::filesystem::perms::owner_read |
-                                                     std::filesystem::perms::owner_write |
-                                                     std::filesystem::perms::owner_exec,
-                                                 std::filesystem::perm_options::replace, ec_perm);
+                                                 std::filesystem::perms::owner_read
+                                                     | std::filesystem::perms::owner_write
+                                                     | std::filesystem::perms::owner_exec,
+                                                 std::filesystem::perm_options::replace,
+                                                 ec_perm);
                 }
             }
         }
@@ -48,8 +50,8 @@ static bool atomic_write(const std::string& path, const std::string& data) {
         if (ec_mv) {
             // Cross-filesystem fallback: copy+remove
             std::error_code ec_cp;
-            std::filesystem::copy_file(tmp, path, std::filesystem::copy_options::overwrite_existing,
-                                       ec_cp);
+            std::filesystem::copy_file(
+                tmp, path, std::filesystem::copy_options::overwrite_existing, ec_cp);
             std::error_code ec_rm;
             std::filesystem::remove(tmp, ec_rm);
             if (ec_cp)
@@ -61,7 +63,8 @@ static bool atomic_write(const std::string& path, const std::string& data) {
     }
 }
 
-bool DebugArtifacts::writeJson(const std::string& path, const nlohmann::json& json,
+bool DebugArtifacts::writeJson(const std::string& path,
+                               const nlohmann::json& json,
                                bool redactSecrets) {
     try {
         std::filesystem::path dir_path = std::filesystem::path(path).parent_path();
@@ -75,10 +78,11 @@ bool DebugArtifacts::writeJson(const std::string& path, const nlohmann::json& js
                 if (!ec) {
                     std::error_code ec_perm;
                     std::filesystem::permissions(dir_path,
-                                                 std::filesystem::perms::owner_read |
-                                                     std::filesystem::perms::owner_write |
-                                                     std::filesystem::perms::owner_exec,
-                                                 std::filesystem::perm_options::replace, ec_perm);
+                                                 std::filesystem::perms::owner_read
+                                                     | std::filesystem::perms::owner_write
+                                                     | std::filesystem::perms::owner_exec,
+                                                 std::filesystem::perm_options::replace,
+                                                 ec_perm);
                     // Best-effort: silently ignore permission errors (may fail in restricted
                     // environments)
                 }
@@ -104,10 +108,11 @@ bool DebugArtifacts::writeText(const std::string& path, std::string_view text, b
                 if (!ec) {
                     std::error_code ec_perm;
                     std::filesystem::permissions(dir_path,
-                                                 std::filesystem::perms::owner_read |
-                                                     std::filesystem::perms::owner_write |
-                                                     std::filesystem::perms::owner_exec,
-                                                 std::filesystem::perm_options::replace, ec_perm);
+                                                 std::filesystem::perms::owner_read
+                                                     | std::filesystem::perms::owner_write
+                                                     | std::filesystem::perms::owner_exec,
+                                                 std::filesystem::perm_options::replace,
+                                                 ec_perm);
                     // Best-effort: silently ignore permission errors (may fail in restricted
                     // environments)
                 }
@@ -177,9 +182,19 @@ nlohmann::json DebugArtifacts::redactJson(const nlohmann::json& j) {
     if (!j.is_object())
         return j;
     nlohmann::json out = j;
-    static const std::vector<std::string> sensitive_keys = {
-        "api_key", "apikey", "access_token", "accesstoken", "token", "authorization", "x-api-key",
-        "xapikey", "secret", "password",     "passwd",      "pwd",   "credential"};
+    static const std::vector<std::string> sensitive_keys = {"api_key",
+                                                            "apikey",
+                                                            "access_token",
+                                                            "accesstoken",
+                                                            "token",
+                                                            "authorization",
+                                                            "x-api-key",
+                                                            "xapikey",
+                                                            "secret",
+                                                            "password",
+                                                            "passwd",
+                                                            "pwd",
+                                                            "credential"};
     for (auto& [key, value] : out.items()) {
         std::string lower = key;
         std::ranges::transform(lower, lower.begin(), ::tolower);
@@ -212,8 +227,9 @@ std::string DebugArtifacts::redactText(std::string_view text) {
     while (i < s.size()) {
         if (std::isalnum(static_cast<unsigned char>(s[i])) || s[i] == '_' || s[i] == '-') {
             size_t j = i;
-            while (j < s.size() &&
-                   (std::isalnum(static_cast<unsigned char>(s[j])) || s[j] == '_' || s[j] == '-')) {
+            while (
+                j < s.size()
+                && (std::isalnum(static_cast<unsigned char>(s[j])) || s[j] == '_' || s[j] == '-')) {
                 ++j;
             }
             if (j - i >= MIN_TOKEN_LENGTH_FOR_REDACTION) {

@@ -11,6 +11,7 @@
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/HttpStatus.hpp"
 #include "LLMEngine/RequestLogger.hpp"
+
 #include <chrono>
 #include <cpr/cpr.h>
 #include <cstring>
@@ -36,7 +37,8 @@ struct RetrySettings {
     bool exponential;
 };
 
-inline RetrySettings computeRetrySettings(const nlohmann::json& params, const IConfigManager* cfg,
+inline RetrySettings computeRetrySettings(const nlohmann::json& params,
+                                          const IConfigManager* cfg,
                                           bool exponential_default = true) {
     RetrySettings rs{};
     if (cfg) {
@@ -83,8 +85,8 @@ cpr::Response sendWithRetries(const RetrySettings& rs, RequestFunc&& doRequest) 
             }
             break;
         }
-        const bool is_non_retriable = ::LLMEngine::HttpStatus::isClientError(code) &&
-                                      !::LLMEngine::HttpStatus::isRetriable(code);
+        const bool is_non_retriable = ::LLMEngine::HttpStatus::isClientError(code)
+                                      && !::LLMEngine::HttpStatus::isRetriable(code);
         if (attempt < rs.max_attempts && !is_non_retriable) {
             int delay = 0;
             if (rs.exponential) {
@@ -127,14 +129,16 @@ cpr::Response sendWithRetries(const RetrySettings& rs, RequestFunc&& doRequest) 
     return resp;
 }
 
-inline void maybeLogRequest(std::string_view method, std::string_view url,
+inline void maybeLogRequest(std::string_view method,
+                            std::string_view url,
                             const std::map<std::string, std::string>& headers) {
     if (std::getenv("LLMENGINE_LOG_REQUESTS") != nullptr) {
         std::cerr << LLMEngine::RequestLogger::formatRequest(method, url, headers);
     }
 }
 
-inline void maybeLogRequestWithBody(std::string_view method, std::string_view url,
+inline void maybeLogRequestWithBody(std::string_view method,
+                                    std::string_view url,
                                     const std::map<std::string, std::string>& headers,
                                     std::string_view body) {
     if (std::getenv("LLMENGINE_LOG_REQUESTS") == nullptr)

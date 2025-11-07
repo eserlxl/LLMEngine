@@ -1,6 +1,7 @@
 #pragma once
 #include "LLMEngine/DebugArtifactManager.hpp"
 #include "LLMEngine/IModelContext.hpp"
+
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -35,7 +36,7 @@ struct RequestContext {
  * - Thread-local random component
  */
 class RequestContextBuilder {
-public:
+  public:
     /**
      * @brief Build a request context with thread-safe unique directory generation.
      *
@@ -49,9 +50,12 @@ public:
      * @param prepend_terse_instruction Whether to prepend terse instruction
      * @return RequestContext with unique request directory and merged parameters
      */
-    static RequestContext build(const IModelContext& context, std::string_view prompt,
-                                const nlohmann::json& input, std::string_view analysis_type,
-                                std::string_view mode, bool prepend_terse_instruction);
+    static RequestContext build(const IModelContext& context,
+                                std::string_view prompt,
+                                const nlohmann::json& input,
+                                std::string_view analysis_type,
+                                std::string_view mode,
+                                bool prepend_terse_instruction);
 };
 
 } // namespace LLMEngine

@@ -3,6 +3,7 @@
 
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
+
 #include <iostream>
 #include <memory>
 #include <mutex>
@@ -62,7 +63,7 @@ struct LLMENGINE_EXPORT Logger {
  * - Warn/Error: stderr with [WARNING] or [ERROR] prefix
  */
 class LLMENGINE_EXPORT DefaultLogger : public Logger {
-public:
+  public:
     /**
      * @brief Log a message (thread-safe implementation).
      *
@@ -86,7 +87,7 @@ public:
         }
     }
 
-private:
+  private:
     mutable std::mutex mutex_; ///< Mutex protecting stream writes
 };
 

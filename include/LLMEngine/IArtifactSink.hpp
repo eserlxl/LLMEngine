@@ -7,6 +7,7 @@
 
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
+
 #include <memory>
 #include <string>
 #include <string_view>
@@ -25,15 +26,17 @@ namespace LLMEngine {
  * @brief Interface for debug artifact creation and writing.
  */
 class LLMENGINE_EXPORT IArtifactSink {
-public:
+  public:
     virtual ~IArtifactSink() = default;
 
     /**
      * @brief Create a new DebugArtifactManager for a request.
      */
     [[nodiscard]] virtual std::unique_ptr<DebugArtifactManager> create(
-        const std::string& request_tmp_dir, const std::string& base_tmp_dir,
-        int log_retention_hours, Logger* logger) const = 0;
+        const std::string& request_tmp_dir,
+        const std::string& base_tmp_dir,
+        int log_retention_hours,
+        Logger* logger) const = 0;
 
     /**
      * @brief Write API response to artifacts.
@@ -47,13 +50,14 @@ public:
  * @brief Default artifact sink implemented with DebugArtifactManager.
  */
 class LLMENGINE_EXPORT DefaultArtifactSink : public IArtifactSink {
-public:
+  public:
     [[nodiscard]] std::unique_ptr<DebugArtifactManager> create(const std::string& request_tmp_dir,
                                                                const std::string& base_tmp_dir,
                                                                int log_retention_hours,
                                                                Logger* logger) const override;
 
-    void writeApiResponse(DebugArtifactManager* mgr, const ::LLMEngineAPI::APIResponse& response,
+    void writeApiResponse(DebugArtifactManager* mgr,
+                          const ::LLMEngineAPI::APIResponse& response,
                           bool is_error) const override;
 };
 

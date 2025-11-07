@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/APIClient.hpp"
+
 #include <cassert>
 #include <iostream>
 
@@ -21,8 +22,8 @@ int main() {
     // providerTypeToString
     assert(APIClientFactory::providerTypeToString(ProviderType::QWEN) == std::string("qwen"));
     assert(APIClientFactory::providerTypeToString(ProviderType::OPENAI) == std::string("openai"));
-    assert(APIClientFactory::providerTypeToString(ProviderType::ANTHROPIC) ==
-           std::string("anthropic"));
+    assert(APIClientFactory::providerTypeToString(ProviderType::ANTHROPIC)
+           == std::string("anthropic"));
     assert(APIClientFactory::providerTypeToString(ProviderType::OLLAMA) == std::string("ollama"));
 
     // Test that createClientFromConfig throws when no credentials are provided for non-Ollama
@@ -38,8 +39,8 @@ int main() {
             std::string error_msg = e.what();
             assert(error_msg.find("No API key found") != std::string::npos);
         }
-        assert(exception_thrown &&
-               "createClientFromConfig should throw when no credentials provided");
+        assert(exception_thrown
+               && "createClientFromConfig should throw when no credentials provided");
     }
 
     // Test that Ollama still works without credentials (it's local)

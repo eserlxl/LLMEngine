@@ -10,6 +10,7 @@
 #include "ChatCompletionRequestHelper.hpp"
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Constants.hpp"
+
 #include <map>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -34,17 +35,18 @@ namespace LLMEngineAPI {
 // does not implement the pure virtual functions from APIClient.
 // Wrapper classes (QwenClient, OpenAIClient) use this via PIMPL pattern.
 class OpenAICompatibleClient {
-protected:
+  protected:
     /**
      * @brief Construct an OpenAI-compatible client.
      * @param api_key API key for authentication
      * @param model Default model name
      * @param base_url Base URL for the API endpoint
      */
-    OpenAICompatibleClient(const std::string& api_key, const std::string& model,
+    OpenAICompatibleClient(const std::string& api_key,
+                           const std::string& model,
                            const std::string& base_url);
 
-public:
+  public:
     void setConfig(std::shared_ptr<IConfigManager> cfg) {
         config_ = std::move(cfg);
     }
@@ -91,7 +93,7 @@ public:
         return config_.get();
     }
 
-protected:
+  protected:
     std::string api_key_;
     std::string model_;
     std::string base_url_;

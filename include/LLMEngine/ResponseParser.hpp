@@ -7,6 +7,7 @@
 
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
+
 #include <string>
 #include <string_view>
 
@@ -19,7 +20,7 @@ namespace LLMEngine {
  * This service encapsulates response parsing logic for better testability.
  */
 class LLMENGINE_EXPORT ResponseParser {
-public:
+  public:
     /**
      * @brief Parse a response string into think section and content.
      *
@@ -49,7 +50,7 @@ public:
     [[nodiscard]] static std::pair<std::string, std::string> parseResponse(
         std::string_view response);
 
-private:
+  private:
     /**
      * @brief Trim whitespace from a string.
      */

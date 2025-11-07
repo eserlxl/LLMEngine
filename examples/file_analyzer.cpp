@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine.hpp"
+
 #include <algorithm>
 #include <ctime>
 #include <filesystem>
@@ -20,14 +21,16 @@
 using namespace LLMEngine;
 
 class FileAnalyzer {
-private:
+  private:
     std::unique_ptr<LLMEngine::LLMEngine> engine_;
     bool debug_mode_;
     std::string mode_;
 
-public:
-    FileAnalyzer(const std::string& provider_name, const std::string& api_key,
-                 const std::string& model = "", bool debug = false,
+  public:
+    FileAnalyzer(const std::string& provider_name,
+                 const std::string& api_key,
+                 const std::string& model = "",
+                 bool debug = false,
                  const std::string& mode = "chat")
         : debug_mode_(debug), mode_(mode) {
         try {
@@ -40,8 +43,8 @@ public:
                 {"presence_penalty", 0.0}   // No penalty for introducing concepts
             };
 
-            engine_ = std::make_unique<LLMEngine::LLMEngine>(provider_name, api_key, model,
-                                                             file_params, 24, debug);
+            engine_ = std::make_unique<LLMEngine::LLMEngine>(
+                provider_name, api_key, model, file_params, 24, debug);
             std::cout << "✓ FileAnalyzer initialized with " << engine_->getProviderName() << " ("
                       << (engine_->isOnlineProvider() ? "Online" : "Local") << ")"
                       << " in " << mode_ << " mode" << std::endl;
@@ -148,7 +151,7 @@ public:
         saveReport(filename, report_content, path);
     }
 
-private:
+  private:
     struct FileInfo {
         std::string name;
         std::string extension;
@@ -177,8 +180,8 @@ private:
 
         auto ftime = std::filesystem::last_write_time(path);
         auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-            ftime - std::filesystem::file_time_type::clock::now() +
-            std::chrono::system_clock::now());
+            ftime - std::filesystem::file_time_type::clock::now()
+            + std::chrono::system_clock::now());
         auto time_t = std::chrono::system_clock::to_time_t(sctp);
         std::stringstream ss;
         ss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S");
@@ -203,8 +206,8 @@ private:
 
                     auto ftime = std::filesystem::last_write_time(entry);
                     auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-                        ftime - std::filesystem::file_time_type::clock::now() +
-                        std::chrono::system_clock::now());
+                        ftime - std::filesystem::file_time_type::clock::now()
+                        + std::chrono::system_clock::now());
                     auto time_t = std::chrono::system_clock::to_time_t(sctp);
 
                     if (time_t < oldest_time) {
@@ -240,8 +243,9 @@ private:
             std::cerr << "❌ Error scanning directory: " << e.what() << std::endl;
         }
 
-        std::sort(files.begin(), files.end(),
-                  [](const auto& a, const auto& b) { return a.second > b.second; });
+        std::sort(files.begin(), files.end(), [](const auto& a, const auto& b) {
+            return a.second > b.second;
+        });
 
         if (files.size() > count) {
             files.resize(count);
@@ -425,16 +429,17 @@ private:
         return "Unknown";
     }
 
-    void analyzeContent(const std::string& content, const std::string& file_type,
+    void analyzeContent(const std::string& content,
+                        const std::string& file_type,
                         const std::string& filepath) {
         try {
-            std::string prompt = "Analyze this " + file_type +
-                                 " file and provide insights about:\n"
-                                 "1. Content overview and purpose\n"
-                                 "2. Key characteristics and patterns\n"
-                                 "3. Potential issues or improvements\n"
-                                 "4. File organization and structure\n"
-                                 "5. Recommendations for optimization";
+            std::string prompt = "Analyze this " + file_type
+                                 + " file and provide insights about:\n"
+                                   "1. Content overview and purpose\n"
+                                   "2. Key characteristics and patterns\n"
+                                   "3. Potential issues or improvements\n"
+                                   "4. File organization and structure\n"
+                                   "5. Recommendations for optimization";
 
             nlohmann::json input = {
                 {"content", content}, {"file_type", file_type}, {"filepath", filepath}};
@@ -588,7 +593,8 @@ private:
         return report.str();
     }
 
-    void saveReport(const std::string& filename, const std::string& content,
+    void saveReport(const std::string& filename,
+                    const std::string& content,
                     const std::string& path) {
         std::ofstream file(filename);
         if (file.is_open()) {

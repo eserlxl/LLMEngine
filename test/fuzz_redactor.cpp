@@ -6,6 +6,7 @@
 // Or use CMake with ENABLE_FUZZ=ON (see test/CMakeLists.txt)
 
 #include "LLMEngine/RequestLogger.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <map>

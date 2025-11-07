@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/LLMEngine.hpp"
+
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/HttpStatus.hpp"
@@ -15,6 +16,7 @@
 #include "LLMEngine/RequestContextBuilder.hpp"
 #include "LLMEngine/ResponseHandler.hpp"
 #include "LLMEngine/TempDirectoryService.hpp"
+
 #include <cstdlib>
 #include <filesystem>
 #include <stdexcept>
@@ -53,7 +55,8 @@ void initializeDefaults(std::shared_ptr<LLM::Logger>& logger,
 
 // Dependency injection constructor
 ::LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<LLMAPI::APIClient> client,
-                                  const nlohmann::json& model_params, int log_retention_hours,
+                                  const nlohmann::json& model_params,
+                                  int log_retention_hours,
                                   bool debug,
                                   const std::shared_ptr<LLM::ITempDirProvider>& temp_dir_provider)
     : model_params_(model_params), log_retention_hours_(log_retention_hours), debug_(debug),
@@ -66,9 +69,12 @@ void initializeDefaults(std::shared_ptr<LLM::Logger>& logger,
 }
 
 // Constructor for API-based providers (direct ProviderType)
-::LLMEngine::LLMEngine::LLMEngine(LLMAPI::ProviderType provider_type, std::string_view api_key,
-                                  std::string_view model, const nlohmann::json& model_params,
-                                  int log_retention_hours, bool debug)
+::LLMEngine::LLMEngine::LLMEngine(LLMAPI::ProviderType provider_type,
+                                  std::string_view api_key,
+                                  std::string_view model,
+                                  const nlohmann::json& model_params,
+                                  int log_retention_hours,
+                                  bool debug)
     : model_params_(model_params), log_retention_hours_(log_retention_hours), debug_(debug),
       temp_dir_provider_(nullptr), provider_type_(provider_type) {
     initializeDefaults(logger_, temp_dir_provider_, nullptr, tmp_dir_);
@@ -85,9 +91,12 @@ void initializeDefaults(std::shared_ptr<LLM::Logger>& logger,
 }
 
 // Constructor using config file
-::LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name, std::string_view api_key,
-                                  std::string_view model, const nlohmann::json& model_params,
-                                  int log_retention_hours, bool debug,
+::LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
+                                  std::string_view api_key,
+                                  std::string_view model,
+                                  const nlohmann::json& model_params,
+                                  int log_retention_hours,
+                                  bool debug,
                                   const std::shared_ptr<LLMAPI::IConfigManager>& config_manager)
     : model_params_(model_params), log_retention_hours_(log_retention_hours), debug_(debug),
       temp_dir_provider_(nullptr) {
@@ -121,10 +130,10 @@ void ::LLMEngine::LLMEngine::initializeAPIClient() {
     if (provider_type_ != LLMAPI::ProviderType::OLLAMA) {
         if (api_key_.empty()) {
             std::string env_var_name = ProviderBootstrap::getApiKeyEnvVarName(provider_type_);
-            std::string error_msg = "No API key found for provider " +
-                                    LLMAPI::APIClientFactory::providerTypeToString(provider_type_) +
-                                    ". " + "Set the " + env_var_name +
-                                    " environment variable or provide it in the constructor.";
+            std::string error_msg = "No API key found for provider "
+                                    + LLMAPI::APIClientFactory::providerTypeToString(provider_type_)
+                                    + ". " + "Set the " + env_var_name
+                                    + " environment variable or provide it in the constructor.";
             if (logger_) {
                 logger_->log(LLM::LogLevel::Error, error_msg);
             }
@@ -133,18 +142,18 @@ void ::LLMEngine::LLMEngine::initializeAPIClient() {
     }
 
     if (provider_type_ == LLMAPI::ProviderType::OLLAMA) {
-        api_client_ = LLMAPI::APIClientFactory::createClient(provider_type_, "", model_,
-                                                             ollama_url_, config_manager_);
+        api_client_ = LLMAPI::APIClientFactory::createClient(
+            provider_type_, "", model_, ollama_url_, config_manager_);
     } else {
-        api_client_ = LLMAPI::APIClientFactory::createClient(provider_type_, api_key_, model_, "",
-                                                             config_manager_);
+        api_client_ = LLMAPI::APIClientFactory::createClient(
+            provider_type_, api_key_, model_, "", config_manager_);
     }
 
     if (!api_client_) {
         std::string provider_name = LLMAPI::APIClientFactory::providerTypeToString(provider_type_);
-        throw std::runtime_error(
-            "Failed to create API client for provider: " + provider_name +
-            ". Check that the provider type is valid and all required dependencies are available.");
+        throw std::runtime_error("Failed to create API client for provider: " + provider_name
+                                 + ". Check that the provider type is valid and all required "
+                                   "dependencies are available.");
     }
 }
 
@@ -181,9 +190,12 @@ LLM::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt,
     ensureSecureTmpDir();
 
     // Build request context (using IModelContext interface to break cyclic dependency)
-    RequestContext ctx =
-        RequestContextBuilder::build(static_cast<const IModelContext&>(*this), prompt, input,
-                                     analysis_type, mode, prepend_terse_instruction);
+    RequestContext ctx = RequestContextBuilder::build(static_cast<const IModelContext&>(*this),
+                                                      prompt,
+                                                      input,
+                                                      analysis_type,
+                                                      mode,
+                                                      prepend_terse_instruction);
 
     // Execute request via injected executor
     LLMAPI::APIResponse api_response;
@@ -209,8 +221,12 @@ LLM::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt,
     }
 
     // Delegate response handling
-    return ResponseHandler::handle(api_response, ctx.debugManager.get(), ctx.requestTmpDir,
-                                   analysis_type, ctx.writeDebugFiles, logger_.get());
+    return ResponseHandler::handle(api_response,
+                                   ctx.debugManager.get(),
+                                   ctx.requestTmpDir,
+                                   analysis_type,
+                                   ctx.writeDebugFiles,
+                                   logger_.get());
 }
 
 std::string LLMEngine::LLMEngine::getProviderName() const {

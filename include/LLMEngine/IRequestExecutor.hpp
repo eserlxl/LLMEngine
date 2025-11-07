@@ -7,6 +7,7 @@
 
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
+
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -23,25 +24,29 @@ namespace LLMEngine {
  * @brief Interface for executing provider requests.
  */
 class LLMENGINE_EXPORT IRequestExecutor {
-public:
+  public:
     virtual ~IRequestExecutor() = default;
 
     /**
      * @brief Execute a request using the provided API client.
      */
     [[nodiscard]] virtual ::LLMEngineAPI::APIResponse execute(
-        const ::LLMEngineAPI::APIClient* api_client, const std::string& full_prompt,
-        const nlohmann::json& input, const nlohmann::json& final_params) const = 0;
+        const ::LLMEngineAPI::APIClient* api_client,
+        const std::string& full_prompt,
+        const nlohmann::json& input,
+        const nlohmann::json& final_params) const = 0;
 };
 
 /**
  * @brief Default request executor that directly calls APIClient::sendRequest.
  */
 class LLMENGINE_EXPORT DefaultRequestExecutor : public IRequestExecutor {
-public:
+  public:
     [[nodiscard]] ::LLMEngineAPI::APIResponse execute(
-        const ::LLMEngineAPI::APIClient* api_client, const std::string& full_prompt,
-        const nlohmann::json& input, const nlohmann::json& final_params) const override;
+        const ::LLMEngineAPI::APIClient* api_client,
+        const std::string& full_prompt,
+        const nlohmann::json& input,
+        const nlohmann::json& final_params) const override;
 };
 
 } // namespace LLMEngine

@@ -7,6 +7,7 @@
 
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
+
 #include <cstdlib>
 #include <filesystem>
 #include <stdexcept>
@@ -37,7 +38,7 @@ namespace LLMEngine {
  * - Custom cleanup policies
  */
 class LLMENGINE_EXPORT ITempDirProvider {
-public:
+  public:
     virtual ~ITempDirProvider() = default;
 
     /**
@@ -66,7 +67,7 @@ public:
  * no custom provider is specified.
  */
 class LLMENGINE_EXPORT DefaultTempDirProvider : public ITempDirProvider {
-public:
+  public:
     DefaultTempDirProvider() {
         std::error_code ec;
         const auto base = std::filesystem::temp_directory_path(ec);
@@ -115,7 +116,7 @@ public:
         return base_path_str_;
     }
 
-private:
+  private:
     std::filesystem::path base_path_;
     std::string base_path_str_;
 };

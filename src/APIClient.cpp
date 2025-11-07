@@ -6,10 +6,12 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/APIClient.hpp"
+
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/Logger.hpp"
 #include "LLMEngine/ProviderBootstrap.hpp"
 #include "LLMEngine/Utils.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <cstring>
@@ -21,7 +23,10 @@ namespace LLMEngineAPI {
 
 // APIClientFactory Implementation
 std::unique_ptr<APIClient> APIClientFactory::createClient(
-    ProviderType type, std::string_view api_key, std::string_view model, std::string_view base_url,
+    ProviderType type,
+    std::string_view api_key,
+    std::string_view model,
+    std::string_view base_url,
     const std::shared_ptr<IConfigManager>& cfg) {
     switch (type) {
         case ProviderType::QWEN: {
@@ -60,7 +65,9 @@ std::unique_ptr<APIClient> APIClientFactory::createClient(
 }
 
 std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(
-    std::string_view provider_name, const nlohmann::json& config, ::LLMEngine::Logger* logger,
+    std::string_view provider_name,
+    const nlohmann::json& config,
+    ::LLMEngine::Logger* logger,
     const std::shared_ptr<IConfigManager>& cfg) {
     ProviderType type = stringToProviderType(provider_name);
 
@@ -78,9 +85,9 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(
     // This prevents silent failures in headless or hardened deployments
     if (api_key.empty() && type != ProviderType::OLLAMA) {
         std::string env_var_name = ::LLMEngine::ProviderBootstrap::getApiKeyEnvVarName(type);
-        std::string error_msg = "No API key found for provider " + std::string(provider_name) +
-                                ". " + "Set the " + env_var_name +
-                                " environment variable or provide it in the config file.";
+        std::string error_msg = "No API key found for provider " + std::string(provider_name) + ". "
+                                + "Set the " + env_var_name
+                                + " environment variable or provide it in the config file.";
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error, error_msg);
         }
@@ -106,8 +113,8 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(
 
 ProviderType APIClientFactory::stringToProviderType(std::string_view provider_name) {
     std::string name(provider_name);
-    std::ranges::transform(name, name.begin(),
-                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    std::ranges::transform(
+        name, name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
     // Direct mapping for known providers
     if (name == "qwen")
@@ -125,8 +132,9 @@ ProviderType APIClientFactory::stringToProviderType(std::string_view provider_na
     // This prevents unexpected provider selection in multi-tenant contexts
     // If an empty or invalid provider is provided, throw an exception rather than defaulting
     if (!name.empty()) {
-        throw std::runtime_error("Unknown provider: " + name +
-                                 ". Supported providers: qwen, openai, anthropic, ollama, gemini");
+        throw std::runtime_error(
+            "Unknown provider: " + name
+            + ". Supported providers: qwen, openai, anthropic, ollama, gemini");
     }
 
     // Only use default for empty string (explicit empty provider request)
@@ -134,8 +142,9 @@ ProviderType APIClientFactory::stringToProviderType(std::string_view provider_na
     const auto& cfg = APIConfigManager::getInstance();
     const std::string def = cfg.getDefaultProvider();
     std::string def_lower = def;
-    std::ranges::transform(def_lower, def_lower.begin(),
-                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    std::ranges::transform(def_lower, def_lower.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
 
     if (def_lower == "qwen")
         return ProviderType::QWEN;
@@ -151,10 +160,10 @@ ProviderType APIClientFactory::stringToProviderType(std::string_view provider_na
     // SECURITY: Fail fast on invalid default provider configuration
     // Falling back to Ollama can route workloads to an unintended local service,
     // potentially exposing secrets to the wrong endpoint. Treat this as a configuration error.
-    std::string error_msg =
-        "Invalid default provider configuration: '" + def +
-        "'. Supported providers: qwen, openai, anthropic, ollama, gemini. "
-        "This is a configuration error and must be fixed to prevent unintended provider selection.";
+    std::string error_msg = "Invalid default provider configuration: '" + def
+                            + "'. Supported providers: qwen, openai, anthropic, ollama, gemini. "
+                              "This is a configuration error and must be fixed to prevent "
+                              "unintended provider selection.";
 
     // Log loudly before throwing (use stderr since getLogger() is private)
     std::cerr << "LLMEngine ERROR: " << error_msg << std::endl;
@@ -257,8 +266,8 @@ bool validateConfig(const nlohmann::json& config, ::LLMEngine::Logger* logger) {
             if (!provider_config.is_object()) {
                 if (logger) {
                     logger->log(::LLMEngine::LogLevel::Error,
-                                std::string("Config validation failed: provider '") +
-                                    provider_name + "' must be an object");
+                                std::string("Config validation failed: provider '") + provider_name
+                                    + "' must be an object");
                 }
                 return false;
             }
@@ -314,11 +323,10 @@ bool validateConfig(const nlohmann::json& config, ::LLMEngine::Logger* logger) {
                 if (logger) {
                     logger->log(
                         ::LLMEngine::LogLevel::Warn,
-                        std::string(
-                            "Config validation warning: timeout_seconds should be between ") +
-                            std::to_string(MIN_TIMEOUT_SECONDS) + " and " +
-                            std::to_string(MAX_TIMEOUT_SECONDS) +
-                            ", got: " + std::to_string(timeout_val));
+                        std::string("Config validation warning: timeout_seconds should be between ")
+                            + std::to_string(MIN_TIMEOUT_SECONDS) + " and "
+                            + std::to_string(MAX_TIMEOUT_SECONDS)
+                            + ", got: " + std::to_string(timeout_val));
                 }
             }
         }
@@ -333,11 +341,10 @@ bool validateConfig(const nlohmann::json& config, ::LLMEngine::Logger* logger) {
                 if (logger) {
                     logger->log(
                         ::LLMEngine::LogLevel::Warn,
-                        std::string(
-                            "Config validation warning: retry_attempts should be between ") +
-                            std::to_string(MIN_RETRY_ATTEMPTS) + " and " +
-                            std::to_string(MAX_RETRY_ATTEMPTS) +
-                            ", got: " + std::to_string(retries_val));
+                        std::string("Config validation warning: retry_attempts should be between ")
+                            + std::to_string(MIN_RETRY_ATTEMPTS) + " and "
+                            + std::to_string(MAX_RETRY_ATTEMPTS)
+                            + ", got: " + std::to_string(retries_val));
                 }
             }
         }
@@ -352,11 +359,10 @@ bool validateConfig(const nlohmann::json& config, ::LLMEngine::Logger* logger) {
                 if (logger) {
                     logger->log(
                         ::LLMEngine::LogLevel::Warn,
-                        std::string(
-                            "Config validation warning: retry_delay_ms should be between ") +
-                            std::to_string(MIN_RETRY_DELAY_MS) + " and " +
-                            std::to_string(MAX_RETRY_DELAY_MS) +
-                            ", got: " + std::to_string(delay_val));
+                        std::string("Config validation warning: retry_delay_ms should be between ")
+                            + std::to_string(MIN_RETRY_DELAY_MS) + " and "
+                            + std::to_string(MAX_RETRY_DELAY_MS)
+                            + ", got: " + std::to_string(delay_val));
                 }
             }
         }
@@ -410,8 +416,8 @@ bool APIConfigManager::loadConfig(std::string_view config_path) {
         return true;
     } catch (const nlohmann::json::parse_error& e) {
         getLogger()->log(::LLMEngine::LogLevel::Error,
-                         std::string("JSON parse error in config file: ") + e.what() +
-                             " at position " + std::to_string(e.byte));
+                         std::string("JSON parse error in config file: ") + e.what()
+                             + " at position " + std::to_string(e.byte));
         config_loaded_ = false;
         config_ = nlohmann::json{}; // Clear stale configuration
         return false;
@@ -447,8 +453,8 @@ std::vector<std::string> APIConfigManager::getAvailableProviders() const {
 
     std::vector<std::string> providers;
 
-    if (config_loaded_ &&
-        config_.contains(std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS))) {
+    if (config_loaded_
+        && config_.contains(std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS))) {
         for (auto& [key, value] :
              config_[std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS)].items()) {
             providers.push_back(key);
@@ -460,8 +466,8 @@ std::vector<std::string> APIConfigManager::getAvailableProviders() const {
 
 std::string APIConfigManager::getDefaultProvider() const {
     std::shared_lock<std::shared_mutex> lock(mutex_);
-    if (!config_loaded_ ||
-        !config_.contains(std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_PROVIDER))) {
+    if (!config_loaded_
+        || !config_.contains(std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_PROVIDER))) {
         return "ollama";
     }
     return config_[std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_PROVIDER)]
@@ -470,8 +476,8 @@ std::string APIConfigManager::getDefaultProvider() const {
 
 int APIConfigManager::getTimeoutSeconds() const {
     std::shared_lock<std::shared_mutex> lock(mutex_);
-    if (!config_loaded_ ||
-        !config_.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
+    if (!config_loaded_
+        || !config_.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
         return ::LLMEngine::Constants::DefaultValues::TIMEOUT_SECONDS;
     }
     return config_[std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)].get<int>();
@@ -496,8 +502,8 @@ int APIConfigManager::getTimeoutSeconds(std::string_view provider_name) const {
     }
 
     // Check provider-specific timeout
-    if (!provider_name.empty() &&
-        config_.contains(std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS))) {
+    if (!provider_name.empty()
+        && config_.contains(std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS))) {
         std::string provider_key(provider_name);
         if (config_[std::string(::LLMEngine::Constants::JsonKeys::PROVIDERS)].contains(
                 provider_key)) {
@@ -522,8 +528,8 @@ int APIConfigManager::getTimeoutSeconds(std::string_view provider_name) const {
 
 int APIConfigManager::getRetryAttempts() const {
     std::shared_lock<std::shared_mutex> lock(mutex_);
-    if (!config_loaded_ ||
-        !config_.contains(std::string(::LLMEngine::Constants::JsonKeys::RETRY_ATTEMPTS))) {
+    if (!config_loaded_
+        || !config_.contains(std::string(::LLMEngine::Constants::JsonKeys::RETRY_ATTEMPTS))) {
         return ::LLMEngine::Constants::DefaultValues::RETRY_ATTEMPTS;
     }
     return config_[std::string(::LLMEngine::Constants::JsonKeys::RETRY_ATTEMPTS)].get<int>();
@@ -531,8 +537,8 @@ int APIConfigManager::getRetryAttempts() const {
 
 int APIConfigManager::getRetryDelayMs() const {
     std::shared_lock<std::shared_mutex> lock(mutex_);
-    if (!config_loaded_ ||
-        !config_.contains(std::string(::LLMEngine::Constants::JsonKeys::RETRY_DELAY_MS))) {
+    if (!config_loaded_
+        || !config_.contains(std::string(::LLMEngine::Constants::JsonKeys::RETRY_DELAY_MS))) {
         return ::LLMEngine::Constants::DefaultValues::RETRY_DELAY_MS;
     }
     return config_[std::string(::LLMEngine::Constants::JsonKeys::RETRY_DELAY_MS)].get<int>();

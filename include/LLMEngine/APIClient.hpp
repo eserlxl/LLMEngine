@@ -77,7 +77,7 @@ struct APIResponse {
  * - Provide thread-safe access to configuration
  */
 class LLMENGINE_EXPORT APIClient {
-public:
+  public:
     virtual ~APIClient() = default;
     /**
      * @brief Send a text generation request.
@@ -86,7 +86,8 @@ public:
      * @param params Model parameters (temperature, max_tokens, etc.).
      * @return Provider-agnostic APIResponse.
      */
-    virtual APIResponse sendRequest(std::string_view prompt, const nlohmann::json& input,
+    virtual APIResponse sendRequest(std::string_view prompt,
+                                    const nlohmann::json& input,
                                     const nlohmann::json& params) const = 0;
     /** @brief Human-readable provider name. */
     virtual std::string getProviderName() const = 0;
@@ -106,14 +107,15 @@ public:
  * Uses OpenAICompatibleClient internally to share common OpenAI-compatible API logic.
  */
 class LLMENGINE_EXPORT QwenClient : public APIClient {
-public:
+  public:
     /**
      * @param api_key Qwen API key (environment-retrieved recommended).
      * @param model Default model, e.g. "qwen-flash".
      */
     QwenClient(const std::string& api_key, const std::string& model = "qwen-flash");
     ~QwenClient();
-    APIResponse sendRequest(std::string_view prompt, const nlohmann::json& input,
+    APIResponse sendRequest(std::string_view prompt,
+                            const nlohmann::json& input,
                             const nlohmann::json& params) const override;
     std::string getProviderName() const override {
         return "Qwen";
@@ -123,7 +125,7 @@ public:
     }
     void setConfig(std::shared_ptr<IConfigManager> cfg) override;
 
-private:
+  private:
     class Impl;
     std::unique_ptr<Impl> impl_;
 };
@@ -134,14 +136,15 @@ private:
  * Uses OpenAICompatibleClient internally to share common OpenAI-compatible API logic.
  */
 class LLMENGINE_EXPORT OpenAIClient : public APIClient {
-public:
+  public:
     /**
      * @param api_key OpenAI API key.
      * @param model Default model, e.g. "gpt-3.5-turbo".
      */
     OpenAIClient(const std::string& api_key, const std::string& model = "gpt-3.5-turbo");
     ~OpenAIClient();
-    APIResponse sendRequest(std::string_view prompt, const nlohmann::json& input,
+    APIResponse sendRequest(std::string_view prompt,
+                            const nlohmann::json& input,
                             const nlohmann::json& params) const override;
     std::string getProviderName() const override {
         return "OpenAI";
@@ -151,7 +154,7 @@ public:
     }
     void setConfig(std::shared_ptr<IConfigManager> cfg) override;
 
-private:
+  private:
     class Impl;
     std::unique_ptr<Impl> impl_;
 };
@@ -160,13 +163,14 @@ private:
  * @brief Anthropic Claude client.
  */
 class LLMENGINE_EXPORT AnthropicClient : public APIClient {
-public:
+  public:
     /**
      * @param api_key Anthropic API key.
      * @param model Default model, e.g. "claude-3-sonnet".
      */
     AnthropicClient(const std::string& api_key, const std::string& model = "claude-3-sonnet");
-    APIResponse sendRequest(std::string_view prompt, const nlohmann::json& input,
+    APIResponse sendRequest(std::string_view prompt,
+                            const nlohmann::json& input,
                             const nlohmann::json& params) const override;
     std::string getProviderName() const override {
         return "Anthropic";
@@ -178,7 +182,7 @@ public:
         config_ = std::move(cfg);
     }
 
-private:
+  private:
     std::string api_key_;
     std::string model_;
     std::string base_url_;
@@ -190,14 +194,15 @@ private:
  * @brief Local Ollama client.
  */
 class LLMENGINE_EXPORT OllamaClient : public APIClient {
-public:
+  public:
     /**
      * @param base_url Ollama server URL.
      * @param model Default local model name.
      */
     OllamaClient(const std::string& base_url = "http://localhost:11434",
                  const std::string& model = "llama2");
-    APIResponse sendRequest(std::string_view prompt, const nlohmann::json& input,
+    APIResponse sendRequest(std::string_view prompt,
+                            const nlohmann::json& input,
                             const nlohmann::json& params) const override;
     std::string getProviderName() const override {
         return "Ollama";
@@ -209,7 +214,7 @@ public:
         config_ = std::move(cfg);
     }
 
-private:
+  private:
     std::string base_url_;
     std::string model_;
     nlohmann::json default_params_;
@@ -220,13 +225,14 @@ private:
  * @brief Google Gemini (AI Studio) client.
  */
 class LLMENGINE_EXPORT GeminiClient : public APIClient {
-public:
+  public:
     /**
      * @param api_key Google AI Studio API key.
      * @param model Default model, e.g. "gemini-1.5-flash".
      */
     GeminiClient(const std::string& api_key, const std::string& model = "gemini-1.5-flash");
-    APIResponse sendRequest(std::string_view prompt, const nlohmann::json& input,
+    APIResponse sendRequest(std::string_view prompt,
+                            const nlohmann::json& input,
                             const nlohmann::json& params) const override;
     std::string getProviderName() const override {
         return "Gemini";
@@ -238,7 +244,7 @@ public:
         config_ = std::move(cfg);
     }
 
-private:
+  private:
     std::string api_key_;
     std::string model_;
     std::string base_url_;
@@ -267,13 +273,16 @@ private:
  * 3. Exception if required and not found
  */
 class LLMENGINE_EXPORT APIClientFactory {
-public:
+  public:
     /**
      * @brief Create client by enum type.
      */
     static std::unique_ptr<APIClient> createClient(
-        ProviderType type, std::string_view api_key = "", std::string_view model = "",
-        std::string_view base_url = "", const std::shared_ptr<IConfigManager>& cfg = nullptr);
+        ProviderType type,
+        std::string_view api_key = "",
+        std::string_view model = "",
+        std::string_view base_url = "",
+        const std::shared_ptr<IConfigManager>& cfg = nullptr);
 
     /**
      * @brief Create client by provider name from JSON config.
@@ -282,7 +291,8 @@ public:
      * @param logger Optional logger for warnings and errors (nullptr to suppress)
      */
     static std::unique_ptr<APIClient> createClientFromConfig(
-        std::string_view provider_name, const nlohmann::json& config,
+        std::string_view provider_name,
+        const nlohmann::json& config,
         ::LLMEngine::Logger* logger = nullptr,
         const std::shared_ptr<IConfigManager>& cfg = nullptr);
 
@@ -336,7 +346,7 @@ public:
  * ```
  */
 class LLMENGINE_EXPORT APIConfigManager : public IConfigManager {
-public:
+  public:
     static APIConfigManager& getInstance();
 
     /**
@@ -359,7 +369,7 @@ public:
     [[nodiscard]] int getRetryAttempts() const override;
     [[nodiscard]] int getRetryDelayMs() const override;
 
-private:
+  private:
     APIConfigManager();
     mutable std::shared_mutex mutex_; // For read-write lock
     nlohmann::json config_;

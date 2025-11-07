@@ -7,6 +7,7 @@
 
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
+
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -36,7 +37,7 @@ namespace LLMEngine {
  * request should use its own instance or ensure proper synchronization.
  */
 class LLMENGINE_EXPORT DebugArtifactManager {
-public:
+  public:
     /**
      * @brief Construct a debug artifact manager.
      *
@@ -45,8 +46,10 @@ public:
      * @param log_retention_hours Hours to retain old debug artifacts
      * @param logger Optional logger for debug messages
      */
-    DebugArtifactManager(std::string request_tmp_dir, std::string base_tmp_dir,
-                         int log_retention_hours, Logger* logger = nullptr);
+    DebugArtifactManager(std::string request_tmp_dir,
+                         std::string base_tmp_dir,
+                         int log_retention_hours,
+                         Logger* logger = nullptr);
 
     /**
      * @brief Write API response JSON (success or error).
@@ -73,7 +76,8 @@ public:
      * @param remaining_section Remaining content after thinking extraction
      * @return true if both files written successfully
      */
-    bool writeAnalysisArtifacts(std::string_view analysis_type, std::string_view think_section,
+    bool writeAnalysisArtifacts(std::string_view analysis_type,
+                                std::string_view think_section,
                                 std::string_view remaining_section);
 
     /**
@@ -102,7 +106,7 @@ public:
      */
     void performCleanup();
 
-private:
+  private:
     std::string request_tmp_dir_;
     std::string base_tmp_dir_;
     int log_retention_hours_;

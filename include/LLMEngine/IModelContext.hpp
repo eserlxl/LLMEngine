@@ -7,6 +7,7 @@
 
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
+
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -37,7 +38,7 @@ namespace LLMEngine {
  * (typically not thread-safe for modifications, but safe for read-only access).
  */
 class LLMENGINE_EXPORT IModelContext {
-public:
+  public:
     virtual ~IModelContext() = default;
 
     /**

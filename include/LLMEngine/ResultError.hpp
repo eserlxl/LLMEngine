@@ -8,6 +8,7 @@
 #pragma once
 #include "LLMEngine/ErrorCodes.hpp"
 #include "LLMEngine/Result.hpp"
+
 #include <string>
 
 namespace LLMEngine {
@@ -45,7 +46,6 @@ struct LLMENGINE_EXPORT ResultError {
  * }
  * ```
  */
-template <typename T>
-using ResultOrError = Result<T, ResultError>;
+template <typename T> using ResultOrError = Result<T, ResultError>;
 
 } // namespace LLMEngine

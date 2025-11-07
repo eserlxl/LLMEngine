@@ -6,6 +6,7 @@
 // fuzz_parameter_merging Or use CMake with ENABLE_FUZZ=ON (see test/CMakeLists.txt)
 
 #include "LLMEngine/ParameterMerger.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <nlohmann/json.hpp>

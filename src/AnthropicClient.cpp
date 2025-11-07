@@ -9,6 +9,7 @@
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/HttpStatus.hpp"
+
 #include <nlohmann/json.hpp>
 
 namespace LLMEngineAPI {
@@ -21,7 +22,8 @@ AnthropicClient::AnthropicClient(const std::string& api_key, const std::string& 
                        {"top_p", ::LLMEngine::Constants::DefaultValues::TOP_P}};
 }
 
-APIResponse AnthropicClient::sendRequest(std::string_view prompt, const nlohmann::json& input,
+APIResponse AnthropicClient::sendRequest(std::string_view prompt,
+                                         const nlohmann::json& input,
                                          const nlohmann::json& params) const {
     APIResponse response;
     response.success = false;
@@ -78,7 +80,8 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt, const nlohmann
                                                {"anthropic-version", "2023-06-01"}};
         maybeLogRequest("POST", url, hdr);
         cpr::Response cpr_response = sendWithRetries(rs, [&]() {
-            return cpr::Post(cpr::Url{url}, cpr::Header{hdr.begin(), hdr.end()},
+            return cpr::Post(cpr::Url{url},
+                             cpr::Header{hdr.begin(), hdr.end()},
                              cpr::Body{payload.dump()},
                              cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
                              cpr::VerifySsl{verify_ssl});
@@ -90,9 +93,9 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt, const nlohmann
             // Parse JSON only after confirming HTTP success
             try {
                 response.raw_response = nlohmann::json::parse(cpr_response.text);
-                if (response.raw_response.contains("content") &&
-                    response.raw_response["content"].is_array() &&
-                    !response.raw_response["content"].empty()) {
+                if (response.raw_response.contains("content")
+                    && response.raw_response["content"].is_array()
+                    && !response.raw_response["content"].empty()) {
 
                     auto content = response.raw_response["content"][0];
                     if (content.contains("text")) {
@@ -122,8 +125,8 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt, const nlohmann
             }
 
             // Classify error based on HTTP status code
-            if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED ||
-                cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
+            if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
+                || cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
                 response.error_code = LLMEngine::LLMEngineErrorCode::Auth;
             } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
                 response.error_code = LLMEngine::LLMEngineErrorCode::RateLimited;

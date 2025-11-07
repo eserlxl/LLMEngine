@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine.hpp"
+
 #include <algorithm>
 #include <cstdlib>
 #include <ctime>
@@ -20,14 +21,16 @@
 using namespace LLMEngine;
 
 class LogoGenerator {
-private:
+  private:
     std::unique_ptr<LLMEngine::LLMEngine> engine_;
     bool debug_mode_;
     std::string output_dir_;
 
-public:
-    LogoGenerator(const std::string& provider_name, const std::string& api_key,
-                  const std::string& model = "", bool debug = false)
+  public:
+    LogoGenerator(const std::string& provider_name,
+                  const std::string& api_key,
+                  const std::string& model = "",
+                  bool debug = false)
         : debug_mode_(debug) {
         try {
             // Configure parameters optimized for creative logo generation
@@ -39,8 +42,8 @@ public:
                 {"presence_penalty", 0.0}   // No penalty for introducing new concepts
             };
 
-            engine_ = std::make_unique<LLMEngine::LLMEngine>(provider_name, api_key, model,
-                                                             logo_params, 24, debug);
+            engine_ = std::make_unique<LLMEngine::LLMEngine>(
+                provider_name, api_key, model, logo_params, 24, debug);
             output_dir_ = "generated_logos";
             std::filesystem::create_directories(output_dir_);
 
@@ -52,10 +55,11 @@ public:
         }
     }
 
-    void generateLogo(const std::string& description, const std::string& format = "png",
+    void generateLogo(const std::string& description,
+                      const std::string& format = "png",
                       const std::string& filename = "") {
-        std::cout << "\n🎨 Generating logo from description: \"" << description
-                  << "\"" << std::endl;
+        std::cout << "\n🎨 Generating logo from description: \"" << description << "\""
+                  << std::endl;
 
         try {
             // Create detailed prompt for logo generation
@@ -146,7 +150,7 @@ public:
         }
     }
 
-private:
+  private:
     std::string createLogoPrompt(const std::string& description, const std::string& format) {
         std::stringstream prompt;
         prompt << "Create a complete SVG logo for: \"" << description << "\"\n\n";
@@ -177,12 +181,12 @@ private:
             std::transform(lower_word.begin(), lower_word.end(), lower_word.begin(), ::tolower);
 
             // Skip common words that don't add meaning
-            if (lower_word != "a" && lower_word != "an" && lower_word != "the" &&
-                lower_word != "and" && lower_word != "or" && lower_word != "but" &&
-                lower_word != "with" && lower_word != "for" && lower_word != "of" &&
-                lower_word != "in" && lower_word != "on" && lower_word != "at" &&
-                lower_word != "to" && lower_word != "from" && lower_word != "by" &&
-                lower_word != "logo" && lower_word != "design") {
+            if (lower_word != "a" && lower_word != "an" && lower_word != "the"
+                && lower_word != "and" && lower_word != "or" && lower_word != "but"
+                && lower_word != "with" && lower_word != "for" && lower_word != "of"
+                && lower_word != "in" && lower_word != "on" && lower_word != "at"
+                && lower_word != "to" && lower_word != "from" && lower_word != "by"
+                && lower_word != "logo" && lower_word != "design") {
                 words.push_back(word);
             }
         }
@@ -256,12 +260,13 @@ private:
 
     bool isValidSVG(const std::string& content) {
         // Basic SVG validation
-        return content.find("<?xml") != std::string::npos &&
-               content.find("<svg") != std::string::npos &&
-               content.find("</svg>") != std::string::npos;
+        return content.find("<?xml") != std::string::npos
+               && content.find("<svg") != std::string::npos
+               && content.find("</svg>") != std::string::npos;
     }
 
-    void convertToRaster(const std::string& svg_path, const std::string& output_path,
+    void convertToRaster(const std::string& svg_path,
+                         const std::string& output_path,
                          const std::string& format) {
         // Try to use ImageMagick or Inkscape for conversion
         std::string convert_cmd;
@@ -386,9 +391,9 @@ int main(int argc, char* argv[]) {
                     descriptions.push_back(argv[i]);
                 }
                 if (descriptions.empty()) {
-                    std::cerr
-                        << "❌ No descriptions provided for multiple logo generation"
-                        << std::endl;
+                    std::cerr << "❌ No descriptions provided for multiple logo "
+                                 "generation"
+                              << std::endl;
                     return 1;
                 }
                 generator.generateMultipleLogos(descriptions);
@@ -452,9 +457,9 @@ int main(int argc, char* argv[]) {
                 descriptions.push_back(argv[i]);
             }
             if (descriptions.empty()) {
-                std::cerr
-                    << "❌ No descriptions provided for multiple logo generation"
-                    << std::endl;
+                std::cerr << "❌ No descriptions provided for multiple logo "
+                             "generation"
+                          << std::endl;
                 return 1;
             }
             generator.generateMultipleLogos(descriptions);

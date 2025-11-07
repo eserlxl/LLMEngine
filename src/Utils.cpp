@@ -6,7 +6,9 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/Utils.hpp"
+
 #include "LLMEngine/Logger.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -72,7 +74,7 @@ void close_fd(int fd) {
 
 // RAII wrapper for pipe file descriptors
 class PipeFD {
-public:
+  public:
     explicit PipeFD(int fd) : fd_(fd) {}
     ~PipeFD() {
         if (fd_ >= 0) {
@@ -102,7 +104,7 @@ public:
         return fd;
     }
 
-private:
+  private:
     int fd_;
 };
 
@@ -193,9 +195,9 @@ std::vector<std::string> execCommandImpl(const std::vector<std::string>& args,
     }
 
     // Explicitly check for newlines and tabs (redundant but defensive)
-    if (cmd_str_for_logging.find('\n') != std::string::npos ||
-        cmd_str_for_logging.find('\r') != std::string::npos ||
-        cmd_str_for_logging.find('\t') != std::string::npos) {
+    if (cmd_str_for_logging.find('\n') != std::string::npos
+        || cmd_str_for_logging.find('\r') != std::string::npos
+        || cmd_str_for_logging.find('\t') != std::string::npos) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
                         "execCommand: Command contains newlines, carriage "
@@ -209,8 +211,8 @@ std::vector<std::string> execCommandImpl(const std::vector<std::string>& args,
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
                         std::string("execCommand: Command contains potentially "
-                                    "unsafe characters: ") +
-                            cmd_str_for_logging);
+                                    "unsafe characters: ")
+                            + cmd_str_for_logging);
             logger->log(::LLMEngine::LogLevel::Error,
                         "Only alphanumeric, single spaces, hyphens, underscores, "
                         "dots, and slashes are allowed");
@@ -223,24 +225,24 @@ std::vector<std::string> execCommandImpl(const std::vector<std::string>& args,
 
     // Additional check: prevent command chaining attempts via shell
     // metacharacters
-    if (cmd_str_for_logging.find('|') != std::string::npos ||
-        cmd_str_for_logging.find('&') != std::string::npos ||
-        cmd_str_for_logging.find(';') != std::string::npos ||
-        cmd_str_for_logging.find('$') != std::string::npos ||
-        cmd_str_for_logging.find('`') != std::string::npos ||
-        cmd_str_for_logging.find('(') != std::string::npos ||
-        cmd_str_for_logging.find(')') != std::string::npos ||
-        cmd_str_for_logging.find('<') != std::string::npos ||
-        cmd_str_for_logging.find('>') != std::string::npos ||
-        cmd_str_for_logging.find('{') != std::string::npos ||
-        cmd_str_for_logging.find('}') != std::string::npos ||
-        cmd_str_for_logging.find('[') != std::string::npos ||
-        cmd_str_for_logging.find(']') != std::string::npos ||
-        cmd_str_for_logging.find('*') != std::string::npos ||
-        cmd_str_for_logging.find('?') != std::string::npos ||
-        cmd_str_for_logging.find('!') != std::string::npos ||
-        cmd_str_for_logging.find('#') != std::string::npos ||
-        cmd_str_for_logging.find('~') != std::string::npos) {
+    if (cmd_str_for_logging.find('|') != std::string::npos
+        || cmd_str_for_logging.find('&') != std::string::npos
+        || cmd_str_for_logging.find(';') != std::string::npos
+        || cmd_str_for_logging.find('$') != std::string::npos
+        || cmd_str_for_logging.find('`') != std::string::npos
+        || cmd_str_for_logging.find('(') != std::string::npos
+        || cmd_str_for_logging.find(')') != std::string::npos
+        || cmd_str_for_logging.find('<') != std::string::npos
+        || cmd_str_for_logging.find('>') != std::string::npos
+        || cmd_str_for_logging.find('{') != std::string::npos
+        || cmd_str_for_logging.find('}') != std::string::npos
+        || cmd_str_for_logging.find('[') != std::string::npos
+        || cmd_str_for_logging.find(']') != std::string::npos
+        || cmd_str_for_logging.find('*') != std::string::npos
+        || cmd_str_for_logging.find('?') != std::string::npos
+        || cmd_str_for_logging.find('!') != std::string::npos
+        || cmd_str_for_logging.find('#') != std::string::npos
+        || cmd_str_for_logging.find('~') != std::string::npos) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
                         "execCommand: Command contains shell metacharacters - "
@@ -275,8 +277,8 @@ std::vector<std::string> execCommandImpl(const std::vector<std::string>& args,
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
                         std::string("execCommand: Failed to create pipes for "
-                                    "command: ") +
-                            cmd_str_for_logging);
+                                    "command: ")
+                            + cmd_str_for_logging);
         }
         return output;
     }
@@ -340,8 +342,9 @@ std::vector<std::string> execCommandImpl(const std::vector<std::string>& args,
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
                         std::string("execCommand: posix_spawnp() failed for "
-                                    "command: ") +
-                            cmd_str_for_logging + " (error: " + std::to_string(spawn_result) + ")");
+                                    "command: ")
+                            + cmd_str_for_logging + " (error: " + std::to_string(spawn_result)
+                            + ")");
         }
         // Pipes are automatically closed by RAII wrappers
         return output;
@@ -420,8 +423,8 @@ std::vector<std::string> execCommandImpl(const std::vector<std::string>& args,
                 } else {
                     stdout_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
                 }
-            } else if (bytes_read == 0 ||
-                       (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK)) {
+            } else if (bytes_read == 0
+                       || (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK)) {
                 // EOF or error (not just would-block)
                 stdout_closed = true;
                 pollfds[0].fd = -1; // Remove from poll set
@@ -446,8 +449,8 @@ std::vector<std::string> execCommandImpl(const std::vector<std::string>& args,
                 } else {
                     stderr_buffer.append(buffer.data(), static_cast<size_t>(bytes_read));
                 }
-            } else if (bytes_read == 0 ||
-                       (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK)) {
+            } else if (bytes_read == 0
+                       || (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK)) {
                 // EOF or error (not just would-block)
                 stderr_closed = true;
                 pollfds[1].fd = -1; // Remove from poll set
@@ -478,8 +481,8 @@ std::vector<std::string> execCommandImpl(const std::vector<std::string>& args,
     if (total_lines >= MAX_OUTPUT_LINES) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Warn,
-                        std::string("execCommand: Output truncated at ") +
-                            std::to_string(MAX_OUTPUT_LINES) + " lines");
+                        std::string("execCommand: Output truncated at ")
+                            + std::to_string(MAX_OUTPUT_LINES) + " lines");
         }
     }
 
@@ -501,8 +504,8 @@ std::vector<std::string> execCommandImpl(const std::vector<std::string>& args,
     if (total_lines >= MAX_OUTPUT_LINES) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Warn,
-                        std::string("execCommand: Total output truncated at ") +
-                            std::to_string(MAX_OUTPUT_LINES) + " lines");
+                        std::string("execCommand: Total output truncated at ")
+                            + std::to_string(MAX_OUTPUT_LINES) + " lines");
         }
     }
 
@@ -523,8 +526,8 @@ std::vector<std::string> execCommandImpl(const std::vector<std::string>& args,
         if (logger) {
             logger->log(
                 ::LLMEngine::LogLevel::Warn,
-                std::string("Command '") + cmd_str_for_logging +
-                    "' exited with non-zero status: " + std::to_string(WEXITSTATUS(status)));
+                std::string("Command '") + cmd_str_for_logging
+                    + "' exited with non-zero status: " + std::to_string(WEXITSTATUS(status)));
             if (!output.empty()) {
                 std::string output_msg = "  Output:\n";
                 for (const auto& output_line : output) {
@@ -536,8 +539,8 @@ std::vector<std::string> execCommandImpl(const std::vector<std::string>& args,
     } else if (WIFSIGNALED(status)) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Warn,
-                        std::string("Command '") + cmd_str_for_logging +
-                            "' terminated by signal: " + std::to_string(WTERMSIG(status)));
+                        std::string("Command '") + cmd_str_for_logging
+                            + "' terminated by signal: " + std::to_string(WTERMSIG(status)));
         }
     }
 
@@ -598,8 +601,8 @@ std::vector<std::string> execCommand(std::string_view cmd, ::LLMEngine::Logger* 
     }
 
     // Explicitly check for newlines and tabs (redundant but defensive)
-    if (cmd_str.find('\n') != std::string::npos || cmd_str.find('\r') != std::string::npos ||
-        cmd_str.find('\t') != std::string::npos) {
+    if (cmd_str.find('\n') != std::string::npos || cmd_str.find('\r') != std::string::npos
+        || cmd_str.find('\t') != std::string::npos) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
                         "execCommand: Command contains newlines, carriage "
@@ -613,8 +616,8 @@ std::vector<std::string> execCommand(std::string_view cmd, ::LLMEngine::Logger* 
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
                         std::string("execCommand: Command contains potentially "
-                                    "unsafe characters: ") +
-                            cmd_str);
+                                    "unsafe characters: ")
+                            + cmd_str);
             logger->log(::LLMEngine::LogLevel::Error,
                         "Only alphanumeric, single spaces, hyphens, underscores, "
                         "dots, and slashes are allowed");
@@ -627,15 +630,15 @@ std::vector<std::string> execCommand(std::string_view cmd, ::LLMEngine::Logger* 
 
     // Additional check: prevent command chaining attempts via shell
     // metacharacters
-    if (cmd_str.find('|') != std::string::npos || cmd_str.find('&') != std::string::npos ||
-        cmd_str.find(';') != std::string::npos || cmd_str.find('$') != std::string::npos ||
-        cmd_str.find('`') != std::string::npos || cmd_str.find('(') != std::string::npos ||
-        cmd_str.find(')') != std::string::npos || cmd_str.find('<') != std::string::npos ||
-        cmd_str.find('>') != std::string::npos || cmd_str.find('{') != std::string::npos ||
-        cmd_str.find('}') != std::string::npos || cmd_str.find('[') != std::string::npos ||
-        cmd_str.find(']') != std::string::npos || cmd_str.find('*') != std::string::npos ||
-        cmd_str.find('?') != std::string::npos || cmd_str.find('!') != std::string::npos ||
-        cmd_str.find('#') != std::string::npos || cmd_str.find('~') != std::string::npos) {
+    if (cmd_str.find('|') != std::string::npos || cmd_str.find('&') != std::string::npos
+        || cmd_str.find(';') != std::string::npos || cmd_str.find('$') != std::string::npos
+        || cmd_str.find('`') != std::string::npos || cmd_str.find('(') != std::string::npos
+        || cmd_str.find(')') != std::string::npos || cmd_str.find('<') != std::string::npos
+        || cmd_str.find('>') != std::string::npos || cmd_str.find('{') != std::string::npos
+        || cmd_str.find('}') != std::string::npos || cmd_str.find('[') != std::string::npos
+        || cmd_str.find(']') != std::string::npos || cmd_str.find('*') != std::string::npos
+        || cmd_str.find('?') != std::string::npos || cmd_str.find('!') != std::string::npos
+        || cmd_str.find('#') != std::string::npos || cmd_str.find('~') != std::string::npos) {
         if (logger) {
             logger->log(::LLMEngine::LogLevel::Error,
                         "execCommand: Command contains shell metacharacters - "
@@ -736,8 +739,8 @@ bool validateModelName(std::string_view model_name) {
     // Check for allowed characters: alphanumeric, hyphens, underscores, dots,
     // slashes
     if (!std::ranges::all_of(model_name, [](char c) {
-            return std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_' ||
-                   c == '.' || c == '/';
+            return std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_' || c == '.'
+                   || c == '/';
         })) {
         return false;
     }
@@ -760,8 +763,8 @@ bool validateUrl(std::string_view url) {
         return false;
     }
 
-    if (url.substr(0, HTTP_PREFIX_LENGTH) != "http://" &&
-        url.substr(0, HTTPS_PREFIX_LENGTH) != "https://") {
+    if (url.substr(0, HTTP_PREFIX_LENGTH) != "http://"
+        && url.substr(0, HTTPS_PREFIX_LENGTH) != "https://") {
         return false;
     }
 

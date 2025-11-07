@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/RequestLogger.hpp"
+
 #include <benchmark/benchmark.h>
 #include <map>
 #include <string>
