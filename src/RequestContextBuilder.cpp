@@ -22,19 +22,6 @@ namespace {
 // Thread-safety: Safe for concurrent access from multiple threads.
 std::atomic<uint64_t> request_counter{0};
 
-// Process-wide PRNG seeded once at startup to avoid blocking on /dev/random
-// under entropy pressure. Each thread uses this with a thread-specific offset.
-// Thread-safety: Initialized once at program startup, then read-only.
-// Each thread has its own thread_local RNG instance for thread safety.
-std::mt19937_64 process_rng = []() {
-    std::random_device rd;
-    std::seed_seq seed{
-        static_cast<uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count()),
-        static_cast<uint64_t>(rd()),
-        static_cast<uint64_t>(rd())};
-    return std::mt19937_64(seed);
-}();
-
 // Thread-local offset for uniqueness per thread without reseeding
 // Thread-safety: Each thread has its own instance, no synchronization needed.
 thread_local uint64_t thread_offset = []() {
@@ -42,17 +29,27 @@ thread_local uint64_t thread_offset = []() {
 }();
 
 // Thread-local random number generator initialized once per thread
-// Uses process-wide PRNG state with thread-specific offset for uniqueness
+// Uses std::random_device per thread for thread-safe initialization.
+// std::random_device is thread-safe and can be called concurrently from multiple threads.
 // Thread-safety: Each thread has its own instance, safe for concurrent use.
 thread_local std::mt19937_64 rng = []() {
-    // Initialize with process seed plus thread offset
-    std::mt19937_64 local_rng(process_rng());
-    // Mix in thread-specific offset
-    constexpr int rng_warmup_rounds = 10; // Number of values to discard for state mixing
+    // Use std::random_device directly (thread-safe) to seed each thread's RNG
+    // This avoids data races from concurrent access to a shared process_rng
+    std::random_device rd;
+    const auto timestamp =
+        static_cast<uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
+    const uint64_t thread_hash = thread_offset;
+    
+    // Create seed sequence from thread-safe sources
+    std::seed_seq seed{timestamp, static_cast<uint64_t>(rd()), static_cast<uint64_t>(rd()),
+                       thread_hash};
+    std::mt19937_64 local_rng(seed);
+    
+    // Warm up the RNG to mix state
+    constexpr int rng_warmup_rounds = 10;
     for (int i = 0; i < rng_warmup_rounds; ++i) {
         local_rng(); // Discard some values to mix state
     }
-    local_rng.seed(process_rng() ^ thread_offset);
     return local_rng;
 }();
 

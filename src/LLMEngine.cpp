@@ -17,9 +17,12 @@
 #include "LLMEngine/ResponseHandler.hpp"
 #include "LLMEngine/TempDirectoryService.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <filesystem>
 #include <stdexcept>
+#include <string>
 #include <system_error>
 
 // Namespace aliases to reduce verbosity
@@ -51,6 +54,35 @@ void initializeDefaults(std::shared_ptr<LLM::Logger>& logger,
         tmp_dir = temp_dir_provider->getTempDir();
     }
 }
+
+// Helper function to parse LLMENGINE_DISABLE_DEBUG_FILES environment variable
+// Returns true if debug files should be disabled, false otherwise.
+// Parses common boolean representations: "0", "false", "False", "FALSE" enable debug files.
+// Any other non-empty value disables debug files. Empty/unset enables debug files.
+bool parseDisableDebugFilesEnv() {
+    const char* env_value = std::getenv("LLMENGINE_DISABLE_DEBUG_FILES");
+    if (env_value == nullptr) {
+        return false; // Variable not set, enable debug files
+    }
+    
+    // Empty string means enable debug files
+    if (env_value[0] == '\0') {
+        return false;
+    }
+    
+    // Check for explicit "false" values (case-insensitive)
+    std::string value(env_value);
+    // Convert to lowercase for comparison
+    std::transform(value.begin(), value.end(), value.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    
+    if (value == "0" || value == "false" || value == "no" || value == "off") {
+        return false; // Explicitly enable debug files
+    }
+    
+    // Any other value (including "1", "true", "yes", "on") disables debug files
+    return true;
+}
 } // namespace
 
 // Dependency injection constructor
@@ -60,7 +92,8 @@ void initializeDefaults(std::shared_ptr<LLM::Logger>& logger,
                                   bool debug,
                                   const std::shared_ptr<LLM::ITempDirProvider>& temp_dir_provider)
     : model_params_(model_params), log_retention_hours_(log_retention_hours), debug_(debug),
-      temp_dir_provider_(nullptr), api_client_(std::move(client)) {
+      temp_dir_provider_(nullptr), api_client_(std::move(client)),
+      disable_debug_files_env_cached_(parseDisableDebugFilesEnv()) {
     initializeDefaults(logger_, temp_dir_provider_, temp_dir_provider, tmp_dir_);
     if (!api_client_) {
         throw std::runtime_error("API client must not be null");
@@ -76,7 +109,8 @@ void initializeDefaults(std::shared_ptr<LLM::Logger>& logger,
                                   int log_retention_hours,
                                   bool debug)
     : model_params_(model_params), log_retention_hours_(log_retention_hours), debug_(debug),
-      temp_dir_provider_(nullptr), provider_type_(provider_type) {
+      temp_dir_provider_(nullptr), provider_type_(provider_type),
+      disable_debug_files_env_cached_(parseDisableDebugFilesEnv()) {
     initializeDefaults(logger_, temp_dir_provider_, nullptr, tmp_dir_);
 
     // Resolve API key using ProviderBootstrap (respects environment variables)
@@ -99,7 +133,7 @@ void initializeDefaults(std::shared_ptr<LLM::Logger>& logger,
                                   bool debug,
                                   const std::shared_ptr<LLMAPI::IConfigManager>& config_manager)
     : model_params_(model_params), log_retention_hours_(log_retention_hours), debug_(debug),
-      temp_dir_provider_(nullptr) {
+      temp_dir_provider_(nullptr), disable_debug_files_env_cached_(parseDisableDebugFilesEnv()) {
     initializeDefaults(logger_, temp_dir_provider_, nullptr, tmp_dir_);
 
     // Use ProviderBootstrap to resolve provider configuration

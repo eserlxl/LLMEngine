@@ -8,7 +8,6 @@
 #pragma once
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/AnalysisResult.hpp"
-#include "LLMEngine/ErrorCodes.hpp"
 #include "LLMEngine/IArtifactSink.hpp"
 #include "LLMEngine/IConfigManager.hpp"
 #include "LLMEngine/IModelContext.hpp"
@@ -23,7 +22,6 @@
 #include <nlohmann/json.hpp>
 #include <string>
 #include <string_view>
-#include <vector>
 
 namespace LLMEngine {
 
@@ -354,7 +352,9 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
     // Cached at construction to avoid repeated getenv calls per request.
     // Note: Read-once semantics; changes to the environment after construction
     // are not reflected in this instance. For dynamic toggling, inject a config object.
-    bool disable_debug_files_env_cached_{std::getenv("LLMENGINE_DISABLE_DEBUG_FILES") != nullptr};
+    // Value is parsed properly: "0", "false", "no", "off" enable debug files;
+    // any other non-empty value disables them. Unset/empty enables debug files.
+    bool disable_debug_files_env_cached_;
 };
 
 } // namespace LLMEngine
