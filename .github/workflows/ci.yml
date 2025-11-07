@@ -248,6 +248,29 @@ jobs:
           echo "Using clang-format at: $(command -v clang-format)"
           clang-format --version
 
+      - name: Check for newer clang-format versions
+        run: |
+          echo "Checking for newer clang-format versions..."
+          CURRENT_VERSION=20
+          # Get all available clang-format packages and extract version numbers
+          AVAILABLE_VERSIONS=$(apt-cache search clang-format | grep "^clang-format-[0-9]" | sed 's/.*clang-format-\([0-9]\+\).*/\1/' | sort -n | uniq)
+          MAX_AVAILABLE=$(echo "$AVAILABLE_VERSIONS" | tail -1)
+          
+          if [ -n "$MAX_AVAILABLE" ] && [ "$MAX_AVAILABLE" -gt "$CURRENT_VERSION" ]; then
+            echo "::warning::A newer clang-format version is available!"
+            echo "Current standard: clang-format-$CURRENT_VERSION"
+            echo "Maximum available: clang-format-$MAX_AVAILABLE"
+            echo "Consider updating the workflow to use clang-format-$MAX_AVAILABLE"
+            echo ""
+            echo "Available versions:"
+            echo "$AVAILABLE_VERSIONS"
+          else
+            echo "✓ Using the latest available version (clang-format-$CURRENT_VERSION)"
+            if [ -n "$MAX_AVAILABLE" ]; then
+              echo "Available versions: $AVAILABLE_VERSIONS"
+            fi
+          fi
+
       - name: Check code formatting
         run: |
           # Find all C++ source files and verify formatting using .clang-format
