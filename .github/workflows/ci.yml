@@ -282,9 +282,9 @@ jobs:
           # Find all C++ source files and verify formatting using .clang-format
           find src include test examples -name "*.cpp" -o -name "*.hpp" | while read -r file; do
             if [ -f "$file" ]; then
-              clang-format --style=file --dry-run --Werror "$file" || {
+              clang-format-20 --style=file --dry-run --Werror "$file" || {
                 echo "Error: $file is not properly formatted"
-                echo "Run: clang-format --style=file -i $file"
+                echo "Run: clang-format-20 --style=file -i $file"
                 exit 1
               }
             fi
