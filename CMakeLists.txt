@@ -116,7 +116,7 @@ else()
   if (LLM_DISABLE_FETCHCONTENT)
     message(FATAL_ERROR
       "cpr not found and LLM_DISABLE_FETCHCONTENT=ON.\n"
-      "Please install cpr (v1.10.5 or compatible) and OpenSSL via your system package manager,\n"
+      "Please install cpr (v1.12.1 or compatible) and OpenSSL via your system package manager,\n"
       "or set LLM_DISABLE_FETCHCONTENT=OFF to allow automatic fetching.")
   endif()
   include(FetchContent)
@@ -132,14 +132,14 @@ else()
     # Temporarily set FETCHCONTENT_UPDATES_DISCONNECTED for CPR only
     set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "Skip updates for FetchContent" FORCE)
   else()
-    message(STATUS "cpr not found via package config; fetching v1.10.5 with FetchContent")
+    message(STATUS "cpr not found via package config; fetching v1.12.1 with FetchContent")
   endif()
   
   # Use a released tag for reproducible builds
   FetchContent_Declare(
     cpr
     GIT_REPOSITORY https://github.com/libcpr/cpr.git
-    GIT_TAG 1.10.5
+    GIT_TAG 1.12.1
     SOURCE_DIR "${_cpr_source_dir}"
     FIND_PACKAGE_ARGS NAMES cpr
   )
