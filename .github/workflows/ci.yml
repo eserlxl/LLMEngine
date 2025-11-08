@@ -316,7 +316,7 @@ jobs:
         run: |
           mkdir -p build/_deps
           if [ ! -d "build/_deps/cpr-src" ]; then
-            git clone --depth 1 --branch 1.12.1 https://github.com/libcpr/cpr.git build/_deps/cpr-src
+            git clone --depth 1 --branch master https://github.com/libcpr/cpr.git build/_deps/cpr-src
           fi
 
       - name: Configure with clang-tidy
@@ -368,7 +368,7 @@ jobs:
         run: |
           mkdir -p build/_deps
           if [ ! -d "build/_deps/cpr-src" ]; then
-            git clone --depth 1 --branch 1.12.1 https://github.com/libcpr/cpr.git build/_deps/cpr-src
+            git clone --depth 1 --branch master https://github.com/libcpr/cpr.git build/_deps/cpr-src
           fi
 
       - name: Configure
