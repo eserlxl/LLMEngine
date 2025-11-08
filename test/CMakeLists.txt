@@ -57,6 +57,9 @@ endif()
 # When included as subdirectory, LLMEngine target should already exist
 # When used standalone, try to find via package config or build tree export
 
+# Find OpenSSL (required by test targets that link to OpenSSL::SSL)
+find_package(OpenSSL REQUIRED)
+
 # First, check if we're being included as a subdirectory (target already exists)
 if (TARGET LLMEngine)
   # Target already available from parent scope - nothing to do
@@ -99,7 +102,7 @@ else()
   if (NOT TARGET LLMEngine)
     message(WARNING "LLMEngine target not found via package config. Attempting manual import from build tree.")
     # Standalone fallback: require headers/libs used directly in tests
-    find_package(OpenSSL REQUIRED)
+    # Note: OpenSSL is already found at the top of this file
     find_package(nlohmann_json REQUIRED)
     if (NOT TARGET cpr::cpr AND NOT TARGET cpr)
       find_package(cpr REQUIRED)

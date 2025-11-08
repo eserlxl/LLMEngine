@@ -33,7 +33,7 @@ jobs:
       - name: Install Clang and LLVM tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang llvm python3 python3-pip
+          sudo apt-get install -y clang llvm python3 python3-pip libssl-dev
       
       - name: Verify MSAN suppressions file
         run: |
