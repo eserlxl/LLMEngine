@@ -71,6 +71,10 @@ else()
     "${CMAKE_CURRENT_BINARY_DIR}"
     "${CMAKE_CURRENT_BINARY_DIR}/.."
     "${CMAKE_SOURCE_DIR}/build"
+    "${CMAKE_SOURCE_DIR}/build-msan"
+    "${CMAKE_SOURCE_DIR}/build-asan"
+    "${CMAKE_SOURCE_DIR}/build-ubsan"
+    "${CMAKE_SOURCE_DIR}/build-tsan"
   )
   
   foreach(_prefix_path IN LISTS _possible_prefix_paths)
@@ -86,16 +90,25 @@ else()
   if (TARGET LLMEngine)
     message(STATUS "Found LLMEngine via package config")
   else()
-    # Last resort: try to use exported target from parent build directory
-    # This works when test is built separately but root was built in ../build
-    set(_parent_build_dir "${CMAKE_CURRENT_SOURCE_DIR}/../build")
-    if (EXISTS "${_parent_build_dir}/LLMEngineTargets.cmake")
-      list(PREPEND CMAKE_PREFIX_PATH "${_parent_build_dir}")
-      find_package(LLMEngine CONFIG QUIET)
-      if (TARGET LLMEngine)
-        message(STATUS "Found LLMEngine via exported targets in ${_parent_build_dir}")
+    # Last resort: try to use exported target from common parent build directories
+    # This works when test is built separately but root was built in a build directory
+    set(_possible_parent_build_dirs
+      "${CMAKE_CURRENT_SOURCE_DIR}/../build"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../build-msan"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../build-asan"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../build-ubsan"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../build-tsan"
+    )
+    foreach(_parent_build_dir IN LISTS _possible_parent_build_dirs)
+      if (EXISTS "${_parent_build_dir}/LLMEngineTargets.cmake")
+        list(PREPEND CMAKE_PREFIX_PATH "${_parent_build_dir}")
+        find_package(LLMEngine CONFIG QUIET)
+        if (TARGET LLMEngine)
+          message(STATUS "Found LLMEngine via exported targets in ${_parent_build_dir}")
+          break()
+        endif()
       endif()
-    endif()
+    endforeach()
   endif()
   
   # If still not found, fall back to manual import (for standalone builds)
@@ -119,17 +132,42 @@ else()
     endif()
     
     # Try multiple possible locations for the library
-    set(_possible_lib_paths
-      "${CMAKE_CURRENT_SOURCE_DIR}/../build/${_llmengine_lib_name}"
-      "${CMAKE_CURRENT_SOURCE_DIR}/../build/$<CONFIG>/${_llmengine_lib_name}"
-      "${CMAKE_CURRENT_SOURCE_DIR}/../build/Debug/${_llmengine_lib_name}"
-      "${CMAKE_CURRENT_SOURCE_DIR}/../build/Release/${_llmengine_lib_name}"
+    # Check common build directory names (build, build-msan, build-asan, etc.)
+    set(_possible_build_dirs
+      "${CMAKE_CURRENT_SOURCE_DIR}/../build"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../build-msan"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../build-asan"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../build-ubsan"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../build-tsan"
+      "${CMAKE_CURRENT_BINARY_DIR}/.."
     )
     
     set(_found_lib_path "")
-    foreach(_lib_path IN LISTS _possible_lib_paths)
-      if (EXISTS "${_lib_path}")
-        set(_found_lib_path "${_lib_path}")
+    set(_found_build_dir "")
+    foreach(_build_dir IN LISTS _possible_build_dirs)
+      # Check root of build directory first
+      if (EXISTS "${_build_dir}/${_llmengine_lib_name}")
+        set(_found_lib_path "${_build_dir}/${_llmengine_lib_name}")
+        set(_found_build_dir "${_build_dir}")
+        break()
+      endif()
+      # Check build type subdirectories (use actual CMAKE_BUILD_TYPE if set)
+      if (CMAKE_BUILD_TYPE)
+        if (EXISTS "${_build_dir}/${CMAKE_BUILD_TYPE}/${_llmengine_lib_name}")
+          set(_found_lib_path "${_build_dir}/${CMAKE_BUILD_TYPE}/${_llmengine_lib_name}")
+          set(_found_build_dir "${_build_dir}")
+          break()
+        endif()
+      endif()
+      # Check common build type directories
+      if (EXISTS "${_build_dir}/Debug/${_llmengine_lib_name}")
+        set(_found_lib_path "${_build_dir}/Debug/${_llmengine_lib_name}")
+        set(_found_build_dir "${_build_dir}")
+        break()
+      endif()
+      if (EXISTS "${_build_dir}/Release/${_llmengine_lib_name}")
+        set(_found_lib_path "${_build_dir}/Release/${_llmengine_lib_name}")
+        set(_found_build_dir "${_build_dir}")
         break()
       endif()
     endforeach()
@@ -137,10 +175,11 @@ else()
     if (_found_lib_path)
       add_library(LLMEngine STATIC IMPORTED)
       set_target_properties(LLMEngine PROPERTIES IMPORTED_LOCATION "${_found_lib_path}")
+      # Use the detected build directory for include paths
       target_include_directories(LLMEngine INTERFACE
         "${CMAKE_CURRENT_SOURCE_DIR}/../include"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../build/generated_include"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../build/generated_include/LLMEngine")
+        "${_found_build_dir}/generated_include"
+        "${_found_build_dir}/generated_include/LLMEngine")
       # Propagate required link dependencies when consuming the imported static lib
       set_target_properties(LLMEngine PROPERTIES
         INTERFACE_LINK_LIBRARIES "cpr::cpr;nlohmann_json::nlohmann_json")
@@ -148,11 +187,11 @@ else()
       add_library(llmengine_compile_options INTERFACE)
       add_library(llmengine::compile_options ALIAS llmengine_compile_options)
       # Expose nlohmann_json headers if fetched by the root
-      if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../build/_deps/nlohmann_json-src/single_include")
+      if (EXISTS "${_found_build_dir}/_deps/nlohmann_json-src/single_include")
         target_include_directories(LLMEngine INTERFACE
-          "${CMAKE_CURRENT_SOURCE_DIR}/../build/_deps/nlohmann_json-src/single_include")
+          "${_found_build_dir}/_deps/nlohmann_json-src/single_include")
       endif()
-      message(STATUS "Imported LLMEngine from ${_found_lib_path}")
+      message(STATUS "Imported LLMEngine from ${_found_lib_path} (build dir: ${_found_build_dir})")
     else()
       message(FATAL_ERROR "LLMEngine target not found. Build the root project first, install LLMEngine, or ensure build tree is accessible.")
     endif()
