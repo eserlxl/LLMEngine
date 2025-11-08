@@ -278,7 +278,8 @@ add_executable(test_request_logger test_request_logger.cpp)
 target_link_libraries(test_request_logger PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 
 add_executable(test_retry_policy test_retry_policy.cpp)
-target_link_libraries(test_retry_policy PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+target_link_libraries(test_retry_policy PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json cpr::cpr)
+target_include_directories(test_retry_policy PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 
 add_executable(test_parameter_merger test_parameter_merger.cpp)
 target_link_libraries(test_parameter_merger PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
@@ -287,13 +288,14 @@ add_executable(test_response_parser test_response_parser.cpp)
 target_link_libraries(test_response_parser PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 
 add_executable(test_chat_completion_helper test_chat_completion_helper.cpp)
-target_link_libraries(test_chat_completion_helper PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+target_link_libraries(test_chat_completion_helper PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json cpr::cpr)
+target_include_directories(test_chat_completion_helper PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 
 add_executable(test_secret_redaction test_secret_redaction.cpp)
 target_link_libraries(test_secret_redaction PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
 
 add_executable(test_error_paths test_error_paths.cpp)
-target_link_libraries(test_error_paths PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+target_link_libraries(test_error_paths PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json cpr::cpr)
 target_include_directories(test_error_paths PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 
 # ---- Fuzz Testing (optional) -------------------------------------------------
