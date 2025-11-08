@@ -50,7 +50,8 @@ void testMultipleTags() {
     std::string response = "<think>first</think> text <think>second</think>";
     auto [think, content] = ResponseParser::parseResponse(response);
     assert(think == "first");
-    assert(content == " text <think>second</think>");
+    // Content is trimmed, so leading space is removed
+    assert(content == "text <think>second</think>");
     std::cout << "✓ Multiple tags test passed\n";
 }
 

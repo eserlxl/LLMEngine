@@ -52,6 +52,11 @@ jobs:
           # Explicitly build test targets (they're EXCLUDE_FROM_ALL by default)
           cmake --build build --target build_all_tests -j20
 
+      - name: Copy config file for tests
+        run: |
+          mkdir -p build/config
+          cp config/api_config.json build/config/api_config.json
+
       - name: Run tests (ctest)
         run: |
           cd build

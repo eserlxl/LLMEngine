@@ -233,7 +233,7 @@ bool RequestLogger::isSensitiveHeader(std::string_view header_name) {
 std::string RequestLogger::redactText(std::string_view text) {
     // Heuristic redaction of key=value, key: value patterns for sensitive keywords (linear pass)
     static const std::vector<std::string> keywords = {
-        "api", "key", "token", "secret", "refresh", "client", "password", "passwd"};
+        "api", "key", "token", "secret", "refresh", "client", "password", "passwd", "bearer", "authorization"};
     const std::string src(text);
     const std::string lower = toLower(src);
     std::string out;
@@ -273,9 +273,22 @@ std::string RequestLogger::redactText(std::string_view text) {
                         if (v < src.size())
                             v++; // include closing quote
                     } else {
-                        while (v < src.size() && !std::isspace(static_cast<unsigned char>(src[v]))
-                               && src[v] != ',' && src[v] != ';') {
-                            v++;
+                        // Check if this is an Authorization header with Bearer token
+                        // If value starts with "bearer" (case-insensitive), redact "bearer" and everything after it
+                        constexpr std::string_view bearer_lower = "bearer";
+                        if (v + bearer_lower.size() <= lower.size()
+                            && lower.compare(v, bearer_lower.size(), bearer_lower) == 0) {
+                            // Redact "bearer" and everything after it until end of line or delimiter
+                            while (v < src.size() && src[v] != '\n' && src[v] != '\r'
+                                   && src[v] != ',' && src[v] != ';') {
+                                v++;
+                            }
+                        } else {
+                            // Normal value redaction: stop at whitespace, comma, or semicolon
+                            while (v < src.size() && !std::isspace(static_cast<unsigned char>(src[v]))
+                                   && src[v] != ',' && src[v] != ';') {
+                                v++;
+                            }
                         }
                     }
                     out.append("<REDACTED>");

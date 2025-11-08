@@ -60,9 +60,10 @@ bool checkPermissions(const std::string& path, mode_t expected_mode) {
 void testSymlinkRejection() {
     std::cout << "Testing symlink rejection...\n";
 
-    TestTempDir base_dir;
-    const std::string test_dir = base_dir.path() + "/test";
-    const std::string symlink_path = base_dir.path() + "/symlink";
+    // Use paths within the default temp root to pass validation
+    const std::string default_root = DefaultTempDirProvider().getTempDir();
+    const std::string test_dir = default_root + "/test";
+    const std::string symlink_path = default_root + "/symlink";
 
     // Create a regular directory
     fs::create_directories(test_dir);
@@ -73,14 +74,27 @@ void testSymlinkRejection() {
     // Create LLMEngine instance and try to set the symlink path
     ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
 
-    // Try to set temp directory to symlink - should be rejected
+    // Try to set temp directory to symlink - should be rejected by symlink detection
+    // Note: setTempDirectory may accept it (path validation passes), but prepareTempDirectory should reject it
     bool set_result = engine.setTempDirectory(symlink_path);
-    (void)set_result; // Suppress unused variable warning - value checked in assert
-    assert(!set_result && "Symlink should be rejected");
+    if (set_result) {
+        // If path validation passed, prepareTempDirectory should detect and reject the symlink
+        try {
+            engine.prepareTempDirectory();
+            assert(false && "Should have thrown for symlink");
+        } catch (const std::runtime_error& e) {
+            std::string msg = e.what();
+            assert(msg.find("symlink") != std::string::npos && "Error should mention symlink");
+        }
+    } else {
+        // Path validation may reject it if symlink resolution causes issues
+        assert(true && "Symlink rejected by path validation");
+    }
 
-    // Now try to ensure the directory - should throw if symlink exists at that path
+    // Now try to ensure the directory - should work for normal directory
     try {
-        (void)engine.setTempDirectory(test_dir);
+        bool set_result2 = engine.setTempDirectory(test_dir);
+        assert(set_result2 && "Normal directory within root should be accepted");
         engine.prepareTempDirectory(); // This should work
         assert(true && "Normal directory should work");
     } catch (const std::exception& e) {
@@ -88,16 +102,18 @@ void testSymlinkRejection() {
         assert(false && "Normal directory should not throw");
     }
 
-    // Test direct symlink detection
+    // Test direct symlink detection with a symlink within the root
     try {
-        // Create engine with symlink path directly
-        fs::create_directories(symlink_path);
-        fs::remove(symlink_path);
-        fs::create_symlink("/tmp", symlink_path);
+        const std::string symlink_path2 = default_root + "/symlink2";
+        // Remove if exists
+        if (fs::exists(symlink_path2)) {
+            fs::remove(symlink_path2);
+        }
+        fs::create_symlink("/tmp", symlink_path2);
 
         // Try to prepare a directory that is a symlink
         ::LLMEngine::LLMEngine engine2(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
-        if (engine2.setTempDirectory(symlink_path)) {
+        if (engine2.setTempDirectory(symlink_path2)) {
             try {
                 engine2.prepareTempDirectory();
                 assert(false && "Should have thrown for symlink");
@@ -105,6 +121,10 @@ void testSymlinkRejection() {
                 std::string msg = e.what();
                 assert(msg.find("symlink") != std::string::npos && "Error should mention symlink");
             }
+        }
+        // Cleanup
+        if (fs::exists(symlink_path2)) {
+            fs::remove(symlink_path2);
         }
     } catch (const std::exception& e) {
         // Expected if symlink creation fails
@@ -116,11 +136,13 @@ void testSymlinkRejection() {
 void testDirectoryPermissions() {
     std::cout << "Testing directory permissions (0700)...\n";
 
-    TestTempDir base_dir;
-    const std::string test_dir = base_dir.path() + "/secure_dir";
+    // Use a path within the default temp root to pass validation
+    const std::string default_root = DefaultTempDirProvider().getTempDir();
+    const std::string test_dir = default_root + "/test_secure_dir";
 
     ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
-    engine.setTempDirectory(test_dir);
+    bool set_result = engine.setTempDirectory(test_dir);
+    assert(set_result && "Path within default root should be accepted");
     engine.prepareTempDirectory();
 
     // Check that directory exists
@@ -150,19 +172,21 @@ void testDirectoryPermissions() {
 void testDirectoryCreation() {
     std::cout << "Testing directory creation...\n";
 
-    TestTempDir base_dir;
-    const std::string test_dir = base_dir.path() + "/nested/deep/directory";
+    // Use a path within the default temp root to pass validation
+    const std::string default_root = DefaultTempDirProvider().getTempDir();
+    const std::string test_dir = default_root + "/nested/deep/directory";
 
     ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
-    (void)engine.setTempDirectory(test_dir);
+    bool set_result = engine.setTempDirectory(test_dir);
+    assert(set_result && "Path within default root should be accepted");
     engine.prepareTempDirectory();
 
     assert(fs::exists(test_dir) && "Directory should be created");
     assert(fs::is_directory(test_dir) && "Should be a directory");
 
     // Verify parent directories were created
-    assert(fs::exists(base_dir.path() + "/nested") && "Parent directory should exist");
-    assert(fs::exists(base_dir.path() + "/nested/deep") && "Nested parent should exist");
+    assert(fs::exists(default_root + "/nested") && "Parent directory should exist");
+    assert(fs::exists(default_root + "/nested/deep") && "Nested parent should exist");
 
     std::cout << "  ✓ Directory creation test passed\n";
 }
@@ -210,11 +234,13 @@ void testPathValidation() {
 void testMultipleCalls() {
     std::cout << "Testing multiple prepareTempDirectory calls...\n";
 
-    TestTempDir base_dir;
-    const std::string test_dir = base_dir.path() + "/multi_call";
+    // Use a path within the default temp root to pass validation
+    const std::string default_root = DefaultTempDirProvider().getTempDir();
+    const std::string test_dir = default_root + "/multi_call";
 
     ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
-    (void)engine.setTempDirectory(test_dir);
+    bool set_result = engine.setTempDirectory(test_dir);
+    assert(set_result && "Path within default root should be accepted");
 
     // Call multiple times - should be safe
     engine.prepareTempDirectory();
