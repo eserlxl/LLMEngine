@@ -45,10 +45,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v1
+        uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: "3.20"
 
@@ -67,6 +67,9 @@ jobs:
             make \
             cmake \
             libssl-dev \
+            libbrotli-dev \
+            libnghttp2-dev \
+            libcurl4-openssl-dev \
             nlohmann-json3-dev
           # Install the specific compiler version we need
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
@@ -232,7 +235,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install maximum available clang-format version
         run: |
@@ -289,10 +292,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v1
+        uses: jwlawson/actions-setup-cmake@v2
 
       - name: Install dependencies
         run: |
@@ -301,6 +304,9 @@ jobs:
             git \
             build-essential \
             libssl-dev \
+            libbrotli-dev \
+            libnghttp2-dev \
+            libcurl4-openssl-dev \
             nlohmann-json3-dev \
             clang-tidy \
             cppcheck \
@@ -339,10 +345,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v1
+        uses: jwlawson/actions-setup-cmake@v2
 
       - name: Install dependencies
         run: |
@@ -351,6 +357,9 @@ jobs:
             git \
             build-essential \
             libssl-dev \
+            libbrotli-dev \
+            libnghttp2-dev \
+            libcurl4-openssl-dev \
             nlohmann-json3-dev \
             cppcheck \
             clang-14
@@ -421,7 +430,7 @@ jobs:
           fi
 
       - name: Upload static analysis reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: static-analysis-reports
@@ -436,10 +445,10 @@ jobs:
     needs: [build-test]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v1
+        uses: jwlawson/actions-setup-cmake@v2
 
       - name: Install dependencies
         run: |
@@ -452,6 +461,9 @@ jobs:
             git \
             build-essential \
             libssl-dev \
+            libbrotli-dev \
+            libnghttp2-dev \
+            libcurl4-openssl-dev \
             nlohmann-json3-dev \
             gcc-12 \
             g++-12 \
@@ -631,7 +643,7 @@ jobs:
           echo "Secret redaction verification passed"
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: coverage-report
