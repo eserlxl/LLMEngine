@@ -6,7 +6,6 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/APIClient.hpp"
-#include "LLMEngine/APIClientFactory.hpp"
 #include "LLMEngine/IConfigManager.hpp"
 #include "LLMEngine/LLMEngine.hpp"
 #include "support/FakeAPIClient.hpp"

@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/APIClient.hpp"
+#include "LLMEngine/AnalysisResult.hpp"
 #include "LLMEngine/DebugArtifactManager.hpp"
 #include "LLMEngine/ErrorCodes.hpp"
 #include "LLMEngine/HttpStatus.hpp"
@@ -27,10 +28,10 @@ using namespace LLMEngineAPI;
 // Mock logger for testing
 class TestLogger : public Logger {
   public:
-    void log(LogLevel level, const std::string& message) override {
+    void log(LogLevel level, std::string_view message) override {
         last_level_ = level;
-        last_message_ = message;
-        messages_.push_back({level, message});
+        last_message_ = std::string(message);
+        messages_.push_back({level, std::string(message)});
     }
 
     LogLevel last_level_ = LogLevel::Info;
