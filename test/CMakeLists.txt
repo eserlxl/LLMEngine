@@ -60,6 +60,36 @@ endif()
 # Find OpenSSL (required by test targets that link to OpenSSL::SSL)
 find_package(OpenSSL REQUIRED)
 
+# Find libunistring (required on some systems like Arch Linux where libidn2 depends on it)
+# This is a transitive dependency of curl/cpr that may not be automatically linked
+# Try pkg-config first, then fall back to find_library
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+  pkg_check_modules(UNISTRING QUIET libunistring)
+endif()
+
+if(UNISTRING_FOUND AND UNISTRING_LIBRARIES)
+  message(STATUS "Found libunistring via pkg-config: ${UNISTRING_LIBRARIES}")
+  add_library(unistring INTERFACE)
+  target_link_libraries(unistring INTERFACE ${UNISTRING_LIBRARIES})
+  set(UNISTRING_TARGET unistring)
+else()
+  # Fall back to find_library
+  find_library(UNISTRING_LIBRARY
+    NAMES unistring libunistring
+    PATHS /usr/lib /usr/local/lib /lib /usr/lib/x86_64-linux-gnu /usr/lib64
+  )
+  if(UNISTRING_LIBRARY)
+    message(STATUS "Found libunistring: ${UNISTRING_LIBRARY}")
+    add_library(unistring INTERFACE)
+    target_link_libraries(unistring INTERFACE ${UNISTRING_LIBRARY})
+    set(UNISTRING_TARGET unistring)
+  else()
+    message(STATUS "libunistring not found (may not be needed on this system)")
+    set(UNISTRING_TARGET "")
+  endif()
+endif()
+
 # First, check if we're being included as a subdirectory (target already exists)
 if (TARGET LLMEngine)
   # Target already available from parent scope - nothing to do
@@ -247,10 +277,14 @@ if (DEBUG_MODE AND ENABLE_SANITIZERS AND NOT MSVC)
   endif()
 endif()
 
-# Helper function to apply sanitizer flags to a test target
+# Helper function to apply sanitizer flags and optional dependencies to a test target
 function(apply_test_sanitizer_flags target_name)
   if (TARGET test_sanitizer_flags)
     target_link_libraries(${target_name} PRIVATE test_sanitizer_flags)
+  endif()
+  # Add libunistring if found (needed on Arch Linux and some other systems)
+  if (UNISTRING_TARGET)
+    target_link_libraries(${target_name} PRIVATE ${UNISTRING_TARGET})
   endif()
 endfunction()
 
