@@ -201,7 +201,7 @@ target_link_libraries(test_api
 add_library(test_support_fake STATIC
   support/FakeAPIClient.cpp)
 target_include_directories(test_support_fake PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(test_support_fake PUBLIC nlohmann_json::nlohmann_json)
+target_link_libraries(test_support_fake PUBLIC LLMEngine nlohmann_json::nlohmann_json)
 
 add_executable(test_api_config_manager test_api_config_manager.cpp)
 target_link_libraries(test_api_config_manager PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
