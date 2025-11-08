@@ -29,7 +29,10 @@ int main() {
         assert(error_msg.find("Unknown provider") != std::string::npos);
         assert(error_msg.find("not-a-provider") != std::string::npos);
     }
-    assert(exception_thrown);
+    // Ensure exception was thrown (compiler sees this as using the variable)
+    if (!exception_thrown) {
+        assert(false && "Expected exception was not thrown");
+    }
 
     // Test that empty string falls back to default provider
     APIConfigManager& mgr = APIConfigManager::getInstance();

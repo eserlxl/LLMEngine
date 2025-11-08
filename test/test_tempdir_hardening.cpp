@@ -113,7 +113,8 @@ void testSymlinkRejection() {
 
         // Try to prepare a directory that is a symlink
         ::LLMEngine::LLMEngine engine2(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
-        if (engine2.setTempDirectory(symlink_path2)) {
+        bool set_result_symlink = engine2.setTempDirectory(symlink_path2);
+        if (set_result_symlink) {
             try {
                 engine2.prepareTempDirectory();
                 assert(false && "Should have thrown for symlink");
@@ -255,7 +256,9 @@ void testMultipleCalls() {
     // Permissions should still be correct
     struct stat st = {};
     assert(stat(test_dir.c_str(), &st) == 0 && "stat should succeed");
-    assert((st.st_mode & 0700) == 0700 && "Permissions should remain 0700");
+    mode_t final_perms = st.st_mode & 0700;
+    assert(final_perms == 0700 && "Permissions should remain 0700");
+    (void)st; // Explicitly mark as used (used in final_perms calculation)
 
     std::cout << "  ✓ Multiple calls test passed\n";
 }
