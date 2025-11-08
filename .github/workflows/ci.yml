@@ -70,7 +70,8 @@ jobs:
             libbrotli-dev \
             libnghttp2-dev \
             libcurl4-openssl-dev \
-            nlohmann-json3-dev
+            nlohmann-json3-dev \
+            meson
           # Install the specific compiler version we need
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
             sudo apt-get install -y \
@@ -310,7 +311,8 @@ jobs:
             nlohmann-json3-dev \
             clang-tidy \
             cppcheck \
-            clang-14
+            clang-14 \
+            meson
 
       - name: Pre-fetch dependencies
         run: |
@@ -362,7 +364,8 @@ jobs:
             libcurl4-openssl-dev \
             nlohmann-json3-dev \
             cppcheck \
-            clang-14
+            clang-14 \
+            meson
 
       - name: Pre-fetch dependencies
         run: |
@@ -468,7 +471,8 @@ jobs:
             gcc-12 \
             g++-12 \
             gcovr \
-            python3-pip
+            python3-pip \
+            meson
           # gcov-12 might be bundled with gcc-12 or available as a separate package
           # Try to install it separately, but don't fail if it doesn't exist
           sudo apt-get install -y gcov-12 || echo "gcov-12 not available as separate package, will use bundled version"

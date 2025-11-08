@@ -30,7 +30,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential cmake g++ make ccache gdb binutils
+            build-essential cmake g++ make ccache gdb binutils \
+            python3 python3-pip libssl-dev libbrotli-dev libnghttp2-dev \
+            libcurl4-openssl-dev nlohmann-json3-dev meson
 
       - name: Configure Debug (CMake preset)
         env:
