@@ -86,6 +86,16 @@ class LLMENGINE_EXPORT RequestLogger {
     static std::vector<std::string> getSensitiveHeaderNames();
 
     /**
+     * @brief Check if a header name is sensitive (case-insensitive).
+     *
+     * Uses O(1) hash lookup internally. Useful for testing and external validation.
+     *
+     * @param header_name Header name to check (case-insensitive)
+     * @return true if the header is considered sensitive, false otherwise
+     */
+    static bool isSensitiveHeader(std::string_view header_name);
+
+    /**
      * @brief Safely log a message with automatic secret redaction.
      *
      * This helper function automatically redacts secrets from log messages
@@ -99,9 +109,6 @@ class LLMENGINE_EXPORT RequestLogger {
     static void logSafe(Logger* logger, LogLevel level, std::string_view message);
 
   private:
-    // Check if a header name is sensitive (case-insensitive)
-    // Uses O(1) hash lookup internally
-    static bool isSensitiveHeader(std::string_view header_name);
 };
 
 } // namespace LLMEngine

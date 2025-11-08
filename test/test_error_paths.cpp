@@ -5,8 +5,8 @@
 // licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/AnalysisResult.hpp"
+#include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/DebugArtifactManager.hpp"
 #include "LLMEngine/ErrorCodes.hpp"
 #include "LLMEngine/HttpStatus.hpp"
