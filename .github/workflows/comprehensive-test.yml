@@ -90,7 +90,20 @@ jobs:
         run: |
           cmake --build "${BUILD_DIR}" -- -j20
           # Explicitly build test targets (they're EXCLUDE_FROM_ALL by default)
-          cmake --build "${BUILD_DIR}" --target build_all_tests -j20
+          # Try to build build_all_tests target if it exists, otherwise build tests individually
+          set +e
+          cmake --build "${BUILD_DIR}" --target build_all_tests -j20 2>&1 | tee /tmp/build_all_tests.log
+          BUILD_ALL_TESTS_EXIT_CODE=$?
+          set -e
+          if [ $BUILD_ALL_TESTS_EXIT_CODE -eq 0 ]; then
+            echo "✓ Built all tests using build_all_tests target"
+          else
+            echo "build_all_tests target not available (exit code: $BUILD_ALL_TESTS_EXIT_CODE), building test targets individually"
+            if grep -q "No rule to make target" /tmp/build_all_tests.log; then
+              echo "Target 'build_all_tests' does not exist, building individual test targets"
+            fi
+            cmake --build "${BUILD_DIR}" --target test_llmengine test_api test_api_config_manager test_api_config_manager_thread_safety test_request_context_builder_thread_safety test_api_client_factory test_provider_type_mapping test_llmengine_construction test_integration test_api_config_parsing test_provider_mapping_extended test_tempdir_hardening test_request_logger test_retry_policy test_parameter_merger test_response_parser test_chat_completion_helper test_secret_redaction test_error_paths -j20
+          fi
 
       - name: Run tests (ctest)
         run: |
