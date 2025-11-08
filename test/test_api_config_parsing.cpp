@@ -7,8 +7,17 @@ int main() {
     using namespace LLMEngineAPI;
     APIConfigManager& mgr = APIConfigManager::getInstance();
 
-    const std::string config_path = "/opt/lxl/c++/LLMEngine/config/api_config.json";
-    bool ok = mgr.loadConfig(config_path);
+    // Try to load config from possible paths (works in both local and CI environments)
+    bool ok = false;
+    // Try relative path from source directory
+    if (!ok) {
+        ok = mgr.loadConfig("config/api_config.json");
+    }
+    // Try relative path from build directory (CI runs from build/)
+    if (!ok) {
+        ok = mgr.loadConfig("../config/api_config.json");
+    }
+    (void)ok; // Suppress unused variable warning - value checked in assert
     assert(ok && "Config should load successfully");
 
     // Default provider must not be empty
@@ -23,6 +32,9 @@ int main() {
     int tout = mgr.getTimeoutSeconds();
     int retries = mgr.getRetryAttempts();
     int delay = mgr.getRetryDelayMs();
+    (void)tout; // Suppress unused variable warning - value checked in assert
+    (void)retries; // Suppress unused variable warning - value checked in assert
+    (void)delay; // Suppress unused variable warning - value checked in assert
     assert(tout > 0);
     assert(retries >= 0);
     assert(delay >= 0);

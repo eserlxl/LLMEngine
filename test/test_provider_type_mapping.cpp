@@ -15,6 +15,7 @@ using namespace LLMEngineAPI;
 static void round_trip(ProviderType t) {
     auto s = APIClientFactory::providerTypeToString(t);
     auto t2 = APIClientFactory::stringToProviderType(s);
+    (void)t2; // Suppress unused variable warning - value checked in assert
     // Allow fallback behavior but ensure known round-trips stay equal
     assert(t2 == t);
 }

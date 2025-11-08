@@ -17,6 +17,7 @@ int main() {
     {
         auto& mgr = APIConfigManager::getInstance();
         bool ok = mgr.loadConfig("/tmp/this-file-should-not-exist-llmengine.json");
+        (void)ok; // Suppress unused variable warning - value checked in assert
         assert(ok == false);
         // Defaults when not loaded
         assert(mgr.getDefaultProvider() == std::string("ollama"));
@@ -54,14 +55,17 @@ int main() {
 
             // Ollama should have provider-specific timeout of 300 seconds
             int ollama_timeout = mgr.getTimeoutSeconds("ollama");
+            (void)ollama_timeout; // Suppress unused variable warning - value checked in assert
             assert(ollama_timeout == 300);
 
             // Other providers should fall back to global timeout (30 seconds)
             int qwen_timeout = mgr.getTimeoutSeconds("qwen");
+            (void)qwen_timeout; // Suppress unused variable warning - value checked in assert
             assert(qwen_timeout == 30);
 
             // Non-existent provider should fall back to global timeout
             int unknown_timeout = mgr.getTimeoutSeconds("nonexistent");
+            (void)unknown_timeout; // Suppress unused variable warning - value checked in assert
             assert(unknown_timeout == 30);
         }
     }

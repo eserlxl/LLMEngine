@@ -24,33 +24,41 @@ void testBackoffCalculations() {
     // Test 1: Basic exponential backoff
     BackoffConfig cfg{100, 1000}; // 100ms base, 1000ms max
     uint64_t cap1 = computeBackoffCapMs(cfg, 1);
+    (void)cap1; // Suppress unused variable warning - value checked in assert
     assert(cap1 == 100 && "Attempt 1 should be 100ms");
 
     uint64_t cap2 = computeBackoffCapMs(cfg, 2);
+    (void)cap2; // Suppress unused variable warning - value checked in assert
     assert(cap2 == 200 && "Attempt 2 should be 200ms (2^1 * 100)");
 
     uint64_t cap3 = computeBackoffCapMs(cfg, 3);
+    (void)cap3; // Suppress unused variable warning - value checked in assert
     assert(cap3 == 400 && "Attempt 3 should be 400ms (2^2 * 100)");
 
     uint64_t cap4 = computeBackoffCapMs(cfg, 4);
+    (void)cap4; // Suppress unused variable warning - value checked in assert
     assert(cap4 == 800 && "Attempt 4 should be 800ms (2^3 * 100)");
 
     uint64_t cap5 = computeBackoffCapMs(cfg, 5);
+    (void)cap5; // Suppress unused variable warning - value checked in assert
     assert(cap5 == 1000 && "Attempt 5 should be capped at 1000ms");
 
     // Test 2: Max delay capping
     BackoffConfig cfg2{50, 200};
     uint64_t cap6 = computeBackoffCapMs(cfg2, 5);
+    (void)cap6; // Suppress unused variable warning - value checked in assert
     assert(cap6 == 200 && "Should cap at max_delay_ms");
 
     // Test 3: Zero base delay
     BackoffConfig cfg3{0, 1000};
     uint64_t cap7 = computeBackoffCapMs(cfg3, 3);
+    (void)cap7; // Suppress unused variable warning - value checked in assert
     assert(cap7 == 0 && "Zero base delay should result in zero cap");
 
     // Test 4: Large attempt numbers
     BackoffConfig cfg4{10, 100};
     uint64_t cap8 = computeBackoffCapMs(cfg4, 10);
+    (void)cap8; // Suppress unused variable warning - value checked in assert
     assert(cap8 == 100 && "Large attempt should be capped at max");
 
     std::cout << "  ✓ Backoff calculation tests passed\n";
@@ -65,18 +73,22 @@ void testJitterDistribution() {
     // Test 1: Deterministic jitter with same seed
     int jitter1 = jitterDelayMs(rng1, 1000);
     int jitter2 = jitterDelayMs(rng2, 1000);
+    (void)jitter1; // Suppress unused variable warning - value checked in assert
+    (void)jitter2; // Suppress unused variable warning - value checked in assert
     assert(jitter1 == jitter2 && "Same seed should produce same jitter");
 
     // Test 2: Jitter bounds (0 to cap)
     std::mt19937_64 rng3(123);
     for (int i = 0; i < 100; ++i) {
         int j = jitterDelayMs(rng3, 500);
+        (void)j; // Suppress unused variable warning - value checked in assert
         assert(j >= 0 && j <= 500 && "Jitter should be within bounds");
     }
 
     // Test 3: Zero cap produces zero jitter
     std::mt19937_64 rng4(456);
     int jitter3 = jitterDelayMs(rng4, 0);
+    (void)jitter3; // Suppress unused variable warning - value checked in assert
     assert(jitter3 == 0 && "Zero cap should produce zero jitter");
 
     // Test 4: Different seeds produce different values
@@ -84,6 +96,8 @@ void testJitterDistribution() {
     std::mt19937_64 rng6(200);
     int jitter5 = jitterDelayMs(rng5, 1000);
     int jitter6 = jitterDelayMs(rng6, 1000);
+    (void)jitter5; // Suppress unused variable warning - value used for verification
+    (void)jitter6; // Suppress unused variable warning - value used for verification
     // Very unlikely to be the same with different seeds
     // (This is probabilistic, but extremely unlikely to fail)
 
@@ -195,6 +209,9 @@ void testBackoffModes() {
     uint64_t cap_exp1 = computeBackoffCapMs(cfg_exp, 1);
     uint64_t cap_exp2 = computeBackoffCapMs(cfg_exp, 2);
     uint64_t cap_exp3 = computeBackoffCapMs(cfg_exp, 3);
+    (void)cap_exp1; // Suppress unused variable warning - value checked in assert
+    (void)cap_exp2; // Suppress unused variable warning - value checked in assert
+    (void)cap_exp3; // Suppress unused variable warning - value checked in assert
 
     assert(cap_exp2 > cap_exp1 && "Exponential should increase");
     assert(cap_exp3 > cap_exp2 && "Exponential should increase");

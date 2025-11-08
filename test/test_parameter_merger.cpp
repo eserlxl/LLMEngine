@@ -121,6 +121,7 @@ void testMergeInto() {
 
     nlohmann::json out;
     bool changed = ParameterMerger::mergeInto(base, input, "", out);
+    (void)changed; // Suppress unused variable warning - value checked in assert
     assert(changed == true);
     assert(out["temperature"] == 0.5);
 

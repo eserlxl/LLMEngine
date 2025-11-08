@@ -23,7 +23,7 @@ namespace fs = std::filesystem;
 // Test helper to create a temporary test directory
 class TestTempDir {
   public:
-    explicit TestTempDir(const std::string& prefix = "llmengine_test_") {
+    explicit TestTempDir([[maybe_unused]] const std::string& prefix = "llmengine_test_") {
         char template_path[] = "/tmp/llmengine_test_XXXXXX";
         char* dir = mkdtemp(template_path);
         if (!dir) {
@@ -75,11 +75,12 @@ void testSymlinkRejection() {
 
     // Try to set temp directory to symlink - should be rejected
     bool set_result = engine.setTempDirectory(symlink_path);
+    (void)set_result; // Suppress unused variable warning - value checked in assert
     assert(!set_result && "Symlink should be rejected");
 
     // Now try to ensure the directory - should throw if symlink exists at that path
     try {
-        engine.setTempDirectory(test_dir);
+        (void)engine.setTempDirectory(test_dir);
         engine.prepareTempDirectory(); // This should work
         assert(true && "Normal directory should work");
     } catch (const std::exception& e) {
@@ -129,14 +130,17 @@ void testDirectoryPermissions() {
     // Check permissions (owner read/write/execute only = 0700)
     // Note: On some systems, umask may affect final permissions
     // We check that owner permissions are set correctly
-    struct stat st;
+    struct stat st = {};
     assert(stat(test_dir.c_str(), &st) == 0 && "stat should succeed");
     mode_t owner_perms = st.st_mode & 0700;
+    (void)owner_perms; // Suppress unused variable warning - value checked in assert
     assert(owner_perms == 0700 && "Owner should have read/write/execute permissions");
 
     // Verify group and others have no permissions
     mode_t group_perms = st.st_mode & 0070;
     mode_t other_perms = st.st_mode & 0007;
+    (void)group_perms; // Suppress unused variable warning - value checked in assert
+    (void)other_perms; // Suppress unused variable warning - value checked in assert
     assert(group_perms == 0 && "Group should have no permissions");
     assert(other_perms == 0 && "Others should have no permissions");
 
@@ -150,7 +154,7 @@ void testDirectoryCreation() {
     const std::string test_dir = base_dir.path() + "/nested/deep/directory";
 
     ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
-    engine.setTempDirectory(test_dir);
+    (void)engine.setTempDirectory(test_dir);
     engine.prepareTempDirectory();
 
     assert(fs::exists(test_dir) && "Directory should be created");
@@ -185,16 +189,19 @@ void testPathValidation() {
     // Test with a path that's definitely within default root
     const std::string test_within = default_root + "/test_subdir";
     bool result = engine.setTempDirectory(test_within);
+    (void)result; // Suppress unused variable warning - value checked in assert
     assert(result && "Path within root should be accepted");
 
     // Test 2: Path outside root should be rejected
     const std::string outside_path = "/tmp/llmengine_outside_test";
     bool result2 = engine.setTempDirectory(outside_path);
+    (void)result2; // Suppress unused variable warning - value checked in assert
     // This should fail because outside_path is not within default_root
     // (unless default_root is /tmp, in which case it might work)
     // So we'll test with an absolute path that's definitely outside
     const std::string definitely_outside = "/usr/local/llmengine_test";
     bool result3 = engine.setTempDirectory(definitely_outside);
+    (void)result3; // Suppress unused variable warning - value checked in assert
     assert(!result3 && "Path outside root should be rejected");
 
     std::cout << "  ✓ Path validation test passed\n";
@@ -207,7 +214,7 @@ void testMultipleCalls() {
     const std::string test_dir = base_dir.path() + "/multi_call";
 
     ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
-    engine.setTempDirectory(test_dir);
+    (void)engine.setTempDirectory(test_dir);
 
     // Call multiple times - should be safe
     engine.prepareTempDirectory();
@@ -220,7 +227,7 @@ void testMultipleCalls() {
     assert(fs::exists(test_dir) && "Directory should still exist after third call");
 
     // Permissions should still be correct
-    struct stat st;
+    struct stat st = {};
     assert(stat(test_dir.c_str(), &st) == 0 && "stat should succeed");
     assert((st.st_mode & 0700) == 0700 && "Permissions should remain 0700");
 

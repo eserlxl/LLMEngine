@@ -39,6 +39,7 @@ int main() {
             std::string error_msg = e.what();
             assert(error_msg.find("No API key found") != std::string::npos);
         }
+        (void)exception_thrown; // Suppress unused variable warning - value checked in assert
         assert(exception_thrown
                && "createClientFromConfig should throw when no credentials provided");
     }

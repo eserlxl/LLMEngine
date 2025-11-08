@@ -200,6 +200,7 @@ void testAPIClientFactory() {
 
         std::cout << "\n2. Testing string to provider type conversion..." << std::endl;
         auto qwen_type = ::LLMEngineAPI::APIClientFactory::stringToProviderType("qwen");
+        (void)qwen_type; // Suppress unused variable warning - value used for verification
         std::cout << "  'qwen' converted successfully" << std::endl;
 
         std::cout << "\n3. Testing client creation..." << std::endl;

@@ -74,7 +74,7 @@ void testConcurrentDirectoryGeneration() {
     MockModelContext context;
     constexpr int num_threads = 20;
     constexpr int iterations_per_thread = 100;
-    constexpr int total_requests = num_threads * iterations_per_thread;
+    [[maybe_unused]] constexpr int total_requests = num_threads * iterations_per_thread;
 
     std::atomic<int> completed{0};
     std::atomic<int> errors{0};

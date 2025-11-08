@@ -44,6 +44,7 @@ void testConcurrentReads() {
                     auto providers = mgr.getAvailableProviders();
                     auto path = mgr.getDefaultConfigPath();
                     auto timeout_ollama = mgr.getTimeoutSeconds("ollama");
+                    (void)timeout_ollama; // Suppress unused variable warning - value used for verification
 
                     // Verify values are reasonable (basic sanity check)
                     if (timeout < 0 || timeout > 10000)
@@ -97,6 +98,9 @@ void testConcurrentReadsAndWrites() {
                     auto timeout = mgr.getTimeoutSeconds();
                     auto retries = mgr.getRetryAttempts();
                     auto delay = mgr.getRetryDelayMs();
+                    (void)timeout; // Suppress unused variable warning - value used in conditional
+                    (void)retries; // Suppress unused variable warning - value used in conditional
+                    (void)delay; // Suppress unused variable warning - value used in conditional
                     auto provider = mgr.getDefaultProvider();
                     auto config = mgr.getProviderConfig("ollama");
                     auto providers = mgr.getAvailableProviders();
