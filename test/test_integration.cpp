@@ -310,7 +310,7 @@ void testAnalyzeErrorPaths() {
         AnalysisResult result2 = engine2.analyze("test prompt", input, "timeout_test");
 
         assert(!result2.success);
-        assert(result2.error_code == APIResponse::APIError::Timeout || result2.statusCode == 0);
+        assert(result2.errorCode == APIResponse::APIError::Timeout || result2.statusCode == 0);
 
         std::cout << "✓ Timeout error handled correctly" << std::endl;
 

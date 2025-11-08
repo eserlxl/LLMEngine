@@ -215,6 +215,45 @@ endif()
 # ---- Common build flags (mirror root CMake) -----------------------------------
 # Removed: tests now rely on llmengine::compile_options interface target for common flags
 
+# ---- Sanitizer flags for test targets -----------------------------------------
+# When sanitizers are enabled, test targets must also be compiled/linked with sanitizer flags
+# to avoid undefined references to sanitizer runtime symbols
+set(_TEST_SANITIZER_TARGET "")
+if (DEBUG_MODE AND ENABLE_SANITIZERS AND NOT MSVC)
+  set(_test_san_list "")
+  if (LLM_ENABLE_ASAN OR ENABLE_SANITIZERS)
+    list(APPEND _test_san_list "address")
+  endif()
+  if (LLM_ENABLE_UBSAN OR ENABLE_SANITIZERS)
+    list(APPEND _test_san_list "undefined")
+  endif()
+  if (LLM_ENABLE_MSAN)
+    list(APPEND _test_san_list "memory")
+  endif()
+  if (LLM_ENABLE_TSAN)
+    list(APPEND _test_san_list "thread")
+  endif()
+  if (_test_san_list)
+    string(REPLACE ";" "," _test_san_flags "${_test_san_list}")
+    # Create an interface target for sanitizer flags that test targets can link to
+    add_library(test_sanitizer_flags INTERFACE)
+    target_compile_options(test_sanitizer_flags INTERFACE
+      $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-fsanitize=${_test_san_flags}>
+      $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-fno-omit-frame-pointer>)
+    target_link_options(test_sanitizer_flags INTERFACE
+      $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-fsanitize=${_test_san_flags}>)
+    set(_TEST_SANITIZER_TARGET "test_sanitizer_flags")
+    message(STATUS "Sanitizer flags enabled for test targets: ${_test_san_flags}")
+  endif()
+endif()
+
+# Helper function to apply sanitizer flags to a test target
+function(apply_test_sanitizer_flags target_name)
+  if (TARGET test_sanitizer_flags)
+    target_link_libraries(${target_name} PRIVATE test_sanitizer_flags)
+  endif()
+endfunction()
+
 # ---- Test executables ---------------------------------------------------------
 add_executable(test_llmengine test.cpp)
 target_link_libraries(test_llmengine
@@ -225,6 +264,7 @@ target_link_libraries(test_llmengine
     nlohmann_json::nlohmann_json
     OpenSSL::SSL
     OpenSSL::Crypto)
+apply_test_sanitizer_flags(test_llmengine)
 
 add_executable(test_api test_api.cpp)
 target_link_libraries(test_api
@@ -235,68 +275,87 @@ target_link_libraries(test_api
     nlohmann_json::nlohmann_json
     OpenSSL::SSL
     OpenSSL::Crypto)
+apply_test_sanitizer_flags(test_api)
 
 # New unit tests
 add_library(test_support_fake STATIC
   support/FakeAPIClient.cpp)
 target_include_directories(test_support_fake PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(test_support_fake PUBLIC LLMEngine nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_support_fake)
 
 add_executable(test_api_config_manager test_api_config_manager.cpp)
 target_link_libraries(test_api_config_manager PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_api_config_manager)
 
 add_executable(test_api_config_manager_thread_safety test_api_config_manager_thread_safety.cpp)
 target_link_libraries(test_api_config_manager_thread_safety PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_api_config_manager_thread_safety)
 
 add_executable(test_request_context_builder_thread_safety test_request_context_builder_thread_safety.cpp)
 target_link_libraries(test_request_context_builder_thread_safety PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_request_context_builder_thread_safety)
 
 add_executable(test_api_client_factory test_api_client_factory.cpp)
 target_link_libraries(test_api_client_factory PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_api_client_factory)
 
 add_executable(test_provider_type_mapping test_provider_type_mapping.cpp)
 target_link_libraries(test_provider_type_mapping PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_provider_type_mapping)
 
 add_executable(test_llmengine_construction test_llmengine_construction.cpp)
 target_link_libraries(test_llmengine_construction PRIVATE LLMEngine llmengine::compile_options test_support_fake nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_llmengine_construction)
 
 # Higher-level integration tests
 add_executable(test_integration test_integration.cpp)
 target_link_libraries(test_integration PRIVATE LLMEngine llmengine::compile_options test_support_fake nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_integration)
 
 # New tests (Phase 2)
 add_executable(test_api_config_parsing test_api_config_parsing.cpp)
 target_link_libraries(test_api_config_parsing PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_api_config_parsing)
 
 add_executable(test_provider_mapping_extended test_provider_mapping_extended.cpp)
 target_link_libraries(test_provider_mapping_extended PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_provider_mapping_extended)
 
 add_executable(test_tempdir_hardening test_tempdir_hardening.cpp)
 target_link_libraries(test_tempdir_hardening PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_tempdir_hardening)
 
 add_executable(test_request_logger test_request_logger.cpp)
 target_link_libraries(test_request_logger PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_request_logger)
 
 add_executable(test_retry_policy test_retry_policy.cpp)
 target_link_libraries(test_retry_policy PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json cpr::cpr)
 target_include_directories(test_retry_policy PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+apply_test_sanitizer_flags(test_retry_policy)
 
 add_executable(test_parameter_merger test_parameter_merger.cpp)
 target_link_libraries(test_parameter_merger PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_parameter_merger)
 
 add_executable(test_response_parser test_response_parser.cpp)
 target_link_libraries(test_response_parser PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_response_parser)
 
 add_executable(test_chat_completion_helper test_chat_completion_helper.cpp)
 target_link_libraries(test_chat_completion_helper PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json cpr::cpr)
 target_include_directories(test_chat_completion_helper PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+apply_test_sanitizer_flags(test_chat_completion_helper)
 
 add_executable(test_secret_redaction test_secret_redaction.cpp)
 target_link_libraries(test_secret_redaction PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_secret_redaction)
 
 add_executable(test_error_paths test_error_paths.cpp)
 target_link_libraries(test_error_paths PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json cpr::cpr)
 target_include_directories(test_error_paths PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+apply_test_sanitizer_flags(test_error_paths)
 
 # ---- Fuzz Testing (optional) -------------------------------------------------
 if (ENABLE_FUZZ)

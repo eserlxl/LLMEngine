@@ -217,8 +217,8 @@ void testResponseHandlerErrorPaths() {
             ResponseHandler::handle(api_resp, nullptr, "/tmp/test", "test", false, nullptr);
 
         assert(result.success);
-        assert(result.thinkSection == "This is thinking");
-        assert(result.remainingSection == "This is the answer");
+        assert(result.think == "This is thinking");
+        assert(result.content == "This is the answer");
         std::cout << "  ✓ Response with think tags parsed correctly" << std::endl;
     }
 
