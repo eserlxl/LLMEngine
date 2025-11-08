@@ -224,7 +224,10 @@ jobs:
           rm -f /tmp/test_compile
 
       - name: Build
-        run: cmake --build build -j20
+        run: |
+          cmake --build build -j20
+          # Explicitly build test targets (they're EXCLUDE_FROM_ALL by default)
+          cmake --build build --target build_all_tests -j20
 
       - name: Test
         run: |
@@ -519,7 +522,10 @@ jobs:
             -DWARNING_MODE=ON
 
       - name: Build
-        run: cmake --build build -j20
+        run: |
+          cmake --build build -j20
+          # Explicitly build test targets (they're EXCLUDE_FROM_ALL by default)
+          cmake --build build --target build_all_tests -j20
 
       - name: Run tests
         run: |

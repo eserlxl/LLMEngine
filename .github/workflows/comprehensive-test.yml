@@ -89,6 +89,8 @@ jobs:
       - name: Build (make -j20)
         run: |
           cmake --build "${BUILD_DIR}" -- -j20
+          # Explicitly build test targets (they're EXCLUDE_FROM_ALL by default)
+          cmake --build "${BUILD_DIR}" --target build_all_tests -j20
 
       - name: Run tests (ctest)
         run: |

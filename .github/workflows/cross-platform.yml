@@ -124,6 +124,8 @@ jobs:
           set -euo pipefail
           cmake -S . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
           cmake --build build -- -j20
+          # Explicitly build test targets (they're EXCLUDE_FROM_ALL by default)
+          cmake --build build --target build_all_tests -j20
           cd build
           ctest --output-on-failure
 

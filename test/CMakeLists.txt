@@ -419,6 +419,32 @@ if (BUILD_TESTING)
   add_test(NAME test_chat_completion_helper COMMAND test_chat_completion_helper)
   add_test(NAME test_secret_redaction COMMAND test_secret_redaction)
   add_test(NAME test_error_paths COMMAND test_error_paths)
+  
+  # Create a custom target that depends on all test executables
+  # This allows building all tests with a single target even when EXCLUDE_FROM_ALL is used
+  add_custom_target(build_all_tests
+    DEPENDS
+      test_llmengine
+      test_api
+      test_api_config_manager
+      test_api_config_manager_thread_safety
+      test_request_context_builder_thread_safety
+      test_api_client_factory
+      test_provider_type_mapping
+      test_llmengine_construction
+      test_integration
+      test_api_config_parsing
+      test_provider_mapping_extended
+      test_tempdir_hardening
+      test_request_logger
+      test_retry_policy
+      test_parameter_merger
+      test_response_parser
+      test_chat_completion_helper
+      test_secret_redaction
+      test_error_paths
+    COMMENT "Building all test executables"
+  )
 endif()
 
 # ---- Target properties --------------------------------------------------------

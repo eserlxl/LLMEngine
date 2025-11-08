@@ -66,6 +66,9 @@ jobs:
                 ..
           # Per repository rules, prefer a fixed parallelism for make
           make -j20
+          # Explicitly build test targets (they're EXCLUDE_FROM_ALL by default)
+          # We're already in build-msan directory, so use . as the build path
+          cmake --build . --target build_all_tests -j20
       
       - name: Run Memory Sanitizer Tests
         run: |
