@@ -272,7 +272,7 @@ void testAnalyzeErrorPaths() {
         };
 
         auto error_client = std::make_unique<ErrorAPIClient>();
-        LLMEngine::LLMEngine engine(std::move(error_client), {}, 1, false);
+        ::LLMEngine::LLMEngine engine(std::move(error_client), {}, 1, false);
 
         nlohmann::json input;
         AnalysisResult result = engine.analyze("test prompt", input, "error_test");
@@ -305,7 +305,7 @@ void testAnalyzeErrorPaths() {
         };
 
         auto timeout_client = std::make_unique<TimeoutAPIClient>();
-        LLMEngine::LLMEngine engine2(std::move(timeout_client), {}, 1, false);
+        ::LLMEngine::LLMEngine engine2(std::move(timeout_client), {}, 1, false);
 
         AnalysisResult result2 = engine2.analyze("test prompt", input, "timeout_test");
 
@@ -334,7 +334,7 @@ void testAnalyzeErrorPaths() {
         };
 
         auto auth_error_client = std::make_unique<AuthErrorAPIClient>();
-        LLMEngine::LLMEngine engine3(std::move(auth_error_client), {}, 1, false);
+        ::LLMEngine::LLMEngine engine3(std::move(auth_error_client), {}, 1, false);
 
         AnalysisResult result3 = engine3.analyze("test prompt", input, "auth_test");
 

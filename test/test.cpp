@@ -38,12 +38,12 @@ int main() {
                                        {"top_k", 40},
                                        {"min_p", 0.05}};
 
-        LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA,
-                                    "",
-                                    model,
-                                    model_params,
-                                    log_retention_hours,
-                                    debug);
+        ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA,
+                                      "",
+                                      model,
+                                      model_params,
+                                      log_retention_hours,
+                                      debug);
         std::cout << "✓ LLMEngine initialized successfully with payload" << std::endl;
 
         // Test 1.5: Test optional parameters (empty payload)
@@ -51,12 +51,12 @@ int main() {
 
         // Create engine with empty payload to test default behavior
         nlohmann::json empty_params = {};
-        LLMEngine::LLMEngine engine_empty(::LLMEngineAPI::ProviderType::OLLAMA,
-                                          "",
-                                          model,
-                                          empty_params,
-                                          log_retention_hours,
-                                          debug);
+        ::LLMEngine::LLMEngine engine_empty(::LLMEngineAPI::ProviderType::OLLAMA,
+                                            "",
+                                            model,
+                                            empty_params,
+                                            log_retention_hours,
+                                            debug);
         std::cout << "✓ LLMEngine with empty payload initialized successfully" << std::endl;
         std::cout << "Note: Empty payload means Ollama will use all default values" << std::endl;
 
@@ -65,12 +65,12 @@ int main() {
 
         // Create engine with only some parameters
         nlohmann::json partial_params = {{"temperature", 0.5}, {"top_p", 0.8}};
-        LLMEngine::LLMEngine engine_partial(::LLMEngineAPI::ProviderType::OLLAMA,
-                                            "",
-                                            model,
-                                            partial_params,
-                                            log_retention_hours,
-                                            debug);
+        ::LLMEngine::LLMEngine engine_partial(::LLMEngineAPI::ProviderType::OLLAMA,
+                                              "",
+                                              model,
+                                              partial_params,
+                                              log_retention_hours,
+                                              debug);
         std::cout << "✓ LLMEngine with partial payload initialized successfully" << std::endl;
         std::cout << "Note: Only specified parameters will be sent to Ollama" << std::endl;
 
@@ -113,7 +113,7 @@ int main() {
         // Test 3: ResponseParser usage
         std::cout << "\n3. Testing ResponseParser..." << std::endl;
         const std::string synthetic = "<think>internal chain of thought</think>Visible content";
-        const auto parsed = LLMEngine::ResponseParser::parseResponse(synthetic);
+        const auto parsed = ::LLMEngine::ResponseParser::parseResponse(synthetic);
         std::cout << "Think: " << parsed.first << std::endl;
         std::cout << "Content: " << parsed.second << std::endl;
 
@@ -122,12 +122,12 @@ int main() {
 
         // Test stripMarkdown function
         std::string markdown_text = "**Bold text** and *italic text*";
-        std::string stripped = LLMEngine::Utils::stripMarkdown(markdown_text);
+        std::string stripped = ::LLMEngine::Utils::stripMarkdown(markdown_text);
         std::cout << "Original: " << markdown_text << std::endl;
         std::cout << "Stripped: " << stripped << std::endl;
 
         // Test TMP_DIR
-        std::cout << "Temporary directory: " << LLMEngine::Utils::TMP_DIR << std::endl;
+        std::cout << "Temporary directory: " << ::LLMEngine::Utils::TMP_DIR << std::endl;
 
         std::cout << "\n=== All tests completed successfully! ===" << std::endl;
 
