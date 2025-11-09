@@ -87,16 +87,22 @@ jobs:
           # Remove all CMake cache files to ensure BUILD_TESTING is set correctly
           # The cache may restore a previous CMakeCache.txt with BUILD_TESTING=OFF
           # We need to remove these files AFTER cache restore but BEFORE cmake configure
-          # Remove CMakeCache.txt and all CMakeFiles directories that might contain cached values
-          rm -f "${BUILD_DIR}/CMakeCache.txt"
-          find "${BUILD_DIR}" -name "CMakeCache.txt" -delete 2>/dev/null || true
-          find "${BUILD_DIR}" -type d -name "CMakeFiles" -exec rm -rf {} + 2>/dev/null || true
-          # Also remove any other CMake-generated files that might persist BUILD_TESTING
-          find "${BUILD_DIR}" -name "*.cmake" -path "*/CMakeFiles/*" -delete 2>/dev/null || true
-          # Unset BUILD_TESTING from cache if it exists, then set it explicitly
+          # Preserve _deps directory (contains fetched dependencies) but remove all CMake-generated files
+          if [ -d "${BUILD_DIR}/_deps" ]; then
+            # Save _deps temporarily
+            mv "${BUILD_DIR}/_deps" "${BUILD_DIR}/_deps.backup" || true
+          fi
+          # Remove all CMake-generated files and directories
+          find "${BUILD_DIR}" -mindepth 1 -maxdepth 1 ! -name "_deps.backup" -exec rm -rf {} + 2>/dev/null || true
+          # Restore _deps
+          if [ -d "${BUILD_DIR}/_deps.backup" ]; then
+            mv "${BUILD_DIR}/_deps.backup" "${BUILD_DIR}/_deps" || true
+          fi
+          # Ensure build directory exists
+          mkdir -p "${BUILD_DIR}"
+          # Configure with BUILD_TESTING=ON explicitly
           cmake -S . -B "${BUILD_DIR}" -G "Unix Makefiles" \
             -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" \
-            -U BUILD_TESTING \
             -DBUILD_TESTING=ON \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
