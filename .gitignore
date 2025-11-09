@@ -345,10 +345,12 @@ docs/build/
 # =============================================================================
 
 # Cursor editor project files
-# Ignore .cursor/ except for project rules
+# Ignore .cursor/ except for project rules and plans
 .cursor/*
 !.cursor/rules/
 !.cursor/rules/**/*
+!.cursor/plans/
+!.cursor/plans/**/*
 
 # Node.js (if using any JS tools)
 node_modules/
