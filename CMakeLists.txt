@@ -42,7 +42,15 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(DEBUG_MODE                 "Enable debug build flags"                       OFF)
 option(PERFORMANCE_BUILD          "Enable performance-optimized flags"             ON)
 option(WARNING_MODE               "Enable extra warnings"                          ON)
-option(BUILD_TESTING              "Build tests and enable CTest"                   ON)
+# Use set() with FORCE for BUILD_TESTING to ensure command-line overrides work
+# even when the variable is already in the cache (e.g., from cached build directories)
+# Command-line -DBUILD_TESTING=ON/OFF is processed before this file, so if BUILD_TESTING
+# is already set (from command line), we preserve that value. Otherwise default to ON.
+if (DEFINED BUILD_TESTING)
+  set(BUILD_TESTING ${BUILD_TESTING} CACHE BOOL "Build tests and enable CTest" FORCE)
+else()
+  set(BUILD_TESTING ON CACHE BOOL "Build tests and enable CTest" FORCE)
+endif()
 option(ENABLE_EXAMPLES            "Build example programs"                          ON)
 option(ENABLE_NATIVE_OPTIMIZATION "Use -march=native/-mtune=native in performance" OFF)
 option(ENABLE_SANITIZERS          "Enable Address/Undefined sanitizers in debug"    OFF)
