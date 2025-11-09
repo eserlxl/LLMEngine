@@ -84,10 +84,21 @@ jobs:
           CCACHE_DIR: ~/.ccache
         run: |
           if [ "${{ matrix.compiler }}" = "gcc" ]; then export CC=gcc; export CXX=g++; else export CC=clang; export CXX=clang++; fi
-          # Remove CMakeCache.txt if it exists to ensure BUILD_TESTING is set correctly
+          # Remove CMakeCache.txt and related cache files to ensure BUILD_TESTING is set correctly
           # The cache may restore a previous CMakeCache.txt with BUILD_TESTING=OFF
+          # We need to remove these files AFTER cache restore but BEFORE cmake configure
           rm -f "${BUILD_DIR}/CMakeCache.txt"
+          rm -rf "${BUILD_DIR}/CMakeFiles/CMakeCache.txt"
+          # Also remove any CMakeCache.txt in subdirectories that might affect configuration
+          find "${BUILD_DIR}" -name "CMakeCache.txt" -delete 2>/dev/null || true
           cmake -S . -B "${BUILD_DIR}" -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" -DBUILD_TESTING=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          # Verify BUILD_TESTING was set correctly
+          if ! grep -q "BUILD_TESTING:BOOL=ON" "${BUILD_DIR}/CMakeCache.txt"; then
+            echo "ERROR: BUILD_TESTING was not set to ON in CMakeCache.txt"
+            echo "CMakeCache.txt contents for BUILD_TESTING:"
+            grep "BUILD_TESTING" "${BUILD_DIR}/CMakeCache.txt" || echo "BUILD_TESTING not found"
+            exit 1
+          fi
 
       - name: Build (make -j20)
         run: |
