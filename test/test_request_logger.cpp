@@ -225,6 +225,10 @@ void testTextRedaction() {
         redact_count++;
         pos += 10;
     }
+    // Use redact_count in a way the compiler recognizes
+    if (redact_count < 3) {
+        std::cerr << "Error: Expected at least 3 redactions, got " << redact_count << std::endl;
+    }
     assert(redact_count >= 3 && "Should redact all sensitive values");
 
     // Test 6: Non-sensitive text should pass through

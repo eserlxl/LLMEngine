@@ -245,6 +245,9 @@ void testMultipleCalls() {
 
     ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
     bool set_result = engine.setTempDirectory(test_dir);
+    if (!set_result) {
+        std::cerr << "Error: Failed to set temp directory to " << test_dir << std::endl;
+    }
     assert(set_result && "Path within default root should be accepted");
 
     // Call multiple times - should be safe
