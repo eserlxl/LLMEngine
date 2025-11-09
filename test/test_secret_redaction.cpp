@@ -77,9 +77,12 @@ void testRedactHeaders() {
 
     auto redacted = LLMEngine::RequestLogger::redactHeaders(headers);
 
-    assert(redacted["Authorization"] == "<REDACTED>");
-    assert(redacted["X-API-Key"] == "<REDACTED>");
-    assert(redacted["Content-Type"] == "application/json"); // Non-sensitive header should remain
+    // Authorization is not on allowlist, so should be omitted entirely (default-deny)
+    assert(redacted.find("Authorization") == redacted.end());
+    // X-API-Key is not on allowlist, so should be omitted entirely (default-deny)
+    assert(redacted.find("X-API-Key") == redacted.end());
+    // Content-Type is on allowlist and not sensitive, so should pass through unchanged
+    assert(redacted["Content-Type"] == "application/json");
 
     std::cout << "✓ Header redaction test passed\n";
 }
