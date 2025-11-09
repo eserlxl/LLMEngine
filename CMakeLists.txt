@@ -45,18 +45,17 @@ option(WARNING_MODE               "Enable extra warnings"                       
 # Configure BUILD_TESTING with proper handling of command-line overrides
 # The workflow uses -UBUILD_TESTING -DBUILD_TESTING=ON to ensure it's set correctly.
 # However, if BUILD_TESTING is in the cache from a previous run (e.g., from cache restoration),
-# include(CTest) won't override it. We need to explicitly set it with FORCE to ensure
-# command-line values and our default (ON) take precedence.
-# Strategy: include(CTest) first to create the option, then always set BUILD_TESTING to ON
-# with FORCE. This ensures that:
-# 1. If BUILD_TESTING was set from command line to ON, it stays ON
-# 2. If BUILD_TESTING was in cache as OFF (stale), it gets set to ON
-# 3. If BUILD_TESTING was set from command line to OFF, the FORCE will still respect it
-#    because command-line values are processed before this file runs
-include(CTest)
+# include(CTest) might read the cached value and not override it. We need to explicitly
+# set it with FORCE BEFORE include(CTest) to ensure our value takes precedence.
+# Strategy: Set BUILD_TESTING to ON with FORCE first, then include(CTest). This ensures that:
+# 1. Any stale cache values are overridden before include(CTest) runs
+# 2. include(CTest) will see BUILD_TESTING=ON and use that value
+# 3. Command-line values are still respected because they're processed before this file runs
 # Always set BUILD_TESTING to ON with FORCE to override any stale cache values
-# Command-line values set with -DBUILD_TESTING=OFF will still work because they're
-# processed before this file runs, and FORCE respects command-line values.
+# This must be done BEFORE include(CTest) so that include(CTest) sees the correct value
+set(BUILD_TESTING ON CACHE BOOL "Build tests and enable CTest" FORCE)
+include(CTest)
+# After include(CTest), ensure BUILD_TESTING is still ON (in case include(CTest) changed it)
 set(BUILD_TESTING ON CACHE BOOL "Build tests and enable CTest" FORCE)
 option(ENABLE_EXAMPLES            "Build example programs"                          ON)
 option(ENABLE_NATIVE_OPTIMIZATION "Use -march=native/-mtune=native in performance" OFF)
