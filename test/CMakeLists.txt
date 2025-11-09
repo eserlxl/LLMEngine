@@ -544,6 +544,9 @@ if (BUILD_TESTING)
   add_test(NAME test_llmengine_construction COMMAND test_llmengine_construction)
   add_test(NAME test_integration COMMAND test_integration)
   add_test(NAME test_api_config_parsing COMMAND test_api_config_parsing)
+  # Set working directory to source root so test can find config/api_config.json
+  set_tests_properties(test_api_config_parsing PROPERTIES
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
   add_test(NAME test_provider_mapping_extended COMMAND test_provider_mapping_extended)
   add_test(NAME test_tempdir_hardening COMMAND test_tempdir_hardening)
   add_test(NAME test_request_logger COMMAND test_request_logger)
