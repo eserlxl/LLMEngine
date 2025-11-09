@@ -84,6 +84,9 @@ jobs:
           CCACHE_DIR: ~/.ccache
         run: |
           if [ "${{ matrix.compiler }}" = "gcc" ]; then export CC=gcc; export CXX=g++; else export CC=clang; export CXX=clang++; fi
+          # Remove CMakeCache.txt if it exists to ensure BUILD_TESTING is set correctly
+          # The cache may restore a previous CMakeCache.txt with BUILD_TESTING=OFF
+          rm -f "${BUILD_DIR}/CMakeCache.txt"
           cmake -S . -B "${BUILD_DIR}" -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" -DBUILD_TESTING=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Build (make -j20)
