@@ -1,6 +1,6 @@
 # LLMEngine Quick Start
 
-This guide shows the minimal steps to build the library, configure a provider, and run a request. For details, see [docs/CONFIGURATION.md](docs/CONFIGURATION.md), [docs/PROVIDERS.md](docs/PROVIDERS.md), and [docs/API_REFERENCE.md](docs/API_REFERENCE.md).
+This guide shows the minimal steps to build the library, configure a provider, and run a request. For details, see [docs/configuration.md](docs/configuration.md), [docs/providers.md](docs/providers.md), and [docs/api_reference.md](docs/api_reference.md).
 
 ## 1. Minimal Example (Qwen)
 
@@ -239,9 +239,9 @@ LLMEngine::LLMEngine engine(
 );
 ```
 
-For comprehensive documentation on setting custom config paths, including thread safety, API reference, and best practices, see [docs/CUSTOM_CONFIG_PATH.md](docs/CUSTOM_CONFIG_PATH.md).
+For comprehensive documentation on setting custom config paths, including thread safety, API reference, and best practices, see [docs/custom_config_path.md](docs/custom_config_path.md).
 
-See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for complete configuration details.
+See [docs/configuration.md](docs/configuration.md) for complete configuration details.
 
 Example:
 ```json
@@ -400,12 +400,12 @@ export QWEN_API_KEY="sk-your-key"
 
 ## 12. More Information
 
-- **Full Documentation**: See [README.md](README.md) for overview and [docs/API_REFERENCE.md](docs/API_REFERENCE.md) for API details
-- **Configuration**: See [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
-- **Custom Config Paths**: See [docs/CUSTOM_CONFIG_PATH.md](docs/CUSTOM_CONFIG_PATH.md)
-- **Providers**: See [docs/PROVIDERS.md](docs/PROVIDERS.md)
-- **Security**: See [docs/SECURITY.md](docs/SECURITY.md)
-- **Performance**: See [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
+- **Full Documentation**: See [README.md](README.md) for overview and [docs/api_reference.md](docs/api_reference.md) for API details
+- **Configuration**: See [docs/configuration.md](docs/configuration.md)
+- **Custom Config Paths**: See [docs/custom_config_path.md](docs/custom_config_path.md)
+- **Providers**: See [docs/providers.md](docs/providers.md)
+- **Security**: See [docs/security.md](docs/security.md)
+- **Performance**: See [docs/performance.md](docs/performance.md)
 - **Examples**: See [examples/README.md](examples/README.md)
 - **Test Examples**: `test/test_api.cpp`
 - **Qwen Documentation**: https://help.aliyun.com/zh/dashscope/
@@ -459,7 +459,7 @@ std::cout << "Analysis: " << result.content << std::endl;
 
 ## 14. Contributing
 
-Found a bug or have a feature request? Please check the [main README](README.md) and [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) for contribution guidelines.
+Found a bug or have a feature request? Please check the [main README](README.md) and [.github/contributing.md](.github/contributing.md) for contribution guidelines.
 
 ## 15. License
 

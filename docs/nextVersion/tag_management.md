@@ -21,7 +21,7 @@ In `next-version`, Git tags are primarily used to mark official releases and sig
 
 This is achieved through:
 -   **Semantic Versioning**: All release tags adhere to the `vX.Y.Z` format, reflecting major, minor, and patch versions.
--   **Automated Release Workflow**: New release tags are automatically created by GitHub Actions as part of the [Release Workflow](RELEASE_WORKFLOW.md).
+-   **Automated Release Workflow**: New release tags are automatically created by GitHub Actions as part of the [Release Workflow](release_workflow.md).
 -   **Automated Tag Cleanup**: A dedicated GitHub Actions workflow periodically cleans up old tags.
 -   **`tag-manager` Script**: A command-line utility for local and manual tag operations with advanced features.
 -   **LOC-Based Delta System**: Advanced versioning that ensures consistent tag progression with mathematical bonus calculations.
@@ -30,7 +30,7 @@ This is achieved through:
 
 ## Tagging Strategy and Conventions
 
-Our tagging strategy is tightly integrated with our [Semantic Versioning](VERSIONING.md) and [Release Workflow](RELEASE_WORKFLOW.md).
+Our tagging strategy is tightly integrated with our [Semantic Versioning](versioning.md) and [Release Workflow](release_workflow.md).
 
 ### When to Create Tags
 
@@ -315,7 +315,7 @@ git config --list | grep -E "(user\.name|user\.email|remote\.origin)"
 -   **GitHub Actions Logs**: Check the detailed logs of the tag cleanup workflow for specific error messages.
 -   **`tag-manager` Output**: Use the verbose output of the tag manager script to understand tag operations.
 -   **Git Documentation**: Refer to the [Git Tag Documentation](https://git-scm.com/docs/git-tag) for advanced tag operations.
--   **Project Documentation**: Consult the [Versioning Guide](VERSIONING.md) and [Release Workflow Guide](RELEASE_WORKFLOW.md) for context.
+-   **Project Documentation**: Consult the [Versioning Guide](versioning.md) and [Release Workflow Guide](release_workflow.md) for context.
 
 [↑ Back to top](#git-tag-management-guide)
 

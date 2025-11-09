@@ -26,9 +26,9 @@ if (!result.success) {
 
 ## See Also
 
-- [docs/CONFIGURATION.md](CONFIGURATION.md) - Configuration and parameter tuning
-- [docs/PROVIDERS.md](PROVIDERS.md) - Provider selection and model recommendations
-- [docs/FAQ.md](FAQ.md) - Performance-related questions
-- [QUICKSTART.md](../QUICKSTART.md) - Quick start with performance tips
+- [docs/configuration.md](configuration.md) - Configuration and parameter tuning
+- [docs/providers.md](providers.md) - Provider selection and model recommendations
+- [docs/faq.md](faq.md) - Performance-related questions
+- [quickstart.md](../quickstart.md) - Quick start with performance tips
 - [README.md](../README.md) - Main documentation
 

@@ -879,10 +879,10 @@ See the [Dependency Injection and Strategy Patterns](#dependency-injection-and-s
 
 ## See Also
 
-- [docs/CONFIGURATION.md](CONFIGURATION.md) - Configuration format and structure
-- [docs/API_REFERENCE.md](API_REFERENCE.md) - API usage and examples
-- [docs/SECURITY.md](SECURITY.md) - Security considerations
-- [docs/PERFORMANCE.md](PERFORMANCE.md) - Performance considerations
-- [QUICKSTART.md](../QUICKSTART.md) - Quick start guide
+- [docs/configuration.md](configuration.md) - Configuration format and structure
+- [docs/api_reference.md](api_reference.md) - API usage and examples
+- [docs/security.md](security.md) - Security considerations
+- [docs/performance.md](performance.md) - Performance considerations
+- [quickstart.md](../quickstart.md) - Quick start guide
 - [README.md](../README.md) - Main documentation
 

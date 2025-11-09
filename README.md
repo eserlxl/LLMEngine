@@ -148,7 +148,7 @@ int main() {
 
 ### Custom Config File Path
 
-For information on using custom configuration file paths, see [docs/CUSTOM_CONFIG_PATH.md](docs/CUSTOM_CONFIG_PATH.md).
+For information on using custom configuration file paths, see [docs/custom_config_path.md](docs/custom_config_path.md).
 
 ### Set API Keys
 
@@ -159,7 +159,7 @@ export ANTHROPIC_API_KEY="sk-your-anthropic-key"
 export GEMINI_API_KEY="your-gemini-api-key"
 ```
 
-For more examples and detailed usage, see [QUICKSTART.md](QUICKSTART.md).
+For more examples and detailed usage, see [quickstart.md](quickstart.md).
 
 [↑ Back to top](#llmengine)
 
@@ -205,7 +205,7 @@ cmake -S . -B build_release
 cmake --build build_release -j20
 ```
 
-For detailed build instructions, dependencies, and all build options, see [docs/BUILD.md](docs/BUILD.md).
+For detailed build instructions, dependencies, and all build options, see [docs/build.md](docs/build.md).
 
 [↑ Back to top](#llmengine)
 
@@ -405,7 +405,7 @@ Some tests will be skipped automatically if the corresponding API keys are not p
 
 ## 🔧 Build Configuration
 
-For detailed information about build presets, CMake options, and build configurations, see [docs/BUILD.md](docs/BUILD.md).
+For detailed information about build presets, CMake options, and build configurations, see [docs/build.md](docs/build.md).
 
 [↑ Back to top](#llmengine)
 
@@ -416,18 +416,18 @@ For detailed information about build presets, CMake options, and build configura
 
 | File | Description |
 |------|--------------|
-| [QUICKSTART.md](QUICKSTART.md) | Getting started guide |
-| [docs/BUILD.md](docs/BUILD.md) | Build presets and CMake options |
-| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Configuration structure |
-| [docs/CUSTOM_CONFIG_PATH.md](docs/CUSTOM_CONFIG_PATH.md) | Setting custom config file paths |
-| [docs/PROVIDERS.md](docs/PROVIDERS.md) | Provider details |
-| [docs/API_REFERENCE.md](docs/API_REFERENCE.md) | Generated Doxygen API |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture overview |
-| [docs/FAQ.md](docs/FAQ.md) | Frequently Asked Questions |
-| [docs/SECURITY.md](docs/SECURITY.md) | Security notes |
-| [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | Optimization tips |
-| [docs/CI_CD_GUIDE.md](docs/CI_CD_GUIDE.md) | CI/CD and testing guide |
-| [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) | Contribution guidelines |
+| [quickstart.md](quickstart.md) | Getting started guide |
+| [docs/build.md](docs/build.md) | Build presets and CMake options |
+| [docs/configuration.md](docs/configuration.md) | Configuration structure |
+| [docs/custom_config_path.md](docs/custom_config_path.md) | Setting custom config file paths |
+| [docs/providers.md](docs/providers.md) | Provider details |
+| [docs/api_reference.md](docs/api_reference.md) | Generated Doxygen API |
+| [docs/architecture.md](docs/architecture.md) | System architecture overview |
+| [docs/faq.md](docs/faq.md) | Frequently Asked Questions |
+| [docs/security.md](docs/security.md) | Security notes |
+| [docs/performance.md](docs/performance.md) | Optimization tips |
+| [docs/ci_cd_guide.md](docs/ci_cd_guide.md) | CI/CD and testing guide |
+| [.github/contributing.md](.github/contributing.md) | Contribution guidelines |
 | [examples/README.md](examples/README.md) | Example usage guide |
 
 [↑ Back to top](#llmengine)

@@ -227,7 +227,7 @@ Loads configuration from the specified path or from the default path if no path 
 
 ## Related Documentation
 
-- [CONFIGURATION.md](CONFIGURATION.md) - Complete configuration guide
-- [API_REFERENCE.md](API_REFERENCE.md) - Full API documentation
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Architecture and design details
+- [configuration.md](configuration.md) - Complete configuration guide
+- [api_reference.md](api_reference.md) - Full API documentation
+- [architecture.md](architecture.md) - Architecture and design details
 

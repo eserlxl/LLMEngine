@@ -306,5 +306,5 @@ bash examples/build_examples.sh
 
 ---
 
-For more details on build options and their interactions, see [CMakeLists.txt](../CMakeLists.txt) and [docs/CI_CD_GUIDE.md](CI_CD_GUIDE.md).
+For more details on build options and their interactions, see [CMakeLists.txt](../CMakeLists.txt) and [docs/ci_cd_guide.md](ci_cd_guide.md).
 

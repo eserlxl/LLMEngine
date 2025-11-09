@@ -139,9 +139,9 @@ const char* api_key = std::getenv("QWEN_API_KEY");
 
 ## See Also
 
-- [docs/CONFIGURATION.md](CONFIGURATION.md) - Configuration and API key setup
-- [docs/ARCHITECTURE.md](ARCHITECTURE.md) - Security considerations in architecture
-- [docs/FAQ.md](FAQ.md) - Common security questions
-- [QUICKSTART.md](../QUICKSTART.md) - Security best practices in quick start
+- [docs/configuration.md](configuration.md) - Configuration and API key setup
+- [docs/architecture.md](architecture.md) - Security considerations in architecture
+- [docs/faq.md](faq.md) - Common security questions
+- [quickstart.md](../quickstart.md) - Security best practices in quick start
 - [README.md](../README.md) - Main documentation
 

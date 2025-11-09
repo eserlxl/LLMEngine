@@ -422,13 +422,13 @@ perf report
 ```
 
 ### Seeking Support
-- **Docs**: See [README.md](../README.md), [QUICKSTART.md](../QUICKSTART.md), and [docs/CONFIGURATION.md](CONFIGURATION.md).
+- **Docs**: See [README.md](../README.md), [quickstart.md](../quickstart.md), and [docs/configuration.md](configuration.md).
 - **Issues**: Open issues in the repository with clear repro steps.
 - **Contributing**: Follow [.github/CONTRIBUTING.md](../.github/CONTRIBUTING.md) when submitting PRs.
 
 ## See Also
 
-- [docs/ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
-- [docs/API_REFERENCE.md](API_REFERENCE.md) - API documentation
-- [docs/FAQ.md](FAQ.md) - Frequently asked questions
+- [docs/architecture.md](architecture.md) - System architecture
+- [docs/api_reference.md](api_reference.md) - API documentation
+- [docs/faq.md](faq.md) - Frequently asked questions
 - [README.md](../README.md) - Main documentation

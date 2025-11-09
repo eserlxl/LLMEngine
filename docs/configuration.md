@@ -419,9 +419,9 @@ LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA,
 
 ## See Also
 
-- [docs/PROVIDERS.md](PROVIDERS.md) - Provider details and model information
-- [docs/API_REFERENCE.md](API_REFERENCE.md) - API documentation
-- [docs/SECURITY.md](SECURITY.md) - Security best practices
-- [docs/PERFORMANCE.md](PERFORMANCE.md) - Performance optimization
-- [QUICKSTART.md](../QUICKSTART.md) - Quick start guide
+- [docs/providers.md](providers.md) - Provider details and model information
+- [docs/api_reference.md](api_reference.md) - API documentation
+- [docs/security.md](security.md) - Security best practices
+- [docs/performance.md](performance.md) - Performance optimization
+- [quickstart.md](../quickstart.md) - Quick start guide
 - [README.md](../README.md) - Main documentation

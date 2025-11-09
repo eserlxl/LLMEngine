@@ -402,11 +402,11 @@ Debug files created:
 ## 📚 Learning Resources
 
 - **Main Library**: See [README.md](../README.md) for detailed documentation
-- **Configuration**: See [docs/CONFIGURATION.md](../docs/CONFIGURATION.md)
-- **Quick Start**: See [QUICKSTART.md](../QUICKSTART.md)
-- **API Reference**: See [docs/API_REFERENCE.md](../docs/API_REFERENCE.md)
-- **Providers**: See [docs/PROVIDERS.md](../docs/PROVIDERS.md)
-- **FAQ**: See [docs/FAQ.md](../docs/FAQ.md)
+- **Configuration**: See [docs/configuration.md](../docs/configuration.md)
+- **Quick Start**: See [quickstart.md](../quickstart.md)
+- **API Reference**: See [docs/api_reference.md](../docs/api_reference.md)
+- **Providers**: See [docs/providers.md](../docs/providers.md)
+- **FAQ**: See [docs/faq.md](../docs/faq.md)
 
 ## 🤝 Contributing
 

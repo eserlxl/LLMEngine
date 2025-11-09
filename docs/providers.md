@@ -68,8 +68,8 @@ LLMEngine fromConfig("qwen", apiKey); // uses default_model
 
 ## See Also
 
-- [docs/CONFIGURATION.md](CONFIGURATION.md) - Provider defaults and parameters
-- [docs/API_REFERENCE.md](API_REFERENCE.md) - API usage examples
-- [QUICKSTART.md](../QUICKSTART.md) - Getting started with providers
+- [docs/configuration.md](configuration.md) - Provider defaults and parameters
+- [docs/api_reference.md](api_reference.md) - API usage examples
+- [quickstart.md](../quickstart.md) - Getting started with providers
 - [README.md](../README.md) - Main documentation
 

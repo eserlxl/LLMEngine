@@ -83,9 +83,9 @@ For most feature additions, bug fixes, or breaking changes, simply push your fin
 
 **Important**: The workflow automatically ignores changes to certain files to prevent infinite loops:
 - `VERSION`
-- `doc/VERSIONING.md`
-- `doc/TAG_MANAGEMENT.md`
-- `doc/RELEASE_WORKFLOW.md`
+- `doc/versioning.md`
+- `doc/tag_management.md`
+- `doc/release_workflow.md`
 - `.shellcheckrc`
 
 #### Option B: Manual Release (For specific control or overriding automation)

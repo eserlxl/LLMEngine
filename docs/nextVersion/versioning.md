@@ -138,7 +138,7 @@ The system now provides enhanced analysis output that includes:
 - **Total delta**: The final increment amount
 - **Example**: "cli_added (LOC: 200, MINOR, base_delta=5, bonus=3*1.4=4, total_delta=9)"
 
-For more details on the LOC-based delta system, see [LOC Delta System Documentation](LOC_DELTA_SYSTEM.md).
+For more details on the LOC-based delta system, see [LOC Delta System Documentation](loc_delta_system.md).
 
 [↑ Back to top](#versioning-strategy)
 
@@ -338,13 +338,13 @@ The project includes several specialized version management tools:
 - **`version-utils.sh`**: Common version utility functions
 - **`version-validator.sh`**: Version format validation and testing
 
-For more details on tag management, refer to the [Git Tag Management Guide](TAG_MANAGEMENT.md).
+For more details on tag management, refer to the [Git Tag Management Guide](tag_management.md).
 
 [↑ Back to top](#versioning-strategy)
 
 ## Release Process Integration
 
-The versioning strategy is an integral part of the overall [Release Workflow](RELEASE_WORKFLOW.md). The typical flow is:
+The versioning strategy is an integral part of the overall [Release Workflow](release_workflow.md). The typical flow is:
 
 1.  **Develop and Commit**: Make changes and commit them using [Conventional Commit](https://www.conventionalcommits.org/) messages.
 2.  **Push to `main`**: Push your changes to the `main` branch.
@@ -420,8 +420,8 @@ If you encounter problems related to versioning, consider the following troubles
 
 -   **GitHub Actions Logs**: The most valuable resource for troubleshooting automated versioning issues are the detailed logs of the `version-bump.yml` workflow runs.
 -   **`semantic-version-analyzer` Output**: Use the verbose output of this tool to understand the analysis of your changes.
--   **Project Documentation**: Refer to the [FAQ](FAQ.md), [Developer Guide](DEVELOPER_GUIDE.md), [Release Workflow Guide](RELEASE_WORKFLOW.md), and [Git Tag Management Guide](TAG_MANAGEMENT.md) for more context.
--   **Version Algorithm**: See [VERSIONING_ALGORITHM.md](VERSIONING_ALGORITHM.md) for detailed technical implementation.
+-   **Project Documentation**: Refer to the [FAQ](faq.md), [Developer Guide](developer_guide.md), [Release Workflow Guide](release_workflow.md), and [Git Tag Management Guide](tag_management.md) for more context.
+-   **Version Algorithm**: See [versioning_algorithm.md](versioning_algorithm.md) for detailed technical implementation.
 -   **GitHub Issues**: If you suspect a bug in the versioning tooling or the workflow itself, please [open an issue](https://github.com/eserlxl/next-version/issues) on the GitHub repository.
 
 [↑ Back to top](#versioning-strategy)
