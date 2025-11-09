@@ -62,8 +62,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/
-          key: ${{ runner.os }}-${{ matrix.build_type }}-${{ hashFiles('CMakeLists.txt', 'src/**') }}
+          key: ${{ runner.os }}-${{ matrix.build_type }}-testing-on-${{ hashFiles('CMakeLists.txt', 'src/**') }}
           restore-keys: |
+            ${{ runner.os }}-${{ matrix.build_type }}-testing-on-
             ${{ runner.os }}-${{ matrix.build_type }}-
 
       - name: Install toolchain
@@ -92,7 +93,10 @@ jobs:
             # Save _deps temporarily
             mv "${BUILD_DIR}/_deps" "${BUILD_DIR}/_deps.backup" || true
           fi
-          # Remove all CMake-generated files and directories
+          # Explicitly remove CMakeCache.txt and CMakeFiles/ to ensure clean configuration
+          rm -f "${BUILD_DIR}/CMakeCache.txt" 2>/dev/null || true
+          rm -rf "${BUILD_DIR}/CMakeFiles" 2>/dev/null || true
+          # Remove all other CMake-generated files and directories
           find "${BUILD_DIR}" -mindepth 1 -maxdepth 1 ! -name "_deps.backup" -exec rm -rf {} + 2>/dev/null || true
           # Restore _deps
           if [ -d "${BUILD_DIR}/_deps.backup" ]; then
