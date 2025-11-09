@@ -84,19 +84,29 @@ jobs:
           CCACHE_DIR: ~/.ccache
         run: |
           if [ "${{ matrix.compiler }}" = "gcc" ]; then export CC=gcc; export CXX=g++; else export CC=clang; export CXX=clang++; fi
-          # Remove CMakeCache.txt and related cache files to ensure BUILD_TESTING is set correctly
+          # Remove all CMake cache files to ensure BUILD_TESTING is set correctly
           # The cache may restore a previous CMakeCache.txt with BUILD_TESTING=OFF
           # We need to remove these files AFTER cache restore but BEFORE cmake configure
+          # Remove CMakeCache.txt and all CMakeFiles directories that might contain cached values
           rm -f "${BUILD_DIR}/CMakeCache.txt"
-          rm -rf "${BUILD_DIR}/CMakeFiles/CMakeCache.txt"
-          # Also remove any CMakeCache.txt in subdirectories that might affect configuration
           find "${BUILD_DIR}" -name "CMakeCache.txt" -delete 2>/dev/null || true
-          cmake -S . -B "${BUILD_DIR}" -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" -DBUILD_TESTING=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          find "${BUILD_DIR}" -type d -name "CMakeFiles" -exec rm -rf {} + 2>/dev/null || true
+          # Also remove any other CMake-generated files that might persist BUILD_TESTING
+          find "${BUILD_DIR}" -name "*.cmake" -path "*/CMakeFiles/*" -delete 2>/dev/null || true
+          # Unset BUILD_TESTING from cache if it exists, then set it explicitly
+          cmake -S . -B "${BUILD_DIR}" -G "Unix Makefiles" \
+            -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" \
+            -U BUILD_TESTING \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           # Verify BUILD_TESTING was set correctly
           if ! grep -q "BUILD_TESTING:BOOL=ON" "${BUILD_DIR}/CMakeCache.txt"; then
             echo "ERROR: BUILD_TESTING was not set to ON in CMakeCache.txt"
             echo "CMakeCache.txt contents for BUILD_TESTING:"
             grep "BUILD_TESTING" "${BUILD_DIR}/CMakeCache.txt" || echo "BUILD_TESTING not found"
+            echo "Full CMakeCache.txt (first 50 lines):"
+            head -50 "${BUILD_DIR}/CMakeCache.txt" || true
             exit 1
           fi
 
