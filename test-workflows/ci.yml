@@ -16,12 +16,12 @@ jobs:
           sudo apt install -y ninja-build build-essential libssl-dev
       - name: Check clang-format version
         run: |
-          if command -v clang-format >/dev/null 2>&1
+          if command -v clang-format-20 >/dev/null 2>&1
           then
-            echo "clang-format located at: $(command -v clang-format)"
-            clang-format --version
+            echo "clang-format-20 located at: $(command -v clang-format-20)"
+            clang-format-20 --version
           else
-            echo "clang-format is not available on this runner"
+            echo "clang-format-20 is not available on this runner"
             exit 1
           fi
       - name: Configure

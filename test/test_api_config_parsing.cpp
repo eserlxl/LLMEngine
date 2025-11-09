@@ -28,7 +28,7 @@ int main() {
         // Try to find the config directory by going up from current directory
         // This handles cases where the test is run from various locations
         std::vector<std::string> paths_to_try = {
-            "../../../config/api_config.json",  // build/test/Debug or similar
+            "../../../config/api_config.json",    // build/test/Debug or similar
             "../../../../config/api_config.json", // build/test/bin/Debug or similar
         };
         for (const auto& path : paths_to_try) {
@@ -52,9 +52,9 @@ int main() {
     int tout = mgr.getTimeoutSeconds();
     int retries = mgr.getRetryAttempts();
     int delay = mgr.getRetryDelayMs();
-    (void)tout; // Suppress unused variable warning - value checked in assert
+    (void)tout;    // Suppress unused variable warning - value checked in assert
     (void)retries; // Suppress unused variable warning - value checked in assert
-    (void)delay; // Suppress unused variable warning - value checked in assert
+    (void)delay;   // Suppress unused variable warning - value checked in assert
     assert(tout > 0);
     assert(retries >= 0);
     assert(delay >= 0);

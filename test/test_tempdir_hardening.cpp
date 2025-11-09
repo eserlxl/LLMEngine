@@ -75,7 +75,8 @@ void testSymlinkRejection() {
     ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
 
     // Try to set temp directory to symlink - should be rejected by symlink detection
-    // Note: setTempDirectory may accept it (path validation passes), but prepareTempDirectory should reject it
+    // Note: setTempDirectory may accept it (path validation passes), but prepareTempDirectory
+    // should reject it
     bool set_result = engine.setTempDirectory(symlink_path);
     if (set_result) {
         // If path validation passed, prepareTempDirectory should detect and reject the symlink

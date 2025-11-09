@@ -47,14 +47,14 @@ int main() {
     if (!config_loaded) {
         config_loaded = mgr.loadConfig("../config/api_config.json");
     }
-    
+
     // Empty string should fall back to default provider
     ProviderType default_ty = APIClientFactory::stringToProviderType("");
     // Should return a valid provider type
     std::string default_s = APIClientFactory::providerTypeToString(default_ty);
     assert(!default_s.empty());
     // Should be one of the known providers
-    assert(default_s == "qwen" || default_s == "openai" || default_s == "anthropic" 
+    assert(default_s == "qwen" || default_s == "openai" || default_s == "anthropic"
            || default_s == "ollama" || default_s == "gemini");
 
     std::cout << "OK\n";

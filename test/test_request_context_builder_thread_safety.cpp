@@ -86,40 +86,36 @@ void testConcurrentDirectoryGeneration() {
     auto start_time = std::chrono::steady_clock::now();
 
     for (int i = 0; i < num_threads; ++i) {
-        threads.emplace_back([&context,
-                              &completed,
-                              &errors,
-                              &dir_names_mutex,
-                              &generated_dirs,
-                              i]() {
-            try {
-                for (int j = 0; j < iterations_per_thread; ++j) {
-                    nlohmann::json input;
-                    RequestContext ctx = RequestContextBuilder::build(
-                        context, "test prompt", input, "test_analysis", "chat", false);
+        threads.emplace_back(
+            [&context, &completed, &errors, &dir_names_mutex, &generated_dirs, i]() {
+                try {
+                    for (int j = 0; j < iterations_per_thread; ++j) {
+                        nlohmann::json input;
+                        RequestContext ctx = RequestContextBuilder::build(
+                            context, "test prompt", input, "test_analysis", "chat", false);
 
-                    // Verify directory name is unique
-                    std::lock_guard<std::mutex> lock(dir_names_mutex);
-                    if (generated_dirs.find(ctx.requestTmpDir) != generated_dirs.end()) {
-                        std::cerr << "ERROR: Duplicate directory name detected: "
-                                  << ctx.requestTmpDir << " (thread " << i << ", iteration " << j
-                                  << ")\n";
-                        ++errors;
-                    } else {
-                        generated_dirs.insert(ctx.requestTmpDir);
+                        // Verify directory name is unique
+                        std::lock_guard<std::mutex> lock(dir_names_mutex);
+                        if (generated_dirs.find(ctx.requestTmpDir) != generated_dirs.end()) {
+                            std::cerr
+                                << "ERROR: Duplicate directory name detected: " << ctx.requestTmpDir
+                                << " (thread " << i << ", iteration " << j << ")\n";
+                            ++errors;
+                        } else {
+                            generated_dirs.insert(ctx.requestTmpDir);
+                        }
                     }
+                    ++completed;
+                } catch (const std::exception& e) {
+                    std::cerr << "ERROR in thread " << i << ": " << e.what() << "\n";
+                    ++errors;
+                    ++completed;
+                } catch (...) {
+                    std::cerr << "ERROR in thread " << i << ": Unknown exception\n";
+                    ++errors;
+                    ++completed;
                 }
-                ++completed;
-            } catch (const std::exception& e) {
-                std::cerr << "ERROR in thread " << i << ": " << e.what() << "\n";
-                ++errors;
-                ++completed;
-            } catch (...) {
-                std::cerr << "ERROR in thread " << i << ": Unknown exception\n";
-                ++errors;
-                ++completed;
-            }
-        });
+            });
     }
 
     // Wait for all threads
@@ -157,11 +153,7 @@ void testRapidConcurrentInitialization() {
 
     // Create all threads at once to maximize concurrent RNG initialization
     for (int i = 0; i < num_threads; ++i) {
-        threads.emplace_back([&context,
-                              &completed,
-                              &errors,
-                              &dir_names_mutex,
-                              &generated_dirs]() {
+        threads.emplace_back([&context, &completed, &errors, &dir_names_mutex, &generated_dirs]() {
             try {
                 for (int j = 0; j < iterations_per_thread; ++j) {
                     nlohmann::json input;
