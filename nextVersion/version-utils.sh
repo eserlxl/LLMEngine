@@ -185,6 +185,9 @@ safe_write_file() {
 
   printf '%s\n' "$content" > "$tmp" || _die "Cannot write temp file"
 
+  # Explicitly set safe permissions (0644: rw-r--r--) to prevent world-writable files
+  chmod 0644 "$tmp" || _die "Cannot set permissions on temp file"
+
   # Best-effort durability without relying on non-portable `sync -f`
   if command -v python3 >/dev/null 2>&1; then
     python3 - <<'PY' "$tmp"
