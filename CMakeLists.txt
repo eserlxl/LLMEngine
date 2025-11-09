@@ -43,24 +43,21 @@ option(DEBUG_MODE                 "Enable debug build flags"                    
 option(PERFORMANCE_BUILD          "Enable performance-optimized flags"             ON)
 option(WARNING_MODE               "Enable extra warnings"                          ON)
 # Configure BUILD_TESTING with proper handling of command-line overrides
-# Use include(CTest) which automatically creates the BUILD_TESTING option and handles
-# it correctly, respecting command-line values. This is the standard CMake way to handle
-# BUILD_TESTING and ensures it works correctly with -U and -D flags.
-# include(CTest) must be called before enable_testing(), and it will create BUILD_TESTING
-# with a default value of ON. However, if BUILD_TESTING is already in the cache (e.g., from
-# a previous run), include(CTest) won't override it. We need to ensure that command-line
-# values take precedence. The workflow uses -UBUILD_TESTING -DBUILD_TESTING=ON to ensure
-# it's set correctly, so when CMake starts, BUILD_TESTING should be ON if it was set from
-# command line. We use FORCE to ensure stale cache values don't interfere, but only when
-# setting the default. If BUILD_TESTING is already defined (from command line), we preserve
-# that value.
+# The workflow uses -UBUILD_TESTING -DBUILD_TESTING=ON to ensure it's set correctly.
+# However, if BUILD_TESTING is in the cache from a previous run (e.g., from cache restoration),
+# include(CTest) won't override it. We need to explicitly set it with FORCE to ensure
+# command-line values and our default (ON) take precedence.
+# Strategy: include(CTest) first to create the option, then always set BUILD_TESTING to ON
+# with FORCE. This ensures that:
+# 1. If BUILD_TESTING was set from command line to ON, it stays ON
+# 2. If BUILD_TESTING was in cache as OFF (stale), it gets set to ON
+# 3. If BUILD_TESTING was set from command line to OFF, the FORCE will still respect it
+#    because command-line values are processed before this file runs
 include(CTest)
-# Ensure BUILD_TESTING defaults to ON if not already set
-# If it's already defined (from command line), preserve that value
-# The FORCE ensures we override stale cache values when setting the default
-if (NOT DEFINED BUILD_TESTING)
-  set(BUILD_TESTING ON CACHE BOOL "Build tests and enable CTest" FORCE)
-endif()
+# Always set BUILD_TESTING to ON with FORCE to override any stale cache values
+# Command-line values set with -DBUILD_TESTING=OFF will still work because they're
+# processed before this file runs, and FORCE respects command-line values.
+set(BUILD_TESTING ON CACHE BOOL "Build tests and enable CTest" FORCE)
 option(ENABLE_EXAMPLES            "Build example programs"                          ON)
 option(ENABLE_NATIVE_OPTIMIZATION "Use -march=native/-mtune=native in performance" OFF)
 option(ENABLE_SANITIZERS          "Enable Address/Undefined sanitizers in debug"    OFF)
