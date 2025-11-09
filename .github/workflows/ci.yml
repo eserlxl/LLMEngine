@@ -549,6 +549,7 @@ jobs:
           $GCOV_EXEC --version || true
           gcovr -r .. \
             --gcov-executable $GCOV_EXEC \
+            --gcov-ignore-parse-errors negative_hits.warn_once_per_file \
             --exclude-directories build_examples \
             --exclude test \
             --xml coverage.xml \
@@ -557,7 +558,7 @@ jobs:
             --print-summary
           
           # Extract coverage percentage for threshold checking
-          COVERAGE_LINE=$(gcovr -r .. --gcov-executable $GCOV_EXEC --exclude-directories build_examples --exclude test --txt - | grep -E "^TOTAL" || echo "")
+          COVERAGE_LINE=$(gcovr -r .. --gcov-executable $GCOV_EXEC --gcov-ignore-parse-errors negative_hits.warn_once_per_file --exclude-directories build_examples --exclude test --txt - | grep -E "^TOTAL" || echo "")
           echo "Coverage summary:"
           echo "$COVERAGE_LINE"
           
@@ -590,7 +591,7 @@ jobs:
           echo "Checking coverage for security-critical modules..."
           
           # Check RequestLogger (redaction)
-          REQUEST_LOGGER_COV=$(gcovr -r .. --gcov-executable $GCOV_EXEC --filter ../src/RequestLogger.cpp --txt - | grep -E "^TOTAL|^.*\.cpp" | tail -1 || echo "")
+          REQUEST_LOGGER_COV=$(gcovr -r .. --gcov-executable $GCOV_EXEC --gcov-ignore-parse-errors negative_hits.warn_once_per_file --filter ../src/RequestLogger.cpp --txt - | grep -E "^TOTAL|^.*\.cpp" | tail -1 || echo "")
           echo "RequestLogger coverage:"
           echo "$REQUEST_LOGGER_COV"
           

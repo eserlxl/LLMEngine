@@ -14,8 +14,8 @@ mkdir -p "$OUT_DIR"
 echo "Generating coverage into $OUT_DIR"
 
 if command -v gcovr >/dev/null 2>&1; then
-  gcovr -r .. --exclude-directories build_examples --xml "$OUT_DIR/coverage.xml"
-  gcovr -r .. --exclude-directories build_examples --html-details "$OUT_DIR/index.html"
+  gcovr -r .. --gcov-ignore-parse-errors negative_hits.warn_once_per_file --exclude-directories build_examples --xml "$OUT_DIR/coverage.xml"
+  gcovr -r .. --gcov-ignore-parse-errors negative_hits.warn_once_per_file --exclude-directories build_examples --html-details "$OUT_DIR/index.html"
   echo "gcovr reports written to $OUT_DIR"
 elif command -v llvm-profdata >/dev/null 2>&1 && command -v llvm-cov >/dev/null 2>&1; then
   PROFRAW_DIR="${OUT_DIR}/profraw"
