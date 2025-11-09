@@ -101,8 +101,11 @@ jobs:
           # Ensure build directory exists
           mkdir -p "${BUILD_DIR}"
           # Configure with BUILD_TESTING=ON explicitly
+          # Use -U to unset any cached value first, then -D to set it
+          # This ensures command-line value always takes precedence
           cmake -S . -B "${BUILD_DIR}" -G "Unix Makefiles" \
             -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" \
+            -UBUILD_TESTING \
             -DBUILD_TESTING=ON \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
