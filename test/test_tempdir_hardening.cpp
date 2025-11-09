@@ -96,6 +96,7 @@ void testSymlinkRejection() {
     try {
         bool set_result2 = engine.setTempDirectory(test_dir);
         assert(set_result2 && "Normal directory within root should be accepted");
+        (void)set_result2; // Suppress unused variable warning - value checked in assert
         engine.prepareTempDirectory(); // This should work
         assert(true && "Normal directory should work");
     } catch (const std::exception& e) {
@@ -145,6 +146,7 @@ void testDirectoryPermissions() {
     ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
     bool set_result = engine.setTempDirectory(test_dir);
     assert(set_result && "Path within default root should be accepted");
+    (void)set_result; // Suppress unused variable warning - value checked in assert
     engine.prepareTempDirectory();
 
     // Check that directory exists
@@ -181,6 +183,7 @@ void testDirectoryCreation() {
     ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
     bool set_result = engine.setTempDirectory(test_dir);
     assert(set_result && "Path within default root should be accepted");
+    (void)set_result; // Suppress unused variable warning - value checked in assert
     engine.prepareTempDirectory();
 
     assert(fs::exists(test_dir) && "Directory should be created");
@@ -260,6 +263,7 @@ void testMultipleCalls() {
     mode_t final_perms = st.st_mode & 0700;
     assert(final_perms == 0700 && "Permissions should remain 0700");
     (void)st; // Explicitly mark as used (used in final_perms calculation)
+    (void)final_perms; // Suppress unused variable warning - value checked in assert
 
     std::cout << "  ✓ Multiple calls test passed\n";
 }
