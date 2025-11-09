@@ -96,7 +96,7 @@ void testSymlinkRejection() {
     try {
         bool set_result2 = engine.setTempDirectory(test_dir);
         assert(set_result2 && "Normal directory within root should be accepted");
-        (void)set_result2;             // Suppress unused variable warning - value checked in assert
+        (void)set_result2; // Suppress unused variable warning - value checked in assert
         engine.prepareTempDirectory(); // This should work
         assert(true && "Normal directory should work");
     } catch (const std::exception& e) {
@@ -265,7 +265,7 @@ void testMultipleCalls() {
     assert(stat(test_dir.c_str(), &st) == 0 && "stat should succeed");
     mode_t final_perms = st.st_mode & 0700;
     assert(final_perms == 0700 && "Permissions should remain 0700");
-    (void)st;          // Explicitly mark as used (used in final_perms calculation)
+    (void)st; // Explicitly mark as used (used in final_perms calculation)
     (void)final_perms; // Suppress unused variable warning - value checked in assert
 
     std::cout << "  ✓ Multiple calls test passed\n";
