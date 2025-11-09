@@ -91,7 +91,6 @@ void testConcurrentDirectoryGeneration() {
                               &errors,
                               &dir_names_mutex,
                               &generated_dirs,
-                              iterations_per_thread,
                               i]() {
             try {
                 for (int j = 0; j < iterations_per_thread; ++j) {
@@ -162,9 +161,7 @@ void testRapidConcurrentInitialization() {
                               &completed,
                               &errors,
                               &dir_names_mutex,
-                              &generated_dirs,
-                              iterations_per_thread,
-                              i]() {
+                              &generated_dirs]() {
             try {
                 for (int j = 0; j < iterations_per_thread; ++j) {
                     nlohmann::json input;

@@ -32,7 +32,7 @@ void testConcurrentReads() {
     std::vector<std::thread> threads;
 
     for (int i = 0; i < num_threads; ++i) {
-        threads.emplace_back([&mgr, &errors, &completed, i]() {
+        threads.emplace_back([&mgr, &errors, &completed]() {
             try {
                 for (int j = 0; j < iterations_per_thread; ++j) {
                     // Concurrent reads
@@ -92,7 +92,7 @@ void testConcurrentReadsAndWrites() {
 
     // Reader threads
     for (int i = 0; i < num_readers; ++i) {
-        threads.emplace_back([&mgr, &read_errors, &readers_completed, iterations]() {
+        threads.emplace_back([&mgr, &read_errors, &readers_completed]() {
             try {
                 for (int j = 0; j < iterations; ++j) {
                     auto timeout = mgr.getTimeoutSeconds();
@@ -119,7 +119,7 @@ void testConcurrentReadsAndWrites() {
 
     // Writer threads
     for (int i = 0; i < num_writers; ++i) {
-        threads.emplace_back([&mgr, &write_errors, &writers_completed, iterations, i]() {
+        threads.emplace_back([&mgr, &write_errors, &writers_completed]() {
             try {
                 for (int j = 0; j < iterations; ++j) {
                     // Alternate between setting default path and loading config
