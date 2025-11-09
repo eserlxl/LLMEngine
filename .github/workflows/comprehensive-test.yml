@@ -91,15 +91,25 @@ jobs:
           cmake --build "${BUILD_DIR}" -- -j20
           # Explicitly build test targets (they're EXCLUDE_FROM_ALL by default)
           # Try to build build_all_tests target if it exists, otherwise build tests individually
+          BUILD_ALL_TESTS_SUCCESS=false
           set +e
           cmake --build "${BUILD_DIR}" --target build_all_tests -j20 2>&1 | tee /tmp/build_all_tests.log
           BUILD_ALL_TESTS_EXIT_CODE=$?
           set -e
           if [ $BUILD_ALL_TESTS_EXIT_CODE -eq 0 ]; then
             echo "✓ Built all tests using build_all_tests target"
+            BUILD_ALL_TESTS_SUCCESS=true
           else
-            echo "build_all_tests target not available (exit code: $BUILD_ALL_TESTS_EXIT_CODE), building test targets individually"
-            # Build each test target individually, ignoring errors for missing targets
+            # Check if the error is "No rule to make target" (target doesn't exist)
+            if grep -q "No rule to make target" /tmp/build_all_tests.log; then
+              echo "⚠ build_all_tests target does not exist, building test targets individually"
+            else
+              echo "⚠ build_all_tests target failed (exit code: $BUILD_ALL_TESTS_EXIT_CODE), building test targets individually"
+            fi
+          fi
+          
+          # If build_all_tests didn't succeed, try building individual targets
+          if [ "$BUILD_ALL_TESTS_SUCCESS" = "false" ]; then
             TEST_TARGETS=(
               test_llmengine
               test_api
@@ -123,6 +133,7 @@ jobs:
             )
             BUILT_COUNT=0
             FAILED_COUNT=0
+            SKIPPED_COUNT=0
             for target in "${TEST_TARGETS[@]}"; do
               set +e
               cmake --build "${BUILD_DIR}" --target "${target}" -j20 2>&1 | tee "/tmp/build_${target}.log"
@@ -134,15 +145,38 @@ jobs:
               else
                 if grep -q "No rule to make target" "/tmp/build_${target}.log"; then
                   echo "⚠ Target '${target}' does not exist, skipping"
+                  SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
                 else
-                  echo "✗ Failed to build ${target}"
+                  echo "✗ Failed to build ${target} (see /tmp/build_${target}.log for details)"
+                  cat "/tmp/build_${target}.log"
                   FAILED_COUNT=$((FAILED_COUNT + 1))
                 fi
               fi
             done
-            echo "Built ${BUILT_COUNT} test targets, ${FAILED_COUNT} failed, $(( ${#TEST_TARGETS[@]} - BUILT_COUNT - FAILED_COUNT )) skipped"
+            echo "Summary: Built ${BUILT_COUNT} test targets, ${FAILED_COUNT} failed, ${SKIPPED_COUNT} skipped"
+            
+            # If no targets were built and all were skipped, this is a configuration issue
+            if [ $BUILT_COUNT -eq 0 ] && [ $SKIPPED_COUNT -eq ${#TEST_TARGETS[@]} ]; then
+              echo "ERROR: No test targets were found. This indicates a configuration issue."
+              echo "Checking if test directory was included..."
+              if [ -d "${BUILD_DIR}/test" ]; then
+                echo "Test directory exists in build tree"
+                if [ -f "${BUILD_DIR}/test/CMakeFiles/CMakeDirectoryInformation.cmake" ]; then
+                  echo "Test directory appears to be configured"
+                else
+                  echo "Test directory exists but may not be fully configured"
+                fi
+              else
+                echo "Test directory does not exist in build tree - tests were not included"
+              fi
+              echo "Checking BUILD_TESTING setting..."
+              grep "BUILD_TESTING" "${BUILD_DIR}/CMakeCache.txt" || echo "BUILD_TESTING not found in cache"
+              exit 1
+            fi
+            
+            # If some targets failed to build (not just missing), that's an error
             if [ $FAILED_COUNT -gt 0 ]; then
-              echo "ERROR: Some test targets failed to build"
+              echo "ERROR: ${FAILED_COUNT} test target(s) failed to build"
               exit 1
             fi
           fi
