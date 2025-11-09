@@ -175,9 +175,6 @@ void testCredentialResolution() {
 
 // Test retry logic with failing client
 class FailingAPIClient : public APIClient {
-    int attempt_count_ = 0;
-    int fail_until_attempt_ = 2; // Fail first 2 attempts, succeed on 3rd
-
   public:
     FailingAPIClient() = default;
 
