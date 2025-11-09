@@ -112,7 +112,11 @@ if (NOT nlohmann_json_FOUND)
     SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/nlohmann_json-src"
     FIND_PACKAGE_ARGS NAMES nlohmann_json
   )
+  # Save BUILD_TESTING value before FetchContent_MakeAvailable, as dependencies may override it
+  get_property(_saved_build_testing CACHE BUILD_TESTING PROPERTY VALUE)
   FetchContent_MakeAvailable(nlohmann_json)
+  # Restore BUILD_TESTING to ensure our project's tests are built
+  set(BUILD_TESTING "${_saved_build_testing}" CACHE BOOL "Build tests and enable CTest" FORCE)
   set(NLOHMANN_JSON_FETCHED TRUE)
   # Some environments expose an un-namespaced target; normalize if needed
   if (TARGET nlohmann_json AND NOT TARGET nlohmann_json::nlohmann_json)
@@ -164,7 +168,12 @@ else()
   # Use CPR_BUILD_SHARED_LIBS option instead of mutating global BUILD_SHARED_LIBS cache
   # This respects user's choice and avoids breaking multi-config generators
   set(CPR_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+  # Save BUILD_TESTING value before FetchContent_MakeAvailable, as dependencies may override it
+  # (e.g., zlib-ng called by curl sets BUILD_TESTING=OFF)
+  get_property(_saved_build_testing CACHE BUILD_TESTING PROPERTY VALUE)
   FetchContent_MakeAvailable(cpr)
+  # Restore BUILD_TESTING to ensure our project's tests are built
+  set(BUILD_TESTING "${_saved_build_testing}" CACHE BOOL "Build tests and enable CTest" FORCE)
   set(CPR_FETCHED TRUE)
   # Restore original FETCHCONTENT_UPDATES_DISCONNECTED value to avoid affecting other FetchContent dependencies
   if(DEFINED _saved_fetchcontent_updates_disconnected)
