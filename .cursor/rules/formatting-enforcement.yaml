@@ -3,9 +3,11 @@ rules:
   # This YAML file provides structured configuration for automatic code formatting enforcement
 
   formatting:
-    tool: "/opt/clang-format-static/clang-format-20"
+    tool: "clang-format-20"
     config_file: ".clang-format"
     style: "LLVM"
+    # Note: If clang-format-20 is not in PATH, use absolute path:
+    # tool: "/opt/clang-format-static/clang-format-20"
     
     # File patterns to format
     file_patterns:
@@ -68,7 +70,7 @@ rules:
       workflow_file: ".github/workflows/ci.yml"
       job_name: "format-check"
       fail_on_unformatted: true  # Fail CI if files aren't formatted
-      check_command: "/opt/clang-format-static/clang-format-20 --style=file --dry-run --Werror"
+      check_command: "clang-format-20 --style=file --dry-run --Werror"
 
   commands:
     # Manual formatting commands
@@ -81,9 +83,9 @@ rules:
         -not -path "./build_test*" \
         -not -path "./build-clang-tidy*" \
         -not -path "./Testing*" \
-        -exec /opt/clang-format-static/clang-format-20 -i {} +
+        -exec clang-format-20 -i {} +
     
-    format_single: "/opt/clang-format-static/clang-format-20 -i {file}"
+    format_single: "clang-format-20 -i {file}"
     
     check_formatting: |
       find . -type f \( -name "*.cpp" -o -name "*.hpp" \) \
@@ -94,7 +96,7 @@ rules:
         -not -path "./build_test*" \
         -not -path "./build-clang-tidy*" \
         -not -path "./Testing*" \
-        -exec /opt/clang-format-static/clang-format-20 --style=file --dry-run --Werror {} +
+        -exec clang-format-20 --style=file --dry-run --Werror {} +
 
   workflow:
     # When to apply formatting

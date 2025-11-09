@@ -257,18 +257,23 @@ void process_data(std::span<const uint8_t> data);
 
 #### Ranges (C++20)
 
-- Use `std::ranges` when available for algorithms
+- Use `std::ranges` for algorithms when available
 - Prefer range-based `for` loops
+- Leverage range adaptors for functional-style operations
 
 ```cpp
 std::ranges::sort(vec);
 for (const auto& item : container) { }
+
+// Range adaptors
+auto even_numbers = vec | std::views::filter([](int n) { return n % 2 == 0; });
 ```
 
 #### Concepts (C++20)
 
 - Use concepts to constrain templates
 - Define custom concepts for reusable constraints
+- Improves error messages and code clarity
 
 ```cpp
 template<std::integral T>
@@ -276,6 +281,9 @@ void process_integer(T value);
 
 template<typename T>
 concept StringLike = std::convertible_to<T, std::string_view>;
+
+template<StringLike T>
+void process_string(T str);
 ```
 
 #### Strong Typedefs
