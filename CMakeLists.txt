@@ -42,13 +42,23 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(DEBUG_MODE                 "Enable debug build flags"                       OFF)
 option(PERFORMANCE_BUILD          "Enable performance-optimized flags"             ON)
 option(WARNING_MODE               "Enable extra warnings"                          ON)
-# Use set() with FORCE for BUILD_TESTING to ensure command-line overrides work
-# even when the variable is already in the cache (e.g., from cached build directories)
-# Command-line -DBUILD_TESTING=ON/OFF is processed before this file, so if BUILD_TESTING
-# is already set (from command line), we preserve that value. Otherwise default to ON.
-if (DEFINED BUILD_TESTING)
-  set(BUILD_TESTING ${BUILD_TESTING} CACHE BOOL "Build tests and enable CTest" FORCE)
-else()
+# Configure BUILD_TESTING with proper handling of command-line overrides
+# Use include(CTest) which automatically creates the BUILD_TESTING option and handles
+# it correctly, respecting command-line values. This is the standard CMake way to handle
+# BUILD_TESTING and ensures it works correctly with -U and -D flags.
+# include(CTest) must be called before enable_testing(), and it will create BUILD_TESTING
+# with a default value of ON. However, if BUILD_TESTING is already in the cache (e.g., from
+# a previous run), include(CTest) won't override it. We need to ensure that command-line
+# values take precedence. The workflow uses -UBUILD_TESTING -DBUILD_TESTING=ON to ensure
+# it's set correctly, so when CMake starts, BUILD_TESTING should be ON if it was set from
+# command line. We use FORCE to ensure stale cache values don't interfere, but only when
+# setting the default. If BUILD_TESTING is already defined (from command line), we preserve
+# that value.
+include(CTest)
+# Ensure BUILD_TESTING defaults to ON if not already set
+# If it's already defined (from command line), preserve that value
+# The FORCE ensures we override stale cache values when setting the default
+if (NOT DEFINED BUILD_TESTING)
   set(BUILD_TESTING ON CACHE BOOL "Build tests and enable CTest" FORCE)
 endif()
 option(ENABLE_EXAMPLES            "Build example programs"                          ON)
@@ -576,8 +586,8 @@ elseif(PERFORMANCE_BUILD OR LLM_ENABLE_LTO)
 endif()
 
 # ---- Tests / Examples --------------------------------------------------------
+# Note: enable_testing() is already called by include(CTest) above
 if (BUILD_TESTING)
-  enable_testing()
   if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
     add_subdirectory(test EXCLUDE_FROM_ALL)
   endif()

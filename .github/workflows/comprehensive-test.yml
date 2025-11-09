@@ -94,9 +94,10 @@ jobs:
             mv "${BUILD_DIR}/_deps" "${BUILD_DIR}/_deps.backup" || true
           fi
           # Explicitly remove CMakeCache.txt and CMakeFiles/ to ensure clean configuration
+          # Also remove any other CMake-generated cache files
           rm -f "${BUILD_DIR}/CMakeCache.txt" 2>/dev/null || true
           rm -rf "${BUILD_DIR}/CMakeFiles" 2>/dev/null || true
-          # Remove all other CMake-generated files and directories
+          # Remove all other CMake-generated files and directories (but preserve _deps.backup)
           find "${BUILD_DIR}" -mindepth 1 -maxdepth 1 ! -name "_deps.backup" -exec rm -rf {} + 2>/dev/null || true
           # Restore _deps
           if [ -d "${BUILD_DIR}/_deps.backup" ]; then
@@ -104,6 +105,11 @@ jobs:
           fi
           # Ensure build directory exists
           mkdir -p "${BUILD_DIR}"
+          # Verify CMakeCache.txt is gone before configuring
+          if [ -f "${BUILD_DIR}/CMakeCache.txt" ]; then
+            echo "WARNING: CMakeCache.txt still exists after removal attempt"
+            rm -f "${BUILD_DIR}/CMakeCache.txt"
+          fi
           # Configure with BUILD_TESTING=ON explicitly
           # Use -U to unset any cached value first, then -D to set it
           # This ensures command-line value always takes precedence
