@@ -277,10 +277,33 @@ if (DEBUG_MODE AND ENABLE_SANITIZERS AND NOT MSVC)
   endif()
 endif()
 
+# ---- Coverage library linking for test targets ---------------------------------
+# When coverage is enabled, the library is built with --coverage flags which inject
+# calls to gcov functions. Test executables must link against -lgcov to resolve these symbols.
+set(_TEST_COVERAGE_TARGET "")
+if (ENABLE_COVERAGE AND NOT MSVC)
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+      if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        # GCC coverage requires linking against libgcov
+        add_library(test_coverage_libs INTERFACE)
+        target_link_libraries(test_coverage_libs INTERFACE gcov)
+        set(_TEST_COVERAGE_TARGET "test_coverage_libs")
+        message(STATUS "Coverage library linking enabled for test targets (GCC)")
+      endif()
+      # Clang coverage uses different mechanism and doesn't need -lgcov
+    endif()
+  endif()
+endif()
+
 # Helper function to apply sanitizer flags and optional dependencies to a test target
 function(apply_test_sanitizer_flags target_name)
   if (TARGET test_sanitizer_flags)
     target_link_libraries(${target_name} PRIVATE test_sanitizer_flags)
+  endif()
+  # Add coverage library if needed (for GCC coverage)
+  if (TARGET test_coverage_libs)
+    target_link_libraries(${target_name} PRIVATE test_coverage_libs)
   endif()
   # Add libunistring if found (needed on Arch Linux and some other systems)
   if (UNISTRING_TARGET)
