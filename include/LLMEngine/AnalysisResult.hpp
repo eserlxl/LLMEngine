@@ -29,6 +29,15 @@ struct LLMENGINE_EXPORT AnalysisResult {
     int statusCode;
 
     /**
+     * @brief Token usage statistics.
+     */
+    struct UsageStats {
+        int promptTokens = 0;
+        int completionTokens = 0;
+        int totalTokens = 0;
+    } usage;
+
+    /**
      * @brief Structured error code for programmatic error handling.
      *
      * Use this instead of parsing errorMessage for error classification.

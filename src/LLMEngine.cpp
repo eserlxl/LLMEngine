@@ -250,6 +250,7 @@ LLM::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt,
                 "Request executor not configured. This is an internal error - the API client was "
                 "not properly initialized. Please check your LLMEngine configuration.",
             .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
+            .usage = {},
             .errorCode = LLMEngineErrorCode::Unknown};
         return result;
     }
@@ -261,6 +262,70 @@ LLM::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt,
                                    analysis_type,
                                    ctx.writeDebugFiles,
                                    logger_.get());
+}
+
+std::future<LLM::AnalysisResult> LLMEngine::LLMEngine::analyzeAsync(
+    std::string_view prompt,
+    const nlohmann::json& input,
+    std::string_view analysis_type,
+    std::string_view mode,
+    bool prepend_terse_instruction) {
+    // Capture arguments by value to ensure valid lifetime during async execution
+    return std::async(std::launch::async,
+                      [this,
+                       prompt = std::string(prompt),
+                       input = input,
+                       analysis_type = std::string(analysis_type),
+                       mode = std::string(mode),
+                       prepend_terse_instruction]() {
+                          return this->analyze(
+                              prompt, input, analysis_type, mode, prepend_terse_instruction);
+                      });
+}
+
+void LLMEngine::LLMEngine::analyzeStream(std::string_view prompt,
+                                         const nlohmann::json& input,
+                                         std::string_view analysis_type,
+                                         std::string_view mode,
+                                         bool prepend_terse_instruction,
+                                         std::function<void(std::string_view, bool)> callback) {
+    // Ensure temp directory is prepared
+    ensureSecureTmpDir();
+
+    // Build request context
+    RequestContext ctx = RequestContextBuilder::build(static_cast<IModelContext&>(*this),
+                                                      prompt,
+                                                      input,
+                                                      analysis_type,
+                                                      mode,
+                                                      prepend_terse_instruction);
+
+    // Adapt callback for APIClient (which might not send is_done boolean, or we handle it)
+    // The APIClient interface has: function<void(string_view)>
+    // LLMEngine interface has: function<void(string_view, bool)>
+    // We'll wrap it.
+    auto wrapped_callback = [callback](std::string_view chunk) {
+        // Assume APIClient implies not-done until it finishes?
+        // Actually APIClient interface is synchronous-like or blocks until done?
+        // sendRequestStream is void, so it blocks?
+        // If it blocks, we invoke callback with chunk, false.
+        // And when it returns, does it mean done?
+        callback(chunk, false);
+    };
+
+    if (api_client_) {
+        // TODO: Handle is_done properly. Currently APIClient assumes blocking stream?
+        api_client_->sendRequestStream(ctx.fullPrompt, input, ctx.finalParams, wrapped_callback);
+        // After return, send empty chunk with is_done=true?
+        callback("", true);
+    } else {
+        if (logger_) {
+            logger_->log(LLM::LogLevel::Error, "API client not initialized for streaming.");
+        }
+        // Signal error/completion?
+        // For now just finish
+        callback("", true);
+    }
 }
 
 std::string LLMEngine::LLMEngine::getProviderName() const {

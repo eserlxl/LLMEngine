@@ -52,6 +52,13 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
         impl_->getConfig());
 }
 
+void QwenClient::sendRequestStream(std::string_view prompt,
+                                   const nlohmann::json& input,
+                                   const nlohmann::json& params,
+                                   std::function<void(std::string_view)> callback) const {
+    impl_->sendRequestStream(prompt, input, params, callback);
+}
+
 void QwenClient::setConfig(std::shared_ptr<IConfigManager> cfg) {
     impl_->setConfig(std::move(cfg));
 }

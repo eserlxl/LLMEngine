@@ -80,6 +80,24 @@ class OpenAICompatibleClient {
     static void parseOpenAIResponse(APIResponse& response, const std::string& raw_text);
 
     /**
+     * @brief Parse a chunk of OpenAI-compatible streaming response.
+     * @param chunk Raw text chunk (part of SSE stream).
+     * @param buffer Buffer for accumulating partial lines (updated in place).
+     * @param callback User callback to receive extracted content.
+     */
+    static void parseOpenAIStreamChunk(std::string_view chunk,
+                                       std::string& buffer,
+                                       std::function<void(std::string_view)> callback);
+
+    /**
+     * @brief Send a streaming request (helper for wrapper classes).
+     */
+    void sendRequestStream(std::string_view prompt,
+                           const nlohmann::json& input,
+                           const nlohmann::json& params,
+                           std::function<void(std::string_view)> callback);
+
+    /**
      * @brief Get default parameters (for use by wrapper classes).
      */
     const nlohmann::json& getDefaultParams() const {

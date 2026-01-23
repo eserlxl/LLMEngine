@@ -70,6 +70,22 @@ void OpenAICompatibleClient::parseOpenAIResponse(APIResponse& response,
         if (choice.contains("message") && choice["message"].contains("content")) {
             response.content = choice["message"]["content"].get<std::string>();
             response.success = true;
+
+            // Parse token usage if available
+            if (response.raw_response.contains("usage")
+                && response.raw_response["usage"].is_object()) {
+                const auto& usage = response.raw_response["usage"];
+                if (usage.contains("prompt_tokens") && usage["prompt_tokens"].is_number_integer()) {
+                    response.usage.promptTokens = usage["prompt_tokens"].get<int>();
+                }
+                if (usage.contains("completion_tokens")
+                    && usage["completion_tokens"].is_number_integer()) {
+                    response.usage.completionTokens = usage["completion_tokens"].get<int>();
+                }
+                if (usage.contains("total_tokens") && usage["total_tokens"].is_number_integer()) {
+                    response.usage.totalTokens = usage["total_tokens"].get<int>();
+                }
+            }
         } else {
             response.error_message = "No content in response";
             response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
@@ -79,5 +95,72 @@ void OpenAICompatibleClient::parseOpenAIResponse(APIResponse& response,
         response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
     }
 }
-
 } // namespace LLMEngineAPI
+
+void LLMEngineAPI::OpenAICompatibleClient::parseOpenAIStreamChunk(
+    std::string_view chunk, std::string& buffer, std::function<void(std::string_view)> callback) {
+    buffer.append(chunk);
+
+    size_t pos = 0;
+    while ((pos = buffer.find("\n\n")) != std::string::npos) {
+        std::string line = buffer.substr(0, pos);
+        buffer.erase(0, pos + 2); // Remove processed line + delimiter
+
+        if (line.rfind("data: ", 0) == 0) {
+            std::string data = line.substr(6); // Skip "data: "
+
+            if (data == "[DONE]") {
+                // Stream finished
+                continue;
+            }
+
+            try {
+                auto json = nlohmann::json::parse(data);
+                if (json.contains("choices") && json["choices"].is_array()
+                    && !json["choices"].empty()) {
+                    auto choice = json["choices"][0];
+                    if (choice.contains("delta") && choice["delta"].contains("content")) {
+                        std::string content = choice["delta"]["content"];
+                        if (!content.empty()) {
+                            callback(content);
+                        }
+                    }
+                }
+            } catch (...) {
+                // Ignore parse errors in stream chunks (resilience)
+            }
+        }
+    }
+}
+
+void LLMEngineAPI::OpenAICompatibleClient::sendRequestStream(
+    std::string_view prompt,
+    const nlohmann::json& input,
+    const nlohmann::json& params,
+    std::function<void(std::string_view)> callback) {
+    // Build messages array using shared helper
+    const nlohmann::json messages = ChatMessageBuilder::buildMessages(prompt, input);
+
+    // Create streaming params
+    nlohmann::json stream_params = params;
+    stream_params["stream"] = true;
+
+    auto buffer = std::make_shared<std::string>();
+
+    ChatCompletionRequestHelper::executeStream(
+        default_params_,
+        stream_params,
+        // Build payload
+        [&](const nlohmann::json& request_params) {
+            return buildPayload(messages, request_params);
+        },
+        // Build URL
+        [&]() { return buildUrl(); },
+        // Build headers
+        [&]() { return getHeaders(); },
+        // Stream processor
+        [buffer, callback](std::string_view chunk) {
+            OpenAICompatibleClient::parseOpenAIStreamChunk(chunk, *buffer, callback);
+        },
+        config_.get());
+}

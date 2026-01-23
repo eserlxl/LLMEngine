@@ -106,6 +106,7 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
                               .content = "",
                               .errorMessage = enhanced_error,
                               .statusCode = api_response.status_code,
+                              .usage = api_response.usage,
                               .errorCode = error_code};
         return result;
     }
@@ -132,6 +133,7 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
                           .content = remaining_section,
                           .errorMessage = "",
                           .statusCode = api_response.status_code,
+                          .usage = api_response.usage,
                           .errorCode = LLMEngineErrorCode::None};
     return result;
 }

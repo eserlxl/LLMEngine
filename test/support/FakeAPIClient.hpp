@@ -27,12 +27,20 @@ class FakeAPIClient : public APIClient {
     }
 
     void setNextResponse(const APIResponse& response);
+    void setNextStreamChunks(const std::vector<std::string>& chunks);
+
+    void sendRequestStream(std::string_view prompt,
+                           const nlohmann::json& input,
+                           const nlohmann::json& params,
+                           std::function<void(std::string_view)> callback) const override;
 
   private:
     ProviderType provider_type_;
     std::string provider_name_;
     mutable bool has_custom_response_ = false;
     mutable APIResponse next_response_{};
+    mutable bool has_custom_stream_ = false;
+    mutable std::vector<std::string> next_stream_chunks_;
 };
 
 } // namespace LLMEngineAPI

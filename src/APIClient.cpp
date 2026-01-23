@@ -112,18 +112,24 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(
     return createClient(type, api_key, model, "", cfg);
 }
 
-ProviderType APIClientFactory::stringToProviderType(std::string_view provider_name) {
-    std::string name(provider_name);
-    std::ranges::transform(
-        name, name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-
+namespace {
+static const std::unordered_map<std::string, ProviderType>& getProviderMap() {
     static const std::unordered_map<std::string, ProviderType> provider_map = {
         {"qwen", ProviderType::QWEN},
         {"openai", ProviderType::OPENAI},
         {"anthropic", ProviderType::ANTHROPIC},
         {"ollama", ProviderType::OLLAMA},
         {"gemini", ProviderType::GEMINI}};
+    return provider_map;
+}
+} // namespace
 
+ProviderType APIClientFactory::stringToProviderType(std::string_view provider_name) {
+    std::string name(provider_name);
+    std::ranges::transform(
+        name, name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+    const auto& provider_map = getProviderMap();
     auto it = provider_map.find(name);
     if (it != provider_map.end()) {
         return it->second;
@@ -167,20 +173,13 @@ ProviderType APIClientFactory::stringToProviderType(std::string_view provider_na
 }
 
 std::string APIClientFactory::providerTypeToString(ProviderType type) {
-    switch (type) {
-        case ProviderType::QWEN:
-            return "qwen";
-        case ProviderType::OPENAI:
-            return "openai";
-        case ProviderType::ANTHROPIC:
-            return "anthropic";
-        case ProviderType::OLLAMA:
-            return "ollama";
-        case ProviderType::GEMINI:
-            return "gemini";
-        default:
-            return "ollama";
+    const auto& provider_map = getProviderMap();
+    for (const auto& [name, enum_type] : provider_map) {
+        if (enum_type == type) {
+            return name;
+        }
     }
+    return "ollama"; // Default fallback
 }
 
 // APIConfigManager Implementation

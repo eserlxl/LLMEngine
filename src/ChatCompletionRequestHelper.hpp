@@ -264,6 +264,82 @@ struct ChatCompletionRequestHelper {
 
         return response;
     }
+
+    /**
+     * @brief Execute a streaming chat completion request.
+     *
+     * @tparam StreamProcessor Callable handling data chunks: void(std::string_view)
+     */
+    template <typename PayloadBuilder,
+              typename UrlBuilder,
+              typename HeaderBuilder,
+              typename StreamProcessor>
+    static void executeStream(const nlohmann::json& default_params,
+                              const nlohmann::json& params,
+                              PayloadBuilder&& buildPayload,
+                              UrlBuilder&& buildUrl,
+                              HeaderBuilder&& buildHeaders,
+                              StreamProcessor&& processChunk,
+                              const IConfigManager* cfg = nullptr) {
+
+        // Merge params (simplified vs execute, no retry settings needed generally for stream connection yet)
+        nlohmann::json request_params_merged;
+        const nlohmann::json* request_params_ptr;
+        if (params.empty() || params.is_null()) {
+            request_params_ptr = &default_params;
+        } else {
+            request_params_merged = default_params;
+            request_params_merged.update(params);
+            request_params_ptr = &request_params_merged;
+        }
+        const nlohmann::json& request_params = *request_params_ptr;
+
+        nlohmann::json payload = buildPayload(request_params);
+        // Force stream=true if not already set (caller usually handles this, but safety check?)
+        // Better to rely on caller.
+
+        const std::string serialized_body = payload.dump();
+        const std::string url = buildUrl();
+        const std::map<std::string, std::string> headers = buildHeaders();
+        const cpr::Header cpr_headers{headers.begin(), headers.end()};
+
+        // Timeout settings
+        int timeout_seconds =
+            cfg ? cfg->getTimeoutSeconds() : APIConfigManager::getInstance().getTimeoutSeconds();
+        // For streaming, timeout usually applies to connect or idle?
+        // cpr::Timeout is transfer timeout.
+        // We might want a longer timeout for stream? Or rely on heartbeat.
+        // Use standard timeout for now.
+
+        bool verify_ssl = true;
+        if (params.contains("verify_ssl") && params.at("verify_ssl").is_boolean()) {
+            verify_ssl = params.at("verify_ssl").get<bool>();
+        }
+
+        // Execute request with WriteCallback
+        cpr::Response response = cpr::Post(cpr::Url{url},
+                                           cpr_headers,
+                                           cpr::Body{serialized_body},
+                                           cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
+                                           cpr::VerifySsl{verify_ssl},
+                                           cpr::WriteCallback([&](std::string_view data, intptr_t) {
+                                               processChunk(data);
+                                               return true; // continue
+                                           }));
+
+        if (response.status_code != 200) {
+            // Handle error?
+            // Since it's streaming, we might have already processed some chunks?
+            // Or if status != 200, typically WriteCallback is called for error body?
+            // We should probably check status and throw if failed?
+            // But strict error handling for stream is tricky.
+            // For now, logging error is enough.
+            std::cerr << "Stream request failed with status " << response.status_code << ": "
+                      << response.text << std::endl;
+            throw std::runtime_error("Stream request failed with status "
+                                     + std::to_string(response.status_code));
+        }
+    }
 };
 
 } // namespace LLMEngineAPI

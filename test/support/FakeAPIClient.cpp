@@ -37,4 +37,29 @@ APIResponse FakeAPIClient::sendRequest(std::string_view prompt,
     return r;
 }
 
+void FakeAPIClient::setNextStreamChunks(const std::vector<std::string>& chunks) {
+    next_stream_chunks_ = chunks;
+    has_custom_stream_ = true;
+}
+
+void FakeAPIClient::sendRequestStream(std::string_view prompt,
+                                      const nlohmann::json& input,
+                                      const nlohmann::json& params,
+                                      std::function<void(std::string_view)> callback) const {
+    (void)input;
+    (void)params;
+
+    if (has_custom_stream_) {
+        has_custom_stream_ = false;
+        for (const auto& chunk : next_stream_chunks_) {
+            callback(chunk);
+        }
+        return;
+    }
+
+    // Default behavior: one chunk with prompt
+    std::string content = "[FAKE STREAM] " + std::string(prompt);
+    callback(content);
+}
+
 } // namespace LLMEngineAPI

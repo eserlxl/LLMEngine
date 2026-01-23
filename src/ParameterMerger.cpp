@@ -6,7 +6,6 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/ParameterMerger.hpp"
-
 #include "LLMEngine/Logger.hpp"
 
 namespace LLMEngine {
@@ -38,10 +37,24 @@ bool ParameterMerger::mergeInto(const nlohmann::json& base_params,
         {"frequency_penalty", nlohmann::json::value_t::number_float},
         {"timeout_seconds", nlohmann::json::value_t::number_integer}};
 
+    // Verify input is an object
+    // Allow null (treated as empty) or object. Reject primitives/arrays.
+    if (!input.is_object() && !input.is_null()) {
+        if (logger) {
+            logger->log(LogLevel::Warn,
+                        "ParameterMerger: input is not a JSON object, ignoring overrides");
+        }
+        return false;
+    }
+
     bool changed = false;
     // Fast check: mode or any allowed key present
-    if (!mode.empty())
+    if (!mode.empty()) {
         changed = true;
+    }
+
+    // DEBUG only
+    // std::cout << "DEBUG: mergeInto mode='" << mode << "' changed=" << changed << std::endl;
     if (!changed) {
         for (const auto& [key, _] : allowed_keys) {
             auto it = input.find(key);

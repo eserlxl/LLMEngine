@@ -18,6 +18,7 @@
 #include "LLMEngine/PromptBuilder.hpp"
 
 #include <functional>
+#include <future>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -194,6 +195,30 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
                                          std::string_view analysis_type,
                                          std::string_view mode = "chat",
                                          bool prepend_terse_instruction = true);
+
+    /**
+     * @brief Run an analysis request asynchronously.
+     * @copydoc analyze
+     * @return std::future<AnalysisResult> Future that will hold the result.
+     */
+    [[nodiscard]] std::future<AnalysisResult> analyzeAsync(std::string_view prompt,
+                                                           const nlohmann::json& input,
+                                                           std::string_view analysis_type,
+                                                           std::string_view mode = "chat",
+                                                           bool prepend_terse_instruction = true);
+
+    /**
+     * @brief Run an analysis request with streaming response.
+     *
+     * @param callback Callback invoked for each token/chunk received.
+     *                 Args: (chunk_content, is_done).
+     */
+    void analyzeStream(std::string_view prompt,
+                       const nlohmann::json& input,
+                       std::string_view analysis_type,
+                       std::string_view mode,
+                       bool prepend_terse_instruction,
+                       std::function<void(std::string_view, bool)> callback);
 
     // Utility methods
     /** @brief Provider display name. */

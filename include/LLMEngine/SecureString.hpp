@@ -8,7 +8,6 @@
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
 
-#include <algorithm>
 #include <atomic>
 #include <cstring>
 #include <string>
@@ -66,15 +65,33 @@ class LLMENGINE_EXPORT SecureString {
     explicit SecureString(std::string str) : data_(std::move(str)) {}
 
     /**
-     * @brief Copy constructor (creates a new secure copy).
+     * @brief Copy constructor deleted to prevent accidental unscrubbed copies.
+     * Use clone() if a copy is explicitly needed.
      */
-    SecureString(const SecureString& other) : data_(other.data_) {}
+    SecureString(const SecureString&) = delete;
+
+    /**
+     * @brief Copy assignment deleted to prevent accidental unscrubbed copies.
+     * Use clone() if a copy is explicitly needed.
+     */
+    SecureString& operator=(const SecureString&) = delete;
+
+    /**
+     * @brief Explicitly clone the secure string.
+     *
+     * WARNING: Creating copies increases the exposure surface area of the secret.
+     * Use with caution and only when absolutely necessary.
+     */
+    [[nodiscard]] SecureString clone() const {
+        return SecureString(data_);
+    }
 
     /**
      * @brief Move constructor.
      */
     SecureString(SecureString&& other) noexcept : data_(std::move(other.data_)) {
-        // Clear the moved-from object
+        // Clear the moved-from object to ensure it's in a known empty state
+        // (though scrubbing empty string is no-op, this is good hygiene)
         other.data_.clear();
     }
 
@@ -83,17 +100,6 @@ class LLMENGINE_EXPORT SecureString {
      */
     ~SecureString() {
         scrub();
-    }
-
-    /**
-     * @brief Copy assignment.
-     */
-    SecureString& operator=(const SecureString& other) {
-        if (this != &other) {
-            scrub();
-            data_ = other.data_;
-        }
-        return *this;
     }
 
     /**

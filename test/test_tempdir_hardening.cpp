@@ -65,6 +65,13 @@ void testSymlinkRejection() {
     const std::string test_dir = default_root + "/test";
     const std::string symlink_path = default_root + "/symlink";
 
+    // Cleanup from previous runs
+    std::error_code ec;
+    if (fs::exists(symlink_path))
+        fs::remove(symlink_path, ec);
+    if (fs::exists(test_dir))
+        fs::remove_all(test_dir, ec);
+
     // Create a regular directory
     fs::create_directories(test_dir);
 
@@ -132,6 +139,12 @@ void testSymlinkRejection() {
     } catch (const std::exception& e) {
         // Expected if symlink creation fails
     }
+
+    // Cleanup artifacts
+    if (fs::exists(symlink_path))
+        fs::remove(symlink_path, ec);
+    if (fs::exists(test_dir))
+        fs::remove_all(test_dir, ec);
 
     std::cout << "  ✓ Symlink rejection test passed\n";
 }

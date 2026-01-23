@@ -15,10 +15,12 @@
 #include <vector>
 
 // Ensure export macros are available
+#include "LLMEngine/AnalysisResult.hpp"
 #include "LLMEngine/ErrorCodes.hpp"
 #include "LLMEngine/IConfigManager.hpp"
 #include "LLMEngine/LLMEngineExport.hpp"
 #include "LLMEngine/Logger.hpp"
+#include <functional>
 
 namespace LLMEngineAPI {
 
@@ -49,6 +51,9 @@ struct APIResponse {
     // Backward compatibility: APIError is an alias for LLMEngineErrorCode
     using APIError = ::LLMEngine::LLMEngineErrorCode;
     LLMEngine::LLMEngineErrorCode error_code = LLMEngine::LLMEngineErrorCode::None;
+
+    // Token usage statistics
+    LLMEngine::AnalysisResult::UsageStats usage;
 };
 
 /**
@@ -89,6 +94,25 @@ class LLMENGINE_EXPORT APIClient {
     virtual APIResponse sendRequest(std::string_view prompt,
                                     const nlohmann::json& input,
                                     const nlohmann::json& params) const = 0;
+
+    /**
+     * @brief Sends a streaming text generation request.
+     * @param prompt User prompt or system instruction.
+     * @param input Additional structured inputs.
+     * @param params Model parameters.
+     * @param callback Callback invoked for each text chunk received.
+     * @throws std::runtime_error if not implemented or on failure.
+     */
+    virtual void sendRequestStream(std::string_view prompt,
+                                   const nlohmann::json& input,
+                                   const nlohmann::json& params,
+                                   std::function<void(std::string_view)> callback) const {
+        (void)prompt;
+        (void)input;
+        (void)params;
+        (void)callback;
+        throw std::runtime_error("Streaming not implemented for this provider");
+    }
     /** @brief Human-readable provider name. */
     virtual std::string getProviderName() const = 0;
     /** @brief Provider enumeration value. */
@@ -117,6 +141,10 @@ class LLMENGINE_EXPORT QwenClient : public APIClient {
     APIResponse sendRequest(std::string_view prompt,
                             const nlohmann::json& input,
                             const nlohmann::json& params) const override;
+    void sendRequestStream(std::string_view prompt,
+                           const nlohmann::json& input,
+                           const nlohmann::json& params,
+                           std::function<void(std::string_view)> callback) const override;
     std::string getProviderName() const override {
         return "Qwen";
     }
@@ -146,6 +174,10 @@ class LLMENGINE_EXPORT OpenAIClient : public APIClient {
     APIResponse sendRequest(std::string_view prompt,
                             const nlohmann::json& input,
                             const nlohmann::json& params) const override;
+    void sendRequestStream(std::string_view prompt,
+                           const nlohmann::json& input,
+                           const nlohmann::json& params,
+                           std::function<void(std::string_view)> callback) const override;
     std::string getProviderName() const override {
         return "OpenAI";
     }
