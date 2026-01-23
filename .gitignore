@@ -1,187 +1,202 @@
-# Build directories
+###############################################################################
+# GENERAL BUILD OUTPUT
+###############################################################################
 build/
 **/build/
+**/build-*/
+**/cmake-build-*/
 **/build_*/
+**/build_test/
+**/build_examples/
 build_check/
-
-# CMake
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-Makefile
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-
-# Ninja
-build.ninja
-.ninja_deps
-.ninja_log
-
-# Binaries
-*.a
-*.so
-*.dll
-*.dylib
-*.exe
+build-coverage/
+out/
+dist/
+target/
 bin/
 lib/
+artifacts/
 
-# Generated docs
-docs/html/
-docs/latex/
+# Allow generated Sphinx/Doxygen build output
+!docs/build/
 
-# IDE/project files
-.vscode/
-.idea/
-*.user
-*.swp
-*.swo
-
-# Temporary files
-*.tmp
-*.log
-/tmp/
-
-# Example and test builds
-examples/build_examples/
-test/build_test/
-build/bin/
-
-# Coverage
-*.gcda
-*.gcno
-*.lcov
-
-# OS
-.DS_Store
-Thumbs.db
-
-# =============================================================================
-# C++ COMPILED FILES
-# =============================================================================
-
-# Compiled object files
+###############################################################################
+# C++ / COMPILER OUTPUTS
+###############################################################################
+# Object & precompiled files
 *.o
 *.obj
-
-# Precompiled Headers
+*.lo
 *.gch
 *.pch
 *.h.gch
 *.h.pch
-*.h.gch.dSYM/
-*.h.pch.dSYM/
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-*.so.*
-*.dylib.*
-*.dll.*
-
-# Compiled Static libraries
+# Static libraries
 *.a
-*.lib
 *.a.*
+*.lib
 *.lib.*
 
-# Executables
+# Shared/Dynamic libs
+*.so
+*.so.*
+*.dylib
+*.dylib.*
+*.dll
+*.dll.*
+
+# Executables / binary formats
 *.exe
 *.out
-*.app
-*.bin
 *.elf
+*.bin
+*.app
 *.hex
 
-# =============================================================================
-# DEBUG & PROFILING FILES
-# =============================================================================
-
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
-*.ilk
-*.map
-*.exp
-
-# Profiling files
-*.gcov
-*.gcda
-*.gcno
-*.prof
-*.gprof
-
-# =============================================================================
-# BUILD SYSTEMS
-# =============================================================================
-
-# CMake
-CMakeFiles/
+###############################################################################
+# CMAKE / NINJA / MAKE
+###############################################################################
 CMakeCache.txt
+CMakeFiles/
 cmake_install.cmake
-CMakeDoxyfile.in
-CMakeDoxygenDefaults.cmake
 DartConfiguration.tcl
 CTestTestfile.cmake
-compile_commands.json
-
-# Ninja build system
-.ninja_deps
-.ninja_log
-build.ninja
-
-# Make
+install_manifest.txt
 Makefile
 Makefile.in
 *.mk
 *.make
 
-# =============================================================================
-# EDITORS & IDEs
-# =============================================================================
+# CompDB ignored globally (default)
+compile_commands.json
 
-# Vim
+build.ninja
+.ninja_deps
+.ninja_log
+
+###############################################################################
+# GENERATED DOCUMENTATION
+###############################################################################
+# Doxygen output
+doc/
+doc/api/
+doc/api-test*/
+doc/html/
+doc/xml/
+doc/rtf/
+doc/man/
+doc/latex/
+docs/api/
+docs/api-test*/
+docs/html/
+docs/xml/
+docs/latex/
+docs/rtf/
+docs/man/
+doxygen/
+
+# User-specific config
+doxyfile.user
+
+# Sphinx output
+docs/_build/
+
+# Audit reports
+docs/audit/
+docs/audits/
+
+###############################################################################
+# COVERAGE & TEST OUTPUT
+###############################################################################
+*.gcov
+*.gcda
+*.gcno
+*.lcov
+coverage/
+
+# Test result directories
+test_results/
+test_results_*/
+*.test
+*.junit
+*.xml
+*.log
+*.csv
+*.txt
+
+# CTest dirs
+Testing/
+Testing*/
+
+# Valgrind / Sanitizer
+*.vglog
+valgrind-out.txt
+*.asan
+*.tsan
+*.msan
+*.ubsan
+
+###############################################################################
+# DEBUG / PROFILING ARTIFACTS
+###############################################################################
+# macOS / Clang
+*.dSYM/
+*.dSYM
+
+# MSVC
+*.pdb
+*.idb
+*.ilk
+*.exp
+*.map
+*.su
+
+# Profiling
+*.prof
+*.gprof
+gmon.out
+perf.data
+perf.data.old
+
+# Core dumps
+core.*
+*.core
+
+###############################################################################
+# IDE / EDITOR FILES
+###############################################################################
+# Vim / Emacs
 *~
 *.swp
 *.swo
 *.swn
 *.bak
 .netrwhist
-
-# Emacs
-*~
 \#*\#
-/.emacs.desktop
-/.emacs.desktop.lock
-*.elc
-auto-save-list
-tramp
 .\#*
+*.elc
 
-# VSCode
+# VS Code
 .vscode/
 *.code-workspace
 *.code-workspace.lock
 
-# JetBrains IDEs
+# JetBrains (CLion, Rider, etc)
 .idea/
 *.iml
 *.ipr
 *.iws
 *.iws.lock
+.idea/shelf/
 
-# Sublime Text
+# Sublime
 *.sublime-project
 *.sublime-workspace
 
-# =============================================================================
-# FRAMEWORKS & LIBRARIES
-# =============================================================================
-
+###############################################################################
+# FRAMEWORK GENERATED FILES
+###############################################################################
 # Qt
 moc_*.cpp
 qrc_*.cpp
@@ -195,58 +210,10 @@ ui_*.h
 *.cbp
 *.workspace
 
-# =============================================================================
-# BUILD & OUTPUT DIRECTORIES
-# =============================================================================
-
-# Build directories
-build/
-build-*/
-cmake-build-*/
-build-test/
-build_examples/
-test/build_test/
-out/
-dist/
-target/
-
-# =============================================================================
-# TESTING & ANALYSIS
-# =============================================================================
-
-# Test results and outputs
-test_results/
-test_results_*/
-*.test
-*.out
-*.log
-*.xml
-*.junit
-coverage/
-*.gcov
-*.lcov
-
-# CTest Testing directories
-Testing/
-Testing*/
-**/Testing/
-**/Testing*/
-
-# Valgrind
-valgrind-out.txt
-*.vglog
-
-# Sanitizer outputs
-*.asan
-*.ubsan
-*.tsan
-*.msan
-
-# =============================================================================
-# PACKAGE MANAGEMENT
-# =============================================================================
-
-# AUR PKG & SRC
+###############################################################################
+# PACKAGE / DEPENDENCY MANAGERS
+###############################################################################
+# AUR
 aur/pkg/
 aur/src/
 aur/lint/
@@ -256,116 +223,105 @@ aur/PKGBUILD.git
 
 # Conan
 conan/
-conanfile.txt.lock
 conan_trace.log
+conanfile.txt.lock
 
 # vcpkg
 vcpkg_installed/
 
-# =============================================================================
-# TEMPORARY & BACKUP FILES
-# =============================================================================
+# CMake FetchContent / ExternalProject
+external/
+_deps/
+**/_deps/
+**/build/_deps/
 
-# Temporary files
-*.tmp
-*.temp
-*.log
-*.lock
-*.lock.*
+###############################################################################
+# LANGUAGE / TOOL RUNTIME
+###############################################################################
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+env/
+venv/
+env.bak/
+venv.bak/
 
-# Cache directories
-.cache/
-
-# Backup files and directories
-*.bak
-*.backup
-*.backup.*
-Backups/
-backups/
-
-# Archive files
-*.tar
-*.tar.*
-*.zip
-*.rar
-*.7z
-*.gz
-*.bz2
-*.xz
-
-# =============================================================================
-# PROJECT SPECIFIC
-# =============================================================================
-
-# Bot directory
-bot/
-
-# CI GPG keys (generated by setup-ci-gpg.sh)
-ci-gpg-out/
-
-# Development files
-.last_prompt
-.clang-format
-
-# Version control
-.git/
-.svn/
-.hg/
-.bzr/
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Binaries
-bin/next-version
-
-# =============================================================================
-# DOCUMENTATION GENERATION
-# =============================================================================
-
-# Doxygen
-doc/html/
-doc/latex/
-doc/man/
-doc/rtf/
-doc/xml/
-
-# Sphinx
-docs/_build/
-docs/build/
-
-# =============================================================================
-# DEPENDENCY MANAGEMENT
-# =============================================================================
-
-# Cursor editor project files
-# Ignore .cursor/ except for project rules and plans
-.cursor/*
-!.cursor/rules/
-!.cursor/rules/**/*
-!.cursor/plans/
-!.cursor/plans/**/*
-
-# Node.js (if using any JS tools)
+# Node
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Python (if using any Python scripts)
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+###############################################################################
+# OS JUNK FILES
+###############################################################################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+###############################################################################
+# TEMP / CACHE / BACKUP
+###############################################################################
+*.tmp
+*.temp
+*.lock
+*.lock.*
+*.backup
+*.backup.*
+*.bak
+Backup*/
+backup*/
+
+.cache/
+.ccache/
+.ccache-tmp/
+/tmp/
+
+###############################################################################
+# SECURITY / SECRETS
+###############################################################################
+.env
+.env.local
+*.pem
+*.key
+*.secret
+
+###############################################################################
+# PROJECT-SPECIFIC
+###############################################################################
+bot/
+data/
+ci-gpg-out/
+.last_prompt
+bin/next-version
+# Legacy install directory (should be generated by CMake install, not tracked)
+install/
+
+###############################################################################
+# CURSOR EDITOR (IMPORTANT)
+###############################################################################
+# Ignore everything except rule/plan/prompts
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+.cursor/plans/
+.cursor/plans/backup/
+!.cursor/prompts/
+!.cursor/prompts/**
+!.cursor/last-change-notes.md
+
+# Editor plan directories
+.antigravity/plans/
+.codex/plans/
+
+###############################################################################
+# RELEASES
+###############################################################################
+releases/*
+!releases/MIGRATION_NOTES.md
+!releases/README.md
