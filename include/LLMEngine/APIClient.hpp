@@ -56,6 +56,9 @@ struct APIResponse {
 
     // Token usage statistics
     LLMEngine::AnalysisResult::UsageStats usage;
+
+    // Reason for completion (stop, length, tool_calls, content_filter, etc.)
+    std::string finish_reason;
 };
 
 /**

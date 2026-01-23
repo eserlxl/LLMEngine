@@ -52,13 +52,34 @@ std::string OpenAICompatibleClient::buildUrl() const {
 
 nlohmann::json OpenAICompatibleClient::buildPayload(const nlohmann::json& messages,
                                                     const nlohmann::json& request_params) const {
-    return nlohmann::json{{"model", model_},
-                          {"messages", messages},
-                          {"temperature", request_params["temperature"]},
-                          {"max_tokens", request_params["max_tokens"]},
-                          {"top_p", request_params["top_p"]},
-                          {"frequency_penalty", request_params["frequency_penalty"]},
-                          {"presence_penalty", request_params["presence_penalty"]}};
+    nlohmann::json payload = {{"model", model_},
+                              {"messages", messages},
+                              {"temperature", request_params["temperature"]},
+                              {"max_tokens", request_params["max_tokens"]},
+                              {"top_p", request_params["top_p"]},
+                              {"frequency_penalty", request_params["frequency_penalty"]},
+                              {"presence_penalty", request_params["presence_penalty"]}};
+
+    // Include response_format if present (Structured Outputs)
+    if (request_params.contains("response_format")) {
+        payload["response_format"] = request_params["response_format"];
+    }
+
+    // Include tool definitions if present
+    if (request_params.contains("tools")) {
+        payload["tools"] = request_params["tools"];
+    }
+    if (request_params.contains("tool_choice")) {
+        payload["tool_choice"] = request_params["tool_choice"];
+    }
+
+    // Include extra fields passed via AnalysisInput::withExtraField
+    // Note: AnalysisInput::toJson merges extra_fields into the root of the JSON
+    // We iterate specific known keys to avoid polluting payload with internal engine params,
+    // but we should ideally support dynamic extra params.
+    // For now, response_format is the critical addition.
+
+    return payload;
 }
 
 void OpenAICompatibleClient::parseOpenAIResponse(APIResponse& response,
@@ -70,6 +91,10 @@ void OpenAICompatibleClient::parseOpenAIResponse(APIResponse& response,
         if (choice.contains("message") && choice["message"].contains("content")) {
             response.content = choice["message"]["content"].get<std::string>();
             response.success = true;
+
+            if (choice.contains("finish_reason") && !choice["finish_reason"].is_null()) {
+                response.finish_reason = choice["finish_reason"].get<std::string>();
+            }
 
             // Parse token usage if available
             if (response.raw_response.contains("usage")
@@ -124,6 +149,13 @@ void LLMEngineAPI::OpenAICompatibleClient::parseOpenAIStreamChunk(
                         if (!content.empty()) {
                             callback(content);
                         }
+                    }
+                    // Handle finish_reason in stream
+                    if (choice.contains("finish_reason") && !choice["finish_reason"].is_null()) {
+                        // Callback generally handles content only.
+                        // We might need an extended callback to pass finish reason,
+                        // but for now we just parse it to ensure robustness.
+                        // APIClient::sendRequestStream takes a simple string callback.
                     }
                 }
             } catch (...) {

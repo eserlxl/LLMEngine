@@ -262,6 +262,16 @@ target_link_libraries(readme_chatbot
 target_compile_features(readme_chatbot PRIVATE cxx_std_23)
 apply_common_build_flags(readme_chatbot)
 
+add_executable(batch_processor batch_processor.cpp)
+target_link_libraries(batch_processor
+  PRIVATE
+    LLMEngine
+    llmengine::compile_options
+    cpr::cpr
+    nlohmann_json::nlohmann_json)
+target_compile_features(batch_processor PRIVATE cxx_std_23)
+apply_common_build_flags(batch_processor)
+
 # ---- Summary -----------------------------------------------------------------
 message(STATUS "========== Examples Build Configuration ==========")
 message(STATUS "CMAKE_CXX_COMPILER       : ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")

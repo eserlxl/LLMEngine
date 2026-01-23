@@ -298,6 +298,7 @@ struct ChatCompletionRequestHelper {
                               const ::LLMEngine::RequestOptions& options = {},
                               bool exponential_retry = true,
                               const IConfigManager* cfg = nullptr) {
+        (void)exponential_retry;
 
         // Merge params (simplified vs execute, no retry settings needed generally for stream connection yet)
         nlohmann::json request_params_merged;

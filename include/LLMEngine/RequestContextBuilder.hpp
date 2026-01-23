@@ -6,18 +6,11 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
+#include "LLMEngine/RequestContext.hpp"
+
 namespace LLMEngine {
 
 struct Logger;
-
-struct RequestContext {
-    std::string requestTmpDir;
-    std::string fullPrompt;
-    nlohmann::json finalParams;
-    std::unique_ptr<DebugArtifactManager> debugManager;
-    bool writeDebugFiles{false};
-    std::string analysisType; // preserved for routing/telemetry
-};
 
 /**
  * @brief Builder for creating request contexts with thread-safe unique directory generation.

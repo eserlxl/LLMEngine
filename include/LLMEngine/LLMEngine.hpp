@@ -18,6 +18,7 @@
 #include "LLMEngine/LLMEngineExport.hpp"
 #include "LLMEngine/Logger.hpp"
 #include "LLMEngine/PromptBuilder.hpp"
+#include "LLMEngine/RequestContext.hpp"
 
 #include <functional>
 #include <future>
@@ -244,6 +245,42 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
                        std::string_view mode,
                        bool prepend_terse_instruction,
                        std::function<void(std::string_view, bool)> callback);
+
+    /**
+     * @brief Interceptor interface for request/response modification/inspection.
+     */
+    class IInterceptor {
+      public:
+        virtual ~IInterceptor() = default;
+        /**
+         * @brief Called before request execution.
+         * @param ctx Read-write access to built request context.
+         */
+        virtual void onRequest(RequestContext& ctx) = 0;
+        /**
+         * @brief Called after response execution.
+         * @param result Read-write access to analysis result.
+         */
+        virtual void onResponse(AnalysisResult& result) = 0;
+    };
+
+    /**
+     * @brief Run a batch of analysis requests in parallel.
+     *
+     * @param inputs Vector of inputs to process.
+     * @param analysis_type Analysis type tag for all requests.
+     * @param options Request options shared by all requests (unless overridden).
+     * @return Vector of results in the same order as inputs.
+     */
+    [[nodiscard]] std::vector<AnalysisResult> analyzeBatch(const std::vector<AnalysisInput>& inputs,
+                                                           std::string_view analysis_type,
+                                                           const RequestOptions& options = {});
+
+    /**
+     * @brief Add a request/response interceptor.
+     * @param interceptor Shared pointer to interceptor.
+     */
+    void addInterceptor(std::shared_ptr<IInterceptor> interceptor);
 
     // Utility methods
     /** @brief Provider display name. */

@@ -22,6 +22,9 @@ nlohmann::json AnalysisInput::toJson() const {
     if (!tool_choice.is_null()) {
         j["tool_choice"] = tool_choice;
     }
+    if (!response_format.is_null()) {
+        j["response_format"] = response_format;
+    }
     for (const auto& [key, value] : extra_fields) {
         j[key] = value;
     }

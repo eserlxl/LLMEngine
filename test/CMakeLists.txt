@@ -434,6 +434,8 @@ add_executable(test_async_streaming_iter2 test_async_streaming_iter2.cpp)
 target_link_libraries(test_async_streaming_iter2 PRIVATE LLMEngine llmengine::compile_options test_support_fake nlohmann_json::nlohmann_json)
 apply_test_sanitizer_flags(test_async_streaming_iter2)
 
+
+
 # ---- Fuzz Testing (optional) -------------------------------------------------
 if (ENABLE_FUZZ)
   # Check if compiler supports libFuzzer
@@ -604,6 +606,7 @@ if (BUILD_TESTING)
   add_test(NAME test_result_extensions COMMAND test_result_extensions)
   add_test(NAME test_new_features_iter1 COMMAND test_new_features_iter1)
   add_test(NAME test_async_streaming_iter2 COMMAND test_async_streaming_iter2)
+
   
   # Create a custom target that depends on all test executables
   # This allows building all tests with a single target even when EXCLUDE_FROM_ALL is used
@@ -633,6 +636,7 @@ if (BUILD_TESTING)
       test_result_extensions
       test_new_features_iter1
       test_async_streaming_iter2
+
     COMMENT "Building all test executables"
   )
 endif()

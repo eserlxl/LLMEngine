@@ -19,7 +19,9 @@
 #include "LLMEngine/ResponseHandler.hpp"
 #include "LLMEngine/SecureString.hpp"
 #include "LLMEngine/TempDirectoryService.hpp"
+#include "LLMEngine/Utils/Semaphore.hpp"
 #include <chrono>
+#include <mutex>
 
 #include <algorithm>
 #include <cctype>
@@ -82,6 +84,8 @@ struct LLMEngine::EngineState {
     std::shared_ptr<IMetricsCollector> metrics_collector_;
     std::function<bool()> debug_files_policy_;
     bool disable_debug_files_env_cached_;
+    std::vector<std::shared_ptr<IInterceptor>> interceptors_;
+    std::mutex state_mutex_;
 
     EngineState(const nlohmann::json& params, int cleanup_hours, bool debug)
         : model_params_(params), log_retention_hours_(cleanup_hours), debug_(debug),
@@ -123,6 +127,7 @@ struct LLMEngine::EngineState {
     }
 
     void ensureSecureTmpDir() {
+        std::lock_guard<std::mutex> lock(state_mutex_);
         if (tmp_dir_verified_) {
             if (TempDirectoryService::isDirectoryValid(tmp_dir_, logger_.get())) {
                 return;
@@ -278,6 +283,11 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                                       mode,
                                                       prepend_terse_instruction);
 
+    // Run Interceptors (onRequest)
+    for (const auto& interceptor : state_->interceptors_) {
+        interceptor->onRequest(ctx);
+    }
+
     // Apply options overrides like timeout/headers would go here if IRequestExecutor supported them
     // For now, we just pass parameters.
     // Ideally, IRequestExecutor interface needs expansion to support Per-Request Options.
@@ -285,6 +295,8 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
     // We will just execute.
 
     LLMAPI::APIResponse api_response;
+    AnalysisResult result; // Declare result early for error paths? No, strictly following flow.
+
     if (state_->request_executor_) {
         api_response = state_->request_executor_->execute(
             state_->api_client_.get(), ctx.fullPrompt, input, ctx.finalParams, options);
@@ -292,21 +304,33 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         if (state_->logger_) {
             state_->logger_->log(LogLevel::Error, "Request executor not configured.");
         }
-        return AnalysisResult{.success = false,
-                              .think = "",
-                              .content = "",
-                              .errorMessage = "Internal Error: Request executor missing",
-                              .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
-                              .usage = {},
-                              .errorCode = LLMEngineErrorCode::Unknown};
+        result = AnalysisResult{.success = false,
+                                .think = "",
+                                .content = "",
+                                .errorMessage = "Internal Error: Request executor missing",
+                                .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
+                                .usage = {},
+                                .errorCode = LLMEngineErrorCode::Unknown};
+        // Should we run onResponse for errors? Yes, usually.
+        for (const auto& interceptor : state_->interceptors_) {
+            interceptor->onResponse(result);
+        }
+        return result;
     }
 
-    return ResponseHandler::handle(api_response,
-                                   ctx.debugManager.get(),
-                                   ctx.requestTmpDir,
-                                   analysis_type,
-                                   ctx.writeDebugFiles,
-                                   state_->logger_.get());
+    result = ResponseHandler::handle(api_response,
+                                     ctx.debugManager.get(),
+                                     ctx.requestTmpDir,
+                                     analysis_type,
+                                     ctx.writeDebugFiles,
+                                     state_->logger_.get());
+
+    // Run Interceptors (onResponse)
+    for (const auto& interceptor : state_->interceptors_) {
+        interceptor->onResponse(result);
+    }
+
+    return result;
 }
 
 AnalysisResult LLMEngine::analyze(std::string_view prompt,
@@ -470,6 +494,47 @@ void LLMEngine::analyzeStream(std::string_view prompt,
             state_->logger_->log(LogLevel::Error, "API client not initialized for streaming.");
         }
         callback("Error: API client/Executor not initialized", true);
+    }
+}
+
+std::vector<AnalysisResult> LLMEngine::analyzeBatch(const std::vector<AnalysisInput>& inputs,
+                                                    std::string_view analysis_type,
+                                                    const RequestOptions& options) {
+    if (inputs.empty()) {
+        return {};
+    }
+
+    // Set up concurrency limiter
+    std::shared_ptr<Semaphore> semaphore;
+    if (options.max_concurrency.has_value() && *options.max_concurrency > 0) {
+        semaphore = std::make_shared<Semaphore>(*options.max_concurrency);
+    }
+
+    std::vector<std::future<AnalysisResult>> futures;
+    futures.reserve(inputs.size());
+
+    for (const auto& input : inputs) {
+        futures.push_back(
+            std::async(std::launch::async, [this, input, analysis_type, options, semaphore]() {
+                std::unique_ptr<SemaphoreGuard> guard;
+                if (semaphore) {
+                    guard = std::make_unique<SemaphoreGuard>(*semaphore);
+                }
+                return this->analyze(input, analysis_type, options);
+            }));
+    }
+
+    std::vector<AnalysisResult> results;
+    results.reserve(inputs.size());
+    for (auto& f : futures) {
+        results.push_back(f.get());
+    }
+    return results;
+}
+
+void LLMEngine::addInterceptor(std::shared_ptr<IInterceptor> interceptor) {
+    if (interceptor) {
+        state_->interceptors_.push_back(std::move(interceptor));
     }
 }
 

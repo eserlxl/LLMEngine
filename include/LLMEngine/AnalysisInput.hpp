@@ -23,6 +23,7 @@ struct LLMENGINE_EXPORT AnalysisInput {
     std::vector<std::string> images; // Base64 or URLs
     nlohmann::json tools;
     nlohmann::json tool_choice;
+    nlohmann::json response_format;
     std::map<std::string, nlohmann::json> extra_fields;
 
     // Builder Pattern
@@ -52,6 +53,11 @@ struct LLMENGINE_EXPORT AnalysisInput {
 
     AnalysisInput& withToolChoice(const nlohmann::json& choice) {
         tool_choice = choice;
+        return *this;
+    }
+
+    AnalysisInput& withResponseFormat(const nlohmann::json& format) {
+        response_format = format;
         return *this;
     }
 

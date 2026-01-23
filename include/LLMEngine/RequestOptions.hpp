@@ -35,6 +35,13 @@ struct RequestOptions {
      * @brief Token for cancelling the operation.
      */
     std::shared_ptr<CancellationToken> cancellation_token;
+
+    /**
+     * @brief Maximum concurrency for batch operations.
+     * Functions like analyzeBatch will limit parallel requests to this number.
+     * Default depends on implementation (e.g., usually unbounded or high limit).
+     */
+    std::optional<size_t> max_concurrency;
 };
 
 } // namespace LLMEngine

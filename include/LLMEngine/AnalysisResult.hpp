@@ -25,6 +25,7 @@ struct LLMENGINE_EXPORT AnalysisResult {
     bool success;
     std::string think;
     std::string content;
+    std::string finishReason;
     std::string errorMessage;
     int statusCode;
 
