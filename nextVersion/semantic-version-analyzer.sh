@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# Copyright © 2026 Eser KUBALI <lxldev.contact@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # This file is part of nextVersion and is licensed under
@@ -49,7 +49,7 @@ Options:
 
 Examples:
   semantic-version-analyzer --since v1.1.0
-  semantic-version-analyzer --since-date 2025-01-01
+  semantic-version-analyzer --since-date 2026-01-01
   semantic-version-analyzer --base HEAD~5 --target HEAD
   semantic-version-analyzer --only-paths "src/**,include/**"
   semantic-version-analyzer --verbose

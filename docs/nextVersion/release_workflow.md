@@ -143,7 +143,7 @@ Use the semantic version analyzer to understand the impact of your changes:
 ./bin/semantic-version-analyzer.sh --json | jq '.suggestion'
 
 # Analyze specific time period
-./bin/semantic-version-analyzer.sh --since-date 2025-01-01 --verbose
+./bin/semantic-version-analyzer.sh --since-date 2026-01-01 --verbose
 
 # Show configuration values
 ./bin/version-config-loader.sh --machine

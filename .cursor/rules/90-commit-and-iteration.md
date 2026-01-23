@@ -173,7 +173,7 @@ Store rationale for code generation decisions in `.cursor/last-change-notes.md`:
 ```markdown
 # Change Notes
 
-## Date: 2025-01-XX
+## Date: 2026-01-XX
 
 ### Feature: Retry Logic
 

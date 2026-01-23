@@ -31,7 +31,7 @@ Use this template when documenting changes:
 ## Example
 
 ```markdown
-## Date: 2025-01-15
+## Date: 2026-01-15
 
 ### Task: Add retry logic to API client
 

@@ -1,4 +1,4 @@
-// Copyright © 2025
+// Copyright © 2026
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "../src/Backoff.hpp"

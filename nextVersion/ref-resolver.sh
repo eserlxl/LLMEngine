@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# Copyright © 2026 Eser KUBALI <lxldev.contact@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # This file is part of nextVersion and is licensed under
@@ -48,7 +48,7 @@ Options:
 
 Examples:
   reference-resolver --since v1.1.0
-  reference-resolver --since-date 2025-01-01
+  reference-resolver --since-date 2026-01-01
   reference-resolver --base HEAD~5 --target HEAD
   reference-resolver --base v1.0.0 --target v1.1.0 --print-base
 EOF

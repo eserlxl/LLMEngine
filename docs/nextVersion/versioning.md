@@ -194,8 +194,8 @@ A dedicated script, `bin/semantic-version-analyzer.sh`, is used to analyze the G
 # Show a detailed analysis, including file changes and commit messages
 ./bin/semantic-version-analyzer.sh --verbose
 
-# Analyze changes since a specific date (e.g., all changes since January 1, 2025)
-./bin/semantic-version-analyzer.sh --since-date 2025-01-01
+# Analyze changes since a specific date (e.g., all changes since January 1, 2026)
+./bin/semantic-version-analyzer.sh --since-date 2026-01-01
 
 # Get machine-readable JSON output
 ./bin/semantic-version-analyzer.sh --json

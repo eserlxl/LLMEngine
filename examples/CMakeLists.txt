@@ -1,4 +1,4 @@
-# Copyright © 2025 Eser KUBALI <lxldev.contact@gmail.com>
+# Copyright © 2026 Eser KUBALI <lxldev.contact@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # This CMake file configures building the LLMEngine example programs, and is

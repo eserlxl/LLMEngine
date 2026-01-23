@@ -1,4 +1,4 @@
-// Copyright © 2025 Eser KUBALI
+// Copyright © 2026 Eser KUBALI
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #pragma once
