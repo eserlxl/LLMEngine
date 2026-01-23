@@ -7,9 +7,11 @@
 
 #pragma once
 #include "LLMEngine/APIClient.hpp"
+#include "LLMEngine/AnalysisInput.hpp"
 #include "LLMEngine/AnalysisResult.hpp"
 #include "LLMEngine/IArtifactSink.hpp"
 #include "LLMEngine/IConfigManager.hpp"
+#include "LLMEngine/IMetricsCollector.hpp"
 #include "LLMEngine/IModelContext.hpp"
 #include "LLMEngine/IRequestExecutor.hpp"
 #include "LLMEngine/ITempDirProvider.hpp"
@@ -204,6 +206,14 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
                                          std::string_view analysis_type,
                                          const RequestOptions& options);
 
+    /**
+     * @brief Run an analysis request using strongly-typed input.
+     * @copydoc analyze
+     */
+    [[nodiscard]] AnalysisResult analyze(const AnalysisInput& input,
+                                         std::string_view analysis_type,
+                                         const RequestOptions& options);
+
     // Overloaded analyze for backward compatibility
     [[nodiscard]] AnalysisResult analyze(std::string_view prompt,
                                          const nlohmann::json& input,
@@ -316,6 +326,9 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
     /** @brief Replace prompt builders. Null keeps existing. */
     void setPromptBuilders(std::shared_ptr<IPromptBuilder> terse,
                            std::shared_ptr<IPromptBuilder> passthrough);
+
+    /** @brief Set metrics collector. */
+    void setMetricsCollector(std::shared_ptr<IMetricsCollector> collector);
 
   private:
     void initializeAPIClient();

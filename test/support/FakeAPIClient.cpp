@@ -19,7 +19,8 @@ void FakeAPIClient::setNextResponse(const APIResponse& response) {
 
 APIResponse FakeAPIClient::sendRequest(std::string_view prompt,
                                        const nlohmann::json& input,
-                                       const nlohmann::json& params) const {
+                                       const nlohmann::json& params,
+                                       const ::LLMEngine::RequestOptions& /*options*/) const {
     if (has_custom_response_) {
         has_custom_response_ = false;
         return next_response_;
@@ -45,7 +46,8 @@ void FakeAPIClient::setNextStreamChunks(const std::vector<std::string>& chunks) 
 void FakeAPIClient::sendRequestStream(std::string_view prompt,
                                       const nlohmann::json& input,
                                       const nlohmann::json& params,
-                                      std::function<void(std::string_view)> callback) const {
+                                      std::function<void(std::string_view)> callback,
+                                      const ::LLMEngine::RequestOptions& /*options*/) const {
     (void)input;
     (void)params;
 

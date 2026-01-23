@@ -17,7 +17,8 @@ class FakeAPIClient : public APIClient {
 
     APIResponse sendRequest(std::string_view prompt,
                             const nlohmann::json& input,
-                            const nlohmann::json& params) const override;
+                            const nlohmann::json& params,
+                            const ::LLMEngine::RequestOptions& options = {}) const override;
 
     std::string getProviderName() const override {
         return provider_name_;
@@ -32,7 +33,8 @@ class FakeAPIClient : public APIClient {
     void sendRequestStream(std::string_view prompt,
                            const nlohmann::json& input,
                            const nlohmann::json& params,
-                           std::function<void(std::string_view)> callback) const override;
+                           std::function<void(std::string_view)> callback,
+                           const ::LLMEngine::RequestOptions& options = {}) const override;
 
   private:
     ProviderType provider_type_;

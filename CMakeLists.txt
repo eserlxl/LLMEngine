@@ -359,7 +359,10 @@ add_library(${PROJECT_NAME}
     src/TempDirectoryService.cpp
     src/ArtifactSink.cpp
     src/RequestExecutor.cpp
+    src/RequestExecutor.cpp
     src/RetryableRequestExecutor.cpp
+    src/AnalysisInput.cpp
+    src/LLMEngineBuilder.cpp
 )
 
 # Versioning for shared libraries

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #pragma once
+#include <functional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -12,10 +13,10 @@ namespace LLMEngine {
 // Header-only; does not impose ABI changes on consumers.
 template <typename T, typename E> class Result {
   public:
-    static Result ok(T value) {
+    [[nodiscard]] static Result ok(T value) {
         return Result(std::in_place_index<0>, std::move(value));
     }
-    static Result err(E error) {
+    [[nodiscard]] static Result err(E error) {
         return Result(std::in_place_index<1>, std::move(error));
     }
 
@@ -150,6 +151,52 @@ template <typename T, typename E> class Result {
             return Result<T, NewE>::ok(std::move(value()));
         }
         return Result<T, NewE>::err(f(std::move(error())));
+    }
+
+    // Alias for transformError which is more standard in some ecosystems
+    template <typename F> auto mapError(F&& f) const& -> Result<T, std::invoke_result_t<F, E>> {
+        return transformError(std::forward<F>(f));
+    }
+    template <typename F> auto mapError(F&& f) && -> Result<T, std::invoke_result_t<F, E>> {
+        return std::move(*this).transformError(std::forward<F>(f));
+    }
+
+    /**
+     * @brief Return the value if present, otherwise return the result of f().
+     */
+    template <typename F> T valueOrElse(F&& f) const& {
+        return hasValue() ? value() : f();
+    }
+    template <typename F> T valueOrElse(F&& f) && {
+        return hasValue() ? std::move(value()) : f();
+    }
+
+    /**
+     * @brief Execute f(value) if the result is a value.
+     */
+    const Result& inspect(std::function<void(const T&)> f) const {
+        if (hasValue())
+            f(value());
+        return *this;
+    }
+    Result& inspect(std::function<void(const T&)> f) {
+        if (hasValue())
+            f(value());
+        return *this;
+    }
+
+    /**
+     * @brief Execute f(error) if the result is an error.
+     */
+    const Result& inspectError(std::function<void(const E&)> f) const {
+        if (hasError())
+            f(error());
+        return *this;
+    }
+    Result& inspectError(std::function<void(const E&)> f) {
+        if (hasError())
+            f(error());
+        return *this;
     }
 
     // Equality operators

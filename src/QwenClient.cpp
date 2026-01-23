@@ -32,7 +32,7 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
                                     const nlohmann::json& input,
                                     const nlohmann::json& params,
                                     const ::LLMEngine::RequestOptions& options) const {
-    (void)options; // TODO: Pass to helper
+
     // Build messages array using shared helper
     const nlohmann::json messages = ChatMessageBuilder::buildMessages(prompt, input);
 

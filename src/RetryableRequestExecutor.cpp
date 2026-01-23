@@ -119,4 +119,23 @@ RetryableRequestExecutor::RetryableRequestExecutor(std::shared_ptr<IRetryStrateg
     return response;
 }
 
+void RetryableRequestExecutor::executeStream(const ::LLMEngineAPI::APIClient* api_client,
+                                             const std::string& full_prompt,
+                                             const nlohmann::json& input,
+                                             const nlohmann::json& final_params,
+                                             std::function<void(std::string_view)> callback,
+                                             const ::LLMEngine::RequestOptions& options) const {
+    // Note: Streaming retries are complex and not fully implemented yet.
+    // We pass through to the base executor or client directly.
+    if (base_executor_) {
+        base_executor_->executeStream(
+            api_client, full_prompt, input, final_params, std::move(callback), options);
+    } else if (api_client) {
+        api_client->sendRequestStream(
+            full_prompt, input, final_params, std::move(callback), options);
+    } else {
+        throw std::runtime_error("API client not initialized");
+    }
+}
+
 } // namespace LLMEngine

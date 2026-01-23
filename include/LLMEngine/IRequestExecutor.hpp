@@ -37,6 +37,16 @@ class LLMENGINE_EXPORT IRequestExecutor {
         const nlohmann::json& input,
         const nlohmann::json& final_params,
         const ::LLMEngine::RequestOptions& options = {}) const = 0;
+
+    /**
+     * @brief Execute a streaming request.
+     */
+    virtual void executeStream(const ::LLMEngineAPI::APIClient* api_client,
+                               const std::string& full_prompt,
+                               const nlohmann::json& input,
+                               const nlohmann::json& final_params,
+                               std::function<void(std::string_view)> callback,
+                               const ::LLMEngine::RequestOptions& options = {}) const = 0;
 };
 
 /**
@@ -50,6 +60,13 @@ class LLMENGINE_EXPORT DefaultRequestExecutor : public IRequestExecutor {
         const nlohmann::json& input,
         const nlohmann::json& final_params,
         const ::LLMEngine::RequestOptions& options = {}) const override;
+
+    void executeStream(const ::LLMEngineAPI::APIClient* api_client,
+                       const std::string& full_prompt,
+                       const nlohmann::json& input,
+                       const nlohmann::json& final_params,
+                       std::function<void(std::string_view)> callback,
+                       const ::LLMEngine::RequestOptions& options = {}) const override;
 };
 
 // Forward declaration
@@ -91,6 +108,13 @@ class LLMENGINE_EXPORT RetryableRequestExecutor : public IRequestExecutor {
         const nlohmann::json& input,
         const nlohmann::json& final_params,
         const ::LLMEngine::RequestOptions& options = {}) const override;
+
+    void executeStream(const ::LLMEngineAPI::APIClient* api_client,
+                       const std::string& full_prompt,
+                       const nlohmann::json& input,
+                       const nlohmann::json& final_params,
+                       std::function<void(std::string_view)> callback,
+                       const ::LLMEngine::RequestOptions& options = {}) const override;
 
   private:
     std::shared_ptr<IRetryStrategy> strategy_;

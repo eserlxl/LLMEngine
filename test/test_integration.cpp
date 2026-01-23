@@ -180,7 +180,8 @@ class FailingAPIClient : public APIClient {
 
     APIResponse sendRequest(std::string_view,
                             const nlohmann::json&,
-                            const nlohmann::json&) const override {
+                            const nlohmann::json&,
+                            const ::LLMEngine::RequestOptions&) const override {
         // Note: This is a simplified test - real retry logic is in APIClientCommon
         // We can't easily test the retry mechanism here without mocking HTTP calls
         // But we can verify that retry configuration is accessible
@@ -258,7 +259,8 @@ void testAnalyzeErrorPaths() {
 
             APIResponse sendRequest(std::string_view,
                                     const nlohmann::json&,
-                                    const nlohmann::json&) const override {
+                                    const nlohmann::json&,
+                                    const ::LLMEngine::RequestOptions&) const override {
                 APIResponse resp;
                 resp.success = false;
                 resp.error_message = "Test API error";
@@ -291,7 +293,8 @@ void testAnalyzeErrorPaths() {
 
             APIResponse sendRequest(std::string_view,
                                     const nlohmann::json&,
-                                    const nlohmann::json&) const override {
+                                    const nlohmann::json&,
+                                    const ::LLMEngine::RequestOptions&) const override {
                 APIResponse resp;
                 resp.success = false;
                 resp.error_message = "Request timeout";
@@ -320,7 +323,8 @@ void testAnalyzeErrorPaths() {
 
             APIResponse sendRequest(std::string_view,
                                     const nlohmann::json&,
-                                    const nlohmann::json&) const override {
+                                    const nlohmann::json&,
+                                    const ::LLMEngine::RequestOptions&) const override {
                 APIResponse resp;
                 resp.success = false;
                 resp.error_message = "Invalid API key";

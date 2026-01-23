@@ -27,4 +27,16 @@ constexpr int kHttpStatusInternalServerError = 500;
     return api_client->sendRequest(full_prompt, input, final_params, options);
 }
 
+void DefaultRequestExecutor::executeStream(const ::LLMEngineAPI::APIClient* api_client,
+                                           const std::string& full_prompt,
+                                           const nlohmann::json& input,
+                                           const nlohmann::json& final_params,
+                                           std::function<void(std::string_view)> callback,
+                                           const ::LLMEngine::RequestOptions& options) const {
+    if (!api_client) {
+        throw std::runtime_error("API client not initialized");
+    }
+    api_client->sendRequestStream(full_prompt, input, final_params, std::move(callback), options);
+}
+
 } // namespace LLMEngine

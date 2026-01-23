@@ -47,10 +47,43 @@ void testEquality() {
     std::cout << "Equality operators passed." << std::endl;
 }
 
+void testNewExtensions() {
+    std::cout << "Testing new extensions (mapError, valueOrElse, inspect)..." << std::endl;
+
+    // mapError
+    auto res = Result<int, int>::err(1).mapError([](int e) { return std::to_string(e); });
+    if (!res.hasError() || res.error() != "1")
+        throw std::runtime_error("mapError failed");
+
+    // valueOrElse
+    auto val = Result<int, int>::ok(10).valueOrElse([]() { return 20; });
+    if (val != 10)
+        throw std::runtime_error("valueOrElse (ok) failed");
+
+    auto fallback = Result<int, int>::err(1).valueOrElse([]() { return 20; });
+    if (fallback != 20)
+        throw std::runtime_error("valueOrElse (err) failed");
+
+    // inspect
+    int visited = 0;
+    Result<int, int>::ok(5).inspect([&](int v) { visited = v; });
+    if (visited != 5)
+        throw std::runtime_error("inspect failed");
+
+    // inspectError
+    int errVisited = 0;
+    Result<int, int>::err(5).inspectError([&](int e) { errVisited = e; });
+    if (errVisited != 5)
+        throw std::runtime_error("inspectError failed");
+
+    std::cout << "New extensions passed." << std::endl;
+}
+
 int main() {
     try {
         testTransformError();
         testEquality();
+        testNewExtensions();
         std::cout << "All Result API tests passed." << std::endl;
         return 0;
     } catch (const std::exception& e) {

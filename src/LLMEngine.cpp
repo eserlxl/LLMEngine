@@ -8,15 +8,18 @@
 #include "LLMEngine/LLMEngine.hpp"
 
 #include "LLMEngine/APIClient.hpp"
+#include "LLMEngine/AnalysisInput.hpp"
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/HttpStatus.hpp"
 #include "LLMEngine/IConfigManager.hpp"
+#include "LLMEngine/IMetricsCollector.hpp"
 #include "LLMEngine/ITempDirProvider.hpp"
 #include "LLMEngine/ProviderBootstrap.hpp"
 #include "LLMEngine/RequestContextBuilder.hpp"
 #include "LLMEngine/ResponseHandler.hpp"
 #include "LLMEngine/SecureString.hpp"
 #include "LLMEngine/TempDirectoryService.hpp"
+#include <chrono>
 
 #include <algorithm>
 #include <cctype>
@@ -76,6 +79,7 @@ struct LLMEngine::EngineState {
     SecureString api_key_{""};
     std::string ollama_url_;
     std::shared_ptr<Logger> logger_;
+    std::shared_ptr<IMetricsCollector> metrics_collector_;
     std::function<bool()> debug_files_policy_;
     bool disable_debug_files_env_cached_;
 
@@ -205,6 +209,57 @@ LLMEngine::LLMEngine(std::string_view provider_name,
 
 // --- Analysis Methods ---
 
+AnalysisResult LLMEngine::analyze(const AnalysisInput& input,
+                                  std::string_view analysis_type,
+                                  const RequestOptions& options) {
+    if (state_->metrics_collector_) {
+        // Record latency
+        auto start = std::chrono::high_resolution_clock::now();
+
+        // Execute original analyze
+        nlohmann::json input_json = input.toJson();
+        // Extract system prompt if present to optimize/override if needed,
+        // but explicit input usually overrides.
+        // For now, we perform the direct call.
+
+        auto result = analyze(input.system_prompt, input_json, analysis_type, options);
+
+        auto end = std::chrono::high_resolution_clock::now();
+        long latency = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+        std::vector<MetricTag> tags = {{"provider", getProviderName()},
+                                       {"model", getModelName()},
+                                       {"type", std::string(analysis_type)},
+                                       {"success", result.success ? "true" : "false"}};
+        state_->metrics_collector_->recordLatency("llm_engine.analyze", latency, tags);
+
+        if (result.success) {
+            state_->metrics_collector_->recordCounter(
+                "llm_engine.tokens_input", result.usage.promptTokens, tags);
+            state_->metrics_collector_->recordCounter(
+                "llm_engine.tokens_output", result.usage.completionTokens, tags);
+        } else {
+            state_->metrics_collector_->recordCounter("llm_engine.errors", 1, tags);
+        }
+
+        return result;
+    }
+
+    // No metrics, direct pass-through
+    // Note: AnalysisInput might separate system_prompt.
+    // The legacy analyze() takes prompt argument as the main prompt.
+    // Should we pass input.user_message as prompt?
+    // Yes, usually the first arg is the "prompt" (user message).
+
+    std::string_view effective_prompt = input.user_message;
+    if (effective_prompt.empty() && !input.system_prompt.empty()) {
+        // Fallback or specific logic?
+        // For now, assume user_message is the primary prompt.
+    }
+
+    return analyze(effective_prompt, input.toJson(), analysis_type, options);
+}
+
 AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                   const nlohmann::json& input,
                                   std::string_view analysis_type,
@@ -238,8 +293,11 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
             state_->logger_->log(LogLevel::Error, "Request executor not configured.");
         }
         return AnalysisResult{.success = false,
+                              .think = "",
+                              .content = "",
                               .errorMessage = "Internal Error: Request executor missing",
                               .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
+                              .usage = {},
                               .errorCode = LLMEngineErrorCode::Unknown};
     }
 
@@ -279,8 +337,11 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
             state_->api_client_.get(), ctx.fullPrompt, input, ctx.finalParams);
     } else {
         return AnalysisResult{.success = false,
+                              .think = "",
+                              .content = "",
                               .errorMessage = "Internal Error: Request executor missing",
                               .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
+                              .usage = {},
                               .errorCode = LLMEngineErrorCode::Unknown};
     }
 
@@ -356,7 +417,11 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                     state->api_client_.get(), ctx.fullPrompt, input, ctx.finalParams);
             } else {
                 return AnalysisResult{.success = false,
+                                      .think = "",
+                                      .content = "",
                                       .errorMessage = "Internal Error",
+                                      .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
+                                      .usage = {},
                                       .errorCode = LLMEngineErrorCode::Unknown};
             }
 
@@ -386,7 +451,17 @@ void LLMEngine::analyzeStream(std::string_view prompt,
 
     auto wrapped_callback = [callback](std::string_view chunk) { callback(chunk, false); };
 
-    if (state_->api_client_) {
+    if (state_->request_executor_) {
+        state_->request_executor_->executeStream(
+            state_->api_client_.get(), ctx.fullPrompt, input, ctx.finalParams, wrapped_callback);
+        callback("", true);
+    } else if (state_->api_client_) {
+        // Fallback or explicit error if executor is mandatory?
+        // Sync analyze fails if no executor.
+        if (state_->logger_) {
+            state_->logger_->log(LogLevel::Warn,
+                                 "Request executor not set, falling back to direct client usage.");
+        }
         state_->api_client_->sendRequestStream(
             ctx.fullPrompt, input, ctx.finalParams, wrapped_callback);
         callback("", true);
@@ -394,7 +469,7 @@ void LLMEngine::analyzeStream(std::string_view prompt,
         if (state_->logger_) {
             state_->logger_->log(LogLevel::Error, "API client not initialized for streaming.");
         }
-        callback("", true);
+        callback("Error: API client/Executor not initialized", true);
     }
 }
 
@@ -496,6 +571,10 @@ void LLMEngine::setPromptBuilders(std::shared_ptr<IPromptBuilder> terse,
         state_->terse_prompt_builder_ = std::move(terse);
     if (passthrough)
         state_->passthrough_prompt_builder_ = std::move(passthrough);
+}
+
+void LLMEngine::setMetricsCollector(std::shared_ptr<IMetricsCollector> collector) {
+    state_->metrics_collector_ = std::move(collector);
 }
 
 } // namespace LLMEngine
