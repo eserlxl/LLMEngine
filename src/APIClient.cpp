@@ -18,6 +18,7 @@
 #include <fstream>
 #include <iostream>
 #include <ranges>
+#include <unordered_map>
 
 namespace LLMEngineAPI {
 
@@ -116,17 +117,17 @@ ProviderType APIClientFactory::stringToProviderType(std::string_view provider_na
     std::ranges::transform(
         name, name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
-    // Direct mapping for known providers
-    if (name == "qwen")
-        return ProviderType::QWEN;
-    if (name == "openai")
-        return ProviderType::OPENAI;
-    if (name == "anthropic")
-        return ProviderType::ANTHROPIC;
-    if (name == "ollama")
-        return ProviderType::OLLAMA;
-    if (name == "gemini")
-        return ProviderType::GEMINI;
+    static const std::unordered_map<std::string, ProviderType> provider_map = {
+        {"qwen", ProviderType::QWEN},
+        {"openai", ProviderType::OPENAI},
+        {"anthropic", ProviderType::ANTHROPIC},
+        {"ollama", ProviderType::OLLAMA},
+        {"gemini", ProviderType::GEMINI}};
+
+    auto it = provider_map.find(name);
+    if (it != provider_map.end()) {
+        return it->second;
+    }
 
     // SECURITY: Fail fast on unknown providers instead of silently falling back
     // This prevents unexpected provider selection in multi-tenant contexts
@@ -146,16 +147,10 @@ ProviderType APIClientFactory::stringToProviderType(std::string_view provider_na
         return static_cast<char>(std::tolower(c));
     });
 
-    if (def_lower == "qwen")
-        return ProviderType::QWEN;
-    if (def_lower == "openai")
-        return ProviderType::OPENAI;
-    if (def_lower == "anthropic")
-        return ProviderType::ANTHROPIC;
-    if (def_lower == "ollama")
-        return ProviderType::OLLAMA;
-    if (def_lower == "gemini")
-        return ProviderType::GEMINI;
+    auto def_it = provider_map.find(def_lower);
+    if (def_it != provider_map.end()) {
+        return def_it->second;
+    }
 
     // SECURITY: Fail fast on invalid default provider configuration
     // Falling back to Ollama can route workloads to an unintended local service,

@@ -193,7 +193,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
                                          const nlohmann::json& input,
                                          std::string_view analysis_type,
                                          std::string_view mode = "chat",
-                                         bool prepend_terse_instruction = true) const;
+                                         bool prepend_terse_instruction = true);
 
     // Utility methods
     /** @brief Provider display name. */
@@ -234,7 +234,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
     [[nodiscard]] std::shared_ptr<Logger> getLogger() const override {
         return logger_;
     }
-    void prepareTempDirectory() const override {
+    void prepareTempDirectory() override {
         ensureSecureTmpDir();
     }
 
@@ -322,7 +322,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
 
   private:
     void initializeAPIClient();
-    void ensureSecureTmpDir() const;
+    void ensureSecureTmpDir();
 
     std::string model_;
     nlohmann::json model_params_;
@@ -330,7 +330,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
     bool debug_;
     std::string tmp_dir_; // Configurable temporary directory (defaults to Utils::TMP_DIR)
     std::shared_ptr<ITempDirProvider> temp_dir_provider_; // Store provider for validation
-    mutable bool tmp_dir_verified_ =
+    bool tmp_dir_verified_ =
         false; // Cache directory existence check to reduce filesystem operations
 
     // API client support

@@ -193,7 +193,7 @@ void ::LLMEngine::LLMEngine::initializeAPIClient() {
 
 // Redaction and debug file I/O moved to DebugArtifacts
 
-void ::LLMEngine::LLMEngine::ensureSecureTmpDir() const {
+void ::LLMEngine::LLMEngine::ensureSecureTmpDir() {
     // Cache directory existence check to reduce filesystem operations
     // Only re-check if directory was previously verified and might have been deleted
     if (tmp_dir_verified_) {
@@ -219,12 +219,12 @@ LLM::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt,
                                                   const nlohmann::json& input,
                                                   std::string_view analysis_type,
                                                   std::string_view mode,
-                                                  bool prepend_terse_instruction) const {
+                                                  bool prepend_terse_instruction) {
     // Ensure temp directory is prepared before building context (RAII enforcement)
     ensureSecureTmpDir();
 
     // Build request context (using IModelContext interface to break cyclic dependency)
-    RequestContext ctx = RequestContextBuilder::build(static_cast<const IModelContext&>(*this),
+    RequestContext ctx = RequestContextBuilder::build(static_cast<IModelContext&>(*this),
                                                       prompt,
                                                       input,
                                                       analysis_type,

@@ -50,7 +50,7 @@ class RequestContextBuilder {
      * @param prepend_terse_instruction Whether to prepend terse instruction
      * @return RequestContext with unique request directory and merged parameters
      */
-    static RequestContext build(const IModelContext& context,
+    static RequestContext build(IModelContext& context,
                                 std::string_view prompt,
                                 const nlohmann::json& input,
                                 std::string_view analysis_type,

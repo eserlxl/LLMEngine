@@ -118,6 +118,17 @@ template <typename T, typename E> class Result {
         return hasValue() ? std::move(value()) : default_value;
     }
 
+    /**
+     * @brief Access value without exception (returns pointer).
+     * @return Pointer to value if success, nullptr if error.
+     */
+    T* tryValue() noexcept {
+        return hasValue() ? &v_.value : nullptr;
+    }
+    const T* tryValue() const noexcept {
+        return hasValue() ? &v_.value : nullptr;
+    }
+
   private:
     template <std::size_t I> struct InPlaceTag {};
 

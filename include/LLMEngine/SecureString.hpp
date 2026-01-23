@@ -9,6 +9,7 @@
 #include "LLMEngine/LLMEngineExport.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 #include <string>
 #include <string_view>
@@ -148,9 +149,13 @@ class LLMENGINE_EXPORT SecureString {
     void scrub() noexcept {
         if (!data_.empty()) {
             // Overwrite memory with zeros
-            // Use volatile to prevent compiler optimization
             volatile char* ptr = const_cast<volatile char*>(data_.data());
-            std::fill_n(ptr, data_.size(), '\0');
+            const size_t len = data_.size();
+            for (size_t i = 0; i < len; ++i) {
+                ptr[i] = '\0';
+            }
+            // Memory barrier to prevent compiler reordering/optimization
+            std::atomic_thread_fence(std::memory_order_release);
             data_.clear();
         }
     }

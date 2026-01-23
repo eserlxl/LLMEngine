@@ -84,7 +84,7 @@ class LLMENGINE_EXPORT IModelContext {
     /**
      * @brief Prepare the temporary directory (ensure it exists and is secure).
      */
-    virtual void prepareTempDirectory() const = 0;
+    virtual void prepareTempDirectory() = 0;
 };
 
 } // namespace LLMEngine

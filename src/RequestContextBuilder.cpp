@@ -94,7 +94,7 @@ std::string generateUniqueRequestDirName(const std::filesystem::path& base) {
 }
 } // namespace
 
-RequestContext RequestContextBuilder::build(const IModelContext& context,
+RequestContext RequestContextBuilder::build(IModelContext& context,
                                             std::string_view prompt,
                                             const nlohmann::json& input,
                                             std::string_view analysis_type,

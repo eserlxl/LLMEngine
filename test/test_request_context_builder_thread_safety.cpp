@@ -62,7 +62,7 @@ class MockModelContext : public IModelContext {
     std::shared_ptr<Logger> getLogger() const override {
         return nullptr;
     }
-    void prepareTempDirectory() const override {}
+    void prepareTempDirectory() override {}
 
   private:
     std::string temp_dir_;
