@@ -59,7 +59,7 @@ Its configuration-driven design allows rapid experimentation and reliable runtim
 |-----------|--------|
 | **Project** | LLMEngine 0.1.0 |
 | **Language** | C++23 |
-| **Build System** | CMake 3.20+ |
+| **Build System** | CMake 3.31+ |
 | **Supported Platforms** | Linux, macOS |
 
 [↑ Back to top](#llmengine)
@@ -101,7 +101,7 @@ Its configuration-driven design allows rapid experimentation and reliable runtim
 ### Prerequisites
 
 - C++23 compiler (e.g., GCC 13+, Clang 17+)  
-- CMake 3.20+  
+- CMake 3.31+  
 - Dependencies: **OpenSSL**, **nlohmann_json**, **cpr**
 
 **Note:** Windows is not officially supported. While the codebase includes partial MSVC support in the build system, Windows has known limitations:

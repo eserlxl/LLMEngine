@@ -5,7 +5,7 @@
 # licensed under the GNU General Public License v3.0 or later.
 # See the LICENSE file in the project root for details.
 
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.31)
 
 # ---- Project -----------------------------------------------------------------
 project(LLMEngineTest

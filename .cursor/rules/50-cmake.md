@@ -6,12 +6,12 @@ This document defines CMake build system guidelines for LLMEngine. These rules e
 
 ## CMake Version
 
-- **Minimum**: CMake 3.20
-- **Required**: CMake 3.20 or later for all features
+- **Minimum**: CMake 3.31
+- **Required**: CMake 3.31 or later for all features
 - **Policy**: Set modern CMake policies explicitly
 
 ```cmake
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.31)
 
 # Set modern policies
 if(POLICY CMP0135)
@@ -313,7 +313,7 @@ add_test(NAME test_my_lib COMMAND test_my_lib)
 ## Best Practices
 
 1. **Target-based**: Always use `target_*` commands
-2. **Modern CMake**: Use CMake 3.20+ features
+2. **Modern CMake**: Use CMake 3.31+ features
 3. **PIC**: Always enable position-independent code
 4. **Compile commands**: Export for IDE support
 5. **Warnings**: Per-target, controlled by options

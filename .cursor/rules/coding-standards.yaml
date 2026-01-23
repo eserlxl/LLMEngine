@@ -39,7 +39,7 @@ rules:
 
   cmake:
     # See 50-cmake.md for comprehensive CMake guidelines
-    minimum_version: "3.20"
+    minimum_version: "3.31"
     target_based_only: true  # Modern CMake targets only (see 50-cmake.md)
     compiler_features:
       require: ["cxx_std_23"]

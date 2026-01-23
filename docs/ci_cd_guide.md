@@ -262,7 +262,7 @@ Set up a local environment to build, test, and contribute effectively.
 **System Requirements:**
 - Linux distribution (Arch Linux, Ubuntu, Fedora, or Debian recommended)
 - GCC or Clang compiler (version 10 or later)
-- CMake (version 3.16 or later)
+- CMake (version 3.31 or later)
 - Git
 - Basic development tools (make, pkg-config, etc.)
 
