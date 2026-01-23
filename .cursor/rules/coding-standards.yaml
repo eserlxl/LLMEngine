@@ -9,7 +9,7 @@ rules:
     ambiguity_resolution: "choose_sensible_default_and_document"
 
   language:
-    standard: "c++20"
+    standard: "c++23"
     allow_cxx23: true
     # See 10-cpp-style.md for detailed C++ style guidelines
     memory_management:
@@ -42,7 +42,7 @@ rules:
     minimum_version: "3.20"
     target_based_only: true  # Modern CMake targets only (see 50-cmake.md)
     compiler_features:
-      require: ["cxx_std_20"]
+      require: ["cxx_std_23"]
     include_style:
       use_target_include_directories: true  # Never use global include_directories
       forbid_global_include_directories: true

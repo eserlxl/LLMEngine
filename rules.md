@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document serves as the index and guide for Cursor's code generation rules for LLMEngine. These rules ensure consistent, high-quality, production-ready C++20/23 code generation.
+This document serves as the index and guide for Cursor's code generation rules for LLMEngine. These rules ensure consistent, high-quality, production-ready C++23 code generation.
 
 ## How Cursor Should Apply These Rules
 
@@ -120,8 +120,8 @@ When Cursor generates C++ code, follow this workflow:
 
 ### Modern C++
 
-- **C++20 minimum**: Use C++20 features
-- **C++23 when safe**: Use C++23 features when available and safe
+- **C++23 standard**: Use C++23 features
+- **Modern C++**: Leverage latest C++23 capabilities
 - **Zero-cost abstractions**: Prefer standard library abstractions
 - **RAII**: Always use RAII for resource management
 

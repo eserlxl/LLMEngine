@@ -77,7 +77,7 @@ int main() {
 EOF
 
 # Compile
-g++ -std=c++20 test_qwen.cpp -o test_qwen
+g++ -std=c++23 test_qwen.cpp -o test_qwen
 pkg-config --cflags --libs libcpr nlohmann_json
 
 # Run

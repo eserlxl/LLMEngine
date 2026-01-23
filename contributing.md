@@ -17,7 +17,7 @@ Thank you for your interest in contributing!
 
 ## Coding style
 
-- C++20, target-based CMake, no global flags.
+- C++23, target-based CMake, no global flags.
 - Prefer RAII, explicit ownership, `enum class`, and `[[nodiscard]]` where relevant.
 - Avoid naked new/delete; use smart pointers.
 

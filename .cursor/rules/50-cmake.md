@@ -31,7 +31,7 @@ endif()
 # Good: Target-based
 add_library(MyLib src/MyLib.cpp)
 target_include_directories(MyLib PUBLIC include)
-target_compile_features(MyLib PUBLIC cxx_std_20)
+target_compile_features(MyLib PUBLIC cxx_std_23)
 target_link_libraries(MyLib PUBLIC SomeDep::SomeDep)
 
 # Bad: Global commands
@@ -80,7 +80,7 @@ target_link_libraries(MyLib
 - Use `PUBLIC` to propagate to consumers
 
 ```cmake
-target_compile_features(MyLib PUBLIC cxx_std_20)
+target_compile_features(MyLib PUBLIC cxx_std_23)
 ```
 
 ## Position-Independent Code

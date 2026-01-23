@@ -57,7 +57,7 @@ jobs:
           cd build-msan
           cmake -DCMAKE_CXX_COMPILER=clang++ \
                 -DCMAKE_C_COMPILER=clang \
-                -DCMAKE_CXX_STANDARD=20 \
+                -DCMAKE_CXX_STANDARD=23 \
                 -DCMAKE_CXX_STANDARD_REQUIRED=ON \
                 -DCMAKE_CXX_FLAGS="-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -O1 -g" \
                 -DCMAKE_C_FLAGS="-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -O1 -g" \

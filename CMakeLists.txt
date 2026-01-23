@@ -498,7 +498,7 @@ generate_export_header(${PROJECT_NAME}
 # Note: Warnings and hardening flags are already applied via ${PROJECT_NAME}_compile_options interface target
 # This avoids duplication and ensures a single source of truth for compile options
 
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
 
 # ---- Install ------------------------------------------------------------------
 # Install library (handles both static and shared) and export targets.

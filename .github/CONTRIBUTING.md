@@ -38,7 +38,7 @@ Before submitting, please confirm:
 5. No secrets are committed; use environment variables.
 
 ### Style
-- C++20; match existing formatting and patterns.
+- C++23; match existing formatting and patterns.
 - Prefer clarity and descriptive names over cleverness.
 
 ## Code of Conduct

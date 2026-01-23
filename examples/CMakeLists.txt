@@ -79,7 +79,7 @@ else()
     add_library(llmengine_compile_options INTERFACE)
     add_library(llmengine::compile_options ALIAS llmengine_compile_options)
     # Populate fallback interface with common hardening/warning flags
-    target_compile_features(llmengine_compile_options INTERFACE cxx_std_20)
+    target_compile_features(llmengine_compile_options INTERFACE cxx_std_23)
     target_compile_options(llmengine_compile_options INTERFACE -fstack-protector-strong)
     if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
       target_link_options(llmengine_compile_options INTERFACE -Wl,-z,relro,-z,now)
@@ -189,7 +189,7 @@ target_link_libraries(chatbot
     llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json)
-target_compile_features(chatbot PRIVATE cxx_std_20)
+target_compile_features(chatbot PRIVATE cxx_std_23)
 apply_common_build_flags(chatbot)
 
 add_executable(code_analyzer code_analyzer.cpp)
@@ -199,7 +199,7 @@ target_link_libraries(code_analyzer
     llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json)
-target_compile_features(code_analyzer PRIVATE cxx_std_20)
+target_compile_features(code_analyzer PRIVATE cxx_std_23)
 apply_common_build_flags(code_analyzer)
 
 add_executable(text_processor text_processor.cpp)
@@ -209,7 +209,7 @@ target_link_libraries(text_processor
     llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json)
-target_compile_features(text_processor PRIVATE cxx_std_20)
+target_compile_features(text_processor PRIVATE cxx_std_23)
 apply_common_build_flags(text_processor)
 
 add_executable(file_analyzer file_analyzer.cpp)
@@ -219,7 +219,7 @@ target_link_libraries(file_analyzer
     llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json)
-target_compile_features(file_analyzer PRIVATE cxx_std_20)
+target_compile_features(file_analyzer PRIVATE cxx_std_23)
 apply_common_build_flags(file_analyzer)
 
 add_executable(translator translator.cpp)
@@ -229,7 +229,7 @@ target_link_libraries(translator
     llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json)
-target_compile_features(translator PRIVATE cxx_std_20)
+target_compile_features(translator PRIVATE cxx_std_23)
 apply_common_build_flags(translator)
 
 add_executable(logo_generator logo_generator.cpp)
@@ -239,7 +239,7 @@ target_link_libraries(logo_generator
     llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json)
-target_compile_features(logo_generator PRIVATE cxx_std_20)
+target_compile_features(logo_generator PRIVATE cxx_std_23)
 apply_common_build_flags(logo_generator)
 
 add_executable(image_generator image_generator.cpp)
@@ -249,7 +249,7 @@ target_link_libraries(image_generator
     llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json)
-target_compile_features(image_generator PRIVATE cxx_std_20)
+target_compile_features(image_generator PRIVATE cxx_std_23)
 apply_common_build_flags(image_generator)
 
 add_executable(readme_chatbot readme_chatbot.cpp)
@@ -259,7 +259,7 @@ target_link_libraries(readme_chatbot
     llmengine::compile_options
     cpr::cpr
     nlohmann_json::nlohmann_json)
-target_compile_features(readme_chatbot PRIVATE cxx_std_20)
+target_compile_features(readme_chatbot PRIVATE cxx_std_23)
 apply_common_build_flags(readme_chatbot)
 
 # ---- Summary -----------------------------------------------------------------

@@ -821,16 +821,16 @@ struct Logger {
 
 #### Design Rationale: Interface vs Concepts
 
-LLMEngine uses a traditional abstract base class (`APIClient`) rather than C++20 concepts for provider abstraction:
+LLMEngine uses a traditional abstract base class (`APIClient`) rather than C++23 concepts for provider abstraction:
 
 **Benefits of current approach:**
 - Runtime polymorphism: Enables dynamic provider selection via factory pattern
 - Type erasure: `LLMEngine` can hold providers via `unique_ptr<APIClient>` without templates
-- Backward compatibility: Works with C++20 compilers without requiring concepts support
+- Backward compatibility: Works with C++23 compilers without requiring concepts support
 - Clear ownership semantics: Virtual destructor ensures proper cleanup
 
 **Alternative (concepts) consideration:**
-- C++20 concepts would provide compile-time polymorphism and better type safety
+- C++23 concepts would provide compile-time polymorphism and better type safety
 - However, concepts require template-based design, which would complicate the factory pattern
 - Current approach provides better runtime flexibility for configuration-driven provider selection
 

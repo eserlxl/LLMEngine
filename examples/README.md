@@ -265,7 +265,7 @@ make -j20
 ### Individual Build
 ```bash
 # Build specific example
-g++ -std=c++20 ../chatbot.cpp -o chatbot \
+g++ -std=c++23 ../chatbot.cpp -o chatbot \
     -I../../src \
     -L../../build -lLLMEngine \
     $(pkg-config --cflags --libs libcpr nlohmann_json)
