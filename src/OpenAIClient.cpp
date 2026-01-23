@@ -50,6 +50,7 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
         [&]() { return impl_->getHeaders(); },
         // Parse response using base class method
         OpenAICompatibleClient::parseOpenAIResponse,
+        options,
         /*exponential_retry*/ true,
         impl_->getConfig());
 }
@@ -59,8 +60,7 @@ void OpenAIClient::sendRequestStream(std::string_view prompt,
                                      const nlohmann::json& params,
                                      std::function<void(std::string_view)> callback,
                                      const ::LLMEngine::RequestOptions& options) const {
-    (void)options; // TODO: Pass to helper
-    impl_->sendRequestStream(prompt, input, params, callback);
+    impl_->sendRequestStream(prompt, input, params, callback, options);
 }
 
 void OpenAIClient::setConfig(std::shared_ptr<IConfigManager> cfg) {

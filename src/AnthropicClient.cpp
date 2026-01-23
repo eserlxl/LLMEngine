@@ -81,13 +81,16 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
                                                {"x-api-key", api_key_},
                                                {"anthropic-version", "2023-06-01"}};
         maybeLogRequest("POST", url, hdr);
-        cpr::Response cpr_response = sendWithRetries(rs, [&]() {
-            return cpr::Post(cpr::Url{url},
-                             cpr::Header{hdr.begin(), hdr.end()},
-                             cpr::Body{payload.dump()},
-                             cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
-                             cpr::VerifySsl{verify_ssl});
-        });
+        cpr::Response cpr_response = sendWithRetries(
+            rs,
+            [&]() {
+                return cpr::Post(cpr::Url{url},
+                                 cpr::Header{hdr.begin(), hdr.end()},
+                                 cpr::Body{payload.dump()},
+                                 cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
+                                 cpr::VerifySsl{verify_ssl});
+            },
+            options);
 
         response.status_code = static_cast<int>(cpr_response.status_code);
 

@@ -77,6 +77,7 @@ struct ChatCompletionRequestHelper {
                                UrlBuilder&& buildUrl,
                                HeaderBuilder&& buildHeaders,
                                ResponseParser&& parseResponse,
+                               const ::LLMEngine::RequestOptions& options = {},
                                bool exponential_retry = true,
                                const IConfigManager* cfg = nullptr) {
 
@@ -107,10 +108,21 @@ struct ChatCompletionRequestHelper {
             const std::string serialized_body = payload.dump();
 
             // Get timeout from params or use config default
+            // Get timeout from options (highest priority), then params, then config
             int timeout_seconds = 0;
-            if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))
-                && params.at(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))
-                       .is_number_integer()) {
+
+            if (options.timeout_ms.has_value()) {
+                // round up to nearest second if needed, or use exact ms if we update cpr::Timeout to support ms?
+                // cpr::Timeout takes milliseconds if constructed with long, or simple integer seconds if simpler constructor?
+                // Actually cpr::Timeout argument is usually milliseconds if it's `long`.
+                // But here code converts seconds * 1000.
+                // Let's stick to seconds for basic compatibility, or improve to ms.
+                // For now, convert ms to seconds (rounding up).
+                timeout_seconds = (*options.timeout_ms + 999) / 1000;
+            } else if (params.contains(
+                           std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))
+                       && params.at(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))
+                              .is_number_integer()) {
                 timeout_seconds =
                     params.at(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))
                         .get<int>();
@@ -163,22 +175,25 @@ struct ChatCompletionRequestHelper {
             maybeLogRequestWithBody("POST", url, headers, serialized_body);
 
             // Execute request with retries
-            cpr::Response cpr_response = sendWithRetries(rs, [&]() {
-                if (connect_timeout_ms > 0) {
-                    return cpr::Post(cpr::Url{url},
-                                     cpr_headers,
-                                     cpr::Body{serialized_body},
-                                     cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
-                                     cpr::VerifySsl{verify_ssl},
-                                     cpr::ConnectTimeout{connect_timeout_ms});
-                } else {
-                    return cpr::Post(cpr::Url{url},
-                                     cpr_headers,
-                                     cpr::Body{serialized_body},
-                                     cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
-                                     cpr::VerifySsl{verify_ssl});
-                }
-            });
+            cpr::Response cpr_response = sendWithRetries(
+                rs,
+                [&]() {
+                    if (connect_timeout_ms > 0) {
+                        return cpr::Post(cpr::Url{url},
+                                         cpr_headers,
+                                         cpr::Body{serialized_body},
+                                         cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
+                                         cpr::VerifySsl{verify_ssl},
+                                         cpr::ConnectTimeout{connect_timeout_ms});
+                    } else {
+                        return cpr::Post(cpr::Url{url},
+                                         cpr_headers,
+                                         cpr::Body{serialized_body},
+                                         cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
+                                         cpr::VerifySsl{verify_ssl});
+                    }
+                },
+                options);
 
             response.status_code = static_cast<int>(cpr_response.status_code);
 
@@ -280,6 +295,8 @@ struct ChatCompletionRequestHelper {
                               UrlBuilder&& buildUrl,
                               HeaderBuilder&& buildHeaders,
                               StreamProcessor&& processChunk,
+                              const ::LLMEngine::RequestOptions& options = {},
+                              bool exponential_retry = true,
                               const IConfigManager* cfg = nullptr) {
 
         // Merge params (simplified vs execute, no retry settings needed generally for stream connection yet)
@@ -304,12 +321,14 @@ struct ChatCompletionRequestHelper {
         const cpr::Header cpr_headers{headers.begin(), headers.end()};
 
         // Timeout settings
-        int timeout_seconds =
-            cfg ? cfg->getTimeoutSeconds() : APIConfigManager::getInstance().getTimeoutSeconds();
-        // For streaming, timeout usually applies to connect or idle?
-        // cpr::Timeout is transfer timeout.
-        // We might want a longer timeout for stream? Or rely on heartbeat.
-        // Use standard timeout for now.
+        // Timeout settings
+        int timeout_seconds = 0;
+        if (options.timeout_ms.has_value()) {
+            timeout_seconds = (*options.timeout_ms + 999) / 1000;
+        } else {
+            timeout_seconds = cfg ? cfg->getTimeoutSeconds()
+                                  : APIConfigManager::getInstance().getTimeoutSeconds();
+        }
 
         bool verify_ssl = true;
         if (params.contains("verify_ssl") && params.at("verify_ssl").is_boolean()) {

@@ -11,6 +11,7 @@
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/HttpStatus.hpp"
 #include "LLMEngine/RequestLogger.hpp"
+#include "LLMEngine/RequestOptions.hpp"
 
 #include <chrono>
 #include <cpr/cpr.h>
@@ -65,7 +66,9 @@ inline RetrySettings computeRetrySettings(const nlohmann::json& params,
 }
 
 template <typename RequestFunc>
-cpr::Response sendWithRetries(const RetrySettings& rs, RequestFunc&& doRequest) {
+cpr::Response sendWithRetries(const RetrySettings& rs,
+                              RequestFunc&& doRequest,
+                              const ::LLMEngine::RequestOptions& options = {}) {
     // Optional trace logging for backoff schedule (only when explicitly enabled)
     const bool log_backoff = std::getenv("LLMENGINE_LOG_BACKOFF") != nullptr;
 
@@ -75,7 +78,26 @@ cpr::Response sendWithRetries(const RetrySettings& rs, RequestFunc&& doRequest) 
     if (rs.jitter_seed != 0 && rs.exponential) {
         rng = std::make_unique<std::mt19937_64>(rs.jitter_seed);
     }
-    for (int attempt = 1; attempt <= rs.max_attempts; ++attempt) {
+
+    // Determine effective max attempts: options override if set, otherwise use settings
+    const int effective_max_attempts =
+        options.max_retries.has_value() ? *options.max_retries : rs.max_attempts;
+
+    for (int attempt = 1; attempt <= effective_max_attempts; ++attempt) {
+        // Check cancellation before each attempt
+        if (options.cancellation_token && options.cancellation_token->isCancelled()) {
+            if (log_backoff) {
+                std::cerr << "[BACKOFF] Request cancelled before attempt " << attempt << "\n";
+            }
+            // Create a fake "cancelled" response
+            resp.status_code = 0; // Invalid status
+            resp.error.code = cpr::ErrorCode::OPERATION_TIMEDOUT;
+            resp.error.message =
+                "Request cancelled"; // CPR doesn't have CANCELLED, using TIMEOUT/generic
+            // The caller should interpret this based on token state
+            return resp;
+        }
+
         resp = doRequest();
         const int code = static_cast<int>(resp.status_code);
         const bool is_success = ::LLMEngine::HttpStatus::isSuccess(code);
@@ -87,7 +109,7 @@ cpr::Response sendWithRetries(const RetrySettings& rs, RequestFunc&& doRequest) 
         }
         const bool is_non_retriable = ::LLMEngine::HttpStatus::isClientError(code)
                                       && !::LLMEngine::HttpStatus::isRetriable(code);
-        if (attempt < rs.max_attempts && !is_non_retriable) {
+        if (attempt < effective_max_attempts && !is_non_retriable) {
             int delay = 0;
             if (rs.exponential) {
                 const uint64_t cap = ::LLMEngine::computeBackoffCapMs(bcfg, attempt);
@@ -112,7 +134,34 @@ cpr::Response sendWithRetries(const RetrySettings& rs, RequestFunc&& doRequest) 
                 std::cerr << "\n";
             }
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+            // Sleep in chunks to allow responsive cancellation during backoff delay
+            const int sleep_chunk_ms = 100;
+            int remaining_sleep = delay;
+            bool cancelled_during_sleep = false;
+            while (remaining_sleep > 0) {
+                if (options.cancellation_token && options.cancellation_token->isCancelled()) {
+                    cancelled_during_sleep = true;
+                    break;
+                }
+                int current_sleep = std::min(remaining_sleep, sleep_chunk_ms);
+                std::this_thread::sleep_for(std::chrono::milliseconds(current_sleep));
+                remaining_sleep -= current_sleep;
+            }
+            if (cancelled_during_sleep) {
+                if (log_backoff) {
+                    std::cerr << "[BACKOFF] Request cancelled during retry delay\n";
+                }
+                break; // Loop will terminate, checking token at start of next iteration or handling here?
+                // Actually we need to return or ensure loop breaks.
+                // Let's rely on next loop iteration check OR break here.
+                // Since we break here, we go to "if (attempt < ...)" else block or loop end.
+                // Simpler to just return fake response here or break to let next iteration check catch it?
+                // Let's break and ensure `resp` reflects cancellation or relies on caller check.
+                // Since we break, we won't retry. `resp` holds the *failed* response from previous attempt.
+                // This allows caller to see the last error, BUT `cancellation_token` status is the real reason.
+                break;
+            }
+
         } else {
             if (log_backoff) {
                 std::cerr << "[BACKOFF] Request failed after " << attempt << " attempt(s)";

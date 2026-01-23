@@ -86,13 +86,16 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
         std::map<std::string, std::string> hdr{{"Content-Type", "application/json"},
                                                {"x-goog-api-key", api_key_}};
         maybeLogRequest("POST", url, hdr);
-        cpr::Response cpr_response = sendWithRetries(rs, [&]() {
-            return cpr::Post(cpr::Url{url},
-                             cpr::Header{hdr.begin(), hdr.end()},
-                             cpr::Body{payload.dump()},
-                             cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
-                             cpr::VerifySsl{verify_ssl});
-        });
+        cpr::Response cpr_response = sendWithRetries(
+            rs,
+            [&]() {
+                return cpr::Post(cpr::Url{url},
+                                 cpr::Header{hdr.begin(), hdr.end()},
+                                 cpr::Body{payload.dump()},
+                                 cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
+                                 cpr::VerifySsl{verify_ssl});
+            },
+            options);
 
         response.status_code = static_cast<int>(cpr_response.status_code);
 

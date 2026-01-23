@@ -137,7 +137,8 @@ void LLMEngineAPI::OpenAICompatibleClient::sendRequestStream(
     std::string_view prompt,
     const nlohmann::json& input,
     const nlohmann::json& params,
-    std::function<void(std::string_view)> callback) {
+    std::function<void(std::string_view)> callback,
+    const ::LLMEngine::RequestOptions& options) {
     // Build messages array using shared helper
     const nlohmann::json messages = ChatMessageBuilder::buildMessages(prompt, input);
 
@@ -162,5 +163,7 @@ void LLMEngineAPI::OpenAICompatibleClient::sendRequestStream(
         [buffer, callback](std::string_view chunk) {
             OpenAICompatibleClient::parseOpenAIStreamChunk(chunk, *buffer, callback);
         },
+        options,
+        /*exponential_retry=*/true,
         config_.get());
 }

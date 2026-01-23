@@ -10,6 +10,7 @@
 #include "ChatCompletionRequestHelper.hpp"
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Constants.hpp"
+#include "LLMEngine/RequestOptions.hpp"
 
 #include <map>
 #include <nlohmann/json.hpp>
@@ -95,7 +96,8 @@ class OpenAICompatibleClient {
     void sendRequestStream(std::string_view prompt,
                            const nlohmann::json& input,
                            const nlohmann::json& params,
-                           std::function<void(std::string_view)> callback);
+                           std::function<void(std::string_view)> callback,
+                           const ::LLMEngine::RequestOptions& options = {});
 
     /**
      * @brief Get default parameters (for use by wrapper classes).

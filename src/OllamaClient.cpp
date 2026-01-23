@@ -76,13 +76,16 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                                          int timeout_seconds) -> cpr::Response {
             std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}};
             maybeLogRequest("POST", url, hdr);
-            return sendWithRetries(rs, [&, verify_ssl]() {
-                return cpr::Post(cpr::Url{url},
-                                 cpr::Header{hdr.begin(), hdr.end()},
-                                 cpr::Body{payload.dump()},
-                                 cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
-                                 cpr::VerifySsl{verify_ssl});
-            });
+            return sendWithRetries(
+                rs,
+                [&, verify_ssl]() {
+                    return cpr::Post(cpr::Url{url},
+                                     cpr::Header{hdr.begin(), hdr.end()},
+                                     cpr::Body{payload.dump()},
+                                     cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
+                                     cpr::VerifySsl{verify_ssl});
+                },
+                options);
         };
 
         auto set_error_from_http = [&](APIResponse& out, const cpr::Response& r) {
