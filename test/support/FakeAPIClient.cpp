@@ -20,7 +20,10 @@ void FakeAPIClient::setNextResponse(const APIResponse& response) {
 APIResponse FakeAPIClient::sendRequest(std::string_view prompt,
                                        const nlohmann::json& input,
                                        const nlohmann::json& params,
-                                       const ::LLMEngine::RequestOptions& /*options*/) const {
+                                       const ::LLMEngine::RequestOptions& options) const {
+    last_options_ = options;
+    last_input_ = input;
+    last_prompt_ = std::string(prompt);
     if (has_custom_response_) {
         has_custom_response_ = false;
         return next_response_;
@@ -47,8 +50,11 @@ void FakeAPIClient::sendRequestStream(std::string_view prompt,
                                       const nlohmann::json& input,
                                       const nlohmann::json& params,
                                       std::function<void(std::string_view)> callback,
-                                      const ::LLMEngine::RequestOptions& /*options*/) const {
-    (void)input;
+                                      const ::LLMEngine::RequestOptions& options) const {
+    last_options_ = options;
+    last_input_ = input;
+    last_prompt_ = std::string(prompt);
+
     (void)params;
 
     if (has_custom_stream_) {

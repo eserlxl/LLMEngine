@@ -427,12 +427,18 @@ target_link_libraries(test_result_extensions PRIVATE LLMEngine llmengine::compil
 apply_test_sanitizer_flags(test_result_extensions)
 
 add_executable(test_new_features_iter1 test_new_features_iter1.cpp)
-target_link_libraries(test_new_features_iter1 PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+target_link_libraries(test_new_features_iter1 PRIVATE LLMEngine llmengine::compile_options test_support_fake nlohmann_json::nlohmann_json)
 apply_test_sanitizer_flags(test_new_features_iter1)
 
 add_executable(test_async_streaming_iter2 test_async_streaming_iter2.cpp)
 target_link_libraries(test_async_streaming_iter2 PRIVATE LLMEngine llmengine::compile_options test_support_fake nlohmann_json::nlohmann_json)
 apply_test_sanitizer_flags(test_async_streaming_iter2)
+
+# New tests (Phase 3 - Iteration 2 features)
+add_executable(test_features_iter2 test_features_iter2.cpp)
+target_link_libraries(test_features_iter2 PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json cpr::cpr)
+target_include_directories(test_features_iter2 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+apply_test_sanitizer_flags(test_features_iter2)
 
 
 
@@ -606,6 +612,7 @@ if (BUILD_TESTING)
   add_test(NAME test_result_extensions COMMAND test_result_extensions)
   add_test(NAME test_new_features_iter1 COMMAND test_new_features_iter1)
   add_test(NAME test_async_streaming_iter2 COMMAND test_async_streaming_iter2)
+  add_test(NAME test_features_iter2 COMMAND test_features_iter2)
 
   
   # Create a custom target that depends on all test executables
@@ -636,6 +643,7 @@ if (BUILD_TESTING)
       test_result_extensions
       test_new_features_iter1
       test_async_streaming_iter2
+      test_features_iter2
 
     COMMENT "Building all test executables"
   )

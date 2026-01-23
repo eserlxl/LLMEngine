@@ -10,6 +10,7 @@
 #include "LLMEngine/LLMEngineExport.hpp"
 
 #include <string>
+#include <vector>
 
 namespace LLMEngine {
 
@@ -62,6 +63,17 @@ struct LLMENGINE_EXPORT AnalysisResult {
                    || errorCode == LLMEngineErrorCode::Timeout
                    || errorCode == LLMEngineErrorCode::Server
                    || errorCode == LLMEngineErrorCode::RateLimited);
+    }
+
+    struct ToolCall {
+        std::string id;
+        std::string name;
+        std::string arguments;
+    };
+    std::vector<ToolCall> tool_calls;
+
+    [[nodiscard]] bool hasToolCalls() const {
+        return !tool_calls.empty();
     }
 };
 

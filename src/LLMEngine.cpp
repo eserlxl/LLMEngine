@@ -446,7 +446,8 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                       .errorMessage = "Internal Error",
                                       .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
                                       .usage = {},
-                                      .errorCode = LLMEngineErrorCode::Unknown};
+                                      .errorCode = LLMEngineErrorCode::Unknown,
+                                      .tool_calls = {}};
             }
 
             return ResponseHandler::handle(api_response,
@@ -488,6 +489,151 @@ void LLMEngine::analyzeStream(std::string_view prompt,
         }
         state_->api_client_->sendRequestStream(
             ctx.fullPrompt, input, ctx.finalParams, wrapped_callback);
+        callback("", true);
+    } else {
+        if (state_->logger_) {
+            state_->logger_->log(LogLevel::Error, "API client not initialized for streaming.");
+        }
+        callback("Error: API client/Executor not initialized", true);
+    }
+}
+
+std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
+                                                    const nlohmann::json& input,
+                                                    std::string_view analysis_type,
+                                                    const RequestOptions& options) {
+    // Copy shared state pointer
+    std::shared_ptr<EngineState> state = state_;
+
+    // Default mode/instruction for options-based overload
+    std::string mode = "chat";
+    bool prepend_terse_instruction = true;
+
+    return std::async(
+        std::launch::async,
+        [state /* captured shared state */,
+         prompt = std::string(prompt),
+         input = input,
+         analysis_type = std::string(analysis_type),
+         mode,
+         prepend_terse_instruction,
+         options]() -> AnalysisResult {
+            struct StateAdapter : public IModelContext {
+                std::shared_ptr<EngineState> s;
+                StateAdapter(std::shared_ptr<EngineState> st) : s(st) {}
+                std::string getTempDirectory() const override {
+                    return s->tmp_dir_;
+                }
+                std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override {
+                    return s->terse_prompt_builder_;
+                }
+                std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override {
+                    return s->passthrough_prompt_builder_;
+                }
+                const nlohmann::json& getModelParams() const override {
+                    return s->model_params_;
+                }
+                bool areDebugFilesEnabled() const override {
+                    if (!s->debug_)
+                        return false;
+                    if (s->debug_files_policy_)
+                        return s->debug_files_policy_();
+                    return !s->disable_debug_files_env_cached_;
+                }
+                std::shared_ptr<IArtifactSink> getArtifactSink() const override {
+                    return s->artifact_sink_;
+                }
+                int getLogRetentionHours() const override {
+                    return s->log_retention_hours_;
+                }
+                std::shared_ptr<Logger> getLogger() const override {
+                    return s->logger_;
+                }
+                void prepareTempDirectory() override {
+                    s->ensureSecureTmpDir();
+                }
+            };
+
+            StateAdapter adapter(state);
+            state->ensureSecureTmpDir();
+
+            RequestContext ctx = RequestContextBuilder::build(
+                adapter, prompt, input, analysis_type, mode, prepend_terse_instruction);
+
+            // Run Interceptors (onRequest)
+            for (const auto& interceptor : state->interceptors_) {
+                interceptor->onRequest(ctx);
+            }
+
+            LLMAPI::APIResponse api_response;
+            if (state->request_executor_) {
+                api_response = state->request_executor_->execute(
+                    state->api_client_.get(), ctx.fullPrompt, input, ctx.finalParams, options);
+            } else {
+                AnalysisResult errResult{.success = false,
+                                         .think = "",
+                                         .content = "",
+                                         .finishReason = "",
+                                         .errorMessage = "Internal Error",
+                                         .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
+                                         .usage = {},
+                                         .errorCode = LLMEngineErrorCode::Unknown,
+                                         .tool_calls = {}};
+                for (const auto& interceptor : state->interceptors_) {
+                    interceptor->onResponse(errResult);
+                }
+                return errResult;
+            }
+
+            auto result = ResponseHandler::handle(api_response,
+                                                  ctx.debugManager.get(),
+                                                  ctx.requestTmpDir,
+                                                  analysis_type,
+                                                  ctx.writeDebugFiles,
+                                                  state->logger_.get());
+
+            // Run Interceptors (onResponse)
+            for (const auto& interceptor : state->interceptors_) {
+                interceptor->onResponse(result);
+            }
+            return result;
+        });
+}
+
+void LLMEngine::analyzeStream(std::string_view prompt,
+                              const nlohmann::json& input,
+                              std::string_view analysis_type,
+                              const RequestOptions& options,
+                              std::function<void(std::string_view, bool)> callback) {
+    state_->ensureSecureTmpDir();
+
+    std::string mode = "chat";
+    bool prepend_terse_instruction = true;
+
+    RequestContext ctx = RequestContextBuilder::build(static_cast<IModelContext&>(*this),
+                                                      prompt,
+                                                      input,
+                                                      analysis_type,
+                                                      mode,
+                                                      prepend_terse_instruction);
+
+    auto wrapped_callback = [callback](std::string_view chunk) { callback(chunk, false); };
+
+    if (state_->request_executor_) {
+        state_->request_executor_->executeStream(state_->api_client_.get(),
+                                                 ctx.fullPrompt,
+                                                 input,
+                                                 ctx.finalParams,
+                                                 wrapped_callback,
+                                                 options);
+        callback("", true);
+    } else if (state_->api_client_) {
+        if (state_->logger_) {
+            state_->logger_->log(LogLevel::Warn,
+                                 "Request executor not set, falling back to direct client usage.");
+        }
+        state_->api_client_->sendRequestStream(
+            ctx.fullPrompt, input, ctx.finalParams, wrapped_callback, options);
         callback("", true);
     } else {
         if (state_->logger_) {

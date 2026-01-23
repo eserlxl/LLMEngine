@@ -51,6 +51,22 @@ constexpr std::string_view QWEN_API_KEY = "QWEN_API_KEY";
 constexpr std::string_view OPENAI_API_KEY = "OPENAI_API_KEY";
 constexpr std::string_view ANTHROPIC_API_KEY = "ANTHROPIC_API_KEY";
 constexpr std::string_view GEMINI_API_KEY = "GEMINI_API_KEY";
+
+// Base URLs
+constexpr std::string_view OLLAMA_HOST = "OLLAMA_HOST"; // Standard Ollama env var
+constexpr std::string_view OPENAI_BASE_URL = "OPENAI_BASE_URL";
+constexpr std::string_view QWEN_BASE_URL = "QWEN_BASE_URL";           // Not standard but useful
+constexpr std::string_view ANTHROPIC_BASE_URL = "ANTHROPIC_BASE_URL"; // Not standard but useful
+constexpr std::string_view GEMINI_BASE_URL = "GEMINI_BASE_URL";       // Not standard but useful
+
+// Models
+constexpr std::string_view DEFAULT_MODEL = "DEFAULT_MODEL"; // Global override
+constexpr std::string_view OLLAMA_MODEL = "OLLAMA_MODEL";
+constexpr std::string_view OPENAI_MODEL = "OPENAI_MODEL";
+constexpr std::string_view QWEN_MODEL = "QWEN_MODEL";
+constexpr std::string_view ANTHROPIC_MODEL = "ANTHROPIC_MODEL";
+constexpr std::string_view GEMINI_MODEL = "GEMINI_MODEL";
+
 constexpr std::string_view DISABLE_DEBUG_FILES = "LLMENGINE_DISABLE_DEBUG_FILES";
 constexpr std::string_view LOG_REQUESTS = "LLMENGINE_LOG_REQUESTS";
 } // namespace EnvVars

@@ -108,10 +108,40 @@ class LLMENGINE_EXPORT ProviderBootstrap {
      * @param logger Optional logger for warnings.
      * @return Resolved API key (may be empty for Ollama).
      */
+    /**
+     * @brief Resolve API key with priority: env var → param → config.
+     *
+     * This method implements the credential resolution priority:
+     * 1. Environment variable (highest priority, most secure)
+     * 2. Constructor parameter (for testing/development)
+     * 3. Configuration file (lowest priority, logs warning)
+     *
+     * @param provider_type Provider type to determine environment variable name.
+     * @param api_key_from_param API key from constructor parameter.
+     * @param api_key_from_config API key from configuration file.
+     * @param logger Optional logger for warnings.
+     * @return Resolved API key (may be empty for Ollama).
+     */
     static SecureString resolveApiKey(::LLMEngineAPI::ProviderType provider_type,
                                       std::string_view api_key_from_param,
                                       std::string_view api_key_from_config,
                                       Logger* logger = nullptr);
+
+    /**
+     * @brief Resolve Base URL with priority: env var → param → config → default.
+     */
+    static std::string resolveBaseUrl(::LLMEngineAPI::ProviderType provider_type,
+                                      std::string_view base_url_from_param,
+                                      std::string_view base_url_from_config,
+                                      Logger* logger = nullptr);
+
+    /**
+     * @brief Resolve Model with priority: env var → param → config → default.
+     */
+    static std::string resolveModel(::LLMEngineAPI::ProviderType provider_type,
+                                    std::string_view model_from_param,
+                                    std::string_view model_from_config,
+                                    Logger* logger = nullptr);
 
     /**
      * @brief Get environment variable name for a provider's API key.
@@ -119,7 +149,23 @@ class LLMENGINE_EXPORT ProviderBootstrap {
      * @param provider_type Provider type.
      * @return Environment variable name, or empty string if provider doesn't use API keys.
      */
+    /**
+     * @brief Get environment variable name for a provider's API key.
+     *
+     * @param provider_type Provider type.
+     * @return Environment variable name, or empty string if provider doesn't use API keys.
+     */
     static std::string getApiKeyEnvVarName(::LLMEngineAPI::ProviderType provider_type);
+
+    /**
+     * @brief Get environment variable name for a provider's Base URL.
+     */
+    static std::string getBaseUrlEnvVarName(::LLMEngineAPI::ProviderType provider_type);
+
+    /**
+     * @brief Get environment variable name for a provider's Model.
+     */
+    static std::string getModelEnvVarName(::LLMEngineAPI::ProviderType provider_type);
 
   private:
     ProviderBootstrap() = delete; // Static class, no instances

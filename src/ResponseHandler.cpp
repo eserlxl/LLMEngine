@@ -29,7 +29,9 @@ static LLMEngineErrorCode classifyErrorCode(LLMEngineErrorCode api_error, int st
         case LLMEngineErrorCode::Unknown:
         default:
             // Classify based on status code if error code is Unknown
-            if (HttpStatus::isClientError(status_code)) {
+            if (status_code == HttpStatus::TOO_MANY_REQUESTS) {
+                return LLMEngineErrorCode::RateLimited;
+            } else if (HttpStatus::isClientError(status_code)) {
                 return LLMEngineErrorCode::Client;
             } else if (HttpStatus::isServerError(status_code)) {
                 return LLMEngineErrorCode::Server;
@@ -38,6 +40,9 @@ static LLMEngineErrorCode classifyErrorCode(LLMEngineErrorCode api_error, int st
     }
 
     // If error code is None but success is false, classify by status code
+    if (status_code == HttpStatus::TOO_MANY_REQUESTS) {
+        return LLMEngineErrorCode::RateLimited;
+    }
     if (HttpStatus::isClientError(status_code)) {
         if (status_code == HttpStatus::UNAUTHORIZED || status_code == HttpStatus::FORBIDDEN) {
             return LLMEngineErrorCode::Auth;
@@ -104,10 +109,12 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
         AnalysisResult result{.success = false,
                               .think = "",
                               .content = "",
+                              .finishReason = "",
                               .errorMessage = enhanced_error,
                               .statusCode = api_response.status_code,
                               .usage = api_response.usage,
-                              .errorCode = error_code};
+                              .errorCode = error_code,
+                              .tool_calls = {}};
         return result;
     }
 
@@ -131,10 +138,46 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
     AnalysisResult result{.success = true,
                           .think = think_section,
                           .content = remaining_section,
+                          .finishReason = api_response.finish_reason,
                           .errorMessage = "",
                           .statusCode = api_response.status_code,
                           .usage = api_response.usage,
-                          .errorCode = LLMEngineErrorCode::None};
+                          .errorCode = LLMEngineErrorCode::None,
+                          .tool_calls = {}};
+
+    // Extract tool calls if present in raw_response
+    // Logic: Look for "choices"[0]["message"]["tool_calls"]
+    // Note: This relies on provider implementations populating raw_response with standard structure
+    // or specific logic. Currently OpenAICompatibleClient does this.
+    try {
+        const auto& raw = api_response.raw_response;
+        if (raw.contains("choices") && raw["choices"].is_array() && !raw["choices"].empty()) {
+            const auto& choice = raw["choices"][0];
+            if (choice.contains("message") && choice["message"].contains("tool_calls")) {
+                const auto& tools = choice["message"]["tool_calls"];
+                if (tools.is_array()) {
+                    for (const auto& tool : tools) {
+                        AnalysisResult::ToolCall tc;
+                        if (tool.contains("id"))
+                            tc.id = tool["id"].get<std::string>();
+                        if (tool.contains("function")) {
+                            const auto& fn = tool["function"];
+                            if (fn.contains("name"))
+                                tc.name = fn["name"].get<std::string>();
+                            if (fn.contains("arguments"))
+                                tc.arguments = fn["arguments"].get<std::string>();
+                        }
+                        result.tool_calls.push_back(tc);
+                    }
+                }
+            }
+        }
+    } catch (...) {
+        // Ignore parsing errors for optional tool calls
+        RequestLogger::logSafe(
+            logger, LogLevel::Warn, "Failed to parse tool calls from raw response");
+    }
+
     return result;
 }
 

@@ -28,20 +28,46 @@ struct ChatMessageBuilder {
     static nlohmann::json buildMessages(std::string_view prompt, const nlohmann::json& input) {
         nlohmann::json messages = nlohmann::json::array();
 
-        // Add system message if input contains system prompt
-        if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))) {
-            const auto& sp = input.at(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT));
-            if (sp.is_string()) {
-                messages.push_back({{"role", "system"}, {"content", sp.get<std::string>()}});
-            } else if (sp.is_number() || sp.is_boolean()) {
-                messages.push_back({{"role", "system"}, {"content", sp.dump()}});
-            } else {
-                // Ignore non-string non-scalar system_prompt to avoid exceptions
+        // 1. Load history if present
+        if (input.contains("messages") && input["messages"].is_array()) {
+            messages = input["messages"];
+        } else {
+            // 2. Legacy: Add system message if input contains system prompt and no history
+            if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))) {
+                const auto& sp =
+                    input.at(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT));
+                if (sp.is_string()) {
+                    messages.push_back({{"role", "system"}, {"content", sp.get<std::string>()}});
+                } else if (sp.is_number() || sp.is_boolean()) {
+                    messages.push_back({{"role", "system"}, {"content", sp.dump()}});
+                }
             }
         }
 
-        // Add user message
-        messages.push_back({{"role", "user"}, {"content", prompt}});
+        // 3. Construct user message content (Text or Multi-modal)
+        nlohmann::json user_content;
+
+        // check for images in input
+        if (input.contains("images") && input["images"].is_array() && !input["images"].empty()) {
+            // Multi-modal format
+            user_content = nlohmann::json::array();
+            // Add text part
+            user_content.push_back({{"type", "text"}, {"text", prompt}});
+
+            // Add image parts
+            for (const auto& img : input["images"]) {
+                if (img.is_string()) {
+                    user_content.push_back(
+                        {{"type", "image_url"}, {"image_url", {{"url", img.get<std::string>()}}}});
+                }
+            }
+        } else {
+            // Simple text format
+            user_content = prompt;
+        }
+
+        // 4. Append user message
+        messages.push_back({{"role", "user"}, {"content", user_content}});
 
         return messages;
     }

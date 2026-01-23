@@ -1,86 +1,145 @@
+#include "../support/FakeAPIClient.hpp" // Relative path to support
+#include "LLMEngine/APIClient.hpp"      // For RequestOptions
 #include "LLMEngine/AnalysisInput.hpp"
 #include "LLMEngine/AnalysisResult.hpp"
 #include "LLMEngine/LLMEngine.hpp"
+
 #include <cassert>
-#include <chrono>
+#include <future>
 #include <iostream>
-#include <nlohmann/json.hpp>
 #include <thread>
 #include <vector>
 
 using namespace LLMEngine;
+using namespace LLMEngineAPI;
 
-// Simple Mock Interceptor
-class TestInterceptor : public LLMEngine::IInterceptor {
-  public:
-    int requestCount = 0;
-    int responseCount = 0;
+void test_analysis_input_messages() {
+    std::cout << "Running test_analysis_input_messages..." << std::endl;
 
-    void onRequest(RequestContext& ctx) override {
-        requestCount++;
-        // Modify prompt to verify modification works
-        ctx.fullPrompt += " [INTERCEPTED]";
-    }
+    auto input = AnalysisInput::builder()
+                     .withMessage("system", "You are a helper.")
+                     .withMessage("user", "Hello");
 
-    void onResponse(AnalysisResult& result) override {
-        responseCount++;
-        // Verify finishReason is accessible
-        if (result.success) {
-            // Check something unique
-        }
-    }
-};
+    nlohmann::json json = input.toJson();
 
-void test_analysis_input_schema() {
-    std::cout << "Running test_analysis_input_schema..." << std::endl;
-    AnalysisInput input;
-    nlohmann::json schema = {{"type", "json_object"}};
-    input.withResponseFormat(schema);
+    assert(json.contains("messages"));
+    assert(json["messages"].is_array());
+    assert(json["messages"].size() == 2);
+    assert(json["messages"][0]["role"] == "system");
+    assert(json["messages"][0]["content"] == "You are a helper.");
+    assert(json["messages"][1]["role"] == "user");
+    assert(json["messages"][1]["content"] == "Hello");
 
-    nlohmann::json j = input.toJson();
-    assert(j.contains("response_format"));
-    assert(j["response_format"] == schema);
     std::cout << "PASS" << std::endl;
 }
 
-void test_batch_processing() {
-    std::cout << "Running test_batch_processing..." << std::endl;
-    // Since we don't have a full mock setup convenient here without linking test_support_fake properly
-    // and setting up the engine with it, we effectively test compilation and basic logic.
-    // Ideally we'd run this with a FakeAPIClient.
-    // For now, we assume if it links and runs empty batch, the API exists.
+void test_tool_call_extraction() {
+    std::cout << "Running test_tool_call_extraction..." << std::endl;
 
-    // We can try to construct an engine (requires config?)
-    // This test might fail if it tries to load config.json from default location.
-    // We will skip runtime execution if complex setup is needed, but we wrote the code to support it.
-    // Let's just create vector of inputs and verify Compilation of the call.
+    // Setup Fake Client
+    auto clientPtr = std::make_unique<FakeAPIClient>();
+    FakeAPIClient* fakeClient = clientPtr.get();
 
-    std::vector<AnalysisInput> inputs;
-    inputs.push_back(AnalysisInput().withUserMessage("test1"));
-    inputs.push_back(AnalysisInput().withUserMessage("test2"));
+    LLMEngine engine(std::move(clientPtr), {}, 24, false, nullptr);
 
-    // To run this, we need an LLMEngine instance.
-    // LLMEngine engine(config?);
-    // engine.analyzeBatch(inputs, "test");
+    // Setup Mock Response with Tool Calls
+    APIResponse mockResponse;
+    mockResponse.success = true;
+    mockResponse.status_code = 200;
+    mockResponse.content = ""; // usually empty for tool calls? or partial.
+    mockResponse.finish_reason = "tool_calls";
 
-    // Since unit tests usually use mocks, we'll rely on the fact that this file COMPILES
-    // to verify the API signature.
-    std::cout << "PASS (Compilation check)" << std::endl;
+    // Construct raw response mirroring OpenAI format
+    mockResponse.raw_response = {
+        {"choices",
+         {{{"message",
+            {{"content", nullptr},
+             {"tool_calls",
+              {{{"id", "call_123"},
+                {"type", "function"},
+                {"function",
+                 {{"name", "get_weather"}, {"arguments", "{\"location\": \"Paris\"}"}}}}}}}},
+           {"finish_reason", "tool_calls"}}}}};
+
+    fakeClient->setNextResponse(mockResponse);
+
+    AnalysisInput input;
+    input.withUserMessage("What's the weather in Paris?");
+
+    AnalysisResult result = engine.analyze(input, "test");
+
+    assert(result.success);
+    assert(result.hasToolCalls());
+    assert(result.tool_calls.size() == 1);
+    assert(result.tool_calls[0].id == "call_123");
+    assert(result.tool_calls[0].name == "get_weather");
+    assert(result.tool_calls[0].arguments == "{\"location\": \"Paris\"}");
+    assert(result.finishReason == "tool_calls");
+
+    std::cout << "PASS" << std::endl;
 }
 
-void test_interceptors() {
-    std::cout << "Running test_interceptors..." << std::endl;
-    // Check if IInterceptor abstract class is usable
-    auto interceptor = std::make_shared<TestInterceptor>();
-    assert(interceptor->requestCount == 0);
-    // We can't easily trigger engine flow without full setup.
-    // But we can verify `addInterceptor` exists on the class if we had an instance.
-    std::cout << "PASS (Class definition check)" << std::endl;
+void test_async_options() {
+    std::cout << "Running test_async_options..." << std::endl;
+
+    auto clientPtr = std::make_unique<FakeAPIClient>();
+    FakeAPIClient* fakeClient = clientPtr.get();
+    LLMEngine engine(std::move(clientPtr), {}, 24, false, nullptr);
+
+    RequestOptions options;
+    options.timeout_ms = 999;
+    options.max_retries = 3;
+
+    AnalysisInput input;
+    input.withUserMessage("hi");
+
+    auto future = engine.analyzeAsync("hi", input, "test", options);
+    auto result = future.get();
+
+    assert(result.success);
+    assert(fakeClient->last_options_.timeout_ms.has_value());
+    assert(*fakeClient->last_options_.timeout_ms == 999);
+    assert(*fakeClient->last_options_.max_retries == 3);
+
+    std::cout << "PASS" << std::endl;
+}
+
+void test_stream_options() {
+    std::cout << "Running test_stream_options..." << std::endl;
+
+    auto clientPtr = std::make_unique<FakeAPIClient>();
+    FakeAPIClient* fakeClient = clientPtr.get();
+    LLMEngine engine(std::move(clientPtr), {}, 24, false, nullptr);
+
+    RequestOptions options;
+    options.timeout_ms = 888;
+
+    AnalysisInput input;
+    input.withUserMessage("hi");
+
+    bool called = false;
+    engine.analyzeStream("hi", input, "test", options, [&](std::string_view, bool done) {
+        if (done)
+            called = true;
+    });
+
+    assert(called);
+    assert(fakeClient->last_options_.timeout_ms.has_value());
+    assert(*fakeClient->last_options_.timeout_ms == 888);
+
+    std::cout << "PASS" << std::endl;
 }
 
 int main() {
-    test_analysis_input_schema();
-    test_batch_processing();
-    test_interceptors();
+    try {
+        test_analysis_input_messages();
+        test_tool_call_extraction();
+        test_async_options();
+        test_stream_options();
+        std::cout << "All integration tests passed." << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "Test failed with exception: " << e.what() << std::endl;
+        return 1;
+    }
     return 0;
 }

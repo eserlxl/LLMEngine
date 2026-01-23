@@ -43,6 +43,11 @@ class FakeAPIClient : public APIClient {
     mutable APIResponse next_response_{};
     mutable bool has_custom_stream_ = false;
     mutable std::vector<std::string> next_stream_chunks_;
+
+    // Verification fields
+    mutable ::LLMEngine::RequestOptions last_options_;
+    mutable nlohmann::json last_input_;
+    mutable std::string last_prompt_;
 };
 
 } // namespace LLMEngineAPI

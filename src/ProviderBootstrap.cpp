@@ -72,17 +72,17 @@ ProviderBootstrap::BootstrapResult ProviderBootstrap::bootstrap(
     result.api_key = resolveApiKey(result.provider_type, api_key, api_key_from_config, logger);
 
     // Set model
-    if (std::string(model).empty()) {
-        result.model = provider_config.value(std::string(Constants::JsonKeys::DEFAULT_MODEL), "");
-    } else {
-        result.model = std::string(model);
-    }
+    std::string model_from_config =
+        provider_config.value(std::string(Constants::JsonKeys::DEFAULT_MODEL), "");
+    result.model = resolveModel(result.provider_type, model, model_from_config, logger);
 
-    // Set Ollama URL if using Ollama
-    if (result.provider_type == ::LLMEngineAPI::ProviderType::OLLAMA) {
-        result.ollama_url = provider_config.value(std::string(Constants::JsonKeys::BASE_URL),
-                                                  std::string(Constants::DefaultUrls::OLLAMA_BASE));
-    }
+    // Set Ollama URL if using Ollama (or generic Base URL)
+    // For now, only Ollama and OpenAI-likes really use BaseURL configuration dynamically
+    std::string base_url_from_config =
+        provider_config.value(std::string(Constants::JsonKeys::BASE_URL), "");
+
+    // Always resolve base URL (e.g. for OpenAI compatible endpoints or Ollama)
+    result.ollama_url = resolveBaseUrl(result.provider_type, "", base_url_from_config, logger);
 
     return result;
 }
@@ -119,6 +119,94 @@ SecureString ProviderBootstrap::resolveApiKey(::LLMEngineAPI::ProviderType provi
     return SecureString(std::move(api_key));
 }
 
+std::string ProviderBootstrap::resolveBaseUrl(::LLMEngineAPI::ProviderType provider_type,
+                                              std::string_view base_url_from_param,
+                                              std::string_view base_url_from_config,
+                                              Logger* /*logger*/) {
+    std::string env_var_name = getBaseUrlEnvVarName(provider_type);
+    const char* env_val = nullptr;
+    if (!env_var_name.empty()) {
+        env_val = std::getenv(env_var_name.c_str());
+    }
+
+    // 1. Env Var
+    if (env_val && strlen(env_val) > 0) {
+        return std::string(env_val);
+    }
+    // 2. Param
+    if (!base_url_from_param.empty()) {
+        return std::string(base_url_from_param);
+    }
+    // 3. Config
+    if (!base_url_from_config.empty()) {
+        return std::string(base_url_from_config);
+    }
+
+    // 4. Default
+    switch (provider_type) {
+        case ::LLMEngineAPI::ProviderType::OLLAMA:
+            return std::string(Constants::DefaultUrls::OLLAMA_BASE);
+        case ::LLMEngineAPI::ProviderType::QWEN:
+            return std::string(Constants::DefaultUrls::QWEN_BASE);
+        case ::LLMEngineAPI::ProviderType::OPENAI:
+            return std::string(Constants::DefaultUrls::OPENAI_BASE);
+        case ::LLMEngineAPI::ProviderType::ANTHROPIC:
+            return std::string(Constants::DefaultUrls::ANTHROPIC_BASE);
+        case ::LLMEngineAPI::ProviderType::GEMINI:
+            return std::string(Constants::DefaultUrls::GEMINI_BASE);
+        default:
+            return "";
+    }
+}
+
+std::string ProviderBootstrap::resolveModel(::LLMEngineAPI::ProviderType provider_type,
+                                            std::string_view model_from_param,
+                                            std::string_view model_from_config,
+                                            Logger* /*logger*/) {
+    std::string env_var_name = getModelEnvVarName(provider_type);
+    const char* env_val = nullptr;
+    if (!env_var_name.empty()) {
+        env_val = std::getenv(env_var_name.c_str());
+    }
+
+    // 1. Provider-specific Env Var
+    if (env_val && strlen(env_val) > 0) {
+        return std::string(env_val);
+    }
+
+    // 1b. Global Default Env Var (DEFAULT_MODEL)
+    const std::string env_var = std::string(Constants::EnvVars::DEFAULT_MODEL);
+    const char* global_env = std::getenv(env_var.c_str());
+    if (global_env && strlen(global_env) > 0) {
+        return std::string(global_env);
+    }
+
+    // 2. Param
+    if (!model_from_param.empty()) {
+        return std::string(model_from_param);
+    }
+    // 3. Config
+    if (!model_from_config.empty()) {
+        return std::string(model_from_config);
+    }
+
+    // 4. Default
+    switch (provider_type) {
+        case ::LLMEngineAPI::ProviderType::QWEN:
+            return std::string(Constants::DefaultModels::QWEN);
+        case ::LLMEngineAPI::ProviderType::OPENAI:
+            return std::string(Constants::DefaultModels::OPENAI);
+        case ::LLMEngineAPI::ProviderType::ANTHROPIC:
+            return std::string(Constants::DefaultModels::ANTHROPIC);
+        case ::LLMEngineAPI::ProviderType::GEMINI:
+            return std::string(Constants::DefaultModels::GEMINI);
+        case ::LLMEngineAPI::ProviderType::OLLAMA:
+            return std::string(Constants::DefaultModels::OLLAMA);
+        default:
+            return "";
+    }
+}
+
 std::string ProviderBootstrap::getApiKeyEnvVarName(::LLMEngineAPI::ProviderType provider_type) {
     switch (provider_type) {
         case ::LLMEngineAPI::ProviderType::QWEN:
@@ -130,7 +218,41 @@ std::string ProviderBootstrap::getApiKeyEnvVarName(::LLMEngineAPI::ProviderType 
         case ::LLMEngineAPI::ProviderType::GEMINI:
             return std::string(Constants::EnvVars::GEMINI_API_KEY);
         default:
-            return ""; // Ollama and others don't use API keys
+            return ""; // Ollama doesn't use API keys
+    }
+}
+
+std::string ProviderBootstrap::getBaseUrlEnvVarName(::LLMEngineAPI::ProviderType provider_type) {
+    switch (provider_type) {
+        case ::LLMEngineAPI::ProviderType::OLLAMA:
+            return std::string(Constants::EnvVars::OLLAMA_HOST);
+        case ::LLMEngineAPI::ProviderType::OPENAI:
+            return std::string(Constants::EnvVars::OPENAI_BASE_URL);
+        case ::LLMEngineAPI::ProviderType::QWEN:
+            return std::string(Constants::EnvVars::QWEN_BASE_URL);
+        case ::LLMEngineAPI::ProviderType::ANTHROPIC:
+            return std::string(Constants::EnvVars::ANTHROPIC_BASE_URL);
+        case ::LLMEngineAPI::ProviderType::GEMINI:
+            return std::string(Constants::EnvVars::GEMINI_BASE_URL);
+        default:
+            return "";
+    }
+}
+
+std::string ProviderBootstrap::getModelEnvVarName(::LLMEngineAPI::ProviderType provider_type) {
+    switch (provider_type) {
+        case ::LLMEngineAPI::ProviderType::OLLAMA:
+            return std::string(Constants::EnvVars::OLLAMA_MODEL);
+        case ::LLMEngineAPI::ProviderType::OPENAI:
+            return std::string(Constants::EnvVars::OPENAI_MODEL);
+        case ::LLMEngineAPI::ProviderType::QWEN:
+            return std::string(Constants::EnvVars::QWEN_MODEL);
+        case ::LLMEngineAPI::ProviderType::ANTHROPIC:
+            return std::string(Constants::EnvVars::ANTHROPIC_MODEL);
+        case ::LLMEngineAPI::ProviderType::GEMINI:
+            return std::string(Constants::EnvVars::GEMINI_MODEL);
+        default:
+            return "";
     }
 }
 

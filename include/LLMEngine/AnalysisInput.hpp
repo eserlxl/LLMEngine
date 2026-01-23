@@ -24,11 +24,30 @@ struct LLMENGINE_EXPORT AnalysisInput {
     nlohmann::json tools;
     nlohmann::json tool_choice;
     nlohmann::json response_format;
+
     std::map<std::string, nlohmann::json> extra_fields;
+
+    struct ChatMessage {
+        std::string role;
+        std::string content;
+        std::string name;         // Optional
+        std::string tool_call_id; // Optional
+    };
+    std::vector<ChatMessage> messages;
 
     // Builder Pattern
     static AnalysisInput builder() {
         return AnalysisInput{};
+    }
+
+    AnalysisInput& withMessage(std::string_view role, std::string_view content) {
+        messages.push_back({std::string(role), std::string(content), "", ""});
+        return *this;
+    }
+
+    AnalysisInput& withMessages(const std::vector<ChatMessage>& msgs) {
+        messages.insert(messages.end(), msgs.begin(), msgs.end());
+        return *this;
     }
 
     AnalysisInput& withSystemPrompt(std::string_view prompt) {

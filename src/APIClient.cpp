@@ -75,12 +75,18 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(
     // Extract values from config
     std::string api_key_from_config =
         config.value(std::string(::LLMEngine::Constants::JsonKeys::API_KEY), "");
-    std::string model =
+    std::string model_from_config =
         config.value(std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_MODEL), "");
+    std::string base_url_from_config =
+        config.value(std::string(::LLMEngine::Constants::JsonKeys::BASE_URL), "");
 
-    // Use ProviderBootstrap to resolve API key with proper priority
+    // Use ProviderBootstrap to resolve credentials and config with proper priority
     auto api_key =
         ::LLMEngine::ProviderBootstrap::resolveApiKey(type, "", api_key_from_config, logger);
+    std::string model =
+        ::LLMEngine::ProviderBootstrap::resolveModel(type, "", model_from_config, logger);
+    std::string base_url =
+        ::LLMEngine::ProviderBootstrap::resolveBaseUrl(type, "", base_url_from_config, logger);
 
     // SECURITY: Fail fast if no credentials are available for providers that require them
     // This prevents silent failures in headless or hardened deployments
@@ -97,19 +103,14 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(
 
     // Handle Ollama separately (uses base_url instead of api_key)
     if (type == ProviderType::OLLAMA) {
-        std::string base_url =
-            config.value(std::string(::LLMEngine::Constants::JsonKeys::BASE_URL),
-                         std::string(::LLMEngine::Constants::DefaultUrls::OLLAMA_BASE));
-        if (model.empty()) {
-            model = std::string(::LLMEngine::Constants::DefaultModels::OLLAMA);
-        }
+        // base_url and model are already resolved with defaults by ProviderBootstrap
         auto ptr = std::make_unique<OllamaClient>(base_url, model);
         if (cfg)
             ptr->setConfig(cfg);
         return ptr;
     }
 
-    return createClient(type, api_key.view(), model, "", cfg);
+    return createClient(type, api_key.view(), model, base_url, cfg);
 }
 
 namespace {
