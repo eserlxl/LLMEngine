@@ -26,7 +26,9 @@ OllamaClient::OllamaClient(const std::string& base_url, const std::string& model
 
 APIResponse OllamaClient::sendRequest(std::string_view prompt,
                                       const nlohmann::json& input,
-                                      const nlohmann::json& params) const {
+                                      const nlohmann::json& params,
+                                      const ::LLMEngine::RequestOptions& options) const {
+    (void)options;
     APIResponse response;
     response.success = false;
 

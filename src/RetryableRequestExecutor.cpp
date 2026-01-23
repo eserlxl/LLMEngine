@@ -29,7 +29,8 @@ RetryableRequestExecutor::RetryableRequestExecutor(std::shared_ptr<IRetryStrateg
     const ::LLMEngineAPI::APIClient* api_client,
     const std::string& full_prompt,
     const nlohmann::json& input,
-    const nlohmann::json& final_params) const {
+    const nlohmann::json& final_params,
+    const ::LLMEngine::RequestOptions& options) const {
     if (!api_client) {
         ::LLMEngineAPI::APIResponse error_response;
         error_response.success = false;
@@ -40,14 +41,31 @@ RetryableRequestExecutor::RetryableRequestExecutor(std::shared_ptr<IRetryStrateg
     }
 
     ::LLMEngineAPI::APIResponse response;
-    const int max_attempts = strategy_->getMaxAttempts();
+    const int max_attempts = options.max_retries.value_or(strategy_->getMaxAttempts());
 
     for (int attempt = 1; attempt <= max_attempts; ++attempt) {
+        // Check cancellation
+        if (options.cancellation_token && options.cancellation_token->isCancelled()) {
+            response.success = false;
+            response.error_message = "Request cancelled";
+            response.error_code = LLMEngineErrorCode::Cancelled;
+            return response;
+        }
+
         // Execute request via base executor or directly
         if (base_executor_) {
-            response = base_executor_->execute(api_client, full_prompt, input, final_params);
+            response =
+                base_executor_->execute(api_client, full_prompt, input, final_params, options);
         } else {
-            response = api_client->sendRequest(full_prompt, input, final_params);
+            response = api_client->sendRequest(full_prompt, input, final_params, options);
+        }
+
+        // Check cancellation (post-request)
+        if (options.cancellation_token && options.cancellation_token->isCancelled()) {
+            response.success = false;
+            response.error_message = "Request cancelled";
+            response.error_code = LLMEngineErrorCode::Cancelled;
+            return response;
         }
 
         // Check if request succeeded
@@ -70,7 +88,29 @@ RetryableRequestExecutor::RetryableRequestExecutor(std::shared_ptr<IRetryStrateg
         if (attempt < max_attempts) {
             const int delay_ms = strategy_->getDelayMs(attempt);
             if (delay_ms > 0) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
+                // Check cancellation before sleeping
+                if (options.cancellation_token && options.cancellation_token->isCancelled()) {
+                    response.success = false;
+                    response.error_message = "Request cancelled";
+                    response.error_code = LLMEngineErrorCode::Cancelled;
+                    return response;
+                }
+
+                // Sleep in small chunks to support responsive cancellation?
+                // For now just sleep, or check token?
+                // Ideally wait on condition variable, but token is simple atomic.
+                // Let's just sleep. Better: loop sleep.
+                auto start = std::chrono::steady_clock::now();
+                auto end = start + std::chrono::milliseconds(delay_ms);
+                while (std::chrono::steady_clock::now() < end) {
+                    if (options.cancellation_token && options.cancellation_token->isCancelled()) {
+                        response.success = false;
+                        response.error_message = "Request cancelled";
+                        response.error_code = LLMEngineErrorCode::Cancelled;
+                        return response;
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10)); // 10ms poll
+                }
             }
         }
     }

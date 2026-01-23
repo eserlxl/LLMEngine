@@ -24,7 +24,9 @@ AnthropicClient::AnthropicClient(const std::string& api_key, const std::string& 
 
 APIResponse AnthropicClient::sendRequest(std::string_view prompt,
                                          const nlohmann::json& input,
-                                         const nlohmann::json& params) const {
+                                         const nlohmann::json& params,
+                                         const ::LLMEngine::RequestOptions& options) const {
+    (void)options;
     APIResponse response;
     response.success = false;
 

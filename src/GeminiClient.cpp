@@ -24,7 +24,9 @@ GeminiClient::GeminiClient(const std::string& api_key, const std::string& model)
 
 APIResponse GeminiClient::sendRequest(std::string_view prompt,
                                       const nlohmann::json& input,
-                                      const nlohmann::json& params) const {
+                                      const nlohmann::json& params,
+                                      const ::LLMEngine::RequestOptions& options) const {
+    (void)options;
     APIResponse response;
     response.success = false;
 

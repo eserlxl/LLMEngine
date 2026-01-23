@@ -129,6 +129,44 @@ template <typename T, typename E> class Result {
         return hasValue() ? &v_.value : nullptr;
     }
 
+    /**
+     * @brief Transform the error type if the result holds an error.
+     *
+     * @param f Function that takes E and returns new error type NewE
+     * @return Result<T, NewE>
+     */
+    template <typename F>
+    auto transformError(F&& f) const& -> Result<T, std::invoke_result_t<F, E>> {
+        using NewE = std::invoke_result_t<F, E>;
+        if (hasValue()) {
+            return Result<T, NewE>::ok(value());
+        }
+        return Result<T, NewE>::err(f(error()));
+    }
+
+    template <typename F> auto transformError(F&& f) && -> Result<T, std::invoke_result_t<F, E>> {
+        using NewE = std::invoke_result_t<F, E>;
+        if (hasValue()) {
+            return Result<T, NewE>::ok(std::move(value()));
+        }
+        return Result<T, NewE>::err(f(std::move(error())));
+    }
+
+    // Equality operators
+    bool operator==(const Result& other) const {
+        if (which_ != other.which_) {
+            return false;
+        }
+        if (which_ == 0) {
+            return v_.value == other.v_.value;
+        }
+        return v_.error == other.v_.error;
+    }
+
+    bool operator!=(const Result& other) const {
+        return !(*this == other);
+    }
+
   private:
     template <std::size_t I> struct InPlaceTag {};
 

@@ -418,6 +418,14 @@ add_executable(test_async_stream test_async_stream.cpp)
 target_link_libraries(test_async_stream PRIVATE LLMEngine llmengine::compile_options test_support_fake nlohmann_json::nlohmann_json)
 apply_test_sanitizer_flags(test_async_stream)
 
+add_executable(test_async_lifetime test_async_lifetime.cpp)
+target_link_libraries(test_async_lifetime PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_async_lifetime)
+
+add_executable(test_result_extensions test_result_extensions.cpp)
+target_link_libraries(test_result_extensions PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json)
+apply_test_sanitizer_flags(test_result_extensions)
+
 # ---- Fuzz Testing (optional) -------------------------------------------------
 if (ENABLE_FUZZ)
   # Check if compiler supports libFuzzer
@@ -584,6 +592,8 @@ if (BUILD_TESTING)
   add_test(NAME test_secret_redaction COMMAND test_secret_redaction)
   add_test(NAME test_error_paths COMMAND test_error_paths)
   add_test(NAME test_async_stream COMMAND test_async_stream)
+  add_test(NAME test_async_lifetime COMMAND test_async_lifetime)
+  add_test(NAME test_result_extensions COMMAND test_result_extensions)
   
   # Create a custom target that depends on all test executables
   # This allows building all tests with a single target even when EXCLUDE_FROM_ALL is used
@@ -609,6 +619,8 @@ if (BUILD_TESTING)
       test_secret_redaction
       test_error_paths
       test_async_stream
+      test_async_lifetime
+      test_result_extensions
     COMMENT "Building all test executables"
   )
 endif()

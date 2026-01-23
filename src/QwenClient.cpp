@@ -30,7 +30,9 @@ QwenClient::~QwenClient() = default;
 
 APIResponse QwenClient::sendRequest(std::string_view prompt,
                                     const nlohmann::json& input,
-                                    const nlohmann::json& params) const {
+                                    const nlohmann::json& params,
+                                    const ::LLMEngine::RequestOptions& options) const {
+    (void)options; // TODO: Pass to helper
     // Build messages array using shared helper
     const nlohmann::json messages = ChatMessageBuilder::buildMessages(prompt, input);
 
@@ -55,7 +57,9 @@ APIResponse QwenClient::sendRequest(std::string_view prompt,
 void QwenClient::sendRequestStream(std::string_view prompt,
                                    const nlohmann::json& input,
                                    const nlohmann::json& params,
-                                   std::function<void(std::string_view)> callback) const {
+                                   std::function<void(std::string_view)> callback,
+                                   const ::LLMEngine::RequestOptions& options) const {
+    (void)options; // TODO: Pass to helper
     impl_->sendRequestStream(prompt, input, params, callback);
 }
 

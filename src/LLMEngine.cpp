@@ -15,6 +15,7 @@
 #include "LLMEngine/ProviderBootstrap.hpp"
 #include "LLMEngine/RequestContextBuilder.hpp"
 #include "LLMEngine/ResponseHandler.hpp"
+#include "LLMEngine/SecureString.hpp"
 #include "LLMEngine/TempDirectoryService.hpp"
 
 #include <algorithm>
@@ -28,202 +29,193 @@
 // Namespace aliases to reduce verbosity
 namespace LLM = ::LLMEngine;
 namespace LLMAPI = ::LLMEngineAPI;
-// Note: We keep the full LLMEngine::LLMEngine:: qualification for class methods
-// to avoid ambiguity with the namespace name
-
-// Helper function to initialize common defaults (logger and temp dir provider)
-namespace {
-void initializeDefaults(std::shared_ptr<LLM::Logger>& logger,
-                        std::shared_ptr<LLM::ITempDirProvider>& temp_dir_provider,
-                        const std::shared_ptr<LLM::ITempDirProvider>& provided_temp_dir_provider,
-                        std::string& tmp_dir) {
-    // Initialize logger if not already set
-    if (!logger) {
-        logger = std::make_shared<LLM::DefaultLogger>();
-    }
-
-    // Initialize temp dir provider if not provided
-    if (!temp_dir_provider) {
-        temp_dir_provider = provided_temp_dir_provider
-                                ? provided_temp_dir_provider
-                                : std::make_shared<LLM::DefaultTempDirProvider>();
-    }
-
-    // Set tmp_dir from provider if not already set
-    if (tmp_dir.empty()) {
-        tmp_dir = temp_dir_provider->getTempDir();
-    }
-}
 
 // Helper function to parse LLMENGINE_DISABLE_DEBUG_FILES environment variable
-// Returns true if debug files should be disabled, false otherwise.
-// Parses common boolean representations: "0", "false", "False", "FALSE" enable debug files.
-// Any other non-empty value disables debug files. Empty/unset enables debug files.
+namespace {
 bool parseDisableDebugFilesEnv() {
     const char* env_value = std::getenv("LLMENGINE_DISABLE_DEBUG_FILES");
     if (env_value == nullptr) {
         return false; // Variable not set, enable debug files
     }
-
-    // Empty string means enable debug files
     if (env_value[0] == '\0') {
         return false;
     }
-
-    // Check for explicit "false" values (case-insensitive)
     std::string value(env_value);
-    // Convert to lowercase for comparison
     std::transform(
         value.begin(), value.end(), value.begin(), [](unsigned char c) { return std::tolower(c); });
 
     if (value == "0" || value == "false" || value == "no" || value == "off") {
-        return false; // Explicitly enable debug files
+        return false;
     }
-
-    // Any other value (including "1", "true", "yes", "on") disables debug files
     return true;
 }
 } // namespace
 
-// Dependency injection constructor
-::LLMEngine::LLMEngine::LLMEngine(std::unique_ptr<LLMAPI::APIClient> client,
-                                  const nlohmann::json& model_params,
-                                  int log_retention_hours,
-                                  bool debug,
-                                  const std::shared_ptr<LLM::ITempDirProvider>& temp_dir_provider)
-    : model_params_(model_params), log_retention_hours_(log_retention_hours), debug_(debug),
-      temp_dir_provider_(nullptr), api_client_(std::move(client)),
-      disable_debug_files_env_cached_(parseDisableDebugFilesEnv()) {
-    initializeDefaults(logger_, temp_dir_provider_, temp_dir_provider, tmp_dir_);
-    if (!api_client_) {
+namespace LLMEngine {
+
+// Internal state structure implementation
+struct LLMEngine::EngineState {
+    std::string model_;
+    nlohmann::json model_params_;
+    int log_retention_hours_;
+    bool debug_;
+    std::string tmp_dir_;
+    std::shared_ptr<ITempDirProvider> temp_dir_provider_;
+    bool tmp_dir_verified_ = false;
+
+    std::unique_ptr<LLMAPI::APIClient> api_client_;
+    std::shared_ptr<LLMAPI::IConfigManager> config_manager_;
+
+    std::shared_ptr<IPromptBuilder> terse_prompt_builder_{std::make_shared<TersePromptBuilder>()};
+    std::shared_ptr<IPromptBuilder> passthrough_prompt_builder_{
+        std::make_shared<PassthroughPromptBuilder>()};
+    std::shared_ptr<IRequestExecutor> request_executor_{std::make_shared<DefaultRequestExecutor>()};
+    std::shared_ptr<IArtifactSink> artifact_sink_{std::make_shared<DefaultArtifactSink>()};
+
+    LLMAPI::ProviderType provider_type_;
+    SecureString api_key_{""};
+    std::string ollama_url_;
+    std::shared_ptr<Logger> logger_;
+    std::function<bool()> debug_files_policy_;
+    bool disable_debug_files_env_cached_;
+
+    EngineState(const nlohmann::json& params, int cleanup_hours, bool debug)
+        : model_params_(params), log_retention_hours_(cleanup_hours), debug_(debug),
+          disable_debug_files_env_cached_(parseDisableDebugFilesEnv()) {
+        // Initialize defaults
+        logger_ = std::make_shared<DefaultLogger>();
+        temp_dir_provider_ = std::make_shared<DefaultTempDirProvider>();
+        tmp_dir_ = temp_dir_provider_->getTempDir();
+    }
+
+    void initializeAPIClient() {
+        if (provider_type_ != LLMAPI::ProviderType::OLLAMA) {
+            if (api_key_.empty()) {
+                std::string env_var_name = ProviderBootstrap::getApiKeyEnvVarName(provider_type_);
+                std::string error_msg =
+                    "No API key found for provider "
+                    + LLMAPI::APIClientFactory::providerTypeToString(provider_type_) + ". Set the "
+                    + env_var_name + " environment variable or provide it in the constructor.";
+                if (logger_) {
+                    logger_->log(LogLevel::Error, error_msg);
+                }
+                throw std::runtime_error(error_msg);
+            }
+        }
+
+        if (provider_type_ == LLMAPI::ProviderType::OLLAMA) {
+            api_client_ = LLMAPI::APIClientFactory::createClient(
+                provider_type_, "", model_, ollama_url_, config_manager_);
+        } else {
+            api_client_ = LLMAPI::APIClientFactory::createClient(
+                provider_type_, api_key_.view(), model_, "", config_manager_);
+        }
+
+        if (!api_client_) {
+            std::string provider_name =
+                LLMAPI::APIClientFactory::providerTypeToString(provider_type_);
+            throw std::runtime_error("Failed to create API client: " + provider_name);
+        }
+    }
+
+    void ensureSecureTmpDir() {
+        if (tmp_dir_verified_) {
+            if (TempDirectoryService::isDirectoryValid(tmp_dir_, logger_.get())) {
+                return;
+            }
+            tmp_dir_verified_ = false;
+        }
+
+        auto result = TempDirectoryService::ensureSecureDirectory(tmp_dir_, logger_.get());
+        if (!result.success) {
+            throw std::runtime_error(result.error_message);
+        }
+        tmp_dir_verified_ = true;
+    }
+};
+
+// --- Constructors ---
+
+LLMEngine::LLMEngine(std::unique_ptr<LLMAPI::APIClient> client,
+                     const nlohmann::json& model_params,
+                     int log_retention_hours,
+                     bool debug,
+                     const std::shared_ptr<ITempDirProvider>& temp_dir_provider) {
+    state_ = std::make_shared<EngineState>(model_params, log_retention_hours, debug);
+
+    if (temp_dir_provider) {
+        state_->temp_dir_provider_ = temp_dir_provider;
+        state_->tmp_dir_ = temp_dir_provider->getTempDir();
+    }
+
+    if (!client) {
         throw std::runtime_error("API client must not be null");
     }
-    provider_type_ = api_client_->getProviderType();
+    state_->api_client_ = std::move(client);
+    state_->provider_type_ = state_->api_client_->getProviderType();
 }
 
-// Constructor for API-based providers (direct ProviderType)
-::LLMEngine::LLMEngine::LLMEngine(LLMAPI::ProviderType provider_type,
-                                  std::string_view api_key,
-                                  std::string_view model,
-                                  const nlohmann::json& model_params,
-                                  int log_retention_hours,
-                                  bool debug)
-    : model_params_(model_params), log_retention_hours_(log_retention_hours), debug_(debug),
-      temp_dir_provider_(nullptr), provider_type_(provider_type),
-      disable_debug_files_env_cached_(parseDisableDebugFilesEnv()) {
-    initializeDefaults(logger_, temp_dir_provider_, nullptr, tmp_dir_);
+LLMEngine::LLMEngine(LLMAPI::ProviderType provider_type,
+                     std::string_view api_key,
+                     std::string_view model,
+                     const nlohmann::json& model_params,
+                     int log_retention_hours,
+                     bool debug) {
+    state_ = std::make_shared<EngineState>(model_params, log_retention_hours, debug);
+    state_->provider_type_ = provider_type;
 
     // Resolve API key using ProviderBootstrap (respects environment variables)
-    api_key_ = ProviderBootstrap::resolveApiKey(provider_type, api_key, "", logger_.get());
-    model_ = std::string(model);
+    state_->api_key_ =
+        ProviderBootstrap::resolveApiKey(provider_type, api_key, "", state_->logger_.get());
 
-    // Store config manager for downstream factories
-    config_manager_ = std::shared_ptr<LLMAPI::IConfigManager>(
+    state_->model_ = std::string(model);
+    state_->config_manager_ = std::shared_ptr<LLMAPI::IConfigManager>(
         &LLMAPI::APIConfigManager::getInstance(), [](LLMAPI::IConfigManager*) {});
 
-    initializeAPIClient();
+    state_->initializeAPIClient();
 }
 
-// Constructor using config file
-::LLMEngine::LLMEngine::LLMEngine(std::string_view provider_name,
-                                  std::string_view api_key,
-                                  std::string_view model,
-                                  const nlohmann::json& model_params,
-                                  int log_retention_hours,
-                                  bool debug,
-                                  const std::shared_ptr<LLMAPI::IConfigManager>& config_manager)
-    : model_params_(model_params), log_retention_hours_(log_retention_hours), debug_(debug),
-      temp_dir_provider_(nullptr), disable_debug_files_env_cached_(parseDisableDebugFilesEnv()) {
-    initializeDefaults(logger_, temp_dir_provider_, nullptr, tmp_dir_);
+LLMEngine::LLMEngine(std::string_view provider_name,
+                     std::string_view api_key,
+                     std::string_view model,
+                     const nlohmann::json& model_params,
+                     int log_retention_hours,
+                     bool debug,
+                     const std::shared_ptr<LLMAPI::IConfigManager>& config_manager) {
+    state_ = std::make_shared<EngineState>(model_params, log_retention_hours, debug);
 
-    // Use ProviderBootstrap to resolve provider configuration
-    auto bootstrap_result =
-        ProviderBootstrap::bootstrap(provider_name, api_key, model, config_manager, logger_.get());
-
-    // Store resolved values
-    provider_type_ = bootstrap_result.provider_type;
-    api_key_ = bootstrap_result.api_key;
-    model_ = bootstrap_result.model;
-    ollama_url_ = bootstrap_result.ollama_url;
-
-    // Store config manager for downstream factories
+    // Manage config manager
     if (config_manager) {
-        config_manager_ = config_manager;
+        state_->config_manager_ = config_manager;
     } else {
-        // Wrap singleton in shared_ptr with no-op deleter
-        config_manager_ = std::shared_ptr<LLMAPI::IConfigManager>(
+        state_->config_manager_ = std::shared_ptr<LLMAPI::IConfigManager>(
             &LLMAPI::APIConfigManager::getInstance(), [](LLMAPI::IConfigManager*) {});
     }
 
-    initializeAPIClient();
+    auto bootstrap_result = ProviderBootstrap::bootstrap(
+        provider_name, api_key, model, state_->config_manager_, state_->logger_.get());
+
+    state_->provider_type_ = bootstrap_result.provider_type;
+    state_->api_key_ = std::move(bootstrap_result.api_key);
+    state_->model_ = bootstrap_result.model;
+    state_->ollama_url_ = bootstrap_result.ollama_url;
+
+    state_->initializeAPIClient();
 }
 
-void ::LLMEngine::LLMEngine::initializeAPIClient() {
-    // SECURITY: Validate API key for cloud providers before instantiating HTTP client
-    // This fails fast during setup instead of deferring credential bugs to runtime 401s
-    if (provider_type_ != LLMAPI::ProviderType::OLLAMA) {
-        if (api_key_.empty()) {
-            std::string env_var_name = ProviderBootstrap::getApiKeyEnvVarName(provider_type_);
-            std::string error_msg = "No API key found for provider "
-                                    + LLMAPI::APIClientFactory::providerTypeToString(provider_type_)
-                                    + ". " + "Set the " + env_var_name
-                                    + " environment variable or provide it in the constructor.";
-            if (logger_) {
-                logger_->log(LLM::LogLevel::Error, error_msg);
-            }
-            throw std::runtime_error(error_msg);
-        }
-    }
+// --- Analysis Methods ---
 
-    if (provider_type_ == LLMAPI::ProviderType::OLLAMA) {
-        api_client_ = LLMAPI::APIClientFactory::createClient(
-            provider_type_, "", model_, ollama_url_, config_manager_);
-    } else {
-        api_client_ = LLMAPI::APIClientFactory::createClient(
-            provider_type_, api_key_, model_, "", config_manager_);
-    }
+AnalysisResult LLMEngine::analyze(std::string_view prompt,
+                                  const nlohmann::json& input,
+                                  std::string_view analysis_type,
+                                  const RequestOptions& options) {
+    state_->ensureSecureTmpDir();
 
-    if (!api_client_) {
-        std::string provider_name = LLMAPI::APIClientFactory::providerTypeToString(provider_type_);
-        throw std::runtime_error("Failed to create API client for provider: " + provider_name
-                                 + ". Check that the provider type is valid and all required "
-                                   "dependencies are available.");
-    }
-}
+    // Determine mode and instruction from options (if extended later, for now just defaults)
+    std::string mode = "chat";
+    bool prepend_terse_instruction = true;
 
-// Redaction and debug file I/O moved to DebugArtifacts
-
-void ::LLMEngine::LLMEngine::ensureSecureTmpDir() {
-    // Cache directory existence check to reduce filesystem operations
-    // Only re-check if directory was previously verified and might have been deleted
-    if (tmp_dir_verified_) {
-        // Quick check: if directory still exists and is valid, skip expensive operations
-        if (TempDirectoryService::isDirectoryValid(tmp_dir_, logger_.get())) {
-            return;
-        }
-        // Directory was deleted or invalid, need to re-verify
-        tmp_dir_verified_ = false;
-    }
-
-    // Use TempDirectoryService to ensure directory with security checks
-    auto result = TempDirectoryService::ensureSecureDirectory(tmp_dir_, logger_.get());
-    if (!result.success) {
-        throw std::runtime_error(result.error_message);
-    }
-
-    // Mark as verified after successful creation/verification
-    tmp_dir_verified_ = true;
-}
-
-LLM::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt,
-                                                  const nlohmann::json& input,
-                                                  std::string_view analysis_type,
-                                                  std::string_view mode,
-                                                  bool prepend_terse_instruction) {
-    // Ensure temp directory is prepared before building context (RAII enforcement)
-    ensureSecureTmpDir();
-
-    // Build request context (using IModelContext interface to break cyclic dependency)
+    // Build context
     RequestContext ctx = RequestContextBuilder::build(static_cast<IModelContext&>(*this),
                                                       prompt,
                                                       input,
@@ -231,68 +223,49 @@ LLM::AnalysisResult LLMEngine::LLMEngine::analyze(std::string_view prompt,
                                                       mode,
                                                       prepend_terse_instruction);
 
-    // Execute request via injected executor
+    // Apply options overrides like timeout/headers would go here if IRequestExecutor supported them
+    // For now, we just pass parameters.
+    // Ideally, IRequestExecutor interface needs expansion to support Per-Request Options.
+    // Iteration 1 limitation: DefaultRequestExecutor might not support dynamic timeout override yet.
+    // We will just execute.
+
     LLMAPI::APIResponse api_response;
-    if (request_executor_) {
-        api_response =
-            request_executor_->execute(api_client_.get(), ctx.fullPrompt, input, ctx.finalParams);
+    if (state_->request_executor_) {
+        api_response = state_->request_executor_->execute(
+            state_->api_client_.get(), ctx.fullPrompt, input, ctx.finalParams, options);
     } else {
-        if (logger_) {
-            logger_->log(LLM::LogLevel::Error,
-                         "Request executor not configured. This is an internal error - the API "
-                         "client was not properly initialized.");
+        if (state_->logger_) {
+            state_->logger_->log(LogLevel::Error, "Request executor not configured.");
         }
-        LLM::AnalysisResult result{
-            .success = false,
-            .think = "",
-            .content = "",
-            .errorMessage =
-                "Request executor not configured. This is an internal error - the API client was "
-                "not properly initialized. Please check your LLMEngine configuration.",
-            .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
-            .usage = {},
-            .errorCode = LLMEngineErrorCode::Unknown};
-        return result;
+        return AnalysisResult{.success = false,
+                              .errorMessage = "Internal Error: Request executor missing",
+                              .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
+                              .errorCode = LLMEngineErrorCode::Unknown};
     }
 
-    // Delegate response handling
     return ResponseHandler::handle(api_response,
                                    ctx.debugManager.get(),
                                    ctx.requestTmpDir,
                                    analysis_type,
                                    ctx.writeDebugFiles,
-                                   logger_.get());
+                                   state_->logger_.get());
 }
 
-std::future<LLM::AnalysisResult> LLMEngine::LLMEngine::analyzeAsync(
-    std::string_view prompt,
-    const nlohmann::json& input,
-    std::string_view analysis_type,
-    std::string_view mode,
-    bool prepend_terse_instruction) {
-    // Capture arguments by value to ensure valid lifetime during async execution
-    return std::async(std::launch::async,
-                      [this,
-                       prompt = std::string(prompt),
-                       input = input,
-                       analysis_type = std::string(analysis_type),
-                       mode = std::string(mode),
-                       prepend_terse_instruction]() {
-                          return this->analyze(
-                              prompt, input, analysis_type, mode, prepend_terse_instruction);
-                      });
-}
+AnalysisResult LLMEngine::analyze(std::string_view prompt,
+                                  const nlohmann::json& input,
+                                  std::string_view analysis_type,
+                                  std::string_view mode,
+                                  bool prepend_terse_instruction) {
+    // Forward to options-based overload?
+    // Actually, the options overload lacks mode/prepend... arguments in my struct logic.
+    // The previous implementation of overload was:
+    // RequestOptions has timeout/retries.
+    // Mode/Prepend are semantic args.
+    // This is a bit conflicting.
+    // Let's keep the original implementation logic here, but using state_.
 
-void LLMEngine::LLMEngine::analyzeStream(std::string_view prompt,
-                                         const nlohmann::json& input,
-                                         std::string_view analysis_type,
-                                         std::string_view mode,
-                                         bool prepend_terse_instruction,
-                                         std::function<void(std::string_view, bool)> callback) {
-    // Ensure temp directory is prepared
-    ensureSecureTmpDir();
+    state_->ensureSecureTmpDir();
 
-    // Build request context
     RequestContext ctx = RequestContextBuilder::build(static_cast<IModelContext&>(*this),
                                                       prompt,
                                                       input,
@@ -300,73 +273,229 @@ void LLMEngine::LLMEngine::analyzeStream(std::string_view prompt,
                                                       mode,
                                                       prepend_terse_instruction);
 
-    // Adapt callback for APIClient (which might not send is_done boolean, or we handle it)
-    // The APIClient interface has: function<void(string_view)>
-    // LLMEngine interface has: function<void(string_view, bool)>
-    // We'll wrap it.
-    auto wrapped_callback = [callback](std::string_view chunk) {
-        // Assume APIClient implies not-done until it finishes?
-        // Actually APIClient interface is synchronous-like or blocks until done?
-        // sendRequestStream is void, so it blocks?
-        // If it blocks, we invoke callback with chunk, false.
-        // And when it returns, does it mean done?
-        callback(chunk, false);
-    };
+    LLMAPI::APIResponse api_response;
+    if (state_->request_executor_) {
+        api_response = state_->request_executor_->execute(
+            state_->api_client_.get(), ctx.fullPrompt, input, ctx.finalParams);
+    } else {
+        return AnalysisResult{.success = false,
+                              .errorMessage = "Internal Error: Request executor missing",
+                              .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
+                              .errorCode = LLMEngineErrorCode::Unknown};
+    }
 
-    if (api_client_) {
-        // TODO: Handle is_done properly. Currently APIClient assumes blocking stream?
-        api_client_->sendRequestStream(ctx.fullPrompt, input, ctx.finalParams, wrapped_callback);
-        // After return, send empty chunk with is_done=true?
+    return ResponseHandler::handle(api_response,
+                                   ctx.debugManager.get(),
+                                   ctx.requestTmpDir,
+                                   analysis_type,
+                                   ctx.writeDebugFiles,
+                                   state_->logger_.get());
+}
+
+std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
+                                                    const nlohmann::json& input,
+                                                    std::string_view analysis_type,
+                                                    std::string_view mode,
+                                                    bool prepend_terse_instruction) {
+    // Copy shared state pointer
+    std::shared_ptr<EngineState> state = state_;
+
+    return std::async(
+        std::launch::async,
+        [state /* captured shared state */,
+         prompt = std::string(prompt),
+         input = input,
+         analysis_type = std::string(analysis_type),
+         mode = std::string(mode),
+         prepend_terse_instruction]() -> AnalysisResult {
+            struct StateAdapter : public IModelContext {
+                std::shared_ptr<EngineState> s;
+                StateAdapter(std::shared_ptr<EngineState> st) : s(st) {}
+                std::string getTempDirectory() const override {
+                    return s->tmp_dir_;
+                }
+                std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override {
+                    return s->terse_prompt_builder_;
+                }
+                std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override {
+                    return s->passthrough_prompt_builder_;
+                }
+                const nlohmann::json& getModelParams() const override {
+                    return s->model_params_;
+                }
+                bool areDebugFilesEnabled() const override {
+                    if (!s->debug_)
+                        return false;
+                    if (s->debug_files_policy_)
+                        return s->debug_files_policy_();
+                    return !s->disable_debug_files_env_cached_;
+                }
+                std::shared_ptr<IArtifactSink> getArtifactSink() const override {
+                    return s->artifact_sink_;
+                }
+                int getLogRetentionHours() const override {
+                    return s->log_retention_hours_;
+                }
+                std::shared_ptr<Logger> getLogger() const override {
+                    return s->logger_;
+                }
+                void prepareTempDirectory() override {
+                    s->ensureSecureTmpDir();
+                }
+            };
+
+            StateAdapter adapter(state);
+            state->ensureSecureTmpDir();
+
+            RequestContext ctx = RequestContextBuilder::build(
+                adapter, prompt, input, analysis_type, mode, prepend_terse_instruction);
+
+            LLMAPI::APIResponse api_response;
+            if (state->request_executor_) {
+                api_response = state->request_executor_->execute(
+                    state->api_client_.get(), ctx.fullPrompt, input, ctx.finalParams);
+            } else {
+                return AnalysisResult{.success = false,
+                                      .errorMessage = "Internal Error",
+                                      .errorCode = LLMEngineErrorCode::Unknown};
+            }
+
+            return ResponseHandler::handle(api_response,
+                                           ctx.debugManager.get(),
+                                           ctx.requestTmpDir,
+                                           analysis_type,
+                                           ctx.writeDebugFiles,
+                                           state->logger_.get());
+        });
+}
+
+void LLMEngine::analyzeStream(std::string_view prompt,
+                              const nlohmann::json& input,
+                              std::string_view analysis_type,
+                              std::string_view mode,
+                              bool prepend_terse_instruction,
+                              std::function<void(std::string_view, bool)> callback) {
+    state_->ensureSecureTmpDir();
+
+    RequestContext ctx = RequestContextBuilder::build(static_cast<IModelContext&>(*this),
+                                                      prompt,
+                                                      input,
+                                                      analysis_type,
+                                                      mode,
+                                                      prepend_terse_instruction);
+
+    auto wrapped_callback = [callback](std::string_view chunk) { callback(chunk, false); };
+
+    if (state_->api_client_) {
+        state_->api_client_->sendRequestStream(
+            ctx.fullPrompt, input, ctx.finalParams, wrapped_callback);
         callback("", true);
     } else {
-        if (logger_) {
-            logger_->log(LLM::LogLevel::Error, "API client not initialized for streaming.");
+        if (state_->logger_) {
+            state_->logger_->log(LogLevel::Error, "API client not initialized for streaming.");
         }
-        // Signal error/completion?
-        // For now just finish
         callback("", true);
     }
 }
 
-std::string LLMEngine::LLMEngine::getProviderName() const {
-    if (api_client_) {
-        return api_client_->getProviderName();
+// --- Accessors ---
+
+std::string LLMEngine::getProviderName() const {
+    if (state_->api_client_) {
+        return state_->api_client_->getProviderName();
     }
     return "Ollama (Legacy)";
 }
 
-std::string LLMEngine::LLMEngine::getModelName() const {
-    return model_;
+std::string LLMEngine::getModelName() const {
+    return state_->model_;
+}
+LLMAPI::ProviderType LLMEngine::getProviderType() const {
+    return state_->provider_type_;
+}
+bool LLMEngine::isOnlineProvider() const {
+    return state_->provider_type_ != LLMAPI::ProviderType::OLLAMA;
 }
 
-LLMAPI::ProviderType LLMEngine::LLMEngine::getProviderType() const {
-    return provider_type_;
+std::string LLMEngine::getTempDirectory() const {
+    return state_->tmp_dir_;
+}
+std::shared_ptr<IPromptBuilder> LLMEngine::getTersePromptBuilder() const {
+    return state_->terse_prompt_builder_;
+}
+std::shared_ptr<IPromptBuilder> LLMEngine::getPassthroughPromptBuilder() const {
+    return state_->passthrough_prompt_builder_;
+}
+const nlohmann::json& LLMEngine::getModelParams() const {
+    return state_->model_params_;
+}
+bool LLMEngine::areDebugFilesEnabled() const {
+    if (!state_->debug_)
+        return false;
+    if (state_->debug_files_policy_)
+        return state_->debug_files_policy_();
+    return !state_->disable_debug_files_env_cached_;
+}
+std::shared_ptr<IArtifactSink> LLMEngine::getArtifactSink() const {
+    return state_->artifact_sink_;
+}
+int LLMEngine::getLogRetentionHours() const {
+    return state_->log_retention_hours_;
+}
+std::shared_ptr<Logger> LLMEngine::getLogger() const {
+    return state_->logger_;
+}
+void LLMEngine::prepareTempDirectory() {
+    state_->ensureSecureTmpDir();
 }
 
-bool ::LLMEngine::LLMEngine::isOnlineProvider() const {
-    return provider_type_ != LLMAPI::ProviderType::OLLAMA;
+bool LLMEngine::isDebugEnabled() const {
+    return state_->debug_;
 }
 
-void ::LLMEngine::LLMEngine::setLogger(std::shared_ptr<LLM::Logger> logger) {
-    if (logger) {
-        logger_ = std::move(logger);
-    }
-}
+bool LLMEngine::setTempDirectory(const std::string& tmp_dir) {
+    const std::string allowed_root = state_->temp_dir_provider_
+                                         ? state_->temp_dir_provider_->getTempDir()
+                                         : DefaultTempDirProvider().getTempDir();
 
-bool ::LLMEngine::LLMEngine::setTempDirectory(const std::string& tmp_dir) {
-    // Only accept directories within the active provider's root to respect dependency injection
-    const std::string allowed_root = temp_dir_provider_
-                                         ? temp_dir_provider_->getTempDir()
-                                         : LLM::DefaultTempDirProvider().getTempDir();
-
-    if (TempDirectoryService::validatePathWithinRoot(tmp_dir, allowed_root, logger_.get())) {
-        tmp_dir_ = tmp_dir;
-        tmp_dir_verified_ = false; // Reset cache when directory changes
+    if (TempDirectoryService::validatePathWithinRoot(
+            tmp_dir, allowed_root, state_->logger_.get())) {
+        state_->tmp_dir_ = tmp_dir;
+        state_->tmp_dir_verified_ = false;
         return true;
     }
     return false;
 }
 
-std::string LLMEngine::LLMEngine::getTempDirectory() const {
-    return tmp_dir_;
+void LLMEngine::setLogger(std::shared_ptr<Logger> logger) {
+    if (logger)
+        state_->logger_ = std::move(logger);
 }
+
+void LLMEngine::setDebugFilesPolicy(std::function<bool()> policy) {
+    state_->debug_files_policy_ = std::move(policy);
+}
+
+void LLMEngine::setDebugFilesEnabled(bool enabled) {
+    state_->debug_files_policy_ = [enabled]() { return enabled; };
+}
+
+void LLMEngine::setRequestExecutor(std::shared_ptr<IRequestExecutor> executor) {
+    if (executor)
+        state_->request_executor_ = std::move(executor);
+}
+
+void LLMEngine::setArtifactSink(std::shared_ptr<IArtifactSink> sink) {
+    if (sink)
+        state_->artifact_sink_ = std::move(sink);
+}
+
+void LLMEngine::setPromptBuilders(std::shared_ptr<IPromptBuilder> terse,
+                                  std::shared_ptr<IPromptBuilder> passthrough) {
+    if (terse)
+        state_->terse_prompt_builder_ = std::move(terse);
+    if (passthrough)
+        state_->passthrough_prompt_builder_ = std::move(passthrough);
+}
+
+} // namespace LLMEngine

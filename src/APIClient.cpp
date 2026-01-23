@@ -79,7 +79,7 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(
         config.value(std::string(::LLMEngine::Constants::JsonKeys::DEFAULT_MODEL), "");
 
     // Use ProviderBootstrap to resolve API key with proper priority
-    std::string api_key =
+    auto api_key =
         ::LLMEngine::ProviderBootstrap::resolveApiKey(type, "", api_key_from_config, logger);
 
     // SECURITY: Fail fast if no credentials are available for providers that require them
@@ -109,7 +109,7 @@ std::unique_ptr<APIClient> APIClientFactory::createClientFromConfig(
         return ptr;
     }
 
-    return createClient(type, api_key, model, "", cfg);
+    return createClient(type, api_key.view(), model, "", cfg);
 }
 
 namespace {

@@ -8,6 +8,7 @@
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
 
+#include "LLMEngine/RequestOptions.hpp"
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -34,7 +35,8 @@ class LLMENGINE_EXPORT IRequestExecutor {
         const ::LLMEngineAPI::APIClient* api_client,
         const std::string& full_prompt,
         const nlohmann::json& input,
-        const nlohmann::json& final_params) const = 0;
+        const nlohmann::json& final_params,
+        const ::LLMEngine::RequestOptions& options = {}) const = 0;
 };
 
 /**
@@ -46,7 +48,8 @@ class LLMENGINE_EXPORT DefaultRequestExecutor : public IRequestExecutor {
         const ::LLMEngineAPI::APIClient* api_client,
         const std::string& full_prompt,
         const nlohmann::json& input,
-        const nlohmann::json& final_params) const override;
+        const nlohmann::json& final_params,
+        const ::LLMEngine::RequestOptions& options = {}) const override;
 };
 
 // Forward declaration
@@ -86,7 +89,8 @@ class LLMENGINE_EXPORT RetryableRequestExecutor : public IRequestExecutor {
         const ::LLMEngineAPI::APIClient* api_client,
         const std::string& full_prompt,
         const nlohmann::json& input,
-        const nlohmann::json& final_params) const override;
+        const nlohmann::json& final_params,
+        const ::LLMEngine::RequestOptions& options = {}) const override;
 
   private:
     std::shared_ptr<IRetryStrategy> strategy_;

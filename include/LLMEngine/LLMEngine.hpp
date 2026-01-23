@@ -190,6 +190,21 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      * auto result = engine.analyze("Review this code", input, "code_review", "chat", false);
      * ```
      */
+#include "LLMEngine/RequestOptions.hpp"
+
+    // Constructor for multi-threaded/async safety state
+    struct EngineState;
+
+    /**
+     * @brief Run an analysis request with options.
+     * @copydoc analyze
+     */
+    [[nodiscard]] AnalysisResult analyze(std::string_view prompt,
+                                         const nlohmann::json& input,
+                                         std::string_view analysis_type,
+                                         const RequestOptions& options);
+
+    // Overloaded analyze for backward compatibility
     [[nodiscard]] AnalysisResult analyze(std::string_view prompt,
                                          const nlohmann::json& input,
                                          std::string_view analysis_type,
@@ -232,41 +247,17 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
 
     // IModelContext interface implementation
     [[nodiscard]] std::string getTempDirectory() const override;
-    [[nodiscard]] std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override {
-        return terse_prompt_builder_;
-    }
-    [[nodiscard]] std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override {
-        return passthrough_prompt_builder_;
-    }
-    [[nodiscard]] const nlohmann::json& getModelParams() const override {
-        return model_params_;
-    }
-    [[nodiscard]] bool areDebugFilesEnabled() const override {
-        if (!debug_)
-            return false;
-        if (debug_files_policy_) {
-            return debug_files_policy_();
-        }
-        // Use cached value to avoid repeated getenv calls on hot paths
-        return !disable_debug_files_env_cached_;
-    }
-    [[nodiscard]] std::shared_ptr<IArtifactSink> getArtifactSink() const override {
-        return artifact_sink_;
-    }
-    [[nodiscard]] int getLogRetentionHours() const override {
-        return log_retention_hours_;
-    }
-    [[nodiscard]] std::shared_ptr<Logger> getLogger() const override {
-        return logger_;
-    }
-    void prepareTempDirectory() override {
-        ensureSecureTmpDir();
-    }
+    [[nodiscard]] std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override;
+    [[nodiscard]] std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override;
+    [[nodiscard]] const nlohmann::json& getModelParams() const override;
+    [[nodiscard]] bool areDebugFilesEnabled() const override;
+    [[nodiscard]] std::shared_ptr<IArtifactSink> getArtifactSink() const override;
+    [[nodiscard]] int getLogRetentionHours() const override;
+    [[nodiscard]] std::shared_ptr<Logger> getLogger() const override;
+    void prepareTempDirectory() override;
 
     // Additional accessors (not part of IModelContext)
-    [[nodiscard]] bool isDebugEnabled() const {
-        return debug_;
-    }
+    [[nodiscard]] bool isDebugEnabled() const;
 
     // Temporary directory configuration
     /**
@@ -304,9 +295,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      * read at construction time. Supplying a policy allows tests and long-lived
      * services to toggle behavior at runtime without rebuilding the engine.
      */
-    void setDebugFilesPolicy(std::function<bool()> policy) {
-        debug_files_policy_ = std::move(policy);
-    }
+    void setDebugFilesPolicy(std::function<bool()> policy);
 
     /**
      * @brief Set whether debug files are enabled at runtime.
@@ -317,69 +306,23 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      *
      * @param enabled True to enable debug files, false to disable
      */
-    void setDebugFilesEnabled(bool enabled) {
-        debug_files_policy_ = [enabled]() { return enabled; };
-    }
+    void setDebugFilesEnabled(bool enabled);
 
     // Dependency injection setters
     /** @brief Replace the request executor strategy. */
-    void setRequestExecutor(std::shared_ptr<IRequestExecutor> executor) {
-        if (executor) {
-            request_executor_ = std::move(executor);
-        }
-    }
+    void setRequestExecutor(std::shared_ptr<IRequestExecutor> executor);
     /** @brief Replace the artifact sink strategy. */
-    void setArtifactSink(std::shared_ptr<IArtifactSink> sink) {
-        if (sink) {
-            artifact_sink_ = std::move(sink);
-        }
-    }
+    void setArtifactSink(std::shared_ptr<IArtifactSink> sink);
     /** @brief Replace prompt builders. Null keeps existing. */
     void setPromptBuilders(std::shared_ptr<IPromptBuilder> terse,
-                           std::shared_ptr<IPromptBuilder> passthrough) {
-        if (terse) {
-            terse_prompt_builder_ = std::move(terse);
-        }
-        if (passthrough) {
-            passthrough_prompt_builder_ = std::move(passthrough);
-        }
-    }
+                           std::shared_ptr<IPromptBuilder> passthrough);
 
   private:
     void initializeAPIClient();
     void ensureSecureTmpDir();
 
-    std::string model_;
-    nlohmann::json model_params_;
-    int log_retention_hours_;
-    bool debug_;
-    std::string tmp_dir_; // Configurable temporary directory (defaults to Utils::TMP_DIR)
-    std::shared_ptr<ITempDirProvider> temp_dir_provider_; // Store provider for validation
-    bool tmp_dir_verified_ =
-        false; // Cache directory existence check to reduce filesystem operations
-
-    // API client support
-    std::unique_ptr<::LLMEngineAPI::APIClient> api_client_;
-    std::shared_ptr<::LLMEngineAPI::IConfigManager> config_manager_;
-
-    // Collaborators (injectable)
-    std::shared_ptr<IPromptBuilder> terse_prompt_builder_{std::make_shared<TersePromptBuilder>()};
-    std::shared_ptr<IPromptBuilder> passthrough_prompt_builder_{
-        std::make_shared<PassthroughPromptBuilder>()};
-    std::shared_ptr<IRequestExecutor> request_executor_{std::make_shared<DefaultRequestExecutor>()};
-    std::shared_ptr<IArtifactSink> artifact_sink_{std::make_shared<DefaultArtifactSink>()};
-    ::LLMEngineAPI::ProviderType provider_type_;
-    std::string api_key_;
-    std::string ollama_url_; // Only used when provider_type is OLLAMA
-    std::shared_ptr<Logger> logger_;
-    // Optional injected policy for enabling/disabling debug artifact writing
-    std::function<bool()> debug_files_policy_;
-    // Cached at construction to avoid repeated getenv calls per request.
-    // Note: Read-once semantics; changes to the environment after construction
-    // are not reflected in this instance. For dynamic toggling, inject a config object.
-    // Value is parsed properly: "0", "false", "no", "off" enable debug files;
-    // any other non-empty value disables them. Unset/empty enables debug files.
-    bool disable_debug_files_env_cached_;
+    // Internal state pointer (PIMPL pattern + Shared Ownership for Async)
+    std::shared_ptr<EngineState> state_;
 };
 
 } // namespace LLMEngine

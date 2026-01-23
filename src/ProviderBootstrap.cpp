@@ -87,10 +87,10 @@ ProviderBootstrap::BootstrapResult ProviderBootstrap::bootstrap(
     return result;
 }
 
-std::string ProviderBootstrap::resolveApiKey(::LLMEngineAPI::ProviderType provider_type,
-                                             std::string_view api_key_from_param,
-                                             std::string_view api_key_from_config,
-                                             Logger* logger) {
+SecureString ProviderBootstrap::resolveApiKey(::LLMEngineAPI::ProviderType provider_type,
+                                              std::string_view api_key_from_param,
+                                              std::string_view api_key_from_config,
+                                              Logger* logger) {
 
     std::string env_var_name = getApiKeyEnvVarName(provider_type);
 
@@ -102,11 +102,11 @@ std::string ProviderBootstrap::resolveApiKey(::LLMEngineAPI::ProviderType provid
     }
 
     if (env_api_key && strlen(env_api_key) > 0) {
-        return std::string{env_api_key};
+        return SecureString(env_api_key);
     }
     if (!std::string(api_key_from_param).empty()) {
         // Use provided API key if environment variable is not set
-        return std::string{api_key_from_param};
+        return SecureString(api_key_from_param);
     }
     // Fall back to config file (last resort - not recommended for production)
     std::string api_key = std::string(api_key_from_config);
@@ -116,7 +116,7 @@ std::string ProviderBootstrap::resolveApiKey(::LLMEngineAPI::ProviderType provid
                         + env_var_name + " environment variable instead. "
                         + "Storing credentials in config files is a security risk.");
     }
-    return api_key;
+    return SecureString(std::move(api_key));
 }
 
 std::string ProviderBootstrap::getApiKeyEnvVarName(::LLMEngineAPI::ProviderType provider_type) {

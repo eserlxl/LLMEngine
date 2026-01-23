@@ -24,6 +24,7 @@ enum class LLMENGINE_EXPORT LLMEngineErrorCode {
     None,            ///< No error (success)
     Network,         ///< Network connection error
     Timeout,         ///< Request timeout
+    Cancelled,       ///< Request cancelled
     InvalidResponse, ///< Invalid or unparseable response
     Auth,            ///< Authentication/authorization error
     RateLimited,     ///< Rate limit exceeded

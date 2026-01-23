@@ -10,9 +10,9 @@
 #include "LLMEngine/LLMEngineExport.hpp"
 #include "LLMEngine/Logger.hpp"
 
+#include "LLMEngine/SecureString.hpp"
 #include <memory>
 #include <string>
-#include <string_view>
 
 // Forward declarations
 namespace LLMEngineAPI {
@@ -53,7 +53,7 @@ namespace LLMEngine {
  *
  * auto client = APIClientFactory::createClient(
  *     result.provider_type,
- *     result.api_key,
+ *     result.api_key.view(),
  *     result.model,
  *     result.ollama_url,
  *     config_manager
@@ -67,7 +67,7 @@ class LLMENGINE_EXPORT ProviderBootstrap {
      */
     struct BootstrapResult {
         ::LLMEngineAPI::ProviderType provider_type;
-        std::string api_key;
+        SecureString api_key{""};
         std::string model;
         std::string ollama_url;
     };
@@ -108,10 +108,10 @@ class LLMENGINE_EXPORT ProviderBootstrap {
      * @param logger Optional logger for warnings.
      * @return Resolved API key (may be empty for Ollama).
      */
-    static std::string resolveApiKey(::LLMEngineAPI::ProviderType provider_type,
-                                     std::string_view api_key_from_param,
-                                     std::string_view api_key_from_config,
-                                     Logger* logger = nullptr);
+    static SecureString resolveApiKey(::LLMEngineAPI::ProviderType provider_type,
+                                      std::string_view api_key_from_param,
+                                      std::string_view api_key_from_config,
+                                      Logger* logger = nullptr);
 
     /**
      * @brief Get environment variable name for a provider's API key.
