@@ -63,17 +63,15 @@ ForEachMacros:
   - foreach
   - Q_FOREACH
   - BOOST_FOREACH
-IncludeBlocks: Regroup
+IncludeBlocks: Preserve
 IncludeCategories:
-  - Regex: '^[^"<].*'
-    Priority: 1
-  - Regex: '^"(gtest|gmock)/'
-    Priority: 2
   - Regex: '^"(llvm|llvm-c|clang|clang-c)/'
+    Priority: 2
+  - Regex: '^(<|"(gtest|gmock|isl|json)/)'
     Priority: 3
-  - Regex: '^".*"'
-    Priority: 4
-IncludeIsMainRegex: '([-_]?test)?$'
+  - Regex: '.*'
+    Priority: 1
+IncludeIsMainRegex: '(Test)?$'
 IndentCaseLabels: true
 IndentPPDirectives: None
 IndentWrappedFunctionNames: false
@@ -97,7 +95,7 @@ PenaltyBreakTemplateDeclaration: 10
 PenaltyExcessCharacter: 1000000
 PenaltyReturnTypeOnItsOwnLine: 200
 PointerAlignment: Left
-ReflowComments: true
+ReflowComments: IndentOnly
 SortIncludes: true
 SortUsingDeclarations: true
 SpaceAfterCStyleCast: false
@@ -112,7 +110,7 @@ SpacesInContainerLiterals: false
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard: c++20
+Standard: Latest
 StatementMacros:
   - Q_UNUSED
   - QT_REQUIRE_VERSION

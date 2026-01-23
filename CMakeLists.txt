@@ -18,6 +18,31 @@ project(LLMEngine
   DESCRIPTION "A C++ library for interacting with Large Language Models"
   LANGUAGES CXX)
 
+# BUILD-001-A1: Add out-of-source build support
+# Prevent accidental in-source builds which can pollute the source directory
+option(BUILD_OUT_OF_SOURCE "Require out-of-source builds (recommended)" ON)
+
+if (BUILD_OUT_OF_SOURCE)
+    # Check if build directory is the same as source directory
+    get_filename_component(CMAKE_SOURCE_DIR_ABS "${CMAKE_SOURCE_DIR}" ABSOLUTE)
+    get_filename_component(CMAKE_BINARY_DIR_ABS "${CMAKE_BINARY_DIR}" ABSOLUTE)
+
+    if (CMAKE_SOURCE_DIR_ABS STREQUAL CMAKE_BINARY_DIR_ABS)
+        message(FATAL_ERROR
+                "In-source builds are not allowed when BUILD_OUT_OF_SOURCE is ON.\n"
+                "Please create a separate build directory and run cmake from there.\n"
+                "Example:\n"
+                "  mkdir build\n"
+                "  cd build\n"
+                "  cmake ..\n"
+                "\n"
+                "To disable this check, set BUILD_OUT_OF_SOURCE to OFF:\n"
+                "  cmake -DBUILD_OUT_OF_SOURCE=OFF .\n"
+                "\n"
+                "However, out-of-source builds are strongly recommended for safety.")
+    endif ()
+endif ()
+
 # _GNU_SOURCE will be applied via target_compile_definitions only to targets that need it
 # This avoids mutating global flags that affect all dependencies and consumers
 
@@ -35,6 +60,21 @@ string(TOLOWER "${PROJECT_NAME}" PROJECT_NAME_LOWER)
 # Build system quality-of-life
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# RPATH settings for better compatibility
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+# Use RUNPATH instead of RPATH for better compatibility
+set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
+# Set to use RUNPATH (more modern, allows LD_LIBRARY_PATH to override)
+if(UNIX AND NOT APPLE)
+  set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG "-Wl,-rpath,")
+  set(CMAKE_SHARED_LIBRARY_RUNTIME_CXX_FLAG "-Wl,-rpath,")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--enable-new-dtags")
+endif()
+
+# Set verbose makefile (useful for debugging builds)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Avoid global runtime output directory; use per-target properties instead
 
@@ -209,7 +249,17 @@ else()
     $<$<AND:$<COMPILE_LANG_AND_ID:CXX,GNU>,$<NOT:$<PLATFORM_ID:Darwin>>>:-fstack-protector-strong>
     $<$<AND:$<COMPILE_LANG_AND_ID:CXX,Clang>,$<NOT:$<PLATFORM_ID:Darwin>>>:-fstack-protector-strong>)
   if (UNIX AND NOT APPLE)
-    target_link_options(${PROJECT_NAME}_compile_options INTERFACE -Wl,-z,relro,-z,now)
+    # Use CheckLinkerFlag to verify support before applying linker flags
+    include(CheckLinkerFlag)
+    check_linker_flag(CXX "-Wl,-z,relro,-z,now" LINKER_SUPPORTS_RELRO)
+    if (LINKER_SUPPORTS_RELRO)
+      target_link_options(${PROJECT_NAME}_compile_options INTERFACE -Wl,-z,relro,-z,now)
+    endif()
+    # Link only needed libraries
+    check_linker_flag(CXX "-Wl,--as-needed" LINKER_SUPPORTS_AS_NEEDED)
+    if (LINKER_SUPPORTS_AS_NEEDED)
+      target_link_options(${PROJECT_NAME}_compile_options INTERFACE -Wl,--as-needed)
+    endif()
   endif()
   if (WARNING_MODE)
     target_compile_options(${PROJECT_NAME}_compile_options INTERFACE
@@ -657,3 +707,82 @@ if (ENABLE_DOXYGEN)
     message(STATUS "Doxygen not found; docs target disabled")
   endif()
 endif()
+
+# ---- Clean Targets -----------------------------------------------------------
+# Clean build artifacts only (keeps CMake cache)
+if (CMAKE_GENERATOR MATCHES "Makefiles|Ninja")
+    add_custom_target(clean-build
+            COMMAND ${CMAKE_COMMAND} --build "${CMAKE_BINARY_DIR}" --target clean
+            COMMENT "Clean build artifacts (keeps CMake cache)"
+            VERBATIM
+    )
+else ()
+    add_custom_target(clean-build
+            COMMAND ${CMAKE_COMMAND} -E echo "Note: clean-build for ${CMAKE_GENERATOR} removes all files"
+            COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/CMakeFiles"
+            COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/CMakeCache.txt"
+            COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+            COMMENT "Clean build artifacts (keeps CMake cache)"
+            VERBATIM
+    )
+endif ()
+
+# clean-all: Remove ALL files and directories in the build directory
+# Note: After running clean-all, CLion users must reload/reconfigure CMake
+# (File -> Reload CMake Project or Tools -> CMake -> Reset Cache and Reload Project)
+if (UNIX)
+    add_custom_target(clean-all
+            COMMAND find "${CMAKE_BINARY_DIR}/CMakeFiles" -name "*.dd" -type f -delete 2>/dev/null || true
+            COMMAND find "${CMAKE_BINARY_DIR}/CMakeFiles" -type d -name "*.dir" -exec rm -rf {} + 2>/dev/null || true
+            COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/CMakeFiles"
+            COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/CMakeCache.txt"
+            COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+            COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/compile_commands.json"
+            COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/Makefile"
+            COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/build.ninja"
+            COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/rules.ninja"
+            COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/.ninja_deps"
+            COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/.ninja_log"
+            COMMAND find "${CMAKE_BINARY_DIR}" -maxdepth 1 -name "*.a" -type f -delete 2>/dev/null || true
+            COMMAND find "${CMAKE_BINARY_DIR}" -maxdepth 1 -name "*.so" -type f -delete 2>/dev/null || true
+            COMMAND ${CMAKE_COMMAND} -E echo ""
+            COMMAND ${CMAKE_COMMAND} -E echo "=========================================="
+            COMMAND ${CMAKE_COMMAND} -E echo "Cleaned all CMake-generated files, cache, and build artifacts"
+            COMMAND ${CMAKE_COMMAND} -E echo ""
+            COMMAND ${CMAKE_COMMAND} -E echo "NOTE: If using CLion IDE, you must now:"
+            COMMAND ${CMAKE_COMMAND} -E echo "  1. Reload CMake Project (File -> Reload CMake Project)"
+            COMMAND ${CMAKE_COMMAND} -E echo "  OR"
+            COMMAND ${CMAKE_COMMAND} -E echo "  2. Reset CMake Cache (Tools -> CMake -> Reset Cache and Reload Project)"
+            COMMAND ${CMAKE_COMMAND} -E echo ""
+            COMMAND ${CMAKE_COMMAND} -E echo "This is required because CMakeCache.txt was removed."
+            COMMAND ${CMAKE_COMMAND} -E echo "=========================================="
+            COMMENT "Clean all CMake-generated files, cache, and build artifacts (full clean)"
+            VERBATIM
+    )
+else ()
+    add_custom_target(clean-all
+            COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/CMakeFiles"
+            COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/CMakeCache.txt"
+            COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+            COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/compile_commands.json"
+            COMMAND ${CMAKE_COMMAND} -E echo ""
+            COMMAND ${CMAKE_COMMAND} -E echo "=========================================="
+            COMMAND ${CMAKE_COMMAND} -E echo "Cleaned CMake cache and generated files"
+            COMMAND ${CMAKE_COMMAND} -E echo ""
+            COMMAND ${CMAKE_COMMAND} -E echo "NOTE: If using CLion IDE, you must now:"
+            COMMAND ${CMAKE_COMMAND} -E echo "  1. Reload CMake Project (File -> Reload CMake Project)"
+            COMMAND ${CMAKE_COMMAND} -E echo "  OR"
+            COMMAND ${CMAKE_COMMAND} -E echo "  2. Reset CMake Cache (Tools -> CMake -> Reset Cache and Reload Project)"
+            COMMAND ${CMAKE_COMMAND} -E echo ""
+            COMMAND ${CMAKE_COMMAND} -E echo "This is required because CMakeCache.txt was removed."
+            COMMAND ${CMAKE_COMMAND} -E echo "=========================================="
+            COMMENT "Clean all CMake-generated files and cache (full clean)"
+            VERBATIM
+    )
+endif ()
+
+message(STATUS "Clean targets available:")
+message(STATUS "  - clean-build: Clean build artifacts only (keeps CMake cache)")
+message(STATUS "  - clean-all: Remove all CMake-generated files, cache, and build artifacts")
+message(STATUS "    Note: After 'clean-all', CLion users must reload CMake project")
+message(STATUS "  Usage: cmake --build . --target <target-name>")
