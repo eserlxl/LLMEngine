@@ -55,12 +55,12 @@ It supports both local and cloud-based backends — **Ollama**, **Qwen (DashScop
 LLMEngine abstracts away the differences between major LLM providers, offering a **unified C++ API** for text generation, reasoning, and analysis.  
 Its configuration-driven design allows rapid experimentation and reliable runtime switching between providers.
 
-| Property | Value |
-|-----------|--------|
-| **Project** | LLMEngine 0.1.0 |
-| **Language** | C++23 |
-| **Build System** | CMake 3.31+ |
-| **Supported Platforms** | Linux, macOS |
+| Property                | Value           |
+| ----------------------- | --------------- |
+| **Project**             | LLMEngine 0.1.0 |
+| **Language**            | C++23           |
+| **Build System**        | CMake 3.31+     |
+| **Supported Platforms** | Linux, macOS    |
 
 [↑ Back to top](#llmengine)
 
@@ -83,13 +83,13 @@ Its configuration-driven design allows rapid experimentation and reliable runtim
 
 ### Supported Providers
 
-| Provider | Example Models |
-|-----------|----------------|
-| **Qwen (DashScope)** | qwen-flash, qwen-plus, qwen2.5 |
-| **OpenAI** | GPT-3.5, GPT-4 series |
-| **Anthropic** | Claude 3 series |
+| Provider               | Example Models                   |
+| ---------------------- | -------------------------------- |
+| **Qwen (DashScope)**   | qwen-flash, qwen-plus, qwen2.5   |
+| **OpenAI**             | GPT-3.5, GPT-4 series            |
+| **Anthropic**          | Claude 3 series                  |
 | **Gemini (AI Studio)** | gemini-1.5-flash, gemini-1.5-pro |
-| **Ollama (Local)** | Any locally hosted model |
+| **Ollama (Local)**     | Any locally hosted model         |
 
 [↑ Back to top](#llmengine)
 
@@ -359,8 +359,9 @@ This option is useful when you need precise control over prompts for evaluation 
 
 ## 🧵 Concurrency Model
 
-- LLMEngine instances are not thread-safe; use one instance per thread.
-- Provider clients are stateless and thread-safe, but are owned by each LLMEngine instance.
+- **Thread-Safe Core**: `LLMEngine` is thread-safe for concurrent `analyze` and `analyzeAsync` calls. Internal state is protected by shared mutexes.
+- **Batch Processing**: Use `analyzeBatch` for valid parallel execution with concurrency limits.
+- **Provider Clients**: Stateless and thread-safe.
 - If sharing a logger across threads, ensure the logger implementation is thread-safe.
 
 [↑ Back to top](#llmengine)
@@ -414,21 +415,21 @@ For detailed information about build presets, CMake options, and build configura
 <a id="documentation"></a>
 ## 📚 Documentation
 
-| File | Description |
-|------|--------------|
-| [quickstart.md](quickstart.md) | Getting started guide |
-| [docs/build.md](docs/build.md) | Build presets and CMake options |
-| [docs/configuration.md](docs/configuration.md) | Configuration structure |
+| File                                                     | Description                      |
+| -------------------------------------------------------- | -------------------------------- |
+| [quickstart.md](quickstart.md)                           | Getting started guide            |
+| [docs/build.md](docs/build.md)                           | Build presets and CMake options  |
+| [docs/configuration.md](docs/configuration.md)           | Configuration structure          |
 | [docs/custom_config_path.md](docs/custom_config_path.md) | Setting custom config file paths |
-| [docs/providers.md](docs/providers.md) | Provider details |
-| [docs/api_reference.md](docs/api_reference.md) | Generated Doxygen API |
-| [docs/architecture.md](docs/architecture.md) | System architecture overview |
-| [docs/faq.md](docs/faq.md) | Frequently Asked Questions |
-| [docs/security.md](docs/security.md) | Security notes |
-| [docs/performance.md](docs/performance.md) | Optimization tips |
-| [docs/ci_cd_guide.md](docs/ci_cd_guide.md) | CI/CD and testing guide |
-| [.github/contributing.md](.github/contributing.md) | Contribution guidelines |
-| [examples/README.md](examples/README.md) | Example usage guide |
+| [docs/providers.md](docs/providers.md)                   | Provider details                 |
+| [docs/api_reference.md](docs/api_reference.md)           | Generated Doxygen API            |
+| [docs/architecture.md](docs/architecture.md)             | System architecture overview     |
+| [docs/faq.md](docs/faq.md)                               | Frequently Asked Questions       |
+| [docs/security.md](docs/security.md)                     | Security notes                   |
+| [docs/performance.md](docs/performance.md)               | Optimization tips                |
+| [docs/ci_cd_guide.md](docs/ci_cd_guide.md)               | CI/CD and testing guide          |
+| [.github/contributing.md](.github/contributing.md)       | Contribution guidelines          |
+| [examples/README.md](examples/README.md)                 | Example usage guide              |
 
 [↑ Back to top](#llmengine)
 
