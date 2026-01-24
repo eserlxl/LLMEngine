@@ -37,12 +37,14 @@ namespace LLMEngine {
  *
  * ## Thread Safety
  *
- * **LLMEngine instances are NOT thread-safe.** Each instance should be used from
- * a single thread. To use LLMEngine from multiple threads, create separate instances.
+ * **LLMEngine instances ARE thread-safe** for `analyze` and `analyzeAsync` calls.
+ * Internal state is protected by shared mutexes, allowing concurrent requests from
+ * multiple threads on the same instance.
  *
- * The underlying APIClient implementations are thread-safe (stateless), but the
- * LLMEngine class maintains internal state (model parameters, configuration, logger)
- * that is not protected by locks.
+ * Configuration methods (setters) are generally thread-safe via locking, but
+ * consistent configuration should ideally be set during initialization.
+ *
+ * The underlying APIClient implementations are thread-safe (stateless).
  *
  * ## Lifecycle and Ownership
  *

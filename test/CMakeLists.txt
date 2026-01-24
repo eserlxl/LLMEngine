@@ -241,6 +241,7 @@ llmengine_test(test_streaming_metrics_fix test_streaming_metrics_fix.cpp test_su
 llmengine_test(test_thread_pool test_thread_pool.cpp)
 llmengine_test(test_analysis_result_extensions test_analysis_result_extensions.cpp)
 llmengine_test(test_parameter_merger_extended test_parameter_merger_extended.cpp)
+llmengine_test(test_llmengine_thread_safety test_llmengine_thread_safety.cpp test_support_fake)
 
 
 
@@ -280,6 +281,8 @@ if (BUILD_TESTING)
       test_parameter_propagation
       test_tool_builder_extended
       test_streaming_metrics_fix
+      test_parameter_merger_extended
+      test_llmengine_thread_safety
     COMMENT "Building all test executables"
 
 
