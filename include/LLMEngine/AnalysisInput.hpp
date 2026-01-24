@@ -137,7 +137,39 @@ struct LLMENGINE_EXPORT AnalysisInput {
     /**
      * @brief Convert to legacy JSON format for API compliance.
      */
+    /**
+     * @brief Convert to legacy JSON format for API compliance.
+     */
     [[nodiscard]] nlohmann::json toJson() const;
+
+    AnalysisInput& withDeveloperMessage(std::string_view content) {
+        messages.push_back({"developer", {ContentPart::createText(content)}, "", ""});
+        return *this;
+    }
+};
+
+class LLMENGINE_EXPORT ResponseFormatBuilder {
+  public:
+    static nlohmann::json text() {
+        return {{"type", "text"}};
+    }
+
+    static nlohmann::json json_object() {
+        return {{"type", "json_object"}};
+    }
+
+    static nlohmann::json json_schema(std::string_view name,
+                                      const nlohmann::json& schema,
+                                      bool strict = true) {
+        nlohmann::json j;
+        j["type"] = "json_schema";
+        j["json_schema"] = {
+            {"name", std::string(name)},
+            {"schema", schema},
+            {"strict", strict}
+        };
+        return j;
+    }
 };
 
 } // namespace LLMEngine

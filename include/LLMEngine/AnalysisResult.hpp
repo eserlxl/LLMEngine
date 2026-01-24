@@ -100,6 +100,8 @@ struct StreamChunk {
     LLMEngineErrorCode error_code = LLMEngineErrorCode::None;
     std::string error_message;
     std::optional<AnalysisResult::UsageStats> usage;
+    std::string finish_reason;
+    std::optional<std::vector<AnalysisResult::TokenLogProb>> logprobs;
 };
 
 using StreamCallback = std::function<void(const StreamChunk&)>;

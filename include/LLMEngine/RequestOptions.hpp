@@ -61,6 +61,8 @@ struct RequestOptions {
         std::optional<std::string> user;
         std::optional<bool> parallel_tool_calls;
         std::optional<std::string> service_tier;
+        std::optional<std::string> reasoning_effort;
+        std::optional<int> max_completion_tokens;
     } generation;
 
     struct StreamOptions {
@@ -169,6 +171,16 @@ public:
 
     RequestOptionsBuilder& setServiceTier(const std::string& tier) {
         m_options.generation.service_tier = tier;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setReasoningEffort(const std::string& effort) {
+        m_options.generation.reasoning_effort = effort;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setMaxCompletionTokens(int tokens) {
+        m_options.generation.max_completion_tokens = tokens;
         return *this;
     }
 
