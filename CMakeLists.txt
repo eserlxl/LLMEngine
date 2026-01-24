@@ -362,8 +362,10 @@ add_library(${PROJECT_NAME}
     src/RequestExecutor.cpp
     src/RetryableRequestExecutor.cpp
     src/AnalysisInput.cpp
+    src/AnalysisResult.cpp
     src/LLMEngineBuilder.cpp
     src/ToolBuilder.cpp
+    src/Utils/ThreadPool.cpp
 )
 
 # Versioning for shared libraries

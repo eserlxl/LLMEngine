@@ -238,6 +238,8 @@ llmengine_test(test_tool_builder test_tool_builder.cpp)
 llmengine_test(test_parameter_propagation test_parameter_propagation.cpp)
 llmengine_test(test_tool_builder_extended test_tool_builder_extended.cpp)
 llmengine_test(test_streaming_metrics_fix test_streaming_metrics_fix.cpp test_support_fake)
+llmengine_test(test_thread_pool test_thread_pool.cpp)
+llmengine_test(test_analysis_result_extensions test_analysis_result_extensions.cpp)
 
 
 

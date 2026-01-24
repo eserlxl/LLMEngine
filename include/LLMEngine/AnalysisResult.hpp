@@ -16,6 +16,8 @@
 #include <vector>
 #include <cstdint>
 
+#include <nlohmann/json.hpp>
+
 namespace LLMEngine {
 
 // Backward compatibility alias - use LLMEngineErrorCode in new code
@@ -27,6 +29,14 @@ using AnalysisErrorCode = LLMEngineErrorCode;
  * Contains the success status, extracted content, and error information.
  */
 struct LLMENGINE_EXPORT AnalysisResult {
+    /**
+     * @brief Extract JSON content from the response options.
+     *
+     * Automatically strips code block markers (```json ... ```) if present.
+     * Returns std::nullopt if parsing fails or content is empty.
+     */
+    [[nodiscard]] std::optional<nlohmann::json> getJson() const;
+
     bool success;
     std::string think;
     std::string content;

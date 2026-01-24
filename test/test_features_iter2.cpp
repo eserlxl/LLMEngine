@@ -57,6 +57,7 @@ void test_chat_message_builder_images() {
     assert(msg["content"].is_array());
 
     auto& content = msg["content"];
+    (void)content;
     assert(content.size() == 2); // Text + 1 Image
 
     assert(content[0]["type"] == "text");
@@ -146,6 +147,8 @@ void test_param_propagation() {
         params,
         // PayloadBuilder
         [&](const nlohmann::json& p) {
+            // Use p explicitly to avoid unused variable warning in Release mode
+            if (p.empty()) { /* merely access */ }
 
             // Verify params were merged from options
             assert(p.contains("seed"));

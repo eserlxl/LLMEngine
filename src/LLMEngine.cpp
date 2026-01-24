@@ -21,9 +21,11 @@
 #include "LLMEngine/SecureString.hpp"
 #include "LLMEngine/TempDirectoryService.hpp"
 #include "LLMEngine/Utils/Semaphore.hpp"
+#include "LLMEngine/Utils/ThreadPool.hpp"
 
 #include <chrono>
 #include <mutex>
+#include <shared_mutex>
 
 #include <algorithm>
 #include <cctype>
@@ -89,7 +91,8 @@ struct LLMEngine::EngineState {
     std::function<bool()> debug_files_policy_;
     bool disable_debug_files_env_cached_;
     std::vector<std::shared_ptr<IInterceptor>> interceptors_;
-    std::mutex state_mutex_;
+    std::mutex state_mutex_; // Protects ensuring secure directories
+    mutable std::shared_mutex config_mutex_; // Protects dynamic configuration (interceptors, settings)
 
     EngineState(const nlohmann::json& params, int cleanup_hours, bool debug)
         : model_params_(params), log_retention_hours_(cleanup_hours), debug_(debug),
@@ -288,8 +291,11 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                                       prepend_terse_instruction);
 
     // Run Interceptors (onRequest)
-    for (const auto& interceptor : state_->interceptors_) {
-        interceptor->onRequest(ctx);
+    {
+        std::shared_lock lock(state_->config_mutex_);
+        for (const auto& interceptor : state_->interceptors_) {
+            interceptor->onRequest(ctx);
+        }
     }
 
 
@@ -326,8 +332,11 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                 .errorCode = LLMEngineErrorCode::Unknown,
                                 .tool_calls = {}};
         // Should we run onResponse for errors? Yes, usually.
-        for (const auto& interceptor : state_->interceptors_) {
-            interceptor->onResponse(result);
+        {
+            std::shared_lock lock(state_->config_mutex_);
+            for (const auto& interceptor : state_->interceptors_) {
+                interceptor->onResponse(result);
+            }
         }
         return result;
     }
@@ -340,8 +349,11 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                      state_->logger_.get());
 
     // Run Interceptors (onResponse)
-    for (const auto& interceptor : state_->interceptors_) {
-        interceptor->onResponse(result);
+    {
+        std::shared_lock lock(state_->config_mutex_);
+        for (const auto& interceptor : state_->interceptors_) {
+            interceptor->onResponse(result);
+        }
     }
 
     return result;
@@ -416,18 +428,23 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                 std::shared_ptr<EngineState> s;
                 StateAdapter(std::shared_ptr<EngineState> st) : s(st) {}
                 std::string getTempDirectory() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     return s->tmp_dir_;
                 }
                 std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     return s->terse_prompt_builder_;
                 }
                 std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     return s->passthrough_prompt_builder_;
                 }
                 const nlohmann::json& getModelParams() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     return s->model_params_;
                 }
                 bool areDebugFilesEnabled() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     if (!s->debug_)
                         return false;
                     if (s->debug_files_policy_)
@@ -435,12 +452,15 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                     return !s->disable_debug_files_env_cached_;
                 }
                 std::shared_ptr<IArtifactSink> getArtifactSink() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     return s->artifact_sink_;
                 }
                 int getLogRetentionHours() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     return s->log_retention_hours_;
                 }
                 std::shared_ptr<Logger> getLogger() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     return s->logger_;
                 }
                 void prepareTempDirectory() override {
@@ -510,18 +530,23 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                 std::shared_ptr<EngineState> s;
                 StateAdapter(std::shared_ptr<EngineState> st) : s(st) {}
                 std::string getTempDirectory() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     return s->tmp_dir_;
                 }
                 std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     return s->terse_prompt_builder_;
                 }
                 std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     return s->passthrough_prompt_builder_;
                 }
                 const nlohmann::json& getModelParams() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     return s->model_params_;
                 }
                 bool areDebugFilesEnabled() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     if (!s->debug_)
                         return false;
                     if (s->debug_files_policy_)
@@ -529,12 +554,15 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                     return !s->disable_debug_files_env_cached_;
                 }
                 std::shared_ptr<IArtifactSink> getArtifactSink() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     return s->artifact_sink_;
                 }
                 int getLogRetentionHours() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     return s->log_retention_hours_;
                 }
                 std::shared_ptr<Logger> getLogger() const override {
+                    std::shared_lock lock(s->config_mutex_);
                     return s->logger_;
                 }
                 void prepareTempDirectory() override {
@@ -549,8 +577,11 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                 adapter, prompt, input, analysis_type, mode, prepend_terse_instruction);
 
             // Run Interceptors (onRequest)
-            for (const auto& interceptor : state->interceptors_) {
-                interceptor->onRequest(ctx);
+            {
+                std::shared_lock lock(state->config_mutex_);
+                for (const auto& interceptor : state->interceptors_) {
+                    interceptor->onRequest(ctx);
+                }
             }
 
 
@@ -589,8 +620,11 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                                   state->logger_.get());
 
             // Run Interceptors (onResponse)
-            for (const auto& interceptor : state->interceptors_) {
-                interceptor->onResponse(result);
+            {
+                std::shared_lock lock(state->config_mutex_);
+                for (const auto& interceptor : state->interceptors_) {
+                    interceptor->onResponse(result);
+                }
             }
 
             // Record Metrics
@@ -721,21 +755,22 @@ std::vector<AnalysisResult> LLMEngine::analyzeBatch(const std::vector<AnalysisIn
     }
 
     // Set up concurrency limiter
-    std::shared_ptr<Semaphore> semaphore;
+    // Default concurrency logic: use hardware concurrency or reasonable default (16)
+    size_t concurrency = 16;
     if (options.max_concurrency.has_value() && *options.max_concurrency > 0) {
-        semaphore = std::make_shared<Semaphore>(*options.max_concurrency);
+        concurrency = *options.max_concurrency;
+    } else {
+        size_t hw = std::thread::hardware_concurrency();
+        if (hw > 0) concurrency = hw * 2;
     }
 
+    Utils::ThreadPool pool(concurrency);
     std::vector<std::future<AnalysisResult>> futures;
     futures.reserve(inputs.size());
 
     for (const auto& input : inputs) {
         futures.push_back(
-            std::async(std::launch::async, [this, input, analysis_type, options, semaphore]() {
-                std::unique_ptr<SemaphoreGuard> guard;
-                if (semaphore) {
-                    guard = std::make_unique<SemaphoreGuard>(*semaphore);
-                }
+            pool.enqueue([this, input, analysis_type, options]() {
                 return this->analyze(input, analysis_type, options);
             }));
     }
@@ -750,6 +785,7 @@ std::vector<AnalysisResult> LLMEngine::analyzeBatch(const std::vector<AnalysisIn
 
 void LLMEngine::addInterceptor(std::shared_ptr<IInterceptor> interceptor) {
     if (interceptor) {
+        std::unique_lock lock(state_->config_mutex_);
         state_->interceptors_.push_back(std::move(interceptor));
     }
 }

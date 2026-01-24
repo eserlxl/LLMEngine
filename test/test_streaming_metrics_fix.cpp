@@ -44,6 +44,7 @@ void testStreamingMetricsAccumulation() {
     
     auto client = std::make_unique<FakeAPIClient>();
     auto* fake_client = client.get();
+    (void)fake_client;
     
     // Inject Mock Collector
     auto collector = std::make_shared<MockMetricsCollector>();
