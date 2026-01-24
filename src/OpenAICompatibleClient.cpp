@@ -182,7 +182,8 @@ void LLMEngineAPI::OpenAICompatibleClient::parseOpenAIStreamChunk(
                     result.is_done = false; // Usage might come before DONE or with DONE
                     result.usage = LLMEngine::AnalysisResult::UsageStats{
                         .promptTokens = json["usage"].value("prompt_tokens", 0),
-                        .completionTokens = json["usage"].value("completion_tokens", 0)};
+                        .completionTokens = json["usage"].value("completion_tokens", 0),
+                        .totalTokens = json["usage"].value("total_tokens", 0)};
                     callback(result);
                 }
 
