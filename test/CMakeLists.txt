@@ -243,6 +243,14 @@ llmengine_test(test_analysis_result_extensions test_analysis_result_extensions.c
 llmengine_test(test_parameter_merger_extended test_parameter_merger_extended.cpp)
 llmengine_test(test_llmengine_thread_safety test_llmengine_thread_safety.cpp test_support_fake)
 
+# Iteration 1 Extensions
+llmengine_test(test_llmengine_builder test_llmengine_builder.cpp)
+llmengine_test(test_batch_concurrency test_batch_concurrency.cpp test_support_fake)
+
+# Iteration 2 Refinements
+llmengine_test(test_builder_refinements test_builder_refinements.cpp)
+llmengine_test(test_async_cancellation test_async_cancellation.cpp test_support_fake)
+
 
 
 # ---- Build All Tests Target --------------------------------------------------

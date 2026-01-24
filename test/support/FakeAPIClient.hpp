@@ -32,6 +32,11 @@ class FakeAPIClient : public APIClient {
 
     void setNextResponse(const APIResponse& response);
     void setNextStreamChunks(const std::vector<std::string>& chunks);
+    
+    // Test utility: delay per chunk
+    void setStreamDelay(std::chrono::milliseconds delay) {
+        stream_delay_ = delay;
+    }
 
     void sendRequestStream(std::string_view prompt,
                            const nlohmann::json& input,
@@ -49,6 +54,7 @@ class FakeAPIClient : public APIClient {
     mutable APIResponse next_response_{};
     mutable bool has_custom_stream_ = false;
     mutable std::vector<std::string> next_stream_chunks_;
+    mutable std::chrono::milliseconds stream_delay_{0};
 
     // Verification fields
     mutable ::LLMEngine::RequestOptions last_options_;

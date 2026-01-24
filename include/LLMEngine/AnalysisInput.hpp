@@ -148,6 +148,13 @@ struct LLMENGINE_EXPORT AnalysisInput {
         messages.push_back({"developer", {ContentPart::createText(content)}, "", ""});
         return *this;
     }
+
+    /**
+     * @brief Validate the input structure.
+     * @param error_message Output parameter for error details.
+     * @return true if valid, false otherwise.
+     */
+    [[nodiscard]] bool validate(std::string& error_message) const;
 };
 
 class LLMENGINE_EXPORT ResponseFormatBuilder {

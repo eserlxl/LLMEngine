@@ -197,7 +197,8 @@ LLMEngine::LLMEngine(std::string_view provider_name,
                      const nlohmann::json& model_params,
                      int log_retention_hours,
                      bool debug,
-                     const std::shared_ptr<LLMAPI::IConfigManager>& config_manager) {
+                     const std::shared_ptr<LLMAPI::IConfigManager>& config_manager,
+                     std::string_view base_url) {
     state_ = std::make_shared<EngineState>(model_params, log_retention_hours, debug);
 
     // Manage config manager
@@ -214,7 +215,13 @@ LLMEngine::LLMEngine(std::string_view provider_name,
     state_->provider_type_ = bootstrap_result.provider_type;
     state_->api_key_ = std::move(bootstrap_result.api_key);
     state_->model_ = bootstrap_result.model;
-    state_->ollama_url_ = bootstrap_result.ollama_url;
+    
+    // Use bootstrapped URL unless explicit base_url is provided
+    if (!base_url.empty()) {
+        state_->ollama_url_ = std::string(base_url);
+    } else {
+        state_->ollama_url_ = bootstrap_result.ollama_url;
+    }
 
     state_->initializeAPIClient();
 }
@@ -756,12 +763,11 @@ std::vector<AnalysisResult> LLMEngine::analyzeBatch(const std::vector<AnalysisIn
 
     // Set up concurrency limiter
     // Default concurrency logic: use hardware concurrency or reasonable default (16)
-    size_t concurrency = 16;
+    size_t concurrency = std::thread::hardware_concurrency();
+    if (concurrency == 0) concurrency = 4; // Absolute fallback
+
     if (options.max_concurrency.has_value() && *options.max_concurrency > 0) {
         concurrency = *options.max_concurrency;
-    } else {
-        size_t hw = std::thread::hardware_concurrency();
-        if (hw > 0) concurrency = hw * 2;
     }
 
     Utils::ThreadPool pool(concurrency);

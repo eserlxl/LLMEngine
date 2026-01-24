@@ -1,24 +1,25 @@
+
 // Copyright © 2026 Eser KUBALI
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "LLMEngine/LLMEngineBuilder.hpp"
+#include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/ProviderBootstrap.hpp"
-#include <stdexcept>
 
 namespace LLMEngine {
 
 LLMEngineBuilder& LLMEngineBuilder::withProvider(std::string_view name) {
-    provider_name_ = name;
+    provider_name_ = std::string(name);
     return *this;
 }
 
 LLMEngineBuilder& LLMEngineBuilder::withApiKey(std::string_view key) {
-    api_key_ = key;
+    api_key_ = std::string(key);
     return *this;
 }
 
 LLMEngineBuilder& LLMEngineBuilder::withModel(std::string_view model) {
-    model_ = model;
+    model_ = std::string(model);
     return *this;
 }
 
@@ -27,8 +28,7 @@ LLMEngineBuilder& LLMEngineBuilder::withModelParams(const nlohmann::json& params
     return *this;
 }
 
-LLMEngineBuilder& LLMEngineBuilder::withConfigManager(
-    std::shared_ptr<::LLMEngineAPI::IConfigManager> cfg) {
+LLMEngineBuilder& LLMEngineBuilder::withConfigManager(std::shared_ptr<::LLMEngineAPI::IConfigManager> cfg) {
     config_manager_ = std::move(cfg);
     return *this;
 }
@@ -48,22 +48,29 @@ LLMEngineBuilder& LLMEngineBuilder::withLogRetention(int hours) {
     return *this;
 }
 
+LLMEngineBuilder& LLMEngineBuilder::withBaseUrl(std::string_view url) {
+    base_url_ = std::string(url);
+    return *this;
+}
+
 std::unique_ptr<LLMEngine> LLMEngineBuilder::build() {
+    // If provider_name_ is not set but we have a config manager, maybe we can infer?
+    // But currently LLMEngine needs at least a provider name or type.
     if (provider_name_.empty()) {
-        // Fallback to default provider from config manager if available,
-        // but we need a config manager to check.
-        // If config_manager_ is null, LLMEngine constructor handles looking up singleton.
-        // But LLMEngine constructor expects a provider name.
-        // We will pass empty provider name which ProviderBootstrap handles (resolves default).
+        throw std::runtime_error("Provider name must be set in LLMEngineBuilder");
     }
 
-    auto engine = std::make_unique<LLMEngine>(provider_name_,
-                                              api_key_,
-                                              model_,
-                                              model_params_,
-                                              log_retention_hours_,
-                                              debug_,
-                                              config_manager_);
+    // Construct using the comprehensive constructor
+    auto engine = std::make_unique<LLMEngine>(
+        provider_name_,
+        api_key_,
+        model_,
+        model_params_,
+        log_retention_hours_,
+        debug_,
+        config_manager_,
+        base_url_
+    );
 
     if (logger_) {
         engine->setLogger(logger_);

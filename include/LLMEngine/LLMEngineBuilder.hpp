@@ -29,6 +29,8 @@ class LLMENGINE_EXPORT LLMEngineBuilder {
     LLMEngineBuilder& enableDebug(bool enabled = true);
     LLMEngineBuilder& withLogRetention(int hours);
 
+    LLMEngineBuilder& withBaseUrl(std::string_view url);
+
     /**
      * @brief Build the LLMEngine instance.
      * @throws std::runtime_error if configuration is invalid.
@@ -39,6 +41,7 @@ class LLMENGINE_EXPORT LLMEngineBuilder {
     std::string provider_name_;
     std::string api_key_;
     std::string model_;
+    std::string base_url_;
     nlohmann::json model_params_;
     std::shared_ptr<::LLMEngineAPI::IConfigManager> config_manager_;
     std::shared_ptr<Logger> logger_;

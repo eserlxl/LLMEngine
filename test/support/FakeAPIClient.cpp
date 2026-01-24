@@ -7,6 +7,8 @@
 
 #include "FakeAPIClient.hpp"
 #include "LLMEngine/HttpStatus.hpp"
+#include <thread>
+#include <chrono>
 
 namespace LLMEngineAPI {
 
@@ -67,12 +69,23 @@ void FakeAPIClient::sendRequestStream(std::string_view prompt,
     if (has_custom_stream_) {
         has_custom_stream_ = false;
         for (const auto& chunk : next_stream_chunks_) {
+            if (options.cancellation_token && options.cancellation_token->isCancelled()) {
+                return; // Simulate cancellation
+            }
+
+            if (stream_delay_.count() > 0) {
+                std::this_thread::sleep_for(stream_delay_);
+            }
+
             LLMEngine::StreamChunk stream_chunk;
             stream_chunk.content = chunk;
             stream_chunk.is_done = false;
             callback(stream_chunk);
         }
         // Send done signal
+        if (options.cancellation_token && options.cancellation_token->isCancelled()) {
+            return;
+        }
         LLMEngine::StreamChunk done_chunk;
         done_chunk.is_done = true;
         callback(done_chunk);
@@ -80,6 +93,14 @@ void FakeAPIClient::sendRequestStream(std::string_view prompt,
     }
 
     // Default behavior: one chunk with prompt
+    if (stream_delay_.count() > 0) {
+        std::this_thread::sleep_for(stream_delay_);
+    }
+    
+    if (options.cancellation_token && options.cancellation_token->isCancelled()) {
+        return;
+    }
+
     std::string content = "[FAKE STREAM] " + std::string(prompt);
     LLMEngine::StreamChunk stream_chunk;
     stream_chunk.content = content;

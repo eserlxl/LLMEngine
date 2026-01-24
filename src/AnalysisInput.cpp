@@ -86,7 +86,6 @@ nlohmann::json AnalysisInput::toJson() const {
     }
 
     // 2. Append explicit messages
-    // 2. Append explicit messages
     for (const auto& msg : messages) {
         nlohmann::json m;
         m["role"] = msg.role;
@@ -142,6 +141,57 @@ nlohmann::json AnalysisInput::toJson() const {
         j[key] = value;
     }
     return j;
+}
+
+bool AnalysisInput::validate(std::string& error_message) const {
+    // Validate response_format if present
+    if (!response_format.is_null()) {
+        if (response_format.contains("type") && response_format["type"] == "json_schema") {
+            if (!response_format.contains("json_schema")) {
+                error_message = "response_format type is json_schema but 'json_schema' field is missing";
+                return false;
+            }
+            const auto& schema = response_format["json_schema"];
+            if (!schema.contains("name") || !schema["name"].is_string()) {
+                error_message = "json_schema must contain a 'name' string field";
+                return false;
+            }
+            if (!schema.contains("schema") || !schema["schema"].is_object()) {
+                error_message = "json_schema must contain a 'schema' object field";
+                return false;
+            }
+        }
+    }
+
+
+    // Validate tools if present
+    if (!tools.is_null()) {
+        if (!tools.is_array()) {
+            error_message = "tools must be an array";
+            return false;
+        }
+        for (const auto& tool : tools) {
+            if (!tool.is_object()) {
+                error_message = "tool item must be an object";
+                return false;
+            }
+            if (!tool.contains("type") || tool["type"] != "function") {
+                error_message = "tool type must be 'function'";
+                return false;
+            }
+            if (!tool.contains("function") || !tool["function"].is_object()) {
+                error_message = "tool must contain 'function' object";
+                return false;
+            }
+            const auto& fn = tool["function"];
+            if (!fn.contains("name") || !fn["name"].is_string()) {
+                error_message = "tool function must have a name";
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 } // namespace LLMEngine

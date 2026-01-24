@@ -190,13 +190,9 @@ struct ChatCompletionRequestHelper {
             int timeout_seconds = 0;
 
             if (options.timeout_ms.has_value()) {
-                // round up to nearest second if needed, or use exact ms if we update cpr::Timeout to support ms?
-                // cpr::Timeout takes milliseconds if constructed with long, or simple integer seconds if simpler constructor?
-                // Actually cpr::Timeout argument is usually milliseconds if it's `long`.
-                // But here code converts seconds * 1000.
-                // Let's stick to seconds for basic compatibility, or improve to ms.
-                // For now, convert ms to seconds (rounding up).
-                timeout_seconds = (*options.timeout_ms + 999) / 1000;
+                // round up to nearest second
+                timeout_seconds = (*options.timeout_ms + (::LLMEngine::Constants::DefaultValues::MILLISECONDS_PER_SECOND - 1)) / 
+                                  ::LLMEngine::Constants::DefaultValues::MILLISECONDS_PER_SECOND;
             } else if (params.contains(
                            std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))
                        && params.at(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))
@@ -221,8 +217,8 @@ struct ChatCompletionRequestHelper {
             }
             if (connect_timeout_ms < 0)
                 connect_timeout_ms = 0;
-            if (connect_timeout_ms > 120000)
-                connect_timeout_ms = 120000; // cap at 120s
+            if (connect_timeout_ms > ::LLMEngine::Constants::DefaultValues::MAX_CONNECT_TIMEOUT_MS)
+                connect_timeout_ms = ::LLMEngine::Constants::DefaultValues::MAX_CONNECT_TIMEOUT_MS;
 
             // SSL verification toggle (default: true)
             // SECURITY: Log prominently when verification is disabled to prevent accidental use in
@@ -245,7 +241,11 @@ struct ChatCompletionRequestHelper {
             // Headers are typically cached by the client, so we capture the reference/const
             // reference to avoid redundant allocations in tight retry loops
             const std::string url = buildUrl();
-            const std::map<std::string, std::string> headers = buildHeaders();
+            std::map<std::string, std::string> headers = buildHeaders();
+            // Merge extra headers from options
+            for (const auto& [key, value] : options.extra_headers) {
+                headers[key] = value;
+            }
             // Pre-allocate cpr::Header once to avoid repeated map iteration in retry loop
             const cpr::Header cpr_headers{headers.begin(), headers.end()};
 
@@ -408,14 +408,19 @@ struct ChatCompletionRequestHelper {
 
         const std::string serialized_body = payload.dump();
         const std::string url = buildUrl();
-        const std::map<std::string, std::string> headers = buildHeaders();
+        std::map<std::string, std::string> headers = buildHeaders();
+        // Merge extra headers from options
+        for (const auto& [key, value] : options.extra_headers) {
+            headers[key] = value;
+        }
         const cpr::Header cpr_headers{headers.begin(), headers.end()};
 
         // Timeout settings
         // Timeout settings
         int timeout_seconds = 0;
         if (options.timeout_ms.has_value()) {
-            timeout_seconds = (*options.timeout_ms + 999) / 1000;
+            timeout_seconds = (*options.timeout_ms + (::LLMEngine::Constants::DefaultValues::MILLISECONDS_PER_SECOND - 1)) / 
+                              ::LLMEngine::Constants::DefaultValues::MILLISECONDS_PER_SECOND;
         } else {
             timeout_seconds = cfg ? cfg->getTimeoutSeconds()
                                   : APIConfigManager::getInstance().getTimeoutSeconds();
@@ -430,7 +435,7 @@ struct ChatCompletionRequestHelper {
         cpr::Response response = cpr::Post(cpr::Url{url},
                                            cpr_headers,
                                            cpr::Body{serialized_body},
-                                           cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
+                                           cpr::Timeout{timeout_seconds * ::LLMEngine::Constants::DefaultValues::MILLISECONDS_PER_SECOND},
                                            cpr::VerifySsl{verify_ssl},
                                            cpr::WriteCallback([&](std::string_view data, intptr_t) {
                                                processChunk(data);

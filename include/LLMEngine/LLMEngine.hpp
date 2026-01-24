@@ -116,7 +116,8 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
               const nlohmann::json& model_params = {},
               int log_retention_hours = Constants::DefaultValues::DEFAULT_LOG_RETENTION_HOURS,
               bool debug = false,
-              const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager = nullptr);
+              const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager = nullptr,
+              std::string_view base_url = "");
 
     // Dependency injection constructor for tests and advanced usage
     /**
