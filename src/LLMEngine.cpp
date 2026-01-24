@@ -17,9 +17,11 @@
 #include "LLMEngine/ProviderBootstrap.hpp"
 #include "LLMEngine/RequestContextBuilder.hpp"
 #include "LLMEngine/ResponseHandler.hpp"
+#include "LLMEngine/ParameterMerger.hpp"
 #include "LLMEngine/SecureString.hpp"
 #include "LLMEngine/TempDirectoryService.hpp"
 #include "LLMEngine/Utils/Semaphore.hpp"
+
 #include <chrono>
 #include <mutex>
 
@@ -58,32 +60,7 @@ bool parseDisableDebugFilesEnv() {
 
 namespace LLMEngine {
 
-namespace {
-void mergeRequestOptions(nlohmann::json& params, const RequestOptions& options) {
-    if (options.generation.reasoning_effort.has_value()) {
-        params["reasoning_effort"] = *options.generation.reasoning_effort;
-    }
-    if (options.generation.max_completion_tokens.has_value()) {
-        params["max_completion_tokens"] = *options.generation.max_completion_tokens;
-    }
-    if (options.generation.logit_bias.has_value()) {
-        params["logit_bias"] = *options.generation.logit_bias;
-    }
-    if (options.generation.logprobs.has_value()) {
-        params["logprobs"] = *options.generation.logprobs;
-        if (options.generation.top_logprobs.has_value()) {
-            params["top_logprobs"] = *options.generation.top_logprobs;
-        }
-    }
-    if (options.generation.top_k.has_value()) {
-        params["top_k"] = *options.generation.top_k;
-    }
-    if (options.generation.min_p.has_value()) {
-        params["min_p"] = *options.generation.min_p;
-    }
-    // Add other fields as necessary
-}
-} // namespace
+
 
 // Internal state structure implementation
 struct LLMEngine::EngineState {
@@ -318,7 +295,9 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
 
 
     // Merge RequestOptions into finalParams
-    mergeRequestOptions(ctx.finalParams, options);
+    // Merge RequestOptions into finalParams
+    ParameterMerger::mergeRequestOptions(ctx.finalParams, options);
+
 
     // Apply options overrides like timeout/headers would go here if IRequestExecutor supported them
     // For now, we just pass parameters.
@@ -577,7 +556,9 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
 
 
             // Merge RequestOptions into finalParams
-            mergeRequestOptions(ctx.finalParams, options);
+            // Merge RequestOptions into finalParams
+            ParameterMerger::mergeRequestOptions(ctx.finalParams, options);
+
 
             LLMAPI::APIResponse api_response;
             if (state->request_executor_) {
@@ -661,7 +642,9 @@ void LLMEngine::analyzeStream(std::string_view prompt,
 
 
     // Merge RequestOptions into finalParams
-    mergeRequestOptions(ctx.finalParams, options);
+    // Merge RequestOptions into finalParams
+    ParameterMerger::mergeRequestOptions(ctx.finalParams, options);
+
 
     auto start_time = std::chrono::high_resolution_clock::now();
 

@@ -13,6 +13,7 @@
 
 namespace LLMEngine {
 struct Logger; // Forward declaration
+struct RequestOptions; // Forward declaration
 
 /**
  * @brief Merges model parameters with input overrides.
@@ -22,6 +23,16 @@ struct Logger; // Forward declaration
  */
 class LLMENGINE_EXPORT ParameterMerger {
   public:
+    /**
+     * @brief Merge RequestOptions into the parameter JSON.
+     *
+     * Applies overrides from the strong-typed RequestOptions struct.
+     *
+     * @param params Target parameters JSON (modified in-place)
+     * @param options Source options
+     */
+    static void mergeRequestOptions(nlohmann::json& params, const RequestOptions& options);
+
     /**
      * @brief Merge base model parameters with input overrides.
      *

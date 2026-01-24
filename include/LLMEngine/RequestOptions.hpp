@@ -63,6 +63,12 @@ struct RequestOptions {
         std::optional<std::string> service_tier;
         std::optional<std::string> reasoning_effort;
         std::optional<int> max_completion_tokens;
+
+        // [NEW] Structured Output Support
+        std::optional<nlohmann::json> response_format;
+
+        // [NEW] Tool Choice Override
+        std::optional<nlohmann::json> tool_choice;
     } generation;
 
     struct StreamOptions {
@@ -181,6 +187,16 @@ public:
 
     RequestOptionsBuilder& setMaxCompletionTokens(int tokens) {
         m_options.generation.max_completion_tokens = tokens;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setResponseFormat(const nlohmann::json& format) {
+        m_options.generation.response_format = format;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setToolChoice(const nlohmann::json& choice) {
+        m_options.generation.tool_choice = choice;
         return *this;
     }
 

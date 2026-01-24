@@ -6,7 +6,10 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/ParameterMerger.hpp"
+#include "LLMEngine/ParameterMerger.hpp"
 #include "LLMEngine/Logger.hpp"
+#include "LLMEngine/RequestOptions.hpp"
+
 
 namespace LLMEngine {
 
@@ -35,7 +38,19 @@ bool ParameterMerger::mergeInto(const nlohmann::json& base_params,
         {"min_p", nlohmann::json::value_t::number_float},
         {"presence_penalty", nlohmann::json::value_t::number_float},
         {"frequency_penalty", nlohmann::json::value_t::number_float},
-        {"timeout_seconds", nlohmann::json::value_t::number_integer}};
+        {"timeout_seconds", nlohmann::json::value_t::number_integer},
+        {"seed", nlohmann::json::value_t::number_integer},
+        {"user", nlohmann::json::value_t::string},
+        {"stop", nlohmann::json::value_t::array},
+        {"response_format", nlohmann::json::value_t::object},
+        {"logit_bias", nlohmann::json::value_t::object},
+        {"logprobs", nlohmann::json::value_t::boolean},
+        {"top_logprobs", nlohmann::json::value_t::number_integer},
+        {"parallel_tool_calls", nlohmann::json::value_t::boolean},
+        {"service_tier", nlohmann::json::value_t::string},
+        {"reasoning_effort", nlohmann::json::value_t::string},
+        {"max_completion_tokens", nlohmann::json::value_t::number_integer}};
+
 
     // Verify input is an object
     // Allow null (treated as empty) or object. Reject primitives/arrays.
@@ -112,4 +127,40 @@ bool ParameterMerger::mergeInto(const nlohmann::json& base_params,
     return true;
 }
 
+void ParameterMerger::mergeRequestOptions(nlohmann::json& params, const RequestOptions& options) {
+    auto& gen = options.generation;
+    if (gen.temperature) params["temperature"] = *gen.temperature;
+    if (gen.max_tokens) params["max_tokens"] = *gen.max_tokens;
+    if (gen.top_p) params["top_p"] = *gen.top_p;
+    if (gen.frequency_penalty) params["frequency_penalty"] = *gen.frequency_penalty;
+    if (gen.presence_penalty) params["presence_penalty"] = *gen.presence_penalty;
+    if (gen.seed) params["seed"] = *gen.seed;
+    if (gen.user) params["user"] = *gen.user;
+    if (gen.parallel_tool_calls) params["parallel_tool_calls"] = *gen.parallel_tool_calls;
+    if (gen.service_tier) params["service_tier"] = *gen.service_tier;
+    if (gen.reasoning_effort) params["reasoning_effort"] = *gen.reasoning_effort;
+    if (gen.max_completion_tokens) params["max_completion_tokens"] = *gen.max_completion_tokens;
+    if (gen.response_format) params["response_format"] = *gen.response_format;
+    if (gen.tool_choice) params["tool_choice"] = *gen.tool_choice;
+    
+    // Vectors/Complex types
+    if (!gen.stop_sequences.empty()) {
+        params["stop"] = gen.stop_sequences;
+    }
+    if (gen.logit_bias) {
+        params["logit_bias"] = *gen.logit_bias;
+    }
+    
+    if (gen.logprobs) {
+        params["logprobs"] = *gen.logprobs;
+        if (gen.top_logprobs) {
+            params["top_logprobs"] = *gen.top_logprobs;
+        }
+    }
+    
+    if (gen.top_k) params["top_k"] = *gen.top_k;
+    if (gen.min_p) params["min_p"] = *gen.min_p;
+}
+
 } // namespace LLMEngine
+

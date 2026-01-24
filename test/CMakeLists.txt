@@ -235,6 +235,8 @@ llmengine_test(test_timeout test_timeout.cpp test_support_fake)
 # Iteration 1 New Test
 llmengine_test(test_request_options_builder test_request_options_builder.cpp)
 llmengine_test(test_tool_builder test_tool_builder.cpp)
+llmengine_test(test_parameter_propagation test_parameter_propagation.cpp)
+
 
 # ---- Build All Tests Target --------------------------------------------------
 if (BUILD_TESTING)
@@ -265,10 +267,13 @@ if (BUILD_TESTING)
       test_new_features_iter1
       test_async_streaming_iter2
       test_features_iter2
+      test_features_iter2
       test_streaming_providers
       test_timeout
       test_request_options_builder
+      test_parameter_propagation
     COMMENT "Building all test executables"
+
   )
 endif()
 
