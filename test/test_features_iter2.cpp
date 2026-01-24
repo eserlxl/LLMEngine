@@ -120,6 +120,7 @@ void test_analysis_input_helpers() {
             assert(m["content"] == "sunny");
         }
     }
+    (void)found; // Suppress unused warning in Release
     assert(found);
     
     std::cout << "AnalysisInput Helpers passed.\n";
@@ -144,7 +145,7 @@ void test_param_propagation() {
         default_params,
         params,
         // PayloadBuilder
-        [&](const nlohmann::json& p) {
+        [&](const nlohmann::json& /*p*/) {
             // Verify params were merged from options
             assert(p.contains("seed"));
             assert(p["seed"] == 12345);

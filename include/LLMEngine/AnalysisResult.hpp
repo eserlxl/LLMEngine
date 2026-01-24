@@ -100,7 +100,15 @@ struct StreamChunk {
     LLMEngineErrorCode error_code = LLMEngineErrorCode::None;
     std::string error_message;
     std::optional<AnalysisResult::UsageStats> usage;
+
+    /**
+     * @brief Reason why the generation finished (e.g. "stop", "length", "content_filter").
+     * Populated in the final chunk or when is_done is true.
+     */
     std::string finish_reason;
+    /**
+     * @brief Log probabilities for the token, if requested.
+     */
     std::optional<std::vector<AnalysisResult::TokenLogProb>> logprobs;
 };
 

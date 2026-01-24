@@ -78,6 +78,12 @@ nlohmann::json OpenAICompatibleClient::buildPayload(const nlohmann::json& messag
     if (request_params.contains("response_format")) {
         payload["response_format"] = request_params["response_format"];
     }
+    if (request_params.contains("reasoning_effort")) {
+        payload["reasoning_effort"] = request_params["reasoning_effort"];
+    }
+    if (request_params.contains("max_completion_tokens")) {
+        payload["max_completion_tokens"] = request_params["max_completion_tokens"];
+    }
 
     // Include tool definitions if present
     if (request_params.contains("tools")) {
@@ -170,10 +176,21 @@ void LLMEngineAPI::OpenAICompatibleClient::parseOpenAIStreamChunk(
                         LLMEngine::StreamChunk result;
                         result.content = content;
                         result.is_done = false;
+                        if (choice.contains("logprobs") && !choice["logprobs"].is_null()) {
+                             // Simple logprobs extraction not fully implemented due to type complexity
+                             // logic here would map JSON to TokenLogProb
+                        }
                         callback(result);
                     }
                     if (choice.contains("finish_reason") && !choice["finish_reason"].is_null()) {
-                        // Finish reason handling
+                        std::string finish_reason = choice["finish_reason"].get<std::string>();
+                        if (!finish_reason.empty()) {
+                             LLMEngine::StreamChunk result;
+                             result.is_done = false; // Will trigger done on [DONE] or next event
+                             result.finish_reason = finish_reason;
+                             // Some providers send empty delta with finish_reason
+                             callback(result);
+                        }
                     }
                 }
 
