@@ -136,6 +136,7 @@ constexpr double TOP_P = 0.9;
 constexpr double MIN_P = 0.05;
 constexpr int TOP_K = 40;
 constexpr int CONTEXT_WINDOW = 10000;
+constexpr int DEFAULT_LOG_RETENTION_HOURS = 24;
 } // namespace DefaultValues
 
 // Request Directory Prefix

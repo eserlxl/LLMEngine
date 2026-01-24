@@ -19,6 +19,7 @@
 #include "LLMEngine/Logger.hpp"
 #include "LLMEngine/PromptBuilder.hpp"
 #include "LLMEngine/RequestContext.hpp"
+#include "LLMEngine/Constants.hpp"
 
 #include <functional>
 #include <future>
@@ -89,7 +90,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
               std::string_view api_key,
               std::string_view model,
               const nlohmann::json& model_params = {},
-              int log_retention_hours = 24,
+              int log_retention_hours = Constants::DefaultValues::DEFAULT_LOG_RETENTION_HOURS,
               bool debug = false);
 
     // Constructor using config file
@@ -109,7 +110,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
               std::string_view api_key = "",
               std::string_view model = "",
               const nlohmann::json& model_params = {},
-              int log_retention_hours = 24,
+              int log_retention_hours = Constants::DefaultValues::DEFAULT_LOG_RETENTION_HOURS,
               bool debug = false,
               const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager = nullptr);
 

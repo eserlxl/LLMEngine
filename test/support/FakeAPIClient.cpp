@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "FakeAPIClient.hpp"
+#include "LLMEngine/HttpStatus.hpp"
 
 namespace LLMEngineAPI {
 
@@ -35,7 +36,7 @@ APIResponse FakeAPIClient::sendRequest(std::string_view prompt,
     r.success = true;
     // Produce a deterministic echo-style response for tests
     r.content = std::string("[FAKE] ") + std::string(prompt);
-    r.status_code = 200;
+    r.status_code = ::LLMEngine::HttpStatus::OK;
     r.raw_response = {{"fake", true},
                       {"provider", provider_name_},
                       {"prompt_len", static_cast<int>(std::string(prompt).size())},

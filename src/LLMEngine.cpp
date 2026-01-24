@@ -386,7 +386,9 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                                     std::string_view analysis_type,
                                                     std::string_view mode,
                                                     bool prepend_terse_instruction) {
-    // Copy shared state pointer
+    // Copy shared state pointer. Efficiently captures the PIMPL state,
+    // ensuring the engine's internal components remain valid for the duration
+    // of the async task, even if the LLMEngine instance itself is destroyed.
     std::shared_ptr<EngineState> state = state_;
 
     return std::async(
@@ -474,7 +476,9 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                                     const nlohmann::json& input,
                                                     std::string_view analysis_type,
                                                     const RequestOptions& options) {
-    // Copy shared state pointer
+    // Copy shared state pointer. Efficiently captures the PIMPL state,
+    // ensuring the engine's internal components remain valid for the duration
+    // of the async task, even if the LLMEngine instance itself is destroyed.
     std::shared_ptr<EngineState> state = state_;
 
     // Default mode/instruction for options-based overload
