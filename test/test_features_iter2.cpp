@@ -145,7 +145,8 @@ void test_param_propagation() {
         default_params,
         params,
         // PayloadBuilder
-        [&](const nlohmann::json& /*p*/) {
+        [&](const nlohmann::json& p) {
+
             // Verify params were merged from options
             assert(p.contains("seed"));
             assert(p["seed"] == 12345);

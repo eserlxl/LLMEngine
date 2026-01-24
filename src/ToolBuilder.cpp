@@ -8,14 +8,19 @@ namespace LLMEngine {
 
 ToolBuilder::ToolBuilder(std::string_view name, std::string_view description)
     : name_(name), description_(description) {
-    if (name.empty()) {
-        throw std::invalid_argument("Function name cannot be empty");
-    }
+// Name can be empty for schema-only objects
 }
 
 ToolBuilder ToolBuilder::createFunction(std::string_view name, std::string_view description) {
     return ToolBuilder(name, description);
 }
+
+ToolBuilder ToolBuilder::createSchema(std::string_view description) {
+    ToolBuilder builder("", description);
+    builder.is_schema_only_ = true;
+    return builder;
+}
+
 
 ToolBuilder& ToolBuilder::addStringProperty(std::string_view name, std::string_view description, bool required) {
     properties_[name] = {
@@ -73,17 +78,72 @@ ToolBuilder& ToolBuilder::addEnumProperty(std::string_view name, const std::vect
     return *this;
 }
 
+
+
+ToolBuilder& ToolBuilder::addObjectProperty(std::string_view name, const ToolBuilder& schema, std::string_view description, bool required) {
+    nlohmann::json nested_json = schema.build();
+    
+    // Extract parameters if it's wrapped in function structure
+    if (nested_json.contains("function")) {
+        if (nested_json["function"].contains("parameters")) {
+            nested_json = nested_json["function"]["parameters"];
+        }
+    } else if (nested_json.contains("type") && nested_json["type"] == "function") {
+         if (nested_json.contains("function") && nested_json["function"].contains("parameters")) {
+             nested_json = nested_json["function"]["parameters"];
+         }
+    }
+    
+    if (!description.empty()) {
+        nested_json["description"] = description;
+    }
+    
+    properties_[name] = nested_json;
+    
+    if (required) {
+        required_.push_back(std::string(name));
+    }
+    return *this;
+}
+
+ToolBuilder& ToolBuilder::addArrayProperty(std::string_view name, const nlohmann::json& items_schema, std::string_view description, bool required) {
+    properties_[name] = {
+        {"type", "array"},
+        {"items", items_schema},
+        {"description", description}
+    };
+    if (required) {
+        required_.push_back(std::string(name));
+    }
+    return *this;
+}
+
+ToolBuilder& ToolBuilder::setStrict(bool strict) {
+    strict_ = strict;
+    return *this;
+}
+
 nlohmann::json ToolBuilder::build() const {
+
     nlohmann::json parameters = {
         {"type", "object"},
         {"properties", properties_},
         {"required", required_}
     };
     
-    // Strict mode is often useful but optional; OpenAI supports "strict": true
-    // adding it implicitly if needed or via method (omitted for now)
+    if (strict_) {
+        parameters["additionalProperties"] = false;
+        // OpenAI strict mode requires all properties to be required?
+        // Usually yes, but we leave `required` array as user defined.
+        // The user is responsible for marking everything required if that's the constraint.
+    }
 
-    return {
+    if (is_schema_only_) {
+        // Return just the schema object
+        return parameters;
+    }
+
+    nlohmann::json tool = {
         {"type", "function"},
         {"function", {
             {"name", name_},
@@ -91,6 +151,19 @@ nlohmann::json ToolBuilder::build() const {
             {"parameters", parameters}
         }}
     };
+    
+    // Validate name for tools
+    if (name_.empty()) {
+        throw std::invalid_argument("Function name cannot be empty for tools");
+    }
+
+    
+    if (strict_) {
+        tool["function"]["strict"] = true;
+    }
+    
+    return tool;
 }
+
 
 } // namespace LLMEngine

@@ -647,8 +647,16 @@ void LLMEngine::analyzeStream(std::string_view prompt,
 
 
     auto start_time = std::chrono::high_resolution_clock::now();
+    
+    // Use shared pointer to accumulate usage across chunks
+    auto usage_accum = std::make_shared<std::optional<AnalysisResult::UsageStats>>();
 
-    auto wrapped_callback = [callback, this, start_time, analysis_type](const StreamChunk& chunk) {
+    auto wrapped_callback = [callback, this, start_time, analysis_type, usage_accum](const StreamChunk& chunk) {
+        // Accumulate usage if present in this chunk
+        if (chunk.usage.has_value()) {
+            *usage_accum = chunk.usage;
+        }
+        
         callback(chunk);
 
         if (chunk.is_done && state_->metrics_collector_) {
@@ -663,11 +671,12 @@ void LLMEngine::analyzeStream(std::string_view prompt,
                 {"mode", "stream"}};
             state_->metrics_collector_->recordLatency("llm_engine.analyze", latency, tags);
 
-            if (chunk.usage.has_value()) {
+            if (usage_accum->has_value()) {
+                const auto& usage = **usage_accum;
                 state_->metrics_collector_->recordCounter(
-                    "llm_engine.tokens_input", chunk.usage->promptTokens, tags);
+                    "llm_engine.tokens_input", usage.promptTokens, tags);
                 state_->metrics_collector_->recordCounter(
-                    "llm_engine.tokens_output", chunk.usage->completionTokens, tags);
+                    "llm_engine.tokens_output", usage.completionTokens, tags);
             }
             // Error counting? If chunk.error_code is set.
             if (chunk.error_code != LLMEngineErrorCode::None) {
@@ -675,6 +684,7 @@ void LLMEngine::analyzeStream(std::string_view prompt,
             }
         }
     };
+
 
     if (state_->request_executor_) {
         // executeStream now takes StreamCallback directly
