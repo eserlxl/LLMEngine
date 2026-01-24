@@ -95,8 +95,8 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
             computeRetrySettings(params, config_.get(), /*exponential_default*/ true);
 
         // Merge default params with provided params using update() for efficiency
-        nlohmann::json request_params = default_params_;
-        request_params.update(params);
+        nlohmann::json requestParams = default_params_;
+        requestParams.update(params);
 
         // Prepare messages array
         nlohmann::json messages = nlohmann::json::array();
@@ -104,9 +104,9 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
 
         // Prepare request payload
         nlohmann::json payload = {{"model", model_},
-                                  {"max_tokens", request_params["max_tokens"]},
-                                  {"temperature", request_params["temperature"]},
-                                  {"top_p", request_params["top_p"]},
+                                  {"max_tokens", requestParams["max_tokens"]},
+                                  {"temperature", requestParams["temperature"]},
+                                  {"top_p", requestParams["top_p"]},
                                   {"messages", messages}};
 
         // Add system prompt if provided
@@ -116,23 +116,23 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
         }
 
         // Get timeout from params or use config default
-        int timeout_seconds = 0;
+        int timeoutSeconds = 0;
         if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS))) {
-            timeout_seconds =
+            timeoutSeconds =
                 params[std::string(::LLMEngine::Constants::JsonKeys::TIMEOUT_SECONDS)].get<int>();
         } else {
-            timeout_seconds = config_ ? config_->getTimeoutSeconds()
+            timeoutSeconds = config_ ? config_->getTimeoutSeconds()
                                       : APIConfigManager::getInstance().getTimeoutSeconds();
         }
         // Clamp to safe range [1, MAX_TIMEOUT_SECONDS] seconds
-        timeout_seconds = std::max(timeout_seconds, 1);
-        timeout_seconds =
-            std::min(timeout_seconds, ::LLMEngine::Constants::DefaultValues::MAX_TIMEOUT_SECONDS);
+        timeoutSeconds = std::max(timeoutSeconds, 1);
+        timeoutSeconds =
+            std::min(timeoutSeconds, ::LLMEngine::Constants::DefaultValues::MAX_TIMEOUT_SECONDS);
 
         // SSL verification toggle (default: true for security)
-        bool verify_ssl = true;
+        bool verifySsl = true;
         if (params.contains("verify_ssl") && params.at("verify_ssl").is_boolean()) {
-            verify_ssl = params.at("verify_ssl").get<bool>();
+            verifySsl = params.at("verify_ssl").get<bool>();
         }
 
         // Send request with retries
@@ -141,23 +141,23 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
                                                {"x-api-key", api_key_},
                                                {"anthropic-version", "2023-06-01"}};
         maybeLogRequest("POST", url, hdr);
-        cpr::Response cpr_response = sendWithRetries(
+        cpr::Response cprResponse = sendWithRetries(
             rs,
             [&]() {
                 return cpr::Post(cpr::Url{url},
                                  cpr::Header{hdr.begin(), hdr.end()},
                                  cpr::Body{payload.dump()},
-                                 cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
-                                 cpr::VerifySsl{verify_ssl});
+                                 cpr::Timeout{timeoutSeconds * MILLISECONDS_PER_SECOND},
+                                 cpr::VerifySsl{verifySsl});
             },
             options);
 
-        response.status_code = static_cast<int>(cpr_response.status_code);
+        response.status_code = static_cast<int>(cprResponse.status_code);
 
-        if (cpr_response.status_code == ::LLMEngine::HttpStatus::OK) {
+        if (cprResponse.status_code == ::LLMEngine::HttpStatus::OK) {
             // Parse JSON only after confirming HTTP success
             try {
-                response.raw_response = nlohmann::json::parse(cpr_response.text);
+                response.raw_response = nlohmann::json::parse(cprResponse.text);
                 if (response.raw_response.contains("content")
                     && response.raw_response["content"].is_array()
                     && !response.raw_response["content"].empty()) {
@@ -181,22 +181,22 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
         } else {
             // Handle error responses - try to parse JSON for structured error messages
             response.error_message =
-                "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
+                "HTTP " + std::to_string(cprResponse.status_code) + ": " + cprResponse.text;
             try {
-                response.raw_response = nlohmann::json::parse(cpr_response.text);
+                response.raw_response = nlohmann::json::parse(cprResponse.text);
             } catch (const nlohmann::json::parse_error&) {
                 // Non-JSON error response (e.g., HTML error page) - keep text error message
                 response.raw_response = nlohmann::json::object();
             }
 
             // Classify error based on HTTP status code
-            if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
-                || cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
+            if (cprResponse.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
+                || cprResponse.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
                 response.error_code = LLMEngine::LLMEngineErrorCode::Auth;
-            } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
+            } else if (cprResponse.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
                 response.error_code = LLMEngine::LLMEngineErrorCode::RateLimited;
             } else if (::LLMEngine::HttpStatus::isServerError(
-                           static_cast<int>(cpr_response.status_code))) {
+                           static_cast<int>(cprResponse.status_code))) {
                 response.error_code = LLMEngine::LLMEngineErrorCode::Server;
             } else {
                 response.error_code = LLMEngine::LLMEngineErrorCode::Unknown;
@@ -221,9 +221,9 @@ void AnthropicClient::sendRequestStream(std::string_view prompt,
                                           LLMEngine::StreamCallback callback,
                                           const ::LLMEngine::RequestOptions& options) const {
     // Merge params
-    nlohmann::json request_params = default_params_;
+    nlohmann::json requestParams = default_params_;
     if (!params.is_null()) {
-        request_params.update(params);
+        requestParams.update(params);
     }
 
     nlohmann::json messages = nlohmann::json::array();

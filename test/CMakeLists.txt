@@ -230,6 +230,8 @@ target_include_directories(test_features_iter2 PRIVATE ${CMAKE_CURRENT_SOURCE_DI
 llmengine_test(test_streaming_providers test_streaming_providers.cpp cpr::cpr)
 target_include_directories(test_streaming_providers PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 
+llmengine_test(test_timeout test_timeout.cpp test_support_fake)
+
 # Iteration 1 New Test
 llmengine_test(test_request_options_builder test_request_options_builder.cpp)
 
@@ -263,6 +265,7 @@ if (BUILD_TESTING)
       test_async_streaming_iter2
       test_features_iter2
       test_streaming_providers
+      test_timeout
       test_request_options_builder
     COMMENT "Building all test executables"
   )

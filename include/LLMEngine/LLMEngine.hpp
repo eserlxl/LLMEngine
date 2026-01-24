@@ -213,7 +213,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      */
     [[nodiscard]] AnalysisResult analyze(const AnalysisInput& input,
                                          std::string_view analysis_type,
-                                         const RequestOptions& options);
+                                         const RequestOptions& options = {});
 
     // Overloaded analyze for backward compatibility
     [[nodiscard]] AnalysisResult analyze(std::string_view prompt,

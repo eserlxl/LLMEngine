@@ -6,7 +6,10 @@
 // See the LICENSE file in the project root for details.
 
 #pragma once
+#include <mutex>
 #include "LLMEngine/APIClient.hpp"
+
+
 
 namespace LLMEngineAPI {
 
@@ -50,6 +53,7 @@ class FakeAPIClient : public APIClient {
     mutable ::LLMEngine::RequestOptions last_options_;
     mutable nlohmann::json last_input_;
     mutable std::string last_prompt_;
+    mutable std::mutex m_mutex;
 };
 
 } // namespace LLMEngineAPI

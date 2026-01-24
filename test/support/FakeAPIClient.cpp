@@ -13,6 +13,7 @@ FakeAPIClient::FakeAPIClient(ProviderType type, std::string providerName)
     : provider_type_(type), provider_name_(std::move(providerName)) {}
 
 void FakeAPIClient::setNextResponse(const APIResponse& response) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     next_response_ = response;
     has_custom_response_ = true;
 }
@@ -21,6 +22,7 @@ APIResponse FakeAPIClient::sendRequest(std::string_view prompt,
                                        const nlohmann::json& input,
                                        const nlohmann::json& params,
                                        const ::LLMEngine::RequestOptions& options) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
     last_options_ = options;
     last_input_ = input;
     last_prompt_ = std::string(prompt);
@@ -42,6 +44,7 @@ APIResponse FakeAPIClient::sendRequest(std::string_view prompt,
 }
 
 void FakeAPIClient::setNextStreamChunks(const std::vector<std::string>& chunks) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     next_stream_chunks_ = chunks;
     has_custom_stream_ = true;
 }
@@ -51,6 +54,7 @@ void FakeAPIClient::sendRequestStream(std::string_view prompt,
                                       const nlohmann::json& params,
                                       LLMEngine::StreamCallback callback,
                                       const ::LLMEngine::RequestOptions& options) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
     last_options_ = options;
     last_input_ = input;
     last_prompt_ = std::string(prompt);
