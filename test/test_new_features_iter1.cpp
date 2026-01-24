@@ -1,4 +1,4 @@
-#include "../support/FakeAPIClient.hpp" // Relative path to support
+#include "support/FakeAPIClient.hpp"
 #include "LLMEngine/APIClient.hpp"      // For RequestOptions
 #include "LLMEngine/AnalysisInput.hpp"
 #include "LLMEngine/AnalysisResult.hpp"
@@ -40,7 +40,7 @@ void test_tool_call_extraction() {
     auto clientPtr = std::make_unique<FakeAPIClient>();
     FakeAPIClient* fakeClient = clientPtr.get();
 
-    LLMEngine engine(std::move(clientPtr), {}, 24, false, nullptr);
+    LLMEngine::LLMEngine engine(std::move(clientPtr), nlohmann::json{}, 24, false, nullptr);
 
     // Setup Mock Response with Tool Calls
     APIResponse mockResponse;
@@ -66,7 +66,7 @@ void test_tool_call_extraction() {
     AnalysisInput input;
     input.withUserMessage("What's the weather in Paris?");
 
-    AnalysisResult result = engine.analyze(input, "test");
+    AnalysisResult result = engine.analyze(input, "test", {});
 
     assert(result.success);
     assert(result.hasToolCalls());
@@ -84,7 +84,7 @@ void test_async_options() {
 
     auto clientPtr = std::make_unique<FakeAPIClient>();
     FakeAPIClient* fakeClient = clientPtr.get();
-    LLMEngine engine(std::move(clientPtr), {}, 24, false, nullptr);
+    LLMEngine::LLMEngine engine(std::move(clientPtr), nlohmann::json{}, 24, false, nullptr);
 
     RequestOptions options;
     options.timeout_ms = 999;
@@ -93,13 +93,13 @@ void test_async_options() {
     AnalysisInput input;
     input.withUserMessage("hi");
 
-    auto future = engine.analyzeAsync("hi", input, "test", options);
+    auto future = engine.analyzeAsync("hi", input.toJson(), "test", options);
     auto result = future.get();
 
     assert(result.success);
-    assert(fakeClient->last_options_.timeout_ms.has_value());
-    assert(*fakeClient->last_options_.timeout_ms == 999);
-    assert(*fakeClient->last_options_.max_retries == 3);
+    assert(fakeClient->getLastOptions().timeout_ms.has_value());
+    assert(*fakeClient->getLastOptions().timeout_ms == 999);
+    assert(*fakeClient->getLastOptions().max_retries == 3);
 
     std::cout << "PASS" << std::endl;
 }
@@ -109,7 +109,7 @@ void test_stream_options() {
 
     auto clientPtr = std::make_unique<FakeAPIClient>();
     FakeAPIClient* fakeClient = clientPtr.get();
-    LLMEngine engine(std::move(clientPtr), {}, 24, false, nullptr);
+    LLMEngine::LLMEngine engine(std::move(clientPtr), nlohmann::json{}, 24, false, nullptr);
 
     RequestOptions options;
     options.timeout_ms = 888;
@@ -118,14 +118,14 @@ void test_stream_options() {
     input.withUserMessage("hi");
 
     bool called = false;
-    engine.analyzeStream("hi", input, "test", options, [&](std::string_view, bool done) {
-        if (done)
+    engine.analyzeStream("hi", input.toJson(), "test", options, [&](const StreamChunk& chunk) {
+        if (chunk.is_done)
             called = true;
     });
 
     assert(called);
-    assert(fakeClient->last_options_.timeout_ms.has_value());
-    assert(*fakeClient->last_options_.timeout_ms == 888);
+    assert(fakeClient->getLastOptions().timeout_ms.has_value());
+    assert(*fakeClient->getLastOptions().timeout_ms == 888);
 
     std::cout << "PASS" << std::endl;
 }

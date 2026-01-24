@@ -57,4 +57,82 @@ struct RequestOptions {
     } generation;
 };
 
+/**
+ * @brief Builder for RequestOptions.
+ */
+class RequestOptionsBuilder {
+public:
+    RequestOptionsBuilder& setTimeout(int timeoutMs) {
+        m_options.timeout_ms = timeoutMs;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setMaxRetries(int maxRetries) {
+        m_options.max_retries = maxRetries;
+        return *this;
+    }
+
+    RequestOptionsBuilder& addHeader(const std::string& key, const std::string& value) {
+        m_options.extra_headers[key] = value;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setCancellationToken(std::shared_ptr<CancellationToken> token) {
+        m_options.cancellation_token = std::move(token);
+        return *this;
+    }
+
+    RequestOptionsBuilder& setMaxConcurrency(size_t maxConcurrency) {
+        m_options.max_concurrency = maxConcurrency;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setTemperature(double temperature) {
+        m_options.generation.temperature = temperature;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setMaxTokens(int maxTokens) {
+        m_options.generation.max_tokens = maxTokens;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setTopP(double topP) {
+        m_options.generation.top_p = topP;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setFrequencyPenalty(double frequencyPenalty) {
+        m_options.generation.frequency_penalty = frequencyPenalty;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setPresencePenalty(double presencePenalty) {
+        m_options.generation.presence_penalty = presencePenalty;
+        return *this;
+    }
+
+    RequestOptionsBuilder& addStopSequence(const std::string& stopSequence) {
+        m_options.generation.stop_sequences.push_back(stopSequence);
+        return *this;
+    }
+
+    RequestOptionsBuilder& setSeed(int seed) {
+        m_options.generation.seed = seed;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setLogitBias(const nlohmann::json& logitBias) {
+        m_options.generation.logit_bias = logitBias;
+        return *this;
+    }
+
+    RequestOptions build() const {
+        return m_options;
+    }
+
+private:
+    RequestOptions m_options;
+};
+
 } // namespace LLMEngine

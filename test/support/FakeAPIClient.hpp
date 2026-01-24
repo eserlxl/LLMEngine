@@ -36,6 +36,8 @@ class FakeAPIClient : public APIClient {
                            LLMEngine::StreamCallback callback,
                            const ::LLMEngine::RequestOptions& options = {}) const override;
 
+    const ::LLMEngine::RequestOptions& getLastOptions() const { return last_options_; }
+
   private:
     ProviderType provider_type_;
     std::string provider_name_;

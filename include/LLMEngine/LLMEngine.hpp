@@ -296,6 +296,8 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
     [[nodiscard]] std::string getModelName() const;
     /** @brief Provider enumeration value. */
     [[nodiscard]] ::LLMEngineAPI::ProviderType getProviderType() const;
+    /** @brief Backend type string (e.g., "ollama", "openai"). */
+    [[nodiscard]] std::string getBackendType() const;
     /** @brief True if using an online provider (not local Ollama). */
     [[nodiscard]] bool isOnlineProvider() const;
 

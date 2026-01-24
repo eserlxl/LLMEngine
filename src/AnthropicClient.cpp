@@ -27,7 +27,7 @@ void parseAnthropicStreamChunk(std::string_view chunk, std::string& buffer, cons
         if (line.empty() || line == "\r")
             continue;
 
-        constexpr size_t kEventPrefixLen = 7;
+
         constexpr size_t kDataPrefixLen = 6;
 
         if (line.rfind("event: ", 0) == 0) {

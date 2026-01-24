@@ -647,7 +647,7 @@ endif()
 # Note: enable_testing() is already called by include(CTest) above
 if (BUILD_TESTING)
   if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
-    add_subdirectory(test EXCLUDE_FROM_ALL)
+    add_subdirectory(test)
   endif()
 endif()
 

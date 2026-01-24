@@ -307,10 +307,12 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         result = AnalysisResult{.success = false,
                                 .think = "",
                                 .content = "",
+                                .finishReason = "",
                                 .errorMessage = "Internal Error: Request executor missing",
                                 .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
                                 .usage = {},
-                                .errorCode = LLMEngineErrorCode::Unknown};
+                                .errorCode = LLMEngineErrorCode::Unknown,
+                                .tool_calls = {}};
         // Should we run onResponse for errors? Yes, usually.
         for (const auto& interceptor : state_->interceptors_) {
             interceptor->onResponse(result);
@@ -363,10 +365,12 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         return AnalysisResult{.success = false,
                               .think = "",
                               .content = "",
+                              .finishReason = "",
                               .errorMessage = "Internal Error: Request executor missing",
                               .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
                               .usage = {},
-                              .errorCode = LLMEngineErrorCode::Unknown};
+                              .errorCode = LLMEngineErrorCode::Unknown,
+                              .tool_calls = {}};
     }
 
     return ResponseHandler::handle(api_response,
@@ -443,6 +447,7 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                 return AnalysisResult{.success = false,
                                       .think = "",
                                       .content = "",
+                                      .finishReason = "",
                                       .errorMessage = "Internal Error",
                                       .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
                                       .usage = {},
@@ -725,6 +730,11 @@ std::string LLMEngine::getModelName() const {
 LLMAPI::ProviderType LLMEngine::getProviderType() const {
     return state_->provider_type_;
 }
+
+std::string LLMEngine::getBackendType() const {
+    return LLMAPI::APIClientFactory::providerTypeToString(state_->provider_type_);
+}
+
 bool LLMEngine::isOnlineProvider() const {
     return state_->provider_type_ != LLMAPI::ProviderType::OLLAMA;
 }
