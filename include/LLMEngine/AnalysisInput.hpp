@@ -9,9 +9,11 @@
 #include <string_view>
 #include <vector>
 
+#include "LLMEngine/ToolBuilder.hpp"
+
 namespace LLMEngine {
 
-class ToolBuilder; // Forward declaration
+
 
 /**
  * @brief Strongly-typed builder for analysis inputs.
@@ -170,6 +172,13 @@ class LLMENGINE_EXPORT ResponseFormatBuilder {
         };
         return j;
     }
+
+    static nlohmann::json json_schema(std::string_view name,
+                                      const ToolBuilder& schemaBuilder,
+                                      bool strict = true) {
+        return json_schema(name, schemaBuilder.build(), strict);
+    }
 };
+
 
 } // namespace LLMEngine

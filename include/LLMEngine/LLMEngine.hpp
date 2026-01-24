@@ -20,6 +20,8 @@
 #include "LLMEngine/PromptBuilder.hpp"
 #include "LLMEngine/RequestContext.hpp"
 #include "LLMEngine/Constants.hpp"
+#include "LLMEngine/RequestOptions.hpp"
+
 
 #include <functional>
 #include <future>
@@ -194,7 +196,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      * auto result = engine.analyze("Review this code", input, "code_review", "chat", false);
      * ```
      */
-#include "LLMEngine/RequestOptions.hpp"
+
 
     // Constructor for multi-threaded/async safety state
     struct EngineState;
