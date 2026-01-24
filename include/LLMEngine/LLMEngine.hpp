@@ -371,6 +371,12 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      */
     void setDebugFilesEnabled(bool enabled);
 
+    /**
+     * @brief Create a new cancellation token.
+     * Use this factory instead of manually creating shared pointers.
+     */
+    static std::shared_ptr<CancellationToken> createCancellationToken();
+
     // Dependency injection setters
     /** @brief Replace the request executor strategy. */
     void setRequestExecutor(std::shared_ptr<IRequestExecutor> executor);

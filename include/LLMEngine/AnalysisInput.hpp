@@ -180,5 +180,26 @@ class LLMENGINE_EXPORT ResponseFormatBuilder {
     }
 };
 
+/**
+ * @brief Helper for constructing tool choices.
+ */
+struct LLMENGINE_EXPORT ToolChoice {
+    static nlohmann::json none() {
+        return "none";
+    }
+    static nlohmann::json autoChoice() { // 'auto' is a keyword
+        return "auto";
+    }
+    static nlohmann::json required() {
+        return "required";
+    }
+    static nlohmann::json function(std::string_view name) {
+        return {
+            {"type", "function"},
+            {"function", {{"name", std::string(name)}}}
+        };
+    }
+};
+
 
 } // namespace LLMEngine

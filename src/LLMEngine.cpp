@@ -792,6 +792,10 @@ void LLMEngine::addInterceptor(std::shared_ptr<IInterceptor> interceptor) {
 
 // --- Accessors ---
 
+std::shared_ptr<CancellationToken> LLMEngine::createCancellationToken() {
+    return CancellationToken::create();
+}
+
 std::string LLMEngine::getProviderName() const {
     if (state_->api_client_) {
         return state_->api_client_->getProviderName();

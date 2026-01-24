@@ -47,6 +47,23 @@ int main() {
         assert(!json.has_value());
     }
 
+    // ToolCall Parsing
+    {
+        AnalysisResult::ToolCall tc;
+        tc.arguments = R"({"arg": 1})";
+        auto args = tc.getArguments();
+        assert(args.has_value());
+        assert((*args)["arg"] == 1);
+
+        tc.arguments = "invalid";
+        assert(!tc.getArguments().has_value());
+        
+        tc.arguments = "";
+        auto empty = tc.getArguments();
+        assert(empty.has_value());
+        assert(empty->empty());
+    }
+
     std::cout << "AnalysisResult tests passed.\n";
     return 0;
 }

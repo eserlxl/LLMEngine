@@ -225,7 +225,7 @@ llmengine_test(test_async_lifetime test_async_lifetime.cpp)
 llmengine_test(test_result_extensions test_result_extensions.cpp)
 llmengine_test(test_new_features_iter1 test_new_features_iter1.cpp test_support_fake)
 llmengine_test(test_async_streaming_iter2 test_async_streaming_iter2.cpp test_support_fake)
-llmengine_test(test_features_iter2 test_features_iter2.cpp cpr::cpr)
+llmengine_test(test_features_iter2 test_features_iter2.cpp cpr::cpr test_support_fake)
 target_include_directories(test_features_iter2 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 llmengine_test(test_streaming_providers test_streaming_providers.cpp cpr::cpr)
 target_include_directories(test_streaming_providers PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
@@ -339,3 +339,4 @@ if (ENABLE_BENCHMARKS)
 endif()
 
 message(STATUS "Test configuration complete")
+

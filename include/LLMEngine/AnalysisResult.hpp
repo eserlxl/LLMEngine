@@ -93,6 +93,19 @@ struct LLMENGINE_EXPORT AnalysisResult {
         std::string id;
         std::string name;
         std::string arguments;
+
+        /**
+         * @brief Parse the arguments JSON string.
+         * @return Parsed JSON object, or std::nullopt if parsing fails.
+         */
+        [[nodiscard]] std::optional<nlohmann::json> getArguments() const {
+            try {
+                if (arguments.empty()) return nlohmann::json::object();
+                return nlohmann::json::parse(arguments);
+            } catch (...) {
+                return std::nullopt;
+            }
+        }
     };
     std::vector<ToolCall> tool_calls;
 
