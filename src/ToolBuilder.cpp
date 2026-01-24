@@ -125,17 +125,32 @@ ToolBuilder& ToolBuilder::setStrict(bool strict) {
 
 nlohmann::json ToolBuilder::build() const {
 
+    std::vector<std::string> effective_required = required_;
+
+    if (strict_) {
+        // In strict mode, all properties must be required.
+        for (auto& [key, val] : properties_.items()) {
+             bool found = false;
+             for (const auto& req : effective_required) {
+                 if (req == key) {
+                     found = true;
+                     break;
+                 }
+             }
+             if (!found) {
+                 effective_required.push_back(std::string(key));
+             }
+        }
+    }
+
     nlohmann::json parameters = {
         {"type", "object"},
         {"properties", properties_},
-        {"required", required_}
+        {"required", effective_required}
     };
     
     if (strict_) {
         parameters["additionalProperties"] = false;
-        // OpenAI strict mode requires all properties to be required?
-        // Usually yes, but we leave `required` array as user defined.
-        // The user is responsible for marking everything required if that's the constraint.
     }
 
     if (is_schema_only_) {
@@ -157,7 +172,6 @@ nlohmann::json ToolBuilder::build() const {
         throw std::invalid_argument("Function name cannot be empty for tools");
     }
 
-    
     if (strict_) {
         tool["function"]["strict"] = true;
     }

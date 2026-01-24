@@ -177,8 +177,22 @@ void LLMEngineAPI::OpenAICompatibleClient::parseOpenAIStreamChunk(
                         result.content = content;
                         result.is_done = false;
                         if (choice.contains("logprobs") && !choice["logprobs"].is_null()) {
-                             // Simple logprobs extraction not fully implemented due to type complexity
-                             // logic here would map JSON to TokenLogProb
+                             const auto& logprobs_obj = choice["logprobs"];
+                             if (logprobs_obj.contains("content") && logprobs_obj["content"].is_array()) {
+                                 std::vector<LLMEngine::AnalysisResult::TokenLogProb> chunk_logprobs;
+                                 for (const auto& item : logprobs_obj["content"]) {
+                                     LLMEngine::AnalysisResult::TokenLogProb lp;
+                                     if (item.contains("token")) lp.token = item["token"].get<std::string>();
+                                     if (item.contains("logprob")) lp.logprob = item["logprob"].get<double>();
+                                     if (item.contains("bytes") && item["bytes"].is_array()) {
+                                         lp.bytes = item["bytes"].get<std::vector<uint8_t>>();
+                                     }
+                                     chunk_logprobs.push_back(std::move(lp));
+                                 }
+                                 if (!chunk_logprobs.empty()) {
+                                     result.logprobs = std::move(chunk_logprobs);
+                                 }
+                             }
                         }
                         callback(result);
                     }

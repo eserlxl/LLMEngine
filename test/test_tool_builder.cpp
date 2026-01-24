@@ -28,9 +28,39 @@ void test_simple_function() {
     std::cout << "PASS" << std::endl;
 }
 
+void test_strict_mode() {
+    std::cout << "Running test_strict_mode..." << std::endl;
+    auto tool = ToolBuilder::createFunction("strict_func", "Strict function")
+                    .addStringProperty("prop1", "Property 1")
+                    .addNumberProperty("prop2", "Property 2")
+                    .setStrict(true)
+                    .build();
+
+    assert(tool["function"]["strict"] == true);
+    auto params = tool["function"]["parameters"];
+    assert(params["additionalProperties"] == false);
+    
+    // Check that all properties are automatically marked required
+    auto req = params["required"];
+    assert(req.size() == 2);
+    
+    // basic check for existence
+    bool has_prop1 = false;
+    bool has_prop2 = false;
+    for (const auto& r : req) {
+        if (r == "prop1") has_prop1 = true;
+        if (r == "prop2") has_prop2 = true;
+    }
+    assert(has_prop1);
+    assert(has_prop2);
+
+    std::cout << "PASS" << std::endl;
+}
+
 int main() {
     try {
         test_simple_function();
+        test_strict_mode();
         std::cout << "All ToolBuilder tests passed." << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "Test failed: " << e.what() << std::endl;
