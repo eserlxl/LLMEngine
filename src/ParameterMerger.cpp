@@ -160,6 +160,10 @@ void ParameterMerger::mergeRequestOptions(nlohmann::json& params, const RequestO
     
     if (gen.top_k) params["top_k"] = *gen.top_k;
     if (gen.min_p) params["min_p"] = *gen.min_p;
+
+    if (options.stream_options) {
+        params["stream_options"] = {{"include_usage", options.stream_options->include_usage}};
+    }
 }
 
 } // namespace LLMEngine

@@ -203,6 +203,8 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
 
     /**
      * @brief Run an analysis request with options.
+     * @details Options provided here (e.g. timeout, headers) take precedence over 
+     * global configuration/defaults.
      * @copydoc analyze
      */
     [[nodiscard]] AnalysisResult analyze(std::string_view prompt,
