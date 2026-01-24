@@ -86,10 +86,97 @@ void test_response_handler_429() {
     std::cout << "ResponseHandler tests passed.\n";
 }
 
+#include "LLMEngine/ToolBuilder.hpp"
+#include "LLMEngine/AnalysisInput.hpp"
+#include "LLMEngine/RequestOptions.hpp"
+
+void test_analysis_input_helpers() {
+    std::cout << "Testing AnalysisInput Tool Helpers...\n";
+    AnalysisInput input;
+    
+    // Test addTool
+    auto tool = ToolBuilder::createFunction("weather", "get weather").build();
+    // Cannot pass raw json to addTool? No, addTool takes ToolBuilder.
+    // So I need ToolBuilder instance.
+    auto builder = ToolBuilder::createFunction("weather", "get weather");
+    input.addTool(builder);
+    
+    nlohmann::json json = input.toJson();
+    assert(json.contains("tools"));
+    assert(json["tools"].size() == 1);
+    assert(json["tools"][0]["function"]["name"] == "weather");
+    
+    // Test addToolOutput
+    input.addToolOutput("call_123", "sunny");
+    json = input.toJson();
+    // tools should still be there
+    assert(json["tools"].size() == 1);
+    
+    // verify message added
+    bool found = false;
+    for (const auto& m : json["messages"]) {
+        if (m["role"] == "tool" && m["tool_call_id"] == "call_123") {
+            found = true;
+            assert(m["content"] == "sunny");
+        }
+    }
+    assert(found);
+    
+    std::cout << "AnalysisInput Helpers passed.\n";
+}
+
+void test_param_propagation() {
+    std::cout << "Testing ChatCompletionRequestHelper Param Propagation...\n";
+    
+    RequestOptions options;
+    options.generation.seed = 12345;
+    options.generation.service_tier = "auto";
+    options.generation.parallel_tool_calls = true;
+    options.stream_options = {true}; // include_usage
+    
+    nlohmann::json default_params;
+    nlohmann::json params;
+    
+    bool verified = false;
+    
+    // Mock execution
+    ChatCompletionRequestHelper::execute(
+        default_params,
+        params,
+        // PayloadBuilder
+        [&](const nlohmann::json& p) {
+            // Verify params were merged from options
+            assert(p.contains("seed"));
+            assert(p["seed"] == 12345);
+            assert(p.contains("service_tier"));
+            assert(p["service_tier"] == "auto");
+            assert(p.contains("parallel_tool_calls"));
+            assert(p["parallel_tool_calls"] == true);
+            assert(p.contains("stream_options"));
+            assert(p["stream_options"]["include_usage"] == true);
+            verified = true;
+            return nlohmann::json{};
+        },
+        // UrlBuilder
+        []() { return "http://mock"; },
+        // HeaderBuilder
+        []() { return std::map<std::string, std::string>{}; },
+        // ResponseParser
+        [](APIResponse&, const std::string&) {},
+        options,
+        false // no retry
+    ); // mock will fail network, but lambda runs first
+    
+    assert(verified && "PayloadBuilder lambda was not called or assertions failed inside");
+    std::cout << "Param Propagation passed.\n";
+}
+
 int main() {
     test_provider_bootstrap_env();
     test_chat_message_builder_images();
     test_response_handler_429();
+    test_analysis_input_helpers(); // New
+    test_param_propagation();      // New
     std::cout << "ALL ITERATION 2 TESTS PASSED\n";
     return 0;
 }

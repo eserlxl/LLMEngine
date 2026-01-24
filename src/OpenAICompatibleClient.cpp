@@ -60,6 +60,20 @@ nlohmann::json OpenAICompatibleClient::buildPayload(const nlohmann::json& messag
                               {"frequency_penalty", request_params["frequency_penalty"]},
                               {"presence_penalty", request_params["presence_penalty"]}};
 
+    // Optional params
+    if (request_params.contains("seed")) {
+        payload["seed"] = request_params["seed"];
+    }
+    if (request_params.contains("parallel_tool_calls")) {
+        payload["parallel_tool_calls"] = request_params["parallel_tool_calls"];
+    }
+    if (request_params.contains("service_tier")) {
+        payload["service_tier"] = request_params["service_tier"];
+    }
+    if (request_params.contains("stream_options")) {
+        payload["stream_options"] = request_params["stream_options"];
+    }
+
     // Include response_format if present (Structured Outputs)
     if (request_params.contains("response_format")) {
         payload["response_format"] = request_params["response_format"];

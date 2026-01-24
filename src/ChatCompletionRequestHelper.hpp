@@ -142,7 +142,11 @@ struct ChatCompletionRequestHelper {
             if (options.generation.user.has_value() || 
                 options.generation.logprobs.has_value() ||
                 options.generation.top_k.has_value() ||
-                options.generation.min_p.has_value()) {
+                options.generation.min_p.has_value() ||
+                options.generation.seed.has_value() ||
+                options.generation.parallel_tool_calls.has_value() ||
+                options.generation.service_tier.has_value() ||
+                options.stream_options.has_value()) {
                 
                 final_params_storage = *request_params_ptr;
                 if (options.generation.user.has_value()) {
@@ -159,6 +163,18 @@ struct ChatCompletionRequestHelper {
                 }
                 if (options.generation.min_p.has_value()) {
                     final_params_storage[std::string(::LLMEngine::Constants::JsonKeys::MIN_P)] = *options.generation.min_p;
+                }
+                if (options.generation.seed.has_value()) {
+                    final_params_storage["seed"] = *options.generation.seed;
+                }
+                if (options.generation.parallel_tool_calls.has_value()) {
+                    final_params_storage["parallel_tool_calls"] = *options.generation.parallel_tool_calls;
+                }
+                if (options.generation.service_tier.has_value()) {
+                    final_params_storage["service_tier"] = *options.generation.service_tier;
+                }
+                if (options.stream_options.has_value()) {
+                    final_params_storage["stream_options"] = {{"include_usage", options.stream_options->include_usage}};
                 }
                 effective_params_ptr = &final_params_storage;
             }

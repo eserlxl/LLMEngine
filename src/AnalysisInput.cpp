@@ -4,12 +4,30 @@
 #include "LLMEngine/AnalysisInput.hpp"
 
 #include "LLMEngine/AnalysisInput.hpp"
+#include "LLMEngine/ToolBuilder.hpp"
 #include "LLMEngine/Utils.hpp"
 #include <filesystem>
 #include <fstream>
 #include <vector>
 
 namespace LLMEngine {
+
+AnalysisInput& AnalysisInput::addTool(const ToolBuilder& tool) {
+    if (tools.is_null()) {
+        tools = nlohmann::json::array();
+    }
+    tools.push_back(tool.build());
+    return *this;
+}
+
+AnalysisInput& AnalysisInput::addToolOutput(std::string_view tool_call_id, std::string_view content) {
+    ChatMessage msg;
+    msg.role = "tool";
+    msg.parts = {ContentPart::createText(content)};
+    msg.tool_call_id = std::string(tool_call_id);
+    messages.push_back(msg);
+    return *this;
+}
 
 AnalysisInput& AnalysisInput::withImageFromFile(const std::string& path) {
     std::filesystem::path p(path);

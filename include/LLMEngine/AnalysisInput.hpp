@@ -11,6 +11,8 @@
 
 namespace LLMEngine {
 
+class ToolBuilder; // Forward declaration
+
 /**
  * @brief Strongly-typed builder for analysis inputs.
  *
@@ -119,6 +121,18 @@ struct LLMENGINE_EXPORT AnalysisInput {
         extra_fields[key] = value;
         return *this;
     }
+
+    // Convenience methods
+
+    /**
+     * @brief Add a tool definition to the request.
+     */
+    AnalysisInput& addTool(const ToolBuilder& tool);
+
+    /**
+     * @brief Add a tool output message to the conversation history.
+     */
+    AnalysisInput& addToolOutput(std::string_view tool_call_id, std::string_view content);
 
     /**
      * @brief Convert to legacy JSON format for API compliance.
