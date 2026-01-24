@@ -109,12 +109,33 @@ void test_cancellation() {
     std::cout << "PASS" << std::endl;
 }
 
+void test_multimodal() {
+    std::cout << "Running test_multimodal..." << std::endl;
+    AnalysisInput input;
+    std::vector<AnalysisInput::ContentPart> parts;
+    parts.push_back(AnalysisInput::ContentPart::createText("Look at this:"));
+    parts.push_back(AnalysisInput::ContentPart::createImage("http://foo.bar/img.png"));
+    input.withMessage("user", parts);
+
+    nlohmann::json json = input.toJson();
+    assert(json["messages"].size() == 1);
+    auto& content = json["messages"][0]["content"];
+    assert(content.is_array());
+    assert(content.size() == 2);
+    assert(content[0]["type"] == "text");
+    assert(content[0]["text"] == "Look at this:");
+    assert(content[1]["type"] == "image_url");
+    assert(content[1]["image_url"]["url"] == "http://foo.bar/img.png");
+    std::cout << "PASS" << std::endl;
+}
+
 int main() {
     try {
         test_analysis_input_messages();
         test_image_loading();
         test_request_options_injection();
         test_cancellation();
+        test_multimodal();
         std::cout << "All new feature tests passed." << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "Test failed: " << e.what() << std::endl;

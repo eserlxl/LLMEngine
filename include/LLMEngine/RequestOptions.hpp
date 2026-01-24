@@ -59,7 +59,14 @@ struct RequestOptions {
         std::optional<int> top_k;
         std::optional<double> min_p;
         std::optional<std::string> user;
+        std::optional<bool> parallel_tool_calls;
+        std::optional<std::string> service_tier;
     } generation;
+
+    struct StreamOptions {
+        bool include_usage = false;
+    };
+    std::optional<StreamOptions> stream_options;
 };
 
 /**
@@ -152,6 +159,21 @@ public:
 
     RequestOptionsBuilder& setUser(const std::string& userId) {
         m_options.generation.user = userId;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setParallelToolCalls(bool enable) {
+        m_options.generation.parallel_tool_calls = enable;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setServiceTier(const std::string& tier) {
+        m_options.generation.service_tier = tier;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setStreamOptions(bool includeUsage) {
+        m_options.stream_options = RequestOptions::StreamOptions{includeUsage};
         return *this;
     }
 

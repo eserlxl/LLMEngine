@@ -112,9 +112,8 @@ void testChatMessageBuilderEmptyPrompt() {
     auto messages = ChatMessageBuilder::buildMessages(prompt, input);
 
     assert(messages.is_array());
-    assert(messages.size() == 1);
-    assert(messages[0]["role"] == "user");
-    assert(messages[0]["content"] == "");
+    assert(messages.is_array());
+    assert(messages.size() == 0); // No user message if prompt is empty
 
     std::cout << "✓ Empty prompt test passed\n";
 }

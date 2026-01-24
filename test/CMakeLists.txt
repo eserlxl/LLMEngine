@@ -234,6 +234,7 @@ llmengine_test(test_timeout test_timeout.cpp test_support_fake)
 
 # Iteration 1 New Test
 llmengine_test(test_request_options_builder test_request_options_builder.cpp)
+llmengine_test(test_tool_builder test_tool_builder.cpp)
 
 # ---- Build All Tests Target --------------------------------------------------
 if (BUILD_TESTING)

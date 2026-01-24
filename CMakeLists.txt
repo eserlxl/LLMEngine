@@ -363,6 +363,7 @@ add_library(${PROJECT_NAME}
     src/RetryableRequestExecutor.cpp
     src/AnalysisInput.cpp
     src/LLMEngineBuilder.cpp
+    src/ToolBuilder.cpp
 )
 
 # Versioning for shared libraries

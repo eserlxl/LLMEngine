@@ -68,8 +68,30 @@ nlohmann::json AnalysisInput::toJson() const {
     }
 
     // 2. Append explicit messages
+    // 2. Append explicit messages
     for (const auto& msg : messages) {
-        nlohmann::json m = {{"role", msg.role}, {"content", msg.content}};
+        nlohmann::json m;
+        m["role"] = msg.role;
+
+        // Serialize content
+        if (msg.parts.empty()) {
+            m["content"] = "";
+        } else if (msg.parts.size() == 1 && msg.parts[0].type == ContentPart::Type::Text) {
+            // Optimization: Use simple string for single text part
+            m["content"] = msg.parts[0].text;
+        } else {
+            // Multimodal: Use array of content parts
+            nlohmann::json contentArr = nlohmann::json::array();
+            for (const auto& part : msg.parts) {
+                if (part.type == ContentPart::Type::Text) {
+                    contentArr.push_back({{"type", "text"}, {"text", part.text}});
+                } else if (part.type == ContentPart::Type::ImageUrl) {
+                    contentArr.push_back({{"type", "image_url"}, {"image_url", {{"url", part.image_url}}}});
+                }
+            }
+            m["content"] = contentArr;
+        }
+
         if (!msg.name.empty())
             m["name"] = msg.name;
         if (!msg.tool_call_id.empty())

@@ -27,11 +27,34 @@ struct LLMENGINE_EXPORT AnalysisInput {
 
     std::map<std::string, nlohmann::json> extra_fields;
 
+    struct ContentPart {
+        enum class Type { Text, ImageUrl };
+        Type type;
+        std::string text;      // For Text
+        std::string image_url; // For ImageUrl (base64 or http)
+
+        static ContentPart createText(std::string_view text) {
+            return ContentPart{Type::Text, std::string(text), ""};
+        }
+        static ContentPart createImage(std::string_view url) {
+            return ContentPart{Type::ImageUrl, "", std::string(url)};
+        }
+    };
+
     struct ChatMessage {
         std::string role;
-        std::string content;
+        std::vector<ContentPart> parts;
         std::string name;         // Optional
         std::string tool_call_id; // Optional
+
+        // Helper to get simple text content
+        std::string getTextContent() const {
+             std::string combined;
+             for (const auto& part : parts) {
+                 if (part.type == ContentPart::Type::Text) combined += part.text;
+             }
+             return combined;
+        }
     };
     std::vector<ChatMessage> messages;
 
@@ -41,7 +64,12 @@ struct LLMENGINE_EXPORT AnalysisInput {
     }
 
     AnalysisInput& withMessage(std::string_view role, std::string_view content) {
-        messages.push_back({std::string(role), std::string(content), "", ""});
+        messages.push_back({std::string(role), {ContentPart::createText(content)}, "", ""});
+        return *this;
+    }
+
+    AnalysisInput& withMessage(std::string_view role, const std::vector<ContentPart>& parts) {
+        messages.push_back({std::string(role), parts, "", ""});
         return *this;
     }
 

@@ -66,8 +66,10 @@ struct ChatMessageBuilder {
             user_content = prompt;
         }
 
-        // 4. Append user message
-        messages.push_back({{"role", "user"}, {"content", user_content}});
+        // 4. Append user message if prompt or images are present
+        if (!prompt.empty() || (input.contains("images") && input["images"].is_array() && !input["images"].empty())) {
+            messages.push_back({{"role", "user"}, {"content", user_content}});
+        }
 
         return messages;
     }
