@@ -41,6 +41,10 @@ constexpr std::string_view TEMPERATURE = "temperature";
 constexpr std::string_view TOP_P = "top_p";
 constexpr std::string_view TOP_K = "top_k";
 constexpr std::string_view MIN_P = "min_p";
+
+constexpr std::string_view LOGPROBS = "logprobs";
+constexpr std::string_view TOP_LOGPROBS = "top_logprobs";
+constexpr std::string_view USER = "user";
 constexpr std::string_view FREQUENCY_PENALTY = "frequency_penalty";
 constexpr std::string_view PRESENCE_PENALTY = "presence_penalty";
 } // namespace JsonKeys

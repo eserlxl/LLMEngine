@@ -9,6 +9,8 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <span>
+#include <cstdint>
 
 // Forward declaration
 namespace LLMEngine {
@@ -139,5 +141,15 @@ constexpr const char* TMP_DIR = "/tmp/llmengine";
  * ```
  */
 [[nodiscard]] bool validateUrl(std::string_view url);
+
+/**
+ * @brief Encode data to Base64 string.
+ */
+[[nodiscard]] std::string base64Encode(std::span<const uint8_t> data);
+
+/**
+ * @brief Encode string to Base64 string.
+ */
+[[nodiscard]] std::string base64Encode(std::string_view data);
 } // namespace Utils
 } // namespace LLMEngine

@@ -776,4 +776,40 @@ bool validateUrl(std::string_view url) {
 
     return true;
 }
+
+std::string base64Encode(std::span<const uint8_t> data) {
+    static const char kBase64Chars[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    std::string out;
+    out.reserve(((data.size() + 2) / 3) * 4);
+
+    for (size_t i = 0; i < data.size(); i += 3) {
+        uint32_t val = data[i] << 16;
+        if (i + 1 < data.size())
+            val |= data[i + 1] << 8;
+        if (i + 2 < data.size())
+            val |= data[i + 2];
+
+        out.push_back(kBase64Chars[(val >> 18) & 0x3F]);
+        out.push_back(kBase64Chars[(val >> 12) & 0x3F]);
+
+        if (i + 1 < data.size())
+            out.push_back(kBase64Chars[(val >> 6) & 0x3F]);
+        else
+            out.push_back('=');
+
+        if (i + 2 < data.size())
+            out.push_back(kBase64Chars[val & 0x3F]);
+        else
+            out.push_back('=');
+    }
+    return out;
+}
+
+std::string base64Encode(std::string_view data) {
+    return base64Encode(
+        std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size()));
+}
+
 } // namespace LLMEngine::Utils

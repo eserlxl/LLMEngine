@@ -18,7 +18,8 @@ void testTimeoutPropagation() {
     opts.timeout_ms = 5000;
     
     // Test sync
-    engine.analyze("prompt", {}, "test", opts);
+    auto result = engine.analyze("prompt", {}, "test", opts);
+    (void)result;
     assert(fakeClient->getLastOptions().timeout_ms.has_value());
     assert(*fakeClient->getLastOptions().timeout_ms == 5000);
 
@@ -30,7 +31,8 @@ void testTimeoutPropagation() {
     assert(*fakeClient->getLastOptions().timeout_ms == 10000);
     
     // Test default (verifies the default argument = {} works)
-    engine.analyze("prompt", {}, "test");
+    auto result2 = engine.analyze("prompt", {}, "test");
+    (void)result2;
     assert(!fakeClient->getLastOptions().timeout_ms.has_value());
     
     std::cout << "testTimeoutPropagation passed\n";

@@ -40,6 +40,7 @@ class FakeAPIClient : public APIClient {
                            const ::LLMEngine::RequestOptions& options = {}) const override;
 
     const ::LLMEngine::RequestOptions& getLastOptions() const { return last_options_; }
+    const nlohmann::json& getLastParams() const { return last_params_; }
 
   private:
     ProviderType provider_type_;
@@ -52,6 +53,7 @@ class FakeAPIClient : public APIClient {
     // Verification fields
     mutable ::LLMEngine::RequestOptions last_options_;
     mutable nlohmann::json last_input_;
+    mutable nlohmann::json last_params_;
     mutable std::string last_prompt_;
     mutable std::mutex m_mutex;
 };

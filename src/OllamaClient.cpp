@@ -212,19 +212,10 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             }
         } else {
             // Use chat API for conversational mode (default)
-            nlohmann::json messages = nlohmann::json::array();
-
-            // Add system message if input contains system prompt
-            if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))) {
-                messages.push_back(
-                    {{"role", "system"},
-                     {"content",
-                      input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
-                          .get<std::string>()}});
-            }
-
-            // Add user message
-            messages.push_back({{"role", "user"}, {"content", prompt}});
+            // Use chat API for conversational mode (default)
+            // Use shared builder to construct messages from input (handles system prompt, history, images)
+            // Note: prompt arg is usually redundant if input has messages, but builder handles it.
+            nlohmann::json messages = ChatMessageBuilder::buildMessages(prompt, input);
 
             // Prepare request payload for chat API
             nlohmann::json payload = {{"model", model_}, {"messages", messages}, {"stream", false}};
@@ -300,15 +291,7 @@ void OllamaClient::sendRequestStream(std::string_view prompt,
         payload = {{"model", model_}, {"prompt", prompt}, {"stream", true}};
         endpoint = "/api/generate";
     } else {
-        nlohmann::json messages = nlohmann::json::array();
-        if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))) {
-            messages.push_back(
-                {{"role", "system"},
-                 {"content",
-                  input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
-                      .get<std::string>()}});
-        }
-        messages.push_back({{"role", "user"}, {"content", prompt}});
+        nlohmann::json messages = ChatMessageBuilder::buildMessages(prompt, input);
         payload = {{"model", model_}, {"messages", messages}, {"stream", true}};
         endpoint = "/api/chat";
     }

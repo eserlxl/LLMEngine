@@ -113,6 +113,7 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
                               .errorMessage = enhanced_error,
                               .statusCode = api_response.status_code,
                               .usage = api_response.usage,
+                              .logprobs = std::nullopt,
                               .errorCode = error_code,
                               .tool_calls = {}};
         return result;
@@ -142,6 +143,7 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
                           .errorMessage = "",
                           .statusCode = api_response.status_code,
                           .usage = api_response.usage,
+                          .logprobs = std::nullopt,
                           .errorCode = LLMEngineErrorCode::None,
                           .tool_calls = {}};
 

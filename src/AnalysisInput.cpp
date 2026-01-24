@@ -3,57 +3,87 @@
 
 #include "LLMEngine/AnalysisInput.hpp"
 
+#include "LLMEngine/AnalysisInput.hpp"
+#include "LLMEngine/Utils.hpp"
+#include <filesystem>
+#include <fstream>
+#include <vector>
+
 namespace LLMEngine {
+
+AnalysisInput& AnalysisInput::withImageFromFile(const std::string& path) {
+    std::filesystem::path p(path);
+    if (!std::filesystem::exists(p)) {
+        throw std::runtime_error("Image file not found: " + path);
+    }
+
+    std::ifstream file(p, std::ios::binary | std::ios::ate);
+    if (!file) {
+        throw std::runtime_error("Could not open image file: " + path);
+    }
+
+    auto size = file.tellg();
+    if (size <= 0) {
+        throw std::runtime_error("Image file is empty: " + path);
+    }
+
+    std::vector<uint8_t> buffer(size);
+    file.seekg(0, std::ios::beg);
+    file.read(reinterpret_cast<char*>(buffer.data()), size);
+
+    std::string base64 = Utils::base64Encode(std::span<const uint8_t>(buffer));
+    // Determine MIME type? For now, we assume provider detects or format is base64 string directly.
+    // OpenAI expects "data:image/jpeg;base64,{base64}" usually.
+    // Anthropic expects base64 string directly with media_type field separate.
+    // Current design stores strings in `images` vector.
+    // `AnalysisInput::toJson` just dumps `images` array.
+    // `ChatMessageBuilder` handles `images` array.
+    // Looking at `ChatCompletionRequestHelper.hpp`:
+    // user_content.push_back({{"type", "image_url"}, {"image_url", {{"url", img.get<std::string>()}}}});
+    // Providers accepting base64 usually want a data URI for "url" field.
+    
+    // Simple MIME detection by extension
+    std::string ext = p.extension().string();
+    if (!ext.empty() && ext[0] == '.') ext = ext.substr(1);
+    
+    std::string mime = "image/jpeg"; // Default
+    if (ext == "png") mime = "image/png";
+    else if (ext == "gif") mime = "image/gif";
+    else if (ext == "webp") mime = "image/webp";
+
+    std::string dataUri = "data:" + mime + ";base64," + base64;
+    images.push_back(dataUri);
+    return *this;
+}
 
 nlohmann::json AnalysisInput::toJson() const {
     nlohmann::json j;
 
-    // Handle messages
-    if (!messages.empty()) {
-        nlohmann::json msgs = nlohmann::json::array();
+    // Unified logic: Build messages array from any combination of fields
+    nlohmann::json msgs = nlohmann::json::array();
 
-        // Strategy: Should we inject legacy system/user prompts?
-        // Let's adopt a "messages-first" approach.
-        // If messages are present, we assume the user populated them completely.
-        // BUT for backward compatibility, if system_prompt exists and is NOT covered by messages, we MAY prepend it.
-        // Let's implement safe merging:
-        // Prepend system prompt if set
-        if (!system_prompt.empty()) {
-            msgs.push_back({{"role", "system"}, {"content", system_prompt}});
-        }
+    // 1. Prepend legacy system prompt if set
+    if (!system_prompt.empty()) {
+        msgs.push_back({{"role", "system"}, {"content", system_prompt}});
+    }
 
-        for (const auto& msg : messages) {
-            nlohmann::json m = {{"role", msg.role}, {"content", msg.content}};
-            if (!msg.name.empty())
-                m["name"] = msg.name;
-            if (!msg.tool_call_id.empty())
-                m["tool_call_id"] = msg.tool_call_id;
-            msgs.push_back(m);
-        }
+    // 2. Append explicit messages
+    for (const auto& msg : messages) {
+        nlohmann::json m = {{"role", msg.role}, {"content", msg.content}};
+        if (!msg.name.empty())
+            m["name"] = msg.name;
+        if (!msg.tool_call_id.empty())
+            m["tool_call_id"] = msg.tool_call_id;
+        msgs.push_back(m);
+    }
 
-        // Append user message if set
-        if (!user_message.empty()) {
-            msgs.push_back({{"role", "user"}, {"content", user_message}});
-        }
+    // 3. Append legacy user message if set
+    if (!user_message.empty()) {
+        msgs.push_back({{"role", "user"}, {"content", user_message}});
+    }
 
+    if (!msgs.empty()) {
         j["messages"] = msgs;
-    } else {
-        // Legacy mode: output flat fields for APIClient (or whoever builds payload)
-        // Note: APIClient expects "system_prompt" and "user_message" fields if it builds messages itself?
-        // Wait, OpenAIClient::buildPayload helper might expect "messages" directly?
-        // The current OpenAIClient likely builds messages from input["system_prompt"] etc.
-        // But if we output "messages", OpenAIClient should use it.
-        // Let's check OpenAIClient behavior later. Ideally we output legacy fields if messages is empty.
-        if (!system_prompt.empty()) {
-            j["system_prompt"] = system_prompt;
-        }
-        if (!user_message.empty()) {
-            j["input_text"] = user_message; // Notice key is "input_text" in original file?
-            // Wait, original file used "input_text" (line 14)?
-            // "j["input_text"] = user_message;"
-            // Let's double check AnalysisInput.cpp line 14.
-            // YES.
-        }
     }
 
     if (!images.empty()) {

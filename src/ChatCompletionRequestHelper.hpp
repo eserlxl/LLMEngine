@@ -127,7 +127,41 @@ struct ChatCompletionRequestHelper {
                 request_params_merged.update(params);
                 request_params_ptr = &request_params_merged;
             }
-            const nlohmann::json& request_params = *request_params_ptr;
+            
+            // Inject options overrides into request params if present
+            // We cast away constness locally or (better) ensure we are working on a copy if we need to modify.
+            // If request_params_ptr points to default_params (const), we must copy if we want to inject.
+            // But efficient way: merge into a new json object only if options are present?
+            // Or just always use a mutable copy if options are present.
+            
+            nlohmann::json final_params_storage;
+            const nlohmann::json* effective_params_ptr = request_params_ptr;
+
+            if (options.generation.user.has_value() || 
+                options.generation.logprobs.has_value() ||
+                options.generation.top_k.has_value() ||
+                options.generation.min_p.has_value()) {
+                
+                final_params_storage = *request_params_ptr;
+                if (options.generation.user.has_value()) {
+                    final_params_storage[std::string(::LLMEngine::Constants::JsonKeys::USER)] = *options.generation.user;
+                }
+                if (options.generation.logprobs.has_value()) {
+                    final_params_storage[std::string(::LLMEngine::Constants::JsonKeys::LOGPROBS)] = *options.generation.logprobs;
+                    if (options.generation.top_logprobs.has_value()) {
+                        final_params_storage[std::string(::LLMEngine::Constants::JsonKeys::TOP_LOGPROBS)] = *options.generation.top_logprobs;
+                    }
+                }
+                if (options.generation.top_k.has_value()) {
+                    final_params_storage[std::string(::LLMEngine::Constants::JsonKeys::TOP_K)] = *options.generation.top_k;
+                }
+                if (options.generation.min_p.has_value()) {
+                    final_params_storage[std::string(::LLMEngine::Constants::JsonKeys::MIN_P)] = *options.generation.min_p;
+                }
+                effective_params_ptr = &final_params_storage;
+            }
+
+            const nlohmann::json& request_params = *effective_params_ptr;
 
             // Build provider-specific payload once and cache serialized body for retries
             nlohmann::json payload = buildPayload(request_params);
@@ -210,13 +244,25 @@ struct ChatCompletionRequestHelper {
                                          cpr::Body{serialized_body},
                                          cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
                                          cpr::VerifySsl{verify_ssl},
-                                         cpr::ConnectTimeout{connect_timeout_ms});
+                                         cpr::ConnectTimeout{connect_timeout_ms},
+                                         cpr::ProgressCallback([&](size_t, size_t, size_t, size_t, intptr_t) -> bool {
+                                             if (options.cancellation_token && options.cancellation_token->isCancelled()) {
+                                                 return false; // Cancel request
+                                             }
+                                             return true;
+                                         }));
                     } else {
                         return cpr::Post(cpr::Url{url},
                                          cpr_headers,
                                          cpr::Body{serialized_body},
                                          cpr::Timeout{timeout_seconds * MILLISECONDS_PER_SECOND},
-                                         cpr::VerifySsl{verify_ssl});
+                                         cpr::VerifySsl{verify_ssl},
+                                         cpr::ProgressCallback([&](size_t, size_t, size_t, size_t, intptr_t) -> bool {
+                                             if (options.cancellation_token && options.cancellation_token->isCancelled()) {
+                                                 return false; // Cancel request
+                                             }
+                                             return true;
+                                         }));
                     }
                 },
                 options);

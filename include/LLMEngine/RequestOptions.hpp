@@ -54,6 +54,11 @@ struct RequestOptions {
         std::vector<std::string> stop_sequences;
         std::optional<int> seed;
         std::optional<nlohmann::json> logit_bias;
+        std::optional<bool> logprobs;
+        std::optional<int> top_logprobs;
+        std::optional<int> top_k;
+        std::optional<double> min_p;
+        std::optional<std::string> user;
     } generation;
 };
 
@@ -124,6 +129,29 @@ public:
 
     RequestOptionsBuilder& setLogitBias(const nlohmann::json& logitBias) {
         m_options.generation.logit_bias = logitBias;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setLogprobs(bool enable, std::optional<int> topLogprobs = std::nullopt) {
+        m_options.generation.logprobs = enable;
+        if (topLogprobs.has_value()) {
+            m_options.generation.top_logprobs = topLogprobs;
+        }
+        return *this;
+    }
+
+    RequestOptionsBuilder& setTopK(int topK) {
+        m_options.generation.top_k = topK;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setMinP(double minP) {
+        m_options.generation.min_p = minP;
+        return *this;
+    }
+
+    RequestOptionsBuilder& setUser(const std::string& userId) {
+        m_options.generation.user = userId;
         return *this;
     }
 

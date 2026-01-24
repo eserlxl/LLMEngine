@@ -65,6 +65,13 @@ struct LLMENGINE_EXPORT AnalysisInput {
         return *this;
     }
 
+    /**
+     * @brief Load image from file, base64 encode it, and add to input.
+     * @param path Path to image file.
+     * @throws std::runtime_error if file cannot be read.
+     */
+    AnalysisInput& withImageFromFile(const std::string& path);
+
     AnalysisInput& withTools(const nlohmann::json& tools_json) {
         tools = tools_json;
         return *this;

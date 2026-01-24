@@ -14,6 +14,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <cstdint>
 
 namespace LLMEngine {
 
@@ -40,7 +41,17 @@ struct LLMENGINE_EXPORT AnalysisResult {
         int promptTokens = 0;
         int completionTokens = 0;
         int totalTokens = 0;
+        // Extended usage stats
+        int reasoning_tokens = 0;
+        int cached_tokens = 0;
     } usage;
+
+    struct TokenLogProb {
+        std::string token;
+        double logprob;
+        std::optional<std::vector<uint8_t>> bytes; // Raw bytes if useful
+    };
+    std::optional<std::vector<TokenLogProb>> logprobs;
 
     /**
      * @brief Structured error code for programmatic error handling.

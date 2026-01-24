@@ -26,6 +26,7 @@ APIResponse FakeAPIClient::sendRequest(std::string_view prompt,
     std::lock_guard<std::mutex> lock(m_mutex);
     last_options_ = options;
     last_input_ = input;
+    last_params_ = params;
     last_prompt_ = std::string(prompt);
     if (has_custom_response_) {
         has_custom_response_ = false;
@@ -58,6 +59,7 @@ void FakeAPIClient::sendRequestStream(std::string_view prompt,
     std::lock_guard<std::mutex> lock(m_mutex);
     last_options_ = options;
     last_input_ = input;
+    last_params_ = params;
     last_prompt_ = std::string(prompt);
 
     (void)params;

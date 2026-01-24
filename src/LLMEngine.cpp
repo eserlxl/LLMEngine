@@ -26,10 +26,10 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <cstdlib>
 #include <filesystem>
 #include <stdexcept>
 #include <string>
-#include <system_error>
 
 // Namespace aliases to reduce verbosity
 namespace LLM = ::LLMEngine;
@@ -311,6 +311,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                 .errorMessage = "Internal Error: Request executor missing",
                                 .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
                                 .usage = {},
+                                .logprobs = std::nullopt,
                                 .errorCode = LLMEngineErrorCode::Unknown,
                                 .tool_calls = {}};
         // Should we run onResponse for errors? Yes, usually.
@@ -369,6 +370,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                               .errorMessage = "Internal Error: Request executor missing",
                               .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
                               .usage = {},
+                              .logprobs = std::nullopt,
                               .errorCode = LLMEngineErrorCode::Unknown,
                               .tool_calls = {}};
     }
@@ -453,6 +455,7 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                       .errorMessage = "Internal Error",
                                       .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
                                       .usage = {},
+                                      .logprobs = std::nullopt,
                                       .errorCode = LLMEngineErrorCode::Unknown,
                                       .tool_calls = {}};
             }
@@ -466,11 +469,7 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
         });
 }
 
-// analyzeStream(std::string_view, ...) legacy overload removed in header.
-// We should remove implementation as well.
-// But if I remove it, I must make sure it matches the view.
-// The view showed it at lines 462-499.
-// I will just delete it.
+
 
 std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                                     const nlohmann::json& input,
@@ -555,6 +554,7 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                          .errorMessage = "Internal Error",
                                          .statusCode = HttpStatus::INTERNAL_SERVER_ERROR,
                                          .usage = {},
+                                         .logprobs = std::nullopt,
                                          .errorCode = LLMEngineErrorCode::Unknown,
                                          .tool_calls = {}};
                 for (const auto& interceptor : state->interceptors_) {
