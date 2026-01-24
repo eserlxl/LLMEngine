@@ -8,6 +8,7 @@
 #include <memory>
 #include <mutex>
 #include <string_view>
+#include <functional>
 
 namespace LLMEngine {
 
@@ -89,6 +90,28 @@ class LLMENGINE_EXPORT DefaultLogger : public Logger {
 
   private:
     mutable std::mutex mutex_; ///< Mutex protecting stream writes
+};
+
+/**
+ * @brief Logger implementation that delegates to a callback function.
+ * 
+ * Useful for integrating with external logging systems, GUIs, or test frameworks.
+ */
+class LLMENGINE_EXPORT CallbackLogger : public Logger {
+public:
+    using LogCallback = std::function<void(LogLevel, std::string_view)>;
+
+    explicit CallbackLogger(LogCallback callback) : callback_(std::move(callback)) {}
+
+    void log(LogLevel level, std::string_view message) override {
+        if (callback_) {
+            // Callback is responsible for its own thread safety if needed
+            callback_(level, message);
+        }
+    }
+
+private:
+    LogCallback callback_;
 };
 
 } // namespace LLMEngine

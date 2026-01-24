@@ -340,3 +340,5 @@ endif()
 
 message(STATUS "Test configuration complete")
 
+add_executable(test_features_iter3 test_features_iter3.cpp)
+target_link_libraries(test_features_iter3 PRIVATE LLMEngine)
