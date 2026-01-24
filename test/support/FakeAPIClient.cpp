@@ -49,7 +49,7 @@ void FakeAPIClient::setNextStreamChunks(const std::vector<std::string>& chunks) 
 void FakeAPIClient::sendRequestStream(std::string_view prompt,
                                       const nlohmann::json& input,
                                       const nlohmann::json& params,
-                                      std::function<void(std::string_view)> callback,
+                                      LLMEngine::StreamCallback callback,
                                       const ::LLMEngine::RequestOptions& options) const {
     last_options_ = options;
     last_input_ = input;
@@ -60,14 +60,28 @@ void FakeAPIClient::sendRequestStream(std::string_view prompt,
     if (has_custom_stream_) {
         has_custom_stream_ = false;
         for (const auto& chunk : next_stream_chunks_) {
-            callback(chunk);
+            LLMEngine::StreamChunk stream_chunk;
+            stream_chunk.content = chunk;
+            stream_chunk.is_done = false;
+            callback(stream_chunk);
         }
+        // Send done signal
+        LLMEngine::StreamChunk done_chunk;
+        done_chunk.is_done = true;
+        callback(done_chunk);
         return;
     }
 
     // Default behavior: one chunk with prompt
     std::string content = "[FAKE STREAM] " + std::string(prompt);
-    callback(content);
+    LLMEngine::StreamChunk stream_chunk;
+    stream_chunk.content = content;
+    stream_chunk.is_done = false;
+    callback(stream_chunk);
+    
+    LLMEngine::StreamChunk done_chunk;
+    done_chunk.is_done = true;
+    callback(done_chunk);
 }
 
 } // namespace LLMEngineAPI

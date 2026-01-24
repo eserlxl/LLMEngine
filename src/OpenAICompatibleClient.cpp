@@ -122,20 +122,27 @@ void OpenAICompatibleClient::parseOpenAIResponse(APIResponse& response,
 }
 } // namespace LLMEngineAPI
 
+// Note: LLMEngine::StreamCallback is used here
 void LLMEngineAPI::OpenAICompatibleClient::parseOpenAIStreamChunk(
-    std::string_view chunk, std::string& buffer, std::function<void(std::string_view)> callback) {
+    std::string_view chunk, std::string& buffer, LLMEngine::StreamCallback callback) {
     buffer.append(chunk);
 
     size_t pos = 0;
-    while ((pos = buffer.find("\n\n")) != std::string::npos) {
+    while ((pos = buffer.find("\n")) != std::string::npos) {
         std::string line = buffer.substr(0, pos);
-        buffer.erase(0, pos + 2); // Remove processed line + delimiter
+        buffer.erase(0, pos + 1);
+
+        if (line.empty() || line == "\r")
+            continue;
 
         if (line.rfind("data: ", 0) == 0) {
-            std::string data = line.substr(6); // Skip "data: "
+            std::string data = line.substr(6);
 
             if (data == "[DONE]") {
-                // Stream finished
+                LLMEngine::StreamChunk result;
+                result.content = "";
+                result.is_done = true;
+                callback(result);
                 continue;
             }
 
@@ -143,23 +150,30 @@ void LLMEngineAPI::OpenAICompatibleClient::parseOpenAIStreamChunk(
                 auto json = nlohmann::json::parse(data);
                 if (json.contains("choices") && json["choices"].is_array()
                     && !json["choices"].empty()) {
-                    auto choice = json["choices"][0];
+                    auto& choice = json["choices"][0];
                     if (choice.contains("delta") && choice["delta"].contains("content")) {
-                        std::string content = choice["delta"]["content"];
-                        if (!content.empty()) {
-                            callback(content);
-                        }
+                        std::string content = choice["delta"]["content"].get<std::string>();
+                        LLMEngine::StreamChunk result;
+                        result.content = content;
+                        result.is_done = false;
+                        callback(result);
                     }
-                    // Handle finish_reason in stream
                     if (choice.contains("finish_reason") && !choice["finish_reason"].is_null()) {
-                        // Callback generally handles content only.
-                        // We might need an extended callback to pass finish reason,
-                        // but for now we just parse it to ensure robustness.
-                        // APIClient::sendRequestStream takes a simple string callback.
+                        // Finish reason handling
                     }
                 }
-            } catch (...) {
-                // Ignore parse errors in stream chunks (resilience)
+
+                if (json.contains("usage") && !json["usage"].is_null()) {
+                    LLMEngine::StreamChunk result;
+                    result.is_done = false; // Usage might come before DONE or with DONE
+                    result.usage = LLMEngine::AnalysisResult::UsageStats{
+                        .promptTokens = json["usage"].value("prompt_tokens", 0),
+                        .completionTokens = json["usage"].value("completion_tokens", 0)};
+                    callback(result);
+                }
+
+            } catch (const nlohmann::json::parse_error&) {
+                // Ignore
             }
         }
     }
@@ -169,23 +183,24 @@ void LLMEngineAPI::OpenAICompatibleClient::sendRequestStream(
     std::string_view prompt,
     const nlohmann::json& input,
     const nlohmann::json& params,
-    std::function<void(std::string_view)> callback,
+    LLMEngine::StreamCallback callback,
     const ::LLMEngine::RequestOptions& options) {
     // Build messages array using shared helper
     const nlohmann::json messages = ChatMessageBuilder::buildMessages(prompt, input);
-
-    // Create streaming params
-    nlohmann::json stream_params = params;
-    stream_params["stream"] = true;
-
     auto buffer = std::make_shared<std::string>();
 
     ChatCompletionRequestHelper::executeStream(
         default_params_,
-        stream_params,
+        params,
         // Build payload
         [&](const nlohmann::json& request_params) {
-            return buildPayload(messages, request_params);
+            nlohmann::json payload = buildPayload(messages, request_params);
+            payload["stream"] = true; // Force streaming
+                                      // Default to include usage for OpenAI compatible
+            if (!payload.contains("stream_options")) {
+                payload["stream_options"] = {{"include_usage", true}};
+            }
+            return payload;
         },
         // Build URL
         [&]() { return buildUrl(); },

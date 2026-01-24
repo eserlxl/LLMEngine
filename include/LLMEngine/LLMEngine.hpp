@@ -245,24 +245,13 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
     /**
      * @brief Run an analysis request with streaming response.
      *
-     * @param callback Callback invoked for each token/chunk received.
-     *                 Args: (chunk_content, is_done).
-     */
-    void analyzeStream(std::string_view prompt,
-                       const nlohmann::json& input,
-                       std::string_view analysis_type,
-                       std::string_view mode,
-                       bool prepend_terse_instruction,
-                       std::function<void(std::string_view, bool)> callback);
-
-    /**
-     * @brief Run an analysis request with streaming response and options.
+     * @param callback Callback invoked for each chunk.
      */
     void analyzeStream(std::string_view prompt,
                        const nlohmann::json& input,
                        std::string_view analysis_type,
                        const RequestOptions& options,
-                       std::function<void(std::string_view, bool)> callback);
+                       StreamCallback callback);
 
     /**
      * @brief Interceptor interface for request/response modification/inspection.

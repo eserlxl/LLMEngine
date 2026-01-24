@@ -9,7 +9,10 @@
 #include "LLMEngine/ErrorCodes.hpp"
 #include "LLMEngine/LLMEngineExport.hpp"
 
+#include <functional>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace LLMEngine {
@@ -76,5 +79,18 @@ struct LLMENGINE_EXPORT AnalysisResult {
         return !tool_calls.empty();
     }
 };
+
+/**
+ * @brief Payload for streaming callbacks.
+ */
+struct StreamChunk {
+    std::string_view content;
+    bool is_done;
+    LLMEngineErrorCode error_code = LLMEngineErrorCode::None;
+    std::string error_message;
+    std::optional<AnalysisResult::UsageStats> usage;
+};
+
+using StreamCallback = std::function<void(const StreamChunk&)>;
 
 } // namespace LLMEngine

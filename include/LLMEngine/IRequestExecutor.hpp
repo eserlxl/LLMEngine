@@ -8,6 +8,7 @@
 #pragma once
 #include "LLMEngine/LLMEngineExport.hpp"
 
+#include "LLMEngine/AnalysisResult.hpp"
 #include "LLMEngine/RequestOptions.hpp"
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -45,7 +46,7 @@ class LLMENGINE_EXPORT IRequestExecutor {
                                const std::string& full_prompt,
                                const nlohmann::json& input,
                                const nlohmann::json& final_params,
-                               std::function<void(std::string_view)> callback,
+                               LLMEngine::StreamCallback callback,
                                const ::LLMEngine::RequestOptions& options = {}) const = 0;
 };
 
@@ -65,7 +66,7 @@ class LLMENGINE_EXPORT DefaultRequestExecutor : public IRequestExecutor {
                        const std::string& full_prompt,
                        const nlohmann::json& input,
                        const nlohmann::json& final_params,
-                       std::function<void(std::string_view)> callback,
+                       LLMEngine::StreamCallback callback,
                        const ::LLMEngine::RequestOptions& options = {}) const override;
 };
 
@@ -113,7 +114,7 @@ class LLMENGINE_EXPORT RetryableRequestExecutor : public IRequestExecutor {
                        const std::string& full_prompt,
                        const nlohmann::json& input,
                        const nlohmann::json& final_params,
-                       std::function<void(std::string_view)> callback,
+                       LLMEngine::StreamCallback callback,
                        const ::LLMEngine::RequestOptions& options = {}) const override;
 
   private:

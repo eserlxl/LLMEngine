@@ -9,6 +9,7 @@
 #include "APIClientCommon.hpp"
 #include "ChatCompletionRequestHelper.hpp"
 #include "LLMEngine/APIClient.hpp"
+#include "LLMEngine/AnalysisResult.hpp"
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/RequestOptions.hpp"
 
@@ -88,7 +89,7 @@ class OpenAICompatibleClient {
      */
     static void parseOpenAIStreamChunk(std::string_view chunk,
                                        std::string& buffer,
-                                       std::function<void(std::string_view)> callback);
+                                       LLMEngine::StreamCallback callback);
 
     /**
      * @brief Send a streaming request (helper for wrapper classes).
@@ -96,7 +97,7 @@ class OpenAICompatibleClient {
     void sendRequestStream(std::string_view prompt,
                            const nlohmann::json& input,
                            const nlohmann::json& params,
-                           std::function<void(std::string_view)> callback,
+                           LLMEngine::StreamCallback callback,
                            const ::LLMEngine::RequestOptions& options = {});
 
     /**

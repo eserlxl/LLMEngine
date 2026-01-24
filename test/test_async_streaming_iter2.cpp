@@ -53,13 +53,14 @@ void testStreaming() {
     std::vector<std::string> received;
     std::cout << "Starting stream..." << std::endl;
 
+    ::LLMEngine::RequestOptions options;
     engine.analyzeStream(
-        "Stream prompt", {}, "stream_test", "chat", true, [&](std::string_view chunk, bool done) {
-            if (!chunk.empty()) {
-                received.push_back(std::string(chunk));
-                std::cout << "Rx: " << chunk << std::endl;
+        "Stream prompt", {}, "stream_test", options, [&](const LLMEngine::StreamChunk& chunk) {
+            if (!chunk.content.empty()) {
+                received.push_back(std::string(chunk.content));
+                std::cout << "Rx: " << chunk.content << std::endl;
             }
-            if (done)
+            if (chunk.is_done)
                 std::cout << "Stream done signal." << std::endl;
         });
 

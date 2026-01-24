@@ -31,7 +31,7 @@ void DefaultRequestExecutor::executeStream(const ::LLMEngineAPI::APIClient* api_
                                            const std::string& full_prompt,
                                            const nlohmann::json& input,
                                            const nlohmann::json& final_params,
-                                           std::function<void(std::string_view)> callback,
+                                           LLMEngine::StreamCallback callback,
                                            const ::LLMEngine::RequestOptions& options) const {
     if (!api_client) {
         throw std::runtime_error("API client not initialized");

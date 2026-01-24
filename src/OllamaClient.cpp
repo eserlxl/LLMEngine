@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "APIClientCommon.hpp"
+#include "ChatCompletionRequestHelper.hpp"
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/HttpStatus.hpp"
@@ -14,6 +15,66 @@
 #include <nlohmann/json.hpp>
 
 namespace LLMEngineAPI {
+
+namespace {
+void parseOllamaStreamChunk(std::string_view chunk, std::string& buffer, const LLMEngine::StreamCallback& callback) {
+    buffer.append(chunk);
+
+    size_t pos = 0;
+    while ((pos = buffer.find("\n")) != std::string::npos) {
+        std::string line = buffer.substr(0, pos);
+        buffer.erase(0, pos + 1);
+
+        if (line.empty() || line == "\r")
+            continue;
+
+        try {
+            auto json = nlohmann::json::parse(line);
+            
+            // Check for done
+            bool done = json.value("done", false);
+            
+            if (json.contains("message") && json["message"].contains("content")) {
+                std::string text = json["message"]["content"].get<std::string>();
+                if (!text.empty()) {
+                    LLMEngine::StreamChunk result;
+                    result.content = text;
+                    result.is_done = false;
+                    callback(result);
+                }
+            } else if (json.contains("response")) {
+                // Generate API format
+                std::string text = json["response"].get<std::string>();
+                if (!text.empty()) {
+                    LLMEngine::StreamChunk result;
+                    result.content = text;
+                    result.is_done = false;
+                    callback(result);
+                }
+            }
+
+            if (done) {
+                // Extract metrics if available
+                if (json.contains("eval_count")) {
+                    LLMEngine::StreamChunk result;
+                    result.is_done = false;
+                    result.usage = LLMEngine::AnalysisResult::UsageStats{
+                        .promptTokens = json.value("prompt_eval_count", 0),
+                        .completionTokens = json.value("eval_count", 0)
+                    };
+                    callback(result);
+                }
+                // Send explicit done signals are handled by executeStream finally block, 
+                // but we can send one if we want to be explicit about closing based on payload.
+                // However, let's let the stream end naturally.
+            }
+
+        } catch (...) {
+            // Ignore
+        }
+    }
+}
+} // namespace
 
 OllamaClient::OllamaClient(const std::string& base_url, const std::string& model)
     : base_url_(base_url), model_(model) {
@@ -212,6 +273,79 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
     }
 
     return response;
+}
+
+void OllamaClient::sendRequestStream(std::string_view prompt,
+                                      const nlohmann::json& input,
+                                      const nlohmann::json& params,
+                                      LLMEngine::StreamCallback callback,
+                                      const ::LLMEngine::RequestOptions& options) const {
+    // Merge params
+    nlohmann::json request_params = default_params_;
+    if (!params.is_null()) {
+        request_params.update(params);
+    }
+
+    bool use_generate = false;
+    if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::MODE))
+        && params[std::string(::LLMEngine::Constants::JsonKeys::MODE)] == "generate") {
+        use_generate = true;
+    }
+
+    // Prepare payload
+    nlohmann::json payload;
+    std::string endpoint;
+
+    if (use_generate) {
+        payload = {{"model", model_}, {"prompt", prompt}, {"stream", true}};
+        endpoint = "/api/generate";
+    } else {
+        nlohmann::json messages = nlohmann::json::array();
+        if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))) {
+            messages.push_back(
+                {{"role", "system"},
+                 {"content",
+                  input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
+                      .get<std::string>()}});
+        }
+        messages.push_back({{"role", "user"}, {"content", prompt}});
+        payload = {{"model", model_}, {"messages", messages}, {"stream", true}};
+        endpoint = "/api/chat";
+    }
+
+    // Add extra params
+    for (auto& [key, value] : request_params.items()) {
+        if (key != "context_window" && !payload.contains(key)) {
+            payload[key] = value;
+        }
+    }
+
+    auto buffer = std::make_shared<std::string>();
+
+    ChatCompletionRequestHelper::executeStream(
+        default_params_,
+        params,
+        // Build payload
+        [&](const nlohmann::json&) {
+            return payload;
+        },
+        // Build URL
+        [&]() { return base_url_ + endpoint; },
+        // Build Headers
+        [&]() {
+            return std::map<std::string, std::string>{{"Content-Type", "application/json"}};
+        },
+        // Stream processor
+        [buffer, callback](std::string_view chunk) {
+            parseOllamaStreamChunk(chunk, *buffer, callback);
+        },
+        options,
+        /*exponential_retry=*/false,
+        config_.get());
+
+    LLMEngine::StreamChunk result;
+    result.is_done = true;
+    callback(result);
 }
 
 } // namespace LLMEngineAPI

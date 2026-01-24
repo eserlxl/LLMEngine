@@ -60,10 +60,11 @@ void testAnalyzeStreamCallsCallback() {
     bool received_done = false;
 
     nlohmann::json input;
+    ::LLMEngine::RequestOptions options;
     engine.analyzeStream(
-        "test stream", input, "test_stream", "chat", true, [&](std::string_view chunk, bool done) {
-            if (!done) {
-                received_chunks.emplace_back(chunk);
+        "test stream", input, "test_stream", options, [&](const LLMEngine::StreamChunk& chunk) {
+            if (!chunk.is_done) {
+                received_chunks.emplace_back(chunk.content);
             } else {
                 received_done = true;
             }
@@ -88,14 +89,14 @@ void testAnalyzeStreamDefaultsWithoutChunks() {
     bool received_done = false;
 
     nlohmann::json input;
+    ::LLMEngine::RequestOptions options;
     engine.analyzeStream("test default",
                          input,
                          "test_stream_default",
-                         "chat",
-                         true,
-                         [&](std::string_view chunk, bool done) {
-                             if (!done) {
-                                 received_chunks.emplace_back(chunk);
+                         options,
+                         [&](const LLMEngine::StreamChunk& chunk) {
+                             if (!chunk.is_done) {
+                                 received_chunks.emplace_back(chunk.content);
                              } else {
                                  received_done = true;
                              }

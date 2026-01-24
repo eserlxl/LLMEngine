@@ -5,8 +5,10 @@
 #include "LLMEngine/CancellationToken.hpp"
 #include <map>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace LLMEngine {
 
@@ -42,6 +44,17 @@ struct RequestOptions {
      * Default depends on implementation (e.g., usually unbounded or high limit).
      */
     std::optional<size_t> max_concurrency;
+
+    struct GenerationOptions {
+        std::optional<double> temperature;
+        std::optional<int> max_tokens;
+        std::optional<double> top_p;
+        std::optional<double> frequency_penalty;
+        std::optional<double> presence_penalty;
+        std::vector<std::string> stop_sequences;
+        std::optional<int> seed;
+        std::optional<nlohmann::json> logit_bias;
+    } generation;
 };
 
 } // namespace LLMEngine

@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "APIClientCommon.hpp"
+#include "ChatCompletionRequestHelper.hpp"
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/HttpStatus.hpp"
@@ -13,6 +14,65 @@
 #include <nlohmann/json.hpp>
 
 namespace LLMEngineAPI {
+
+namespace {
+void parseAnthropicStreamChunk(std::string_view chunk, std::string& buffer, const LLMEngine::StreamCallback& callback) {
+    buffer.append(chunk);
+
+    size_t pos = 0;
+    while ((pos = buffer.find("\n")) != std::string::npos) {
+        std::string line = buffer.substr(0, pos);
+        buffer.erase(0, pos + 1);
+
+        if (line.empty() || line == "\r")
+            continue;
+
+        constexpr size_t kEventPrefixLen = 7;
+        constexpr size_t kDataPrefixLen = 6;
+
+        if (line.rfind("event: ", 0) == 0) {
+            // Check event type
+            // std::string event = line.substr(kEventPrefixLen);
+            // (Event type usage logic ommitted for now as we parse data directly, 
+            // but structure implies we might use it eventually)
+        }
+        
+        if (line.rfind("data: ", 0) == 0) {
+            std::string data = line.substr(kDataPrefixLen);
+            
+            try {
+                auto json = nlohmann::json::parse(data);
+                
+                std::string type;
+                if (json.contains("type")) type = json["type"].get<std::string>();
+
+                if (type == "content_block_delta") {
+                    if (json.contains("delta") && json["delta"].contains("text")) {
+                        std::string text = json["delta"]["text"].get<std::string>();
+                        LLMEngine::StreamChunk result;
+                        result.content = text;
+                        result.is_done = false;
+                        callback(result);
+                    }
+                } else if (type == "message_stop") {
+                    // Done
+                } else if (type == "message_delta") {
+                    if (json.contains("usage")) {
+                         LLMEngine::StreamChunk result;
+                         result.is_done = false;
+                         result.usage = LLMEngine::AnalysisResult::UsageStats{
+                            .completionTokens = json["usage"].value("output_tokens", 0)
+                         };
+                         callback(result);
+                    }
+                }
+            } catch (...) {
+                // Ignore
+            }
+        }
+    }
+}
+} // namespace
 
 AnthropicClient::AnthropicClient(const std::string& api_key, const std::string& model)
     : api_key_(api_key), model_(model),
@@ -153,6 +213,63 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
     }
 
     return response;
+}
+
+void AnthropicClient::sendRequestStream(std::string_view prompt,
+                                          const nlohmann::json& input,
+                                          const nlohmann::json& params,
+                                          LLMEngine::StreamCallback callback,
+                                          const ::LLMEngine::RequestOptions& options) const {
+    // Merge params
+    nlohmann::json request_params = default_params_;
+    if (!params.is_null()) {
+        request_params.update(params);
+    }
+
+    nlohmann::json messages = nlohmann::json::array();
+    messages.push_back({{"role", "user"}, {"content", prompt}});
+
+    auto buffer = std::make_shared<std::string>();
+
+    ChatCompletionRequestHelper::executeStream(
+        default_params_,
+        params,
+        // Build payload
+        [&](const nlohmann::json& rp) {
+            nlohmann::json payload = {
+                {"model", model_},
+                {"max_tokens", rp["max_tokens"]},
+                {"temperature", rp["temperature"]},
+                {"top_p", rp["top_p"]},
+                {"messages", messages},
+                {"stream", true}
+            };
+            if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))) {
+                payload["system"] = input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
+                                        .get<std::string>();
+            }
+            return payload;
+        },
+        // Build URL
+        [&]() { return base_url_ + "/messages"; },
+        // Build Headers
+        [&]() {
+            return std::map<std::string, std::string>{
+                {"Content-Type", "application/json"},
+                {"x-api-key", api_key_},
+                {"anthropic-version", "2023-06-01"}};
+        },
+        // Stream processor
+        [buffer, callback](std::string_view chunk) {
+            parseAnthropicStreamChunk(chunk, *buffer, callback);
+        },
+        options,
+        /*exponential_retry=*/true,
+        config_.get());
+
+    LLMEngine::StreamChunk result;
+    result.is_done = true;
+    callback(result);
 }
 
 } // namespace LLMEngineAPI

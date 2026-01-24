@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "APIClientCommon.hpp"
+#include "ChatCompletionRequestHelper.hpp"
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/Constants.hpp"
 #include "LLMEngine/HttpStatus.hpp"
@@ -13,6 +14,63 @@
 #include <nlohmann/json.hpp>
 
 namespace LLMEngineAPI {
+
+namespace {
+void parseGeminiStreamChunk(std::string_view chunk, std::string& buffer, const LLMEngine::StreamCallback& callback) {
+    buffer.append(chunk);
+
+    size_t pos = 0;
+    while ((pos = buffer.find("\n")) != std::string::npos) {
+        std::string line = buffer.substr(0, pos);
+        buffer.erase(0, pos + 1);
+
+        if (line.empty() || line == "\r")
+            continue;
+
+        if (line.rfind("data: ", 0) == 0) {
+            constexpr size_t kDataPrefixLen = 6;
+            std::string data = line.substr(kDataPrefixLen);
+            if (data == "[DONE]")
+                continue;
+
+            try {
+                auto json = nlohmann::json::parse(data);
+                
+                if (json.contains("candidates") && json["candidates"].is_array() && !json["candidates"].empty()) {
+                    const auto& cand = json["candidates"][0];
+                    if (cand.contains("content") && cand["content"].contains("parts") && cand["content"]["parts"].is_array()) {
+                        for (const auto& part : cand["content"]["parts"]) {
+                            if (part.contains("text") && part["text"].is_string()) {
+                                std::string text = part["text"].get<std::string>();
+                                if (!text.empty()) {
+                                    LLMEngine::StreamChunk result;
+                                    result.content = text;
+                                    result.is_done = false;
+                                    callback(result);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (json.contains("usageMetadata")) {
+                    LLMEngine::StreamChunk result;
+                    result.is_done = false;
+                    result.usage = LLMEngine::AnalysisResult::UsageStats{
+                        .promptTokens = json["usageMetadata"].value("promptTokenCount", 0),
+                        .completionTokens = json["usageMetadata"].value("candidatesTokenCount", 0),
+                        .totalTokens = json["usageMetadata"].value("totalTokenCount", 0)
+                    };
+                    callback(result);
+                }
+
+            } catch (const nlohmann::json::parse_error&) {
+                // Ignore
+            }
+        }
+    }
+}
+} // namespace
 
 GeminiClient::GeminiClient(const std::string& api_key, const std::string& model)
     : api_key_(api_key), model_(model),
@@ -165,6 +223,68 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
     }
 
     return response;
+}
+
+void GeminiClient::sendRequestStream(std::string_view prompt,
+                                     const nlohmann::json& input,
+                                     const nlohmann::json& params,
+                                     LLMEngine::StreamCallback callback,
+                                     const ::LLMEngine::RequestOptions& options) const {
+    // Merge params
+    nlohmann::json request_params = default_params_;
+    if (!params.is_null()) {
+        request_params.update(params);
+    }
+
+    // Build user text
+    std::string user_text;
+    if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))
+        && input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)].is_string()) {
+        user_text += input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
+                         .get<std::string>();
+        if (!user_text.empty() && user_text.back() != '\n')
+            user_text += "\n";
+    }
+    user_text += std::string(prompt);
+
+    auto buffer = std::make_shared<std::string>();
+
+    ChatCompletionRequestHelper::executeStream(
+        default_params_,
+        params,
+        // Build payload
+        [&](const nlohmann::json& rp) {
+            return nlohmann::json{
+                {"contents",
+                 nlohmann::json::array({nlohmann::json{
+                     {"role", "user"},
+                     {"parts", nlohmann::json::array({nlohmann::json{{"text", user_text}}})}}})},
+                {"generationConfig",
+                 nlohmann::json{{"temperature", rp["temperature"]},
+                                {"maxOutputTokens", rp["max_tokens"]},
+                                {"topP", rp["top_p"]}}}};
+        },
+        // Build URL (SSE mode)
+        [&]() {
+            return base_url_ + "/models/" + model_ + ":streamGenerateContent?alt=sse";
+        },
+        // Build Headers
+        [&]() {
+            return std::map<std::string, std::string>{{"Content-Type", "application/json"},
+                                                      {"x-goog-api-key", api_key_}};
+        },
+        // Stream processor
+        [buffer, callback](std::string_view chunk) {
+            parseGeminiStreamChunk(chunk, *buffer, callback);
+        },
+        options,
+        /*exponential_retry=*/false,
+        config_.get());
+    
+    // Send final done signal
+    LLMEngine::StreamChunk result;
+    result.is_done = true;
+    callback(result);
 }
 
 } // namespace LLMEngineAPI

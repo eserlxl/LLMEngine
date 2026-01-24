@@ -441,7 +441,10 @@ target_include_directories(test_features_iter2 PRIVATE ${CMAKE_CURRENT_SOURCE_DI
 apply_test_sanitizer_flags(test_features_iter2)
 
 
-
+add_executable(test_streaming_providers test_streaming_providers.cpp)
+target_link_libraries(test_streaming_providers PRIVATE LLMEngine llmengine::compile_options nlohmann_json::nlohmann_json cpr::cpr)
+target_include_directories(test_streaming_providers PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+apply_test_sanitizer_flags(test_streaming_providers)
 # ---- Fuzz Testing (optional) -------------------------------------------------
 if (ENABLE_FUZZ)
   # Check if compiler supports libFuzzer

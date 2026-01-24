@@ -58,7 +58,7 @@ APIResponse OpenAIClient::sendRequest(std::string_view prompt,
 void OpenAIClient::sendRequestStream(std::string_view prompt,
                                      const nlohmann::json& input,
                                      const nlohmann::json& params,
-                                     std::function<void(std::string_view)> callback,
+                                     LLMEngine::StreamCallback callback,
                                      const ::LLMEngine::RequestOptions& options) const {
     impl_->sendRequestStream(prompt, input, params, callback, options);
 }

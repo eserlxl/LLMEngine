@@ -459,44 +459,11 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
         });
 }
 
-void LLMEngine::analyzeStream(std::string_view prompt,
-                              const nlohmann::json& input,
-                              std::string_view analysis_type,
-                              std::string_view mode,
-                              bool prepend_terse_instruction,
-                              std::function<void(std::string_view, bool)> callback) {
-    state_->ensureSecureTmpDir();
-
-    RequestContext ctx = RequestContextBuilder::build(static_cast<IModelContext&>(*this),
-                                                      prompt,
-                                                      input,
-                                                      analysis_type,
-                                                      mode,
-                                                      prepend_terse_instruction);
-
-    auto wrapped_callback = [callback](std::string_view chunk) { callback(chunk, false); };
-
-    if (state_->request_executor_) {
-        state_->request_executor_->executeStream(
-            state_->api_client_.get(), ctx.fullPrompt, input, ctx.finalParams, wrapped_callback);
-        callback("", true);
-    } else if (state_->api_client_) {
-        // Fallback or explicit error if executor is mandatory?
-        // Sync analyze fails if no executor.
-        if (state_->logger_) {
-            state_->logger_->log(LogLevel::Warn,
-                                 "Request executor not set, falling back to direct client usage.");
-        }
-        state_->api_client_->sendRequestStream(
-            ctx.fullPrompt, input, ctx.finalParams, wrapped_callback);
-        callback("", true);
-    } else {
-        if (state_->logger_) {
-            state_->logger_->log(LogLevel::Error, "API client not initialized for streaming.");
-        }
-        callback("Error: API client/Executor not initialized", true);
-    }
-}
+// analyzeStream(std::string_view, ...) legacy overload removed in header.
+// We should remove implementation as well.
+// But if I remove it, I must make sure it matches the view.
+// The view showed it at lines 462-499.
+// I will just delete it.
 
 std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                                     const nlohmann::json& input,
@@ -518,6 +485,8 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
          mode,
          prepend_terse_instruction,
          options]() -> AnalysisResult {
+            auto start = std::chrono::high_resolution_clock::now();
+
             struct StateAdapter : public IModelContext {
                 std::shared_ptr<EngineState> s;
                 StateAdapter(std::shared_ptr<EngineState> st) : s(st) {}
@@ -596,6 +565,32 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
             for (const auto& interceptor : state->interceptors_) {
                 interceptor->onResponse(result);
             }
+
+            // Record Metrics
+            if (state->metrics_collector_) {
+                auto end = std::chrono::high_resolution_clock::now();
+                long latency =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+                std::string provider =
+                    state->api_client_ ? state->api_client_->getProviderName() : "Ollama (Legacy)";
+                std::vector<MetricTag> tags = {{"provider", provider},
+                                               {"model", state->model_},
+                                               {"type", analysis_type},
+                                               {"success", result.success ? "true" : "false"},
+                                               {"mode", "async"}};
+
+                state->metrics_collector_->recordLatency("llm_engine.analyze", latency, tags);
+
+                if (result.success) {
+                    state->metrics_collector_->recordCounter(
+                        "llm_engine.tokens_input", result.usage.promptTokens, tags);
+                    state->metrics_collector_->recordCounter(
+                        "llm_engine.tokens_output", result.usage.completionTokens, tags);
+                } else {
+                    state->metrics_collector_->recordCounter("llm_engine.errors", 1, tags);
+                }
+            }
+
             return result;
         });
 }
@@ -604,7 +599,7 @@ void LLMEngine::analyzeStream(std::string_view prompt,
                               const nlohmann::json& input,
                               std::string_view analysis_type,
                               const RequestOptions& options,
-                              std::function<void(std::string_view, bool)> callback) {
+                              StreamCallback callback) {
     state_->ensureSecureTmpDir();
 
     std::string mode = "chat";
@@ -617,16 +612,44 @@ void LLMEngine::analyzeStream(std::string_view prompt,
                                                       mode,
                                                       prepend_terse_instruction);
 
-    auto wrapped_callback = [callback](std::string_view chunk) { callback(chunk, false); };
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    auto wrapped_callback = [callback, this, start_time, analysis_type](const StreamChunk& chunk) {
+        callback(chunk);
+
+        if (chunk.is_done && state_->metrics_collector_) {
+            auto end = std::chrono::high_resolution_clock::now();
+            long latency =
+                std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count();
+            std::vector<MetricTag> tags = {
+                {"provider", getProviderName()},
+                {"model", getModelName()},
+                {"type", std::string(analysis_type)},
+                {"success", chunk.error_code == LLMEngineErrorCode::None ? "true" : "false"},
+                {"mode", "stream"}};
+            state_->metrics_collector_->recordLatency("llm_engine.analyze", latency, tags);
+
+            if (chunk.usage.has_value()) {
+                state_->metrics_collector_->recordCounter(
+                    "llm_engine.tokens_input", chunk.usage->promptTokens, tags);
+                state_->metrics_collector_->recordCounter(
+                    "llm_engine.tokens_output", chunk.usage->completionTokens, tags);
+            }
+            // Error counting? If chunk.error_code is set.
+            if (chunk.error_code != LLMEngineErrorCode::None) {
+                state_->metrics_collector_->recordCounter("llm_engine.errors", 1, tags);
+            }
+        }
+    };
 
     if (state_->request_executor_) {
+        // executeStream now takes StreamCallback directly
         state_->request_executor_->executeStream(state_->api_client_.get(),
                                                  ctx.fullPrompt,
                                                  input,
                                                  ctx.finalParams,
                                                  wrapped_callback,
                                                  options);
-        callback("", true);
     } else if (state_->api_client_) {
         if (state_->logger_) {
             state_->logger_->log(LogLevel::Warn,
@@ -634,12 +657,15 @@ void LLMEngine::analyzeStream(std::string_view prompt,
         }
         state_->api_client_->sendRequestStream(
             ctx.fullPrompt, input, ctx.finalParams, wrapped_callback, options);
-        callback("", true);
     } else {
         if (state_->logger_) {
             state_->logger_->log(LogLevel::Error, "API client not initialized for streaming.");
         }
-        callback("Error: API client/Executor not initialized", true);
+        StreamChunk errChunk;
+        errChunk.is_done = true;
+        errChunk.error_code = LLMEngineErrorCode::Unknown;
+        errChunk.error_message = "API client/Executor not initialized";
+        wrapped_callback(errChunk);
     }
 }
 

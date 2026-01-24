@@ -33,7 +33,7 @@ class FakeAPIClient : public APIClient {
     void sendRequestStream(std::string_view prompt,
                            const nlohmann::json& input,
                            const nlohmann::json& params,
-                           std::function<void(std::string_view)> callback,
+                           LLMEngine::StreamCallback callback,
                            const ::LLMEngine::RequestOptions& options = {}) const override;
 
   private:
