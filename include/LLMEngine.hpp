@@ -1,3 +1,0 @@
-// Compatibility header for legacy includes
-#pragma once
-#include "LLMEngine/core/LLMEngine.hpp"
