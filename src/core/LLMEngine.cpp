@@ -7,6 +7,7 @@
 
 #include "LLMEngine/core/LLMEngine.hpp"
 #include "EngineState.hpp"
+#include "EngineStateAdapter.hpp"
 
 #include "LLMEngine/providers/APIClient.hpp"
 #include "LLMEngine/core/AnalysisInput.hpp"
@@ -45,55 +46,6 @@ namespace LLMEngine {
 
 
 
-// Internal state structure implementation
-
-namespace {
-class EngineStateAdapter : public IModelContext {
-    std::shared_ptr<LLMEngine::EngineState> s;
-
-  public:
-    explicit EngineStateAdapter(std::shared_ptr<LLMEngine::EngineState> st) : s(std::move(st)) {}
-    std::string getTempDirectory() const override {
-        std::shared_lock lock(s->configMutex_);
-        return s->tmp_dir_;
-    }
-    std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override {
-        std::shared_lock lock(s->configMutex_);
-        return s->tersePromptBuilder_;
-    }
-    std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override {
-        std::shared_lock lock(s->configMutex_);
-        return s->passthroughPromptBuilder_;
-    }
-    const nlohmann::json& getModelParams() const override {
-        std::shared_lock lock(s->configMutex_);
-        return s->modelParams_;
-    }
-    bool areDebugFilesEnabled() const override {
-        std::shared_lock lock(s->configMutex_);
-        if (!s->debug_)
-            return false;
-        if (s->debugFilesPolicy_)
-            return s->debugFilesPolicy_();
-        return !s->disableDebugFilesEnvCached_;
-    }
-    std::shared_ptr<IArtifactSink> getArtifactSink() const override {
-        std::shared_lock lock(s->configMutex_);
-        return s->artifactSink_;
-    }
-    int getLogRetentionHours() const override {
-        std::shared_lock lock(s->configMutex_);
-        return s->logRetentionHours_;
-    }
-    std::shared_ptr<Logger> getLogger() const override {
-        std::shared_lock lock(s->configMutex_);
-        return s->logger_;
-    }
-    void prepareTempDirectory() override {
-        s->ensureSecureTmpDir();
-    }
-};
-} // namespace
 
 
 // --- Constructors ---
