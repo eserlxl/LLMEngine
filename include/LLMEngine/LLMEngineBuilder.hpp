@@ -30,6 +30,10 @@ class LLMENGINE_EXPORT LLMEngineBuilder {
     LLMEngineBuilder& withLogRetention(int hours);
 
     LLMEngineBuilder& withBaseUrl(std::string_view url);
+    
+    // New Configuration Methods
+    LLMEngineBuilder& withTimeout(std::chrono::milliseconds timeout);
+    LLMEngineBuilder& withMaxRetries(int retries);
 
     /**
      * @brief Build the LLMEngine instance.
@@ -47,6 +51,10 @@ class LLMENGINE_EXPORT LLMEngineBuilder {
     std::shared_ptr<Logger> logger_;
     bool debug_ = false;
     int log_retention_hours_ = 24;
+    
+    // Default options
+    std::optional<int> timeout_ms_;
+    std::optional<int> max_retries_;
 };
 
 } // namespace LLMEngine

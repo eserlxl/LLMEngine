@@ -33,8 +33,8 @@ public:
     void recordLatency(std::string_view, long, const std::vector<MetricTag>&) override {}
     
     void recordCounter(std::string_view name, long value, const std::vector<MetricTag>&) override {
-        if (name == "llm_engine.tokens_input") total_input_tokens += value;
-        if (name == "llm_engine.tokens_output") total_output_tokens += value;
+        if (name == "llm_engine.tokens_input") total_input_tokens += static_cast<int>(value);
+        if (name == "llm_engine.tokens_output") total_output_tokens += static_cast<int>(value);
     }
 };
 

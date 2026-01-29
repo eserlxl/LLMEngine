@@ -137,6 +137,16 @@ nlohmann::json AnalysisInput::toJson() const {
     if (!response_format.is_null()) {
         j["response_format"] = response_format;
     }
+
+    // Standard params
+    if (temperature.has_value()) j["temperature"] = *temperature;
+    if (max_tokens.has_value()) j["max_tokens"] = *max_tokens;
+    if (top_p.has_value()) j["top_p"] = *top_p;
+    if (!stop_sequences.empty()) j["stop"] = stop_sequences;
+    if (logit_bias.has_value()) j["logit_bias"] = *logit_bias;
+    if (frequency_penalty.has_value()) j["frequency_penalty"] = *frequency_penalty;
+    if (presence_penalty.has_value()) j["presence_penalty"] = *presence_penalty;
+
     for (const auto& [key, value] : extra_fields) {
         j[key] = value;
     }
@@ -161,6 +171,34 @@ bool AnalysisInput::validate(std::string& error_message) const {
                 return false;
             }
         }
+    }
+
+    // Validate tool_choice logic
+    if (!tool_choice.is_null() && !tool_choice.is_string() && tool_choice.contains("function")) {
+         // Should verify if function name exists in tools?
+         // For now, simple structural check.
+         const auto& fn = tool_choice["function"];
+         if (!fn.contains("name")) {
+             error_message = "tool_choice function must have 'name'";
+             return false;
+         }
+         // Optional: Check if named tool exists in 'tools' array
+         std::string target = fn["name"];
+         bool found = false;
+         
+         if (tools.is_array()) {
+             for (const auto& t : tools) {
+                 if (t.contains("function") && t["function"].contains("name") && t["function"]["name"] == target) {
+                     found = true;
+                     break;
+                 }
+             }
+         }
+         
+         if (!found) {
+             error_message = "tool_choice refers to unknown tool: " + target;
+             return false;
+         }
     }
 
 
@@ -192,6 +230,14 @@ bool AnalysisInput::validate(std::string& error_message) const {
     }
 
     return true;
+}
+
+AnalysisInput AnalysisInput::fromJson(const nlohmann::json& j) {
+    AnalysisInput input;
+    if (j.contains("tools")) input.tools = j["tools"];
+    if (j.contains("tool_choice")) input.tool_choice = j["tool_choice"];
+    if (j.contains("response_format")) input.response_format = j["response_format"];
+    return input;
 }
 
 } // namespace LLMEngine

@@ -93,6 +93,7 @@ struct LLMEngine::EngineState {
     std::vector<std::shared_ptr<IInterceptor>> interceptors_;
     std::mutex state_mutex_; // Protects ensuring secure directories
     mutable std::shared_mutex config_mutex_; // Protects dynamic configuration (interceptors, settings)
+    RequestOptions default_request_options_; // Default options applied to all requests
 
     EngineState(const nlohmann::json& params, int cleanup_hours, bool debug)
         : model_params_(params), log_retention_hours_(cleanup_hours), debug_(debug),
@@ -228,9 +229,22 @@ LLMEngine::LLMEngine(std::string_view provider_name,
 
 // --- Analysis Methods ---
 
+void LLMEngine::setDefaultRequestOptions(const RequestOptions& options) {
+    std::unique_lock lock(state_->config_mutex_);
+    state_->default_request_options_ = options;
+}
+
+void LLMEngine::validateInput(const AnalysisInput& input) const {
+    std::string error;
+    if (!input.validate(error)) {
+        throw std::invalid_argument("Invalid AnalysisInput: " + error);
+    }
+}
+
 AnalysisResult LLMEngine::analyze(const AnalysisInput& input,
                                   std::string_view analysis_type,
                                   const RequestOptions& options) {
+    validateInput(input);
     if (state_->metrics_collector_) {
         // Record latency
         auto start = std::chrono::high_resolution_clock::now();
@@ -241,7 +255,14 @@ AnalysisResult LLMEngine::analyze(const AnalysisInput& input,
         // but explicit input usually overrides.
         // For now, we perform the direct call.
 
-        auto result = analyze(input.system_prompt, input_json, analysis_type, options);
+        // MERGE OPTIONS
+        RequestOptions effectiveOptions;
+        {
+            std::shared_lock lock(state_->config_mutex_);
+            effectiveOptions = RequestOptions::merge(state_->default_request_options_, options);
+        }
+
+        auto result = analyze(input.system_prompt, input_json, analysis_type, effectiveOptions);
 
         auto end = std::chrono::high_resolution_clock::now();
         long latency = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -276,13 +297,20 @@ AnalysisResult LLMEngine::analyze(const AnalysisInput& input,
         // For now, assume user_message is the primary prompt.
     }
 
-    return analyze(effective_prompt, input.toJson(), analysis_type, options);
+    RequestOptions effectiveOptions;
+    {
+        std::shared_lock lock(state_->config_mutex_);
+        effectiveOptions = RequestOptions::merge(state_->default_request_options_, options);
+    }
+
+    return analyze(effective_prompt, input.toJson(), analysis_type, effectiveOptions);
 }
 
 AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                   const nlohmann::json& input,
                                   std::string_view analysis_type,
                                   const RequestOptions& options) {
+    // validateInput(input); // Validate strictly before processing - REMOVED: JSON overload cannot be validated as AnalysisInput
     state_->ensureSecureTmpDir();
 
     // Determine mode and instruction from options (if extended later, for now just defaults)
@@ -513,10 +541,18 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                                     const nlohmann::json& input,
                                                     std::string_view analysis_type,
                                                     const RequestOptions& options) {
+    validateInput(AnalysisInput::fromJson(input));
     // Copy shared state pointer. Efficiently captures the PIMPL state,
     // ensuring the engine's internal components remain valid for the duration
     // of the async task, even if the LLMEngine instance itself is destroyed.
     std::shared_ptr<EngineState> state = state_;
+
+    // Merge Options immediately (capture current state)
+    RequestOptions effectiveOptions;
+    {
+        std::shared_lock lock(state->config_mutex_);
+        effectiveOptions = RequestOptions::merge(state->default_request_options_, options);
+    }
 
     // Default mode/instruction for options-based overload
     std::string mode = "chat";
@@ -528,9 +564,9 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
          prompt = std::string(prompt),
          input = input,
          analysis_type = std::string(analysis_type),
-         mode,
+         mode = std::string(mode),
          prepend_terse_instruction,
-         options]() -> AnalysisResult {
+         options=effectiveOptions]() -> AnalysisResult {
             auto start = std::chrono::high_resolution_clock::now();
 
             struct StateAdapter : public IModelContext {
@@ -664,11 +700,19 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
 }
 
 void LLMEngine::analyzeStream(std::string_view prompt,
-                              const nlohmann::json& input,
-                              std::string_view analysis_type,
-                              const RequestOptions& options,
-                              StreamCallback callback) {
+                               const nlohmann::json& input,
+                               std::string_view analysis_type,
+                               const RequestOptions& options,
+                               StreamCallback callback) {
     state_->ensureSecureTmpDir();
+
+    RequestOptions effectiveOptions;
+    {
+        std::shared_lock lock(state_->config_mutex_);
+        effectiveOptions = RequestOptions::merge(state_->default_request_options_, options);
+    }
+
+    validateInput(AnalysisInput::fromJson(input));
 
     std::string mode = "chat";
     bool prepend_terse_instruction = true;
@@ -680,11 +724,20 @@ void LLMEngine::analyzeStream(std::string_view prompt,
                                                       mode,
                                                       prepend_terse_instruction);
 
+    // Run Interceptors (onRequest)
+    {
+        std::shared_lock lock(state_->config_mutex_);
+        for (const auto& interceptor : state_->interceptors_) {
+            interceptor->onRequest(ctx);
+        }
+    }
 
 
     // Merge RequestOptions into finalParams
     // Merge RequestOptions into finalParams
-    ParameterMerger::mergeRequestOptions(ctx.finalParams, options);
+    // Merge RequestOptions into finalParams
+    // Merge RequestOptions into finalParams
+    ParameterMerger::mergeRequestOptions(ctx.finalParams, effectiveOptions);
 
 
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -728,20 +781,19 @@ void LLMEngine::analyzeStream(std::string_view prompt,
 
 
     if (state_->request_executor_) {
-        // executeStream now takes StreamCallback directly
         state_->request_executor_->executeStream(state_->api_client_.get(),
                                                  ctx.fullPrompt,
                                                  input,
                                                  ctx.finalParams,
                                                  wrapped_callback,
-                                                 options);
+                                                 effectiveOptions);
     } else if (state_->api_client_) {
         if (state_->logger_) {
             state_->logger_->log(LogLevel::Warn,
                                  "Request executor not set, falling back to direct client usage.");
         }
         state_->api_client_->sendRequestStream(
-            ctx.fullPrompt, input, ctx.finalParams, wrapped_callback, options);
+            ctx.fullPrompt, input, ctx.finalParams, wrapped_callback, effectiveOptions);
     } else {
         if (state_->logger_) {
             state_->logger_->log(LogLevel::Error, "API client not initialized for streaming.");
@@ -750,8 +802,16 @@ void LLMEngine::analyzeStream(std::string_view prompt,
         errChunk.is_done = true;
         errChunk.error_code = LLMEngineErrorCode::Unknown;
         errChunk.error_message = "API client/Executor not initialized";
+        errChunk.error_message = "API client/Executor not initialized";
         wrapped_callback(errChunk);
     }
+
+    // Run Interceptors (onResponse) - approximated for stream
+    // Note: Streaming makes full onResponse difficult as result is built incrementally.
+    // We can trigger it if we accumulated a full result or just skip for now?
+    // Given usage_accum logic, we could potentially construct a partial result?
+    // For now, skipping full onResponse for stream to avoid complexity,
+    // as IInterceptor::onResponse takes AnalysisResult&.
 }
 
 std::vector<AnalysisResult> LLMEngine::analyzeBatch(const std::vector<AnalysisInput>& inputs,
@@ -759,6 +819,19 @@ std::vector<AnalysisResult> LLMEngine::analyzeBatch(const std::vector<AnalysisIn
                                                     const RequestOptions& options) {
     if (inputs.empty()) {
         return {};
+    }
+
+
+
+    // Validate all inputs first
+    for (const auto& input : inputs) {
+        validateInput(input);
+    }
+
+    RequestOptions effectiveOptions;
+    {
+        std::shared_lock lock(state_->config_mutex_);
+        effectiveOptions = RequestOptions::merge(state_->default_request_options_, options);
     }
 
     // Set up concurrency limiter
@@ -776,8 +849,8 @@ std::vector<AnalysisResult> LLMEngine::analyzeBatch(const std::vector<AnalysisIn
 
     for (const auto& input : inputs) {
         futures.push_back(
-            pool.enqueue([this, input, analysis_type, options]() {
-                return this->analyze(input, analysis_type, options);
+            pool.enqueue([this, input, analysis_type, effectiveOptions]() {
+                return this->analyze(input, analysis_type, effectiveOptions);
             }));
     }
 

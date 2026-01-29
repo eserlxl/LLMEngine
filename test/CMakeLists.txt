@@ -50,6 +50,7 @@ endif()
 
 # ---- Dependencies ------------------------------------------------------------
 find_package(OpenSSL REQUIRED)
+find_package(GTest REQUIRED)
 
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
@@ -167,6 +168,9 @@ function(llmengine_test name source)
     LLMEngine
     llmengine::compile_options
     nlohmann_json::nlohmann_json
+    GTest::gtest
+    GTest::gmock
+    GTest::gtest_main
     ${ARGN} # Additional dependencies
   )
   apply_test_sanitizer_flags(${name})
@@ -250,6 +254,7 @@ llmengine_test(test_batch_concurrency test_batch_concurrency.cpp test_support_fa
 # Iteration 2 Refinements
 llmengine_test(test_builder_refinements test_builder_refinements.cpp)
 llmengine_test(test_async_cancellation test_async_cancellation.cpp test_support_fake)
+llmengine_test(test_validation_and_interceptors test_validation_and_interceptors.cpp test_support_fake)
 
 
 

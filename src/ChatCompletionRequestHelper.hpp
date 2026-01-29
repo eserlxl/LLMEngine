@@ -438,6 +438,9 @@ struct ChatCompletionRequestHelper {
                                            cpr::Timeout{timeout_seconds * ::LLMEngine::Constants::DefaultValues::MILLISECONDS_PER_SECOND},
                                            cpr::VerifySsl{verify_ssl},
                                            cpr::WriteCallback([&](std::string_view data, intptr_t) {
+                                               if (options.cancellation_token && options.cancellation_token->isCancelled()) {
+                                                   return false; // Cancel request
+                                               }
                                                processChunk(data);
                                                return true; // continue
                                            }));

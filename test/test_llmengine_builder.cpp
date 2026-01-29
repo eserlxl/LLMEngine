@@ -78,7 +78,7 @@ int main() {
 
     // Test missing provider exception (still throws because builder checks name)
     try {
-        LLMEngine::LLMEngineBuilder()
+        (void)LLMEngine::LLMEngineBuilder()
             .withConfigManager(stubConfig)
             .build();
         std::cerr << "  Missing provider check: FAIL (Should have thrown)" << std::endl;

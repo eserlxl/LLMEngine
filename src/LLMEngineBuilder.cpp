@@ -53,6 +53,16 @@ LLMEngineBuilder& LLMEngineBuilder::withBaseUrl(std::string_view url) {
     return *this;
 }
 
+LLMEngineBuilder& LLMEngineBuilder::withTimeout(std::chrono::milliseconds timeout) {
+    timeout_ms_ = static_cast<int>(timeout.count());
+    return *this;
+}
+
+LLMEngineBuilder& LLMEngineBuilder::withMaxRetries(int retries) {
+    max_retries_ = retries;
+    return *this;
+}
+
 std::unique_ptr<LLMEngine> LLMEngineBuilder::build() {
     // If provider_name_ is not set but we have a config manager, maybe we can infer?
     // But currently LLMEngine needs at least a provider name or type.
@@ -74,6 +84,16 @@ std::unique_ptr<LLMEngine> LLMEngineBuilder::build() {
 
     if (logger_) {
         engine->setLogger(logger_);
+    }
+
+    // Configure Default Request Options
+    RequestOptions defaults;
+    if (timeout_ms_) defaults.timeout_ms = *timeout_ms_;
+    if (max_retries_) defaults.max_retries = *max_retries_;
+    
+    // If we have defaults, set them
+    if (timeout_ms_ || max_retries_) {
+        engine->setDefaultRequestOptions(defaults);
     }
 
     return engine;

@@ -28,6 +28,15 @@ struct LLMENGINE_EXPORT AnalysisInput {
     nlohmann::json tools;
     nlohmann::json tool_choice;
     nlohmann::json response_format;
+    
+    // Standard Generation Parameters (Optional)
+    std::optional<double> temperature;
+    std::optional<int> max_tokens;
+    std::optional<double> top_p;
+    std::vector<std::string> stop_sequences;
+    std::optional<nlohmann::json> logit_bias;
+    std::optional<double> frequency_penalty;
+    std::optional<double> presence_penalty;
 
     std::map<std::string, nlohmann::json> extra_fields;
 
@@ -119,6 +128,41 @@ struct LLMENGINE_EXPORT AnalysisInput {
         return *this;
     }
 
+    AnalysisInput& setTemperature(double t) {
+        temperature = t;
+        return *this;
+    }
+
+    AnalysisInput& setMaxTokens(int t) {
+        max_tokens = t;
+        return *this;
+    }
+
+    AnalysisInput& setTopP(double p) {
+        top_p = p;
+        return *this;
+    }
+
+    AnalysisInput& addStopSequence(const std::string& seq) {
+        stop_sequences.push_back(seq);
+        return *this;
+    }
+
+    AnalysisInput& setLogitBias(const nlohmann::json& bias) {
+        logit_bias = bias;
+        return *this;
+    }
+
+    AnalysisInput& setFrequencyPenalty(double p) {
+        frequency_penalty = p;
+        return *this;
+    }
+
+    AnalysisInput& setPresencePenalty(double p) {
+        presence_penalty = p;
+        return *this;
+    }
+
     template <typename T> AnalysisInput& withExtraField(const std::string& key, const T& value) {
         extra_fields[key] = value;
         return *this;
@@ -155,6 +199,13 @@ struct LLMENGINE_EXPORT AnalysisInput {
      * @return true if valid, false otherwise.
      */
     [[nodiscard]] bool validate(std::string& error_message) const;
+    
+    /**
+     * @brief Create AnalysisInput from JSON payload.
+     * @param j JSON object.
+     * @return AnalysisInput instance.
+     */
+    static AnalysisInput fromJson(const nlohmann::json& j);
 };
 
 class LLMENGINE_EXPORT ResponseFormatBuilder {

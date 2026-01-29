@@ -339,6 +339,12 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      */
     [[nodiscard]] bool setTempDirectory(const std::string& tmp_dir);
 
+    /**
+     * @brief Set default request options applied to all requests unless overridden.
+     * @param options Default options (timeout, retries, headers, etc.)
+     */
+    void setDefaultRequestOptions(const RequestOptions& options);
+
     // Logging
     /**
      * @brief Set a custom logger instance.
@@ -393,6 +399,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
   private:
     void initializeAPIClient();
     void ensureSecureTmpDir();
+    void validateInput(const AnalysisInput& input) const;
 
     // Internal state pointer (PIMPL pattern + Shared Ownership for Async)
     std::shared_ptr<EngineState> state_;

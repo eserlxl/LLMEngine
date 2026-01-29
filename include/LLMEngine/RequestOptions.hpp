@@ -75,6 +75,53 @@ struct RequestOptions {
         bool include_usage = false;
     };
     std::optional<StreamOptions> stream_options;
+
+    /**
+     * @brief Merge two RequestOptions objects.
+     * @param defaults The default options (lower priority).
+     * @param overrides The overriding options (higher priority).
+     * @return A new RequestOptions object with merged values.
+     */
+    static RequestOptions merge(const RequestOptions& defaults, const RequestOptions& overrides) {
+        RequestOptions result = defaults;
+
+        // Override if present in 'overrides'
+        if (overrides.timeout_ms) result.timeout_ms = overrides.timeout_ms;
+        if (overrides.max_retries) result.max_retries = overrides.max_retries;
+        
+        // Merge headers
+        for (const auto& [key, val] : overrides.extra_headers) {
+            result.extra_headers[key] = val;
+        }
+
+        if (overrides.cancellation_token) result.cancellation_token = overrides.cancellation_token;
+        if (overrides.max_concurrency) result.max_concurrency = overrides.max_concurrency;
+
+        // Generation Options
+        if (overrides.generation.temperature) result.generation.temperature = overrides.generation.temperature;
+        if (overrides.generation.max_tokens) result.generation.max_tokens = overrides.generation.max_tokens;
+        if (overrides.generation.top_p) result.generation.top_p = overrides.generation.top_p;
+        if (overrides.generation.frequency_penalty) result.generation.frequency_penalty = overrides.generation.frequency_penalty;
+        if (overrides.generation.presence_penalty) result.generation.presence_penalty = overrides.generation.presence_penalty;
+        if (!overrides.generation.stop_sequences.empty()) result.generation.stop_sequences = overrides.generation.stop_sequences;
+        if (overrides.generation.seed) result.generation.seed = overrides.generation.seed;
+        if (overrides.generation.logit_bias) result.generation.logit_bias = overrides.generation.logit_bias;
+        if (overrides.generation.logprobs) result.generation.logprobs = overrides.generation.logprobs;
+        if (overrides.generation.top_logprobs) result.generation.top_logprobs = overrides.generation.top_logprobs;
+        if (overrides.generation.top_k) result.generation.top_k = overrides.generation.top_k;
+        if (overrides.generation.min_p) result.generation.min_p = overrides.generation.min_p;
+        if (overrides.generation.user) result.generation.user = overrides.generation.user;
+        if (overrides.generation.parallel_tool_calls) result.generation.parallel_tool_calls = overrides.generation.parallel_tool_calls;
+        if (overrides.generation.service_tier) result.generation.service_tier = overrides.generation.service_tier;
+        if (overrides.generation.reasoning_effort) result.generation.reasoning_effort = overrides.generation.reasoning_effort;
+        if (overrides.generation.max_completion_tokens) result.generation.max_completion_tokens = overrides.generation.max_completion_tokens;
+        if (overrides.generation.response_format) result.generation.response_format = overrides.generation.response_format;
+        if (overrides.generation.tool_choice) result.generation.tool_choice = overrides.generation.tool_choice;
+
+        if (overrides.stream_options) result.stream_options = overrides.stream_options;
+
+        return result;
+    }
 };
 
 /**
