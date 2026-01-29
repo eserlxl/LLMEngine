@@ -11,7 +11,7 @@ using namespace LLMEngineAPI;
 
 void testTimeoutPropagation() {
     auto clientPtr = std::make_unique<FakeAPIClient>();
-    FakeAPIClient* fakeClient = clientPtr.get();
+
     LLMEngine::LLMEngine engine(std::move(clientPtr));
 
     RequestOptions opts;

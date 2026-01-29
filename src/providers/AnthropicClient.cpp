@@ -32,8 +32,7 @@ void parseAnthropicStreamChunk(std::string_view chunk, std::string& buffer, cons
 
         if (line.rfind("event: ", 0) == 0) {
             // Check event type
-            // std::string event = line.substr(kEventPrefixLen);
-            // (Event type usage logic ommitted for now as we parse data directly, 
+            // Event type usage logic ommitted for now as we parse data directly, 
             // but structure implies we might use it eventually)
         }
         

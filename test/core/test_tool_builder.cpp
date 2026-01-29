@@ -45,14 +45,17 @@ void test_strict_mode() {
     assert(req.size() == 2);
     
     // basic check for existence
+
     bool has_prop1 = false;
     bool has_prop2 = false;
     for (const auto& r : req) {
         if (r == "prop1") has_prop1 = true;
         if (r == "prop2") has_prop2 = true;
     }
-    assert(has_prop1);
-    assert(has_prop2);
+    if (!has_prop1 || !has_prop2) {
+        std::cerr << "Strict mode check failed: Properties missing" << std::endl;
+        std::exit(1);
+    }
 
     std::cout << "PASS" << std::endl;
 }

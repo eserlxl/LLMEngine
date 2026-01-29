@@ -5,7 +5,7 @@
 // the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine.hpp"
+#include "LLMEngine/core/LLMEngine.hpp"
 #include "LLMEngine/providers/APIClient.hpp"
 #include "LLMEngine/utils/Utils.hpp"
 
