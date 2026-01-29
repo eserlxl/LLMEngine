@@ -1,3 +1,3 @@
 // Compatibility header for legacy includes
 #pragma once
-#include "LLMEngine/Utils.hpp"
+#include "LLMEngine/utils/Utils.hpp"

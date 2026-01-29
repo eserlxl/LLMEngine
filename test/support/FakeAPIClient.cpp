@@ -6,7 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "FakeAPIClient.hpp"
-#include "LLMEngine/HttpStatus.hpp"
+#include "LLMEngine/http/HttpStatus.hpp"
 #include <thread>
 #include <chrono>
 

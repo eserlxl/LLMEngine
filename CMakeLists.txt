@@ -339,35 +339,34 @@ endmacro()
 
 # ---- Library ---------------------------------------------------------------
 add_library(${PROJECT_NAME}
-    src/LLMEngine.cpp
-    src/EngineState.cpp
-    src/Utils.cpp
-    src/APIClient.cpp
-    src/OpenAICompatibleClient.cpp
-    src/QwenClient.cpp
-    src/OpenAIClient.cpp
-    src/AnthropicClient.cpp
-    src/OllamaClient.cpp
-    src/GeminiClient.cpp
-    src/DebugArtifacts.cpp
-    src/DebugArtifactManager.cpp
-    src/RequestLogger.cpp
-    src/ResponseParser.cpp
-    src/ParameterMerger.cpp
-    src/RequestContextBuilder.cpp
-    src/ResponseHandler.cpp
-    src/ProviderBootstrap.cpp
-    src/TempDirectoryService.cpp
-    src/ArtifactSink.cpp
-    src/RequestExecutor.cpp
-    src/RequestExecutor.cpp
-    src/RetryableRequestExecutor.cpp
-    src/AnalysisInput.cpp
-    src/AnalysisResult.cpp
-    src/LLMEngineBuilder.cpp
-    src/ToolBuilder.cpp
-    src/Utils/ThreadPool.cpp
-    src/Utils/CommandExecutor.cpp
+    src/core/LLMEngine.cpp
+    src/core/EngineState.cpp
+    src/utils/Utils.cpp
+    src/providers/APIClient.cpp
+    src/providers/OpenAICompatibleClient.cpp
+    src/providers/QwenClient.cpp
+    src/providers/OpenAIClient.cpp
+    src/providers/AnthropicClient.cpp
+    src/providers/OllamaClient.cpp
+    src/providers/GeminiClient.cpp
+    src/diagnostics/DebugArtifacts.cpp
+    src/diagnostics/DebugArtifactManager.cpp
+    src/http/RequestLogger.cpp
+    src/http/ResponseParser.cpp
+    src/core/ParameterMerger.cpp
+    src/core/RequestContextBuilder.cpp
+    src/http/ResponseHandler.cpp
+    src/providers/ProviderBootstrap.cpp
+    src/utils/TempDirectoryService.cpp
+    src/diagnostics/ArtifactSink.cpp
+    src/http/RequestExecutor.cpp
+    src/http/RetryableRequestExecutor.cpp
+    src/core/AnalysisInput.cpp
+    src/core/AnalysisResult.cpp
+    src/core/LLMEngineBuilder.cpp
+    src/core/ToolBuilder.cpp
+    src/utils/ThreadPool.cpp
+    src/utils/CommandExecutor.cpp
 )
 
 # Versioning for shared libraries

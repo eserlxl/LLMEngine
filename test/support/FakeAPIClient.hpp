@@ -7,7 +7,7 @@
 
 #pragma once
 #include <mutex>
-#include "LLMEngine/APIClient.hpp"
+#include "LLMEngine/providers/APIClient.hpp"
 
 
 

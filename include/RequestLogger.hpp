@@ -1,3 +1,3 @@
 // Compatibility header for legacy includes
 #pragma once
-#include "LLMEngine/RequestLogger.hpp"
+#include "LLMEngine/http/RequestLogger.hpp"
