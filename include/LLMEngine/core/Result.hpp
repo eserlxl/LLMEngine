@@ -5,6 +5,7 @@
 #include <functional>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace LLMEngine {
@@ -233,9 +234,11 @@ template <typename T, typename E> class Result {
         if (which_ == 0) {
             new (&v_.value) T(std::move(other.v_.value));
             other.v_.value.~T();
-        } else {
+        } else if (which_ == 1) {
             new (&v_.error) E(std::move(other.v_.error));
             other.v_.error.~E();
+        } else {
+            which_ = -1;
         }
         other.which_ = -1; // Mark as moved-from
     }
@@ -255,9 +258,11 @@ template <typename T, typename E> class Result {
             if (which_ == 0) {
                 new (&v_.value) T(std::move(other.v_.value));
                 other.v_.value.~T();
-            } else {
+            } else if (which_ == 1) {
                 new (&v_.error) E(std::move(other.v_.error));
                 other.v_.error.~E();
+            } else {
+                which_ = -1;
             }
             other.which_ = -1; // Mark as moved-from
         }

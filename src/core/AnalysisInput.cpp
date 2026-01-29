@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "LLMEngine/core/AnalysisInput.hpp"
-
-#include "LLMEngine/core/AnalysisInput.hpp"
 #include "LLMEngine/core/ToolBuilder.hpp"
 #include "LLMEngine/utils/Utils.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <span>
 #include <vector>
 
 namespace LLMEngine {
@@ -46,9 +45,12 @@ AnalysisInput& AnalysisInput::withImageFromFile(const std::string& path) {
         throw std::runtime_error("Image file is empty: " + path);
     }
 
-    std::vector<uint8_t> buffer(size);
+    std::vector<uint8_t> buffer(static_cast<size_t>(size));
     file.seekg(0, std::ios::beg);
     file.read(reinterpret_cast<char*>(buffer.data()), size);
+    if (!file) {
+        throw std::runtime_error("Failed to read image file: " + path);
+    }
 
     std::string base64 = Utils::base64Encode(std::span<const uint8_t>(buffer));
     // Determine MIME type? For now, we assume provider detects or format is base64 string directly.
@@ -175,31 +177,40 @@ bool AnalysisInput::validate(std::string& error_message) const {
     }
 
     // Validate tool_choice logic
-    if (!tool_choice.is_null() && !tool_choice.is_string() && tool_choice.contains("function")) {
-         // Should verify if function name exists in tools?
-         // For now, simple structural check.
-         const auto& fn = tool_choice["function"];
-         if (!fn.contains("name")) {
-             error_message = "tool_choice function must have 'name'";
-             return false;
-         }
-         // Optional: Check if named tool exists in 'tools' array
-         std::string target = fn["name"];
-         bool found = false;
-         
-         if (tools.is_array()) {
-             for (const auto& t : tools) {
-                 if (t.contains("function") && t["function"].contains("name") && t["function"]["name"] == target) {
-                     found = true;
-                     break;
-                 }
-             }
-         }
-         
-         if (!found) {
-             error_message = "tool_choice refers to unknown tool: " + target;
-             return false;
-         }
+    if (!tool_choice.is_null()) {
+        if (tool_choice.is_string()) {
+            // "auto" / "none" are valid string modes.
+        } else if (tool_choice.is_object()) {
+            if (!tool_choice.contains("function") || !tool_choice["function"].is_object()) {
+                error_message = "tool_choice object must contain a 'function' object";
+                return false;
+            }
+            const auto& fn = tool_choice["function"];
+            if (!fn.contains("name") || !fn["name"].is_string()) {
+                error_message = "tool_choice function must have a 'name' string field";
+                return false;
+            }
+            std::string target = fn["name"];
+            bool found = false;
+
+            if (tools.is_array()) {
+                for (const auto& t : tools) {
+                    if (t.contains("function") && t["function"].contains("name")
+                        && t["function"]["name"] == target) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!found) {
+                error_message = "tool_choice refers to unknown tool: " + target;
+                return false;
+            }
+        } else {
+            error_message = "tool_choice must be a string or object";
+            return false;
+        }
     }
 
 
@@ -234,6 +245,9 @@ bool AnalysisInput::validate(std::string& error_message) const {
 }
 
 AnalysisInput AnalysisInput::fromJson(const nlohmann::json& j) {
+    if (!j.is_object() && !j.is_null()) {
+        throw std::invalid_argument("AnalysisInput JSON must be an object");
+    }
     AnalysisInput input;
     if (j.contains("tools")) input.tools = j["tools"];
     if (j.contains("tool_choice")) input.tool_choice = j["tool_choice"];

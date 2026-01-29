@@ -4,7 +4,10 @@
 #pragma once
 #include "LLMEngine/core/LLMEngine.hpp"
 #include "LLMEngine/LLMEngineExport.hpp"
+#include <chrono>
 #include <memory>
+#include <nlohmann/json.hpp>
+#include <optional>
 #include <string>
 #include <string_view>
 

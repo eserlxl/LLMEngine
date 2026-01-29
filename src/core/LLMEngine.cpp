@@ -613,7 +613,6 @@ void LLMEngine::analyzeStream(std::string_view prompt,
         errChunk.is_done = true;
         errChunk.error_code = LLMEngineErrorCode::Unknown;
         errChunk.error_message = "API client/Executor not initialized";
-        errChunk.error_message = "API client/Executor not initialized";
         wrappedCallback(errChunk);
     }
 

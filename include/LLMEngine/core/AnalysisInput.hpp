@@ -5,6 +5,7 @@
 #include "LLMEngine/LLMEngineExport.hpp"
 #include <map>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>

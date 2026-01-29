@@ -116,6 +116,16 @@ TEST_F(ValidationTest, AnalyzeJsonOverloadThrowsOnInvalidToolChoice) {
     }, std::invalid_argument);
 }
 
+TEST_F(ValidationTest, AnalyzeThrowsOnMalformedToolChoiceObject) {
+    AnalysisInput input;
+    input.withUserMessage("Use the tool");
+    input.withToolChoice(nlohmann::json::object({{"type", "function"}})); // Missing function block
+
+    EXPECT_THROW({
+        (void)engine->analyze(input, "test");
+    }, std::invalid_argument);
+}
+
 TEST_F(ValidationTest, ValidToolChoiceDoesNotThrow) {
     AnalysisInput input;
     input.withUserMessage("Use the tool");

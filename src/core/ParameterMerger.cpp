@@ -6,7 +6,6 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/core/ParameterMerger.hpp"
-#include "LLMEngine/core/ParameterMerger.hpp"
 #include "LLMEngine/utils/Logger.hpp"
 #include "LLMEngine/http/RequestOptions.hpp"
 
@@ -167,4 +166,3 @@ void ParameterMerger::mergeRequestOptions(nlohmann::json& params, const RequestO
 }
 
 } // namespace LLMEngine
-
