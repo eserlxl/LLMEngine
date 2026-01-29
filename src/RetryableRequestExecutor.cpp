@@ -34,9 +34,9 @@ RetryableRequestExecutor::RetryableRequestExecutor(std::shared_ptr<IRetryStrateg
     if (!api_client) {
         ::LLMEngineAPI::APIResponse error_response;
         error_response.success = false;
-        error_response.error_message = "API client not initialized";
-        error_response.status_code = HttpStatus::INTERNAL_SERVER_ERROR;
-        error_response.error_code = LLMEngine::LLMEngineErrorCode::Unknown;
+        error_response.errorMessage = "API client not initialized";
+        error_response.statusCode = HttpStatus::INTERNAL_SERVER_ERROR;
+        error_response.errorCode = LLMEngine::LLMEngineErrorCode::Unknown;
         return error_response;
     }
 
@@ -47,8 +47,8 @@ RetryableRequestExecutor::RetryableRequestExecutor(std::shared_ptr<IRetryStrateg
         // Check cancellation
         if (options.cancellation_token && options.cancellation_token->isCancelled()) {
             response.success = false;
-            response.error_message = "Request cancelled";
-            response.error_code = LLMEngineErrorCode::Cancelled;
+            response.errorMessage = "Request cancelled";
+            response.errorCode = LLMEngineErrorCode::Cancelled;
             return response;
         }
 
@@ -63,21 +63,21 @@ RetryableRequestExecutor::RetryableRequestExecutor(std::shared_ptr<IRetryStrateg
         // Check cancellation (post-request)
         if (options.cancellation_token && options.cancellation_token->isCancelled()) {
             response.success = false;
-            response.error_message = "Request cancelled";
-            response.error_code = LLMEngineErrorCode::Cancelled;
+            response.errorMessage = "Request cancelled";
+            response.errorCode = LLMEngineErrorCode::Cancelled;
             return response;
         }
 
         // Check if request succeeded
-        const bool is_success = response.success && HttpStatus::isSuccess(response.status_code);
+        const bool is_success = response.success && HttpStatus::isSuccess(response.statusCode);
         if (is_success) {
             return response;
         }
 
         // Determine if we should retry
-        const bool is_network_error = response.error_code == LLMEngineErrorCode::Network
-                                      || response.error_code == LLMEngineErrorCode::Timeout;
-        const int http_status = response.status_code;
+        const bool is_network_error = response.errorCode == LLMEngineErrorCode::Network
+                                      || response.errorCode == LLMEngineErrorCode::Timeout;
+        const int http_status = response.statusCode;
 
         if (!strategy_->shouldRetry(attempt, http_status, is_network_error)) {
             // Don't retry - return the error response
@@ -91,8 +91,8 @@ RetryableRequestExecutor::RetryableRequestExecutor(std::shared_ptr<IRetryStrateg
                 // Check cancellation before sleeping
                 if (options.cancellation_token && options.cancellation_token->isCancelled()) {
                     response.success = false;
-                    response.error_message = "Request cancelled";
-                    response.error_code = LLMEngineErrorCode::Cancelled;
+                    response.errorMessage = "Request cancelled";
+                    response.errorCode = LLMEngineErrorCode::Cancelled;
                     return response;
                 }
 
@@ -105,8 +105,8 @@ RetryableRequestExecutor::RetryableRequestExecutor(std::shared_ptr<IRetryStrateg
                 while (std::chrono::steady_clock::now() < end) {
                     if (options.cancellation_token && options.cancellation_token->isCancelled()) {
                         response.success = false;
-                        response.error_message = "Request cancelled";
-                        response.error_code = LLMEngineErrorCode::Cancelled;
+                        response.errorMessage = "Request cancelled";
+                        response.errorCode = LLMEngineErrorCode::Cancelled;
                         return response;
                     }
                     std::this_thread::sleep_for(std::chrono::milliseconds(10)); // 10ms poll

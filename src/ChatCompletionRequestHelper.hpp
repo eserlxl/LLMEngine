@@ -111,7 +111,7 @@ struct ChatCompletionRequestHelper {
 
         APIResponse response;
         response.success = false;
-        response.error_code = LLMEngine::LLMEngineErrorCode::Unknown;
+        response.errorCode = LLMEngine::LLMEngineErrorCode::Unknown;
 
         try {
             RetrySettings rs = computeRetrySettings(params, cfg, exponential_retry);
@@ -285,18 +285,18 @@ struct ChatCompletionRequestHelper {
                 },
                 options);
 
-            response.status_code = static_cast<int>(cpr_response.status_code);
+            response.statusCode = static_cast<int>(cpr_response.status_code);
 
             // Parse response using provider-specific parser
-            if (::LLMEngine::HttpStatus::isSuccess(response.status_code)) {
+            if (::LLMEngine::HttpStatus::isSuccess(response.statusCode)) {
                 // Only parse JSON for successful responses
                 try {
-                    response.raw_response = nlohmann::json::parse(cpr_response.text);
+                    response.rawResponse = nlohmann::json::parse(cpr_response.text);
                     parseResponse(response, cpr_response.text);
                 } catch (const nlohmann::json::parse_error& e) {
-                    response.error_message =
+                    response.errorMessage =
                         "JSON parse error in successful response: " + std::string(e.what());
-                    response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
+                    response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                 }
             } else {
                 // For error responses, attempt to parse JSON but don't fail if it's not JSON
@@ -306,7 +306,7 @@ struct ChatCompletionRequestHelper {
                     // Try to extract structured error message from JSON response
                     try {
                         auto error_json = nlohmann::json::parse(cpr_response.text);
-                        response.raw_response = error_json;
+                        response.rawResponse = error_json;
 
                         // Extract error message from common JSON error response formats
                         if (error_json.contains("error")) {
@@ -330,41 +330,41 @@ struct ChatCompletionRequestHelper {
                         // instead. Logging is not available in this context, but the error is
                         // handled by including the raw response text in the error message.
                         error_msg += ": " + cpr_response.text;
-                        response.raw_response = nlohmann::json::object();
+                        response.rawResponse = nlohmann::json::object();
                     }
                 } else {
                     error_msg += ": Empty response body";
                 }
 
-                response.error_message = error_msg;
+                response.errorMessage = error_msg;
 
                 // Classify error based on HTTP status code
                 if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
                     || cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
-                    response.error_code = LLMEngine::LLMEngineErrorCode::Auth;
+                    response.errorCode = LLMEngine::LLMEngineErrorCode::Auth;
                 } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
-                    response.error_code = LLMEngine::LLMEngineErrorCode::RateLimited;
+                    response.errorCode = LLMEngine::LLMEngineErrorCode::RateLimited;
                 } else if (::LLMEngine::HttpStatus::isServerError(
                                static_cast<int>(cpr_response.status_code))) {
-                    response.error_code = LLMEngine::LLMEngineErrorCode::Server;
+                    response.errorCode = LLMEngine::LLMEngineErrorCode::Server;
                 } else if (::LLMEngine::HttpStatus::isClientError(
                                static_cast<int>(cpr_response.status_code))) {
-                    response.error_code = LLMEngine::LLMEngineErrorCode::Client;
+                    response.errorCode = LLMEngine::LLMEngineErrorCode::Client;
                 } else {
-                    response.error_code = LLMEngine::LLMEngineErrorCode::Unknown;
+                    response.errorCode = LLMEngine::LLMEngineErrorCode::Unknown;
                 }
             }
 
         } catch (const nlohmann::json::parse_error& e) {
-            response.error_message = "JSON parse error at position " + std::to_string(e.byte) + ": "
+            response.errorMessage = "JSON parse error at position " + std::to_string(e.byte) + ": "
                                      + std::string(e.what());
-            response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
+            response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
         } catch (const std::exception& e) {
-            response.error_message = "Network error: " + std::string(e.what());
-            response.error_code = LLMEngine::LLMEngineErrorCode::Network;
+            response.errorMessage = "Network error: " + std::string(e.what());
+            response.errorCode = LLMEngine::LLMEngineErrorCode::Network;
         } catch (...) {
-            response.error_message = "Unknown error occurred during request execution";
-            response.error_code = LLMEngine::LLMEngineErrorCode::Unknown;
+            response.errorMessage = "Unknown error occurred during request execution";
+            response.errorCode = LLMEngine::LLMEngineErrorCode::Unknown;
         }
 
         return response;

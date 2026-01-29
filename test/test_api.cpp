@@ -85,7 +85,7 @@ void testQwenClient() {
             std::cout << "✓ Request successful" << std::endl;
             std::cout << "Response: " << response.content << std::endl;
         } else {
-            std::cout << "✗ Request failed: " << response.error_message << std::endl;
+            std::cout << "✗ Request failed: " << response.errorMessage << std::endl;
         }
     } catch (const std::exception& e) {
         std::cout << "✗ Exception: " << e.what() << std::endl;

@@ -19,35 +19,35 @@ constexpr size_t BEARER_PREFIX_LENGTH = 7;          // "Bearer " = 7 chars
 OpenAICompatibleClient::OpenAICompatibleClient(const std::string& api_key,
                                                const std::string& model,
                                                const std::string& base_url)
-    : api_key_(api_key), model_(model), base_url_(base_url) {
+    : apiKey_(api_key), model_(model), baseUrl_(base_url) {
     // Initialize default parameters
-    default_params_ = {{"temperature", ::LLMEngine::Constants::DefaultValues::TEMPERATURE},
+    defaultParams_ = {{"temperature", ::LLMEngine::Constants::DefaultValues::TEMPERATURE},
                        {"max_tokens", ::LLMEngine::Constants::DefaultValues::MAX_TOKENS},
                        {"top_p", ::LLMEngine::Constants::DefaultValues::TOP_P},
                        {"frequency_penalty", 0.0},
                        {"presence_penalty", 0.0}};
 
     // Cache the chat completions URL to avoid string concatenation on every request
-    chat_completions_url_.reserve(base_url_.size() + CHAT_COMPLETIONS_PATH_LENGTH);
-    chat_completions_url_ = base_url_;
-    chat_completions_url_ += "/chat/completions";
+    chatCompletionsUrl_.reserve(baseUrl_.size() + CHAT_COMPLETIONS_PATH_LENGTH);
+    chatCompletionsUrl_ = baseUrl_;
+    chatCompletionsUrl_ += "/chat/completions";
 
     // Cache headers to avoid rebuilding on every request
     std::string auth_header;
-    auth_header.reserve(api_key_.size() + BEARER_PREFIX_LENGTH);
+    auth_header.reserve(apiKey_.size() + BEARER_PREFIX_LENGTH);
     auth_header = "Bearer ";
-    auth_header += api_key_;
+    auth_header += apiKey_;
 
-    cached_headers_ = {{"Content-Type", "application/json"},
+    cachedHeaders_ = {{"Content-Type", "application/json"},
                        {"Authorization", std::move(auth_header)}};
 }
 
 const std::map<std::string, std::string>& OpenAICompatibleClient::getHeaders() const {
-    return cached_headers_; // Return cached headers
+    return cachedHeaders_; // Return cached headers
 }
 
 std::string OpenAICompatibleClient::buildUrl() const {
-    return chat_completions_url_; // Return cached URL
+    return chatCompletionsUrl_; // Return cached URL
 }
 
 nlohmann::json OpenAICompatibleClient::buildPayload(const nlohmann::json& messages,
@@ -104,22 +104,22 @@ nlohmann::json OpenAICompatibleClient::buildPayload(const nlohmann::json& messag
 
 void OpenAICompatibleClient::parseOpenAIResponse(APIResponse& response,
                                                  const std::string& /*unused*/) {
-    if (response.raw_response.contains("choices") && response.raw_response["choices"].is_array()
-        && !response.raw_response["choices"].empty()) {
+    if (response.rawResponse.contains("choices") && response.rawResponse["choices"].is_array()
+        && !response.rawResponse["choices"].empty()) {
 
-        auto choice = response.raw_response["choices"][0];
+        auto choice = response.rawResponse["choices"][0];
         if (choice.contains("message") && choice["message"].contains("content")) {
             response.content = choice["message"]["content"].get<std::string>();
             response.success = true;
 
             if (choice.contains("finish_reason") && !choice["finish_reason"].is_null()) {
-                response.finish_reason = choice["finish_reason"].get<std::string>();
+                response.finishReason = choice["finish_reason"].get<std::string>();
             }
 
             // Parse token usage if available
-            if (response.raw_response.contains("usage")
-                && response.raw_response["usage"].is_object()) {
-                const auto& usage = response.raw_response["usage"];
+            if (response.rawResponse.contains("usage")
+                && response.rawResponse["usage"].is_object()) {
+                const auto& usage = response.rawResponse["usage"];
                 if (usage.contains("prompt_tokens") && usage["prompt_tokens"].is_number_integer()) {
                     response.usage.promptTokens = usage["prompt_tokens"].get<int>();
                 }
@@ -132,12 +132,14 @@ void OpenAICompatibleClient::parseOpenAIResponse(APIResponse& response,
                 }
             }
         } else {
-            response.error_message = "No content in response";
-            response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
+            // response.errorMessage = "No content in response";
+            response.errorMessage = "No content in response";
+            response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
         }
     } else {
-        response.error_message = "Invalid response format";
-        response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
+        // response.errorMessage = "Invalid response format";
+        response.errorMessage = "Invalid response format";
+        response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
     }
 }
 } // namespace LLMEngineAPI
@@ -236,7 +238,7 @@ void LLMEngineAPI::OpenAICompatibleClient::sendRequestStream(
     auto buffer = std::make_shared<std::string>();
 
     ChatCompletionRequestHelper::executeStream(
-        default_params_,
+        defaultParams_,
         params,
         // Build payload
         [&](const nlohmann::json& request_params) {

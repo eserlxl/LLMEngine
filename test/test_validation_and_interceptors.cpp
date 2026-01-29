@@ -25,12 +25,12 @@ public:
         return {
             .success = true,
             .content = "response",
-            .error_message = "",
-            .status_code = 200,
-            .raw_response = {},
-            .error_code = LLMEngine::LLMEngineErrorCode::None,
+            .errorMessage = "",
+            .statusCode = 200,
+            .rawResponse = {},
+            .errorCode = LLMEngine::LLMEngineErrorCode::None,
             .usage = {},
-            .finish_reason = "stop"
+            .finishReason = "stop"
         };
     }
 

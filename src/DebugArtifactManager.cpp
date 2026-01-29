@@ -65,7 +65,7 @@ bool DebugArtifactManager::writeApiResponse(const ::LLMEngineAPI::APIResponse& r
 
     std::string filepath = request_tmp_dir_ + "/" + filename;
     bool success =
-        DebugArtifacts::writeJson(filepath, response.raw_response, /*redactSecrets*/ true);
+        DebugArtifacts::writeJson(filepath, response.rawResponse, /*redactSecrets*/ true);
 
     if (!success && logger_) {
         logger_->log(LogLevel::Warn, "Failed to write debug artifact: " + filepath);

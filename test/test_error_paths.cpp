@@ -48,9 +48,9 @@ void testResponseHandlerErrorPaths() {
         std::cout << "\n1. Testing null logger handling..." << std::endl;
         APIResponse api_resp;
         api_resp.success = false;
-        api_resp.error_message = "Test error";
-        api_resp.status_code = 500;
-        api_resp.error_code = LLMEngineErrorCode::Server;
+        api_resp.errorMessage = "Test error";
+        api_resp.statusCode = 500;
+        api_resp.errorCode = LLMEngineErrorCode::Server;
 
         AnalysisResult result =
             ResponseHandler::handle(api_resp, nullptr, "/tmp/test", "test", false, nullptr);
@@ -70,9 +70,9 @@ void testResponseHandlerErrorPaths() {
         {
             APIResponse api_resp;
             api_resp.success = false;
-            api_resp.error_message = "Unauthorized";
-            api_resp.status_code = 401;
-            api_resp.error_code = LLMEngineErrorCode::None;
+            api_resp.errorMessage = "Unauthorized";
+            api_resp.statusCode = 401;
+            api_resp.errorCode = LLMEngineErrorCode::None;
 
             AnalysisResult result =
                 ResponseHandler::handle(api_resp, nullptr, "/tmp/test", "test", false, nullptr);
@@ -87,9 +87,9 @@ void testResponseHandlerErrorPaths() {
         {
             APIResponse api_resp;
             api_resp.success = false;
-            api_resp.error_message = "Forbidden";
-            api_resp.status_code = 403;
-            api_resp.error_code = LLMEngineErrorCode::None;
+            api_resp.errorMessage = "Forbidden";
+            api_resp.statusCode = 403;
+            api_resp.errorCode = LLMEngineErrorCode::None;
 
             AnalysisResult result =
                 ResponseHandler::handle(api_resp, nullptr, "/tmp/test", "test", false, nullptr);
@@ -104,9 +104,9 @@ void testResponseHandlerErrorPaths() {
         {
             APIResponse api_resp;
             api_resp.success = false;
-            api_resp.error_message = "Rate limited";
-            api_resp.status_code = 429;
-            api_resp.error_code = LLMEngineErrorCode::RateLimited;
+            api_resp.errorMessage = "Rate limited";
+            api_resp.statusCode = 429;
+            api_resp.errorCode = LLMEngineErrorCode::RateLimited;
 
             AnalysisResult result =
                 ResponseHandler::handle(api_resp, nullptr, "/tmp/test", "test", false, nullptr);
@@ -121,9 +121,9 @@ void testResponseHandlerErrorPaths() {
         {
             APIResponse api_resp;
             api_resp.success = false;
-            api_resp.error_message = "Bad request";
-            api_resp.status_code = 400;
-            api_resp.error_code = LLMEngineErrorCode::None;
+            api_resp.errorMessage = "Bad request";
+            api_resp.statusCode = 400;
+            api_resp.errorCode = LLMEngineErrorCode::None;
 
             AnalysisResult result =
                 ResponseHandler::handle(api_resp, nullptr, "/tmp/test", "test", false, nullptr);
@@ -138,9 +138,9 @@ void testResponseHandlerErrorPaths() {
         {
             APIResponse api_resp;
             api_resp.success = false;
-            api_resp.error_message = "Internal server error";
-            api_resp.status_code = 500;
-            api_resp.error_code = LLMEngineErrorCode::None;
+            api_resp.errorMessage = "Internal server error";
+            api_resp.statusCode = 500;
+            api_resp.errorCode = LLMEngineErrorCode::None;
 
             AnalysisResult result =
                 ResponseHandler::handle(api_resp, nullptr, "/tmp/test", "test", false, nullptr);
@@ -155,9 +155,9 @@ void testResponseHandlerErrorPaths() {
         {
             APIResponse api_resp;
             api_resp.success = false;
-            api_resp.error_message = "Unknown error";
-            api_resp.status_code = 0;
-            api_resp.error_code = LLMEngineErrorCode::Unknown;
+            api_resp.errorMessage = "Unknown error";
+            api_resp.statusCode = 0;
+            api_resp.errorCode = LLMEngineErrorCode::Unknown;
 
             AnalysisResult result =
                 ResponseHandler::handle(api_resp, nullptr, "/tmp/test", "test", false, nullptr);
@@ -175,9 +175,9 @@ void testResponseHandlerErrorPaths() {
         TestLogger logger;
         APIResponse api_resp;
         api_resp.success = false;
-        api_resp.error_message = "Connection failed";
-        api_resp.status_code = 503;
-        api_resp.error_code = LLMEngineErrorCode::Server;
+        api_resp.errorMessage = "Connection failed";
+        api_resp.statusCode = 503;
+        api_resp.errorCode = LLMEngineErrorCode::Server;
 
         AnalysisResult result =
             ResponseHandler::handle(api_resp, nullptr, "/tmp/test", "test", false, &logger);
@@ -194,7 +194,7 @@ void testResponseHandlerErrorPaths() {
         APIResponse api_resp;
         api_resp.success = true;
         api_resp.content = "";
-        api_resp.status_code = 200;
+        api_resp.statusCode = 200;
 
         AnalysisResult result =
             ResponseHandler::handle(api_resp, nullptr, "/tmp/test", "test", false, nullptr);
@@ -211,7 +211,7 @@ void testResponseHandlerErrorPaths() {
         APIResponse api_resp;
         api_resp.success = true;
         api_resp.content = "<think>This is thinking</think>This is the answer";
-        api_resp.status_code = 200;
+        api_resp.statusCode = 200;
 
         AnalysisResult result =
             ResponseHandler::handle(api_resp, nullptr, "/tmp/test", "test", false, nullptr);
@@ -234,13 +234,13 @@ void testOpenAICompatibleClientErrorPaths() {
         std::cout << "\n1. Testing invalid response format (missing choices)..." << std::endl;
         APIResponse response;
         response.success = true; // Initialize to test that it doesn't get set to false
-        response.raw_response = nlohmann::json::parse(R"({"model": "test"})");
+        response.rawResponse = nlohmann::json::parse(R"({"model": "test"})");
 
         OpenAICompatibleClient::parseOpenAIResponse(response, "");
 
         // Note: parseOpenAIResponse doesn't set success=false on error, only sets error fields
-        assert(response.error_code == LLMEngineErrorCode::InvalidResponse);
-        assert(response.error_message == "Invalid response format");
+        assert(response.errorCode == LLMEngineErrorCode::InvalidResponse);
+        assert(response.errorMessage == "Invalid response format");
         std::cout << "  ✓ Missing choices array detected" << std::endl;
     }
 
@@ -249,12 +249,12 @@ void testOpenAICompatibleClientErrorPaths() {
         std::cout << "\n2. Testing empty choices array..." << std::endl;
         APIResponse response;
         response.success = true; // Initialize
-        response.raw_response = nlohmann::json::parse(R"({"choices": []})");
+        response.rawResponse = nlohmann::json::parse(R"({"choices": []})");
 
         OpenAICompatibleClient::parseOpenAIResponse(response, "");
 
-        assert(response.error_code == LLMEngineErrorCode::InvalidResponse);
-        assert(response.error_message == "Invalid response format");
+        assert(response.errorCode == LLMEngineErrorCode::InvalidResponse);
+        assert(response.errorMessage == "Invalid response format");
         std::cout << "  ✓ Empty choices array detected" << std::endl;
     }
 
@@ -263,12 +263,12 @@ void testOpenAICompatibleClientErrorPaths() {
         std::cout << "\n3. Testing missing message in choice..." << std::endl;
         APIResponse response;
         response.success = true; // Initialize
-        response.raw_response = nlohmann::json::parse(R"({"choices": [{"index": 0}]})");
+        response.rawResponse = nlohmann::json::parse(R"({"choices": [{"index": 0}]})");
 
         OpenAICompatibleClient::parseOpenAIResponse(response, "");
 
-        assert(response.error_code == LLMEngineErrorCode::InvalidResponse);
-        assert(response.error_message == "No content in response");
+        assert(response.errorCode == LLMEngineErrorCode::InvalidResponse);
+        assert(response.errorMessage == "No content in response");
         std::cout << "  ✓ Missing message detected" << std::endl;
     }
 
@@ -277,13 +277,13 @@ void testOpenAICompatibleClientErrorPaths() {
         std::cout << "\n4. Testing missing content in message..." << std::endl;
         APIResponse response;
         response.success = true; // Initialize
-        response.raw_response =
+        response.rawResponse =
             nlohmann::json::parse(R"({"choices": [{"message": {"role": "assistant"}}]})");
 
         OpenAICompatibleClient::parseOpenAIResponse(response, "");
 
-        assert(response.error_code == LLMEngineErrorCode::InvalidResponse);
-        assert(response.error_message == "No content in response");
+        assert(response.errorCode == LLMEngineErrorCode::InvalidResponse);
+        assert(response.errorMessage == "No content in response");
         std::cout << "  ✓ Missing content detected" << std::endl;
     }
 
@@ -292,7 +292,7 @@ void testOpenAICompatibleClientErrorPaths() {
         std::cout << "\n5. Testing valid response..." << std::endl;
         APIResponse response;
         response.success = false; // Initialize to false to test it gets set to true
-        response.raw_response = nlohmann::json::parse(
+        response.rawResponse = nlohmann::json::parse(
             R"({"choices": [{"message": {"content": "Hello, world!", "role": "assistant"}}]})");
 
         OpenAICompatibleClient::parseOpenAIResponse(response, "");
@@ -310,12 +310,12 @@ void testOpenAICompatibleClientErrorPaths() {
         // Try to parse invalid JSON - this should throw, but we test that the function
         // doesn't crash if raw_response is already set to invalid state
         try {
-            response.raw_response = nlohmann::json::parse("invalid json");
+            response.rawResponse = nlohmann::json::parse("invalid json");
             // If we get here, the JSON was parsed (as null or something)
             // The function should handle this gracefully
             OpenAICompatibleClient::parseOpenAIResponse(response, "");
             // Should fail because invalid JSON won't have choices
-            assert(response.error_code == LLMEngineErrorCode::InvalidResponse);
+            assert(response.errorCode == LLMEngineErrorCode::InvalidResponse);
             std::cout << "  ✓ Malformed JSON handled gracefully" << std::endl;
         } catch (const std::exception&) {
             // JSON parse exception is expected - this is handled by caller

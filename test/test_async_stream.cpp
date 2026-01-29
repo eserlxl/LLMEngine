@@ -33,7 +33,7 @@ void testAnalyzeAsyncReturnsFuture() {
 
     ::LLMEngine::LLMEngine engine(std::move(client));
 
-    fake_client->setNextResponse({true, "Async Response", "", 200, {}, {}, {}});
+    fake_client->setNextResponse({true, "Async Response", "", 200, {}, {}, {}, ""});
 
     nlohmann::json input;
     auto future = engine.analyzeAsync("test prompt", input, "test_async");

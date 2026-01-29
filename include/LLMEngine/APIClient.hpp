@@ -45,20 +45,20 @@ enum class ProviderType { QWEN, OPENAI, ANTHROPIC, OLLAMA, GEMINI };
 struct APIResponse {
     bool success;
     std::string content;
-    std::string error_message;
-    int status_code;
-    nlohmann::json raw_response;
+    std::string errorMessage;
+    int statusCode;
+    nlohmann::json rawResponse;
 
     // Use unified error code enum
     // Backward compatibility: APIError is an alias for LLMEngineErrorCode
     using APIError = ::LLMEngine::LLMEngineErrorCode;
-    LLMEngine::LLMEngineErrorCode error_code = LLMEngine::LLMEngineErrorCode::None;
+    LLMEngine::LLMEngineErrorCode errorCode = LLMEngine::LLMEngineErrorCode::None;
 
     // Token usage statistics
     LLMEngine::AnalysisResult::UsageStats usage;
 
     // Reason for completion (stop, length, tool_calls, content_filter, etc.)
-    std::string finish_reason;
+    std::string finishReason;
 };
 
 /**
@@ -238,10 +238,10 @@ class LLMENGINE_EXPORT AnthropicClient : public APIClient {
     }
 
   private:
-    std::string api_key_;
+    std::string apiKey_;
     std::string model_;
-    std::string base_url_;
-    nlohmann::json default_params_;
+    std::string baseUrl_;
+    nlohmann::json defaultParams_;
     std::shared_ptr<IConfigManager> config_;
 };
 
@@ -276,9 +276,9 @@ class LLMENGINE_EXPORT OllamaClient : public APIClient {
     }
 
   private:
-    std::string base_url_;
+    std::string baseUrl_;
     std::string model_;
-    nlohmann::json default_params_;
+    nlohmann::json defaultParams_;
     std::shared_ptr<IConfigManager> config_;
 };
 
@@ -312,10 +312,10 @@ class LLMENGINE_EXPORT GeminiClient : public APIClient {
     }
 
   private:
-    std::string api_key_;
+    std::string apiKey_;
     std::string model_;
-    std::string base_url_;
-    nlohmann::json default_params_;
+    std::string baseUrl_;
+    nlohmann::json defaultParams_;
     std::shared_ptr<IConfigManager> config_;
 };
 

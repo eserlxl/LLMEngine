@@ -66,10 +66,10 @@ class LLMENGINE_EXPORT ProviderBootstrap {
      * @brief Result of provider bootstrap process.
      */
     struct BootstrapResult {
-        ::LLMEngineAPI::ProviderType provider_type;
-        SecureString api_key{""};
+        ::LLMEngineAPI::ProviderType providerType;
+        SecureString apiKey{""};
         std::string model;
-        std::string ollama_url;
+        std::string ollamaUrl;
     };
 
     /**
@@ -88,10 +88,10 @@ class LLMENGINE_EXPORT ProviderBootstrap {
      * @throws std::runtime_error if provider not found or configuration invalid.
      */
     static BootstrapResult bootstrap(
-        std::string_view provider_name,
-        std::string_view api_key = "",
+        std::string_view providerName,
+        std::string_view apiKey = "",
         std::string_view model = "",
-        const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager = nullptr,
+        const std::shared_ptr<::LLMEngineAPI::IConfigManager>& configManager = nullptr,
         Logger* logger = nullptr);
 
     /**
@@ -122,25 +122,25 @@ class LLMENGINE_EXPORT ProviderBootstrap {
      * @param logger Optional logger for warnings.
      * @return Resolved API key (may be empty for Ollama).
      */
-    static SecureString resolveApiKey(::LLMEngineAPI::ProviderType provider_type,
-                                      std::string_view api_key_from_param,
-                                      std::string_view api_key_from_config,
+    static SecureString resolveApiKey(::LLMEngineAPI::ProviderType providerType,
+                                      std::string_view apiKeyFromParam,
+                                      std::string_view apiKeyFromConfig,
                                       Logger* logger = nullptr);
 
     /**
      * @brief Resolve Base URL with priority: env var → param → config → default.
      */
-    static std::string resolveBaseUrl(::LLMEngineAPI::ProviderType provider_type,
-                                      std::string_view base_url_from_param,
-                                      std::string_view base_url_from_config,
+    static std::string resolveBaseUrl(::LLMEngineAPI::ProviderType providerType,
+                                      std::string_view baseUrlFromParam,
+                                      std::string_view baseUrlFromConfig,
                                       Logger* logger = nullptr);
 
     /**
      * @brief Resolve Model with priority: env var → param → config → default.
      */
-    static std::string resolveModel(::LLMEngineAPI::ProviderType provider_type,
-                                    std::string_view model_from_param,
-                                    std::string_view model_from_config,
+    static std::string resolveModel(::LLMEngineAPI::ProviderType providerType,
+                                    std::string_view modelFromParam,
+                                    std::string_view modelFromConfig,
                                     Logger* logger = nullptr);
 
     /**
@@ -155,17 +155,17 @@ class LLMENGINE_EXPORT ProviderBootstrap {
      * @param provider_type Provider type.
      * @return Environment variable name, or empty string if provider doesn't use API keys.
      */
-    static std::string getApiKeyEnvVarName(::LLMEngineAPI::ProviderType provider_type);
+    static std::string getApiKeyEnvVarName(::LLMEngineAPI::ProviderType providerType);
 
     /**
      * @brief Get environment variable name for a provider's Base URL.
      */
-    static std::string getBaseUrlEnvVarName(::LLMEngineAPI::ProviderType provider_type);
+    static std::string getBaseUrlEnvVarName(::LLMEngineAPI::ProviderType providerType);
 
     /**
      * @brief Get environment variable name for a provider's Model.
      */
-    static std::string getModelEnvVarName(::LLMEngineAPI::ProviderType provider_type);
+    static std::string getModelEnvVarName(::LLMEngineAPI::ProviderType providerType);
 
   private:
     ProviderBootstrap() = delete; // Static class, no instances

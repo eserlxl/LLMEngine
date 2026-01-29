@@ -19,9 +19,9 @@ constexpr int httpStatusInternalServerError = 500;
     if (!api_client) {
         ::LLMEngineAPI::APIResponse error_response;
         error_response.success = false;
-        error_response.error_message = "API client not initialized";
-        error_response.status_code = httpStatusInternalServerError;
-        error_response.error_code = LLMEngine::LLMEngineErrorCode::Unknown;
+        error_response.errorMessage = "API client not initialized";
+        error_response.statusCode = httpStatusInternalServerError;
+        error_response.errorCode = LLMEngine::LLMEngineErrorCode::Unknown;
         return error_response;
     }
     return api_client->sendRequest(full_prompt, input, final_params, options);

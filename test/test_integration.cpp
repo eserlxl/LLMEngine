@@ -263,9 +263,9 @@ void testAnalyzeErrorPaths() {
                                     const ::LLMEngine::RequestOptions&) const override {
                 APIResponse resp;
                 resp.success = false;
-                resp.error_message = "Test API error";
-                resp.status_code = 500;
-                resp.error_code = APIResponse::APIError::Server;
+                resp.errorMessage = "Test API error";
+                resp.statusCode = 500;
+                resp.errorCode = APIResponse::APIError::Server;
                 return resp;
             }
         };
@@ -297,9 +297,9 @@ void testAnalyzeErrorPaths() {
                                     const ::LLMEngine::RequestOptions&) const override {
                 APIResponse resp;
                 resp.success = false;
-                resp.error_message = "Request timeout";
-                resp.status_code = 0; // Network error
-                resp.error_code = APIResponse::APIError::Timeout;
+                resp.errorMessage = "Request timeout";
+                resp.statusCode = 0; // Network error
+                resp.errorCode = APIResponse::APIError::Timeout;
                 return resp;
             }
         };
@@ -327,9 +327,9 @@ void testAnalyzeErrorPaths() {
                                     const ::LLMEngine::RequestOptions&) const override {
                 APIResponse resp;
                 resp.success = false;
-                resp.error_message = "Invalid API key";
-                resp.status_code = 401;
-                resp.error_code = APIResponse::APIError::Auth;
+                resp.errorMessage = "Invalid API key";
+                resp.statusCode = 401;
+                resp.errorCode = APIResponse::APIError::Auth;
                 return resp;
             }
         };

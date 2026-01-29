@@ -63,18 +63,18 @@ ProviderBootstrap::BootstrapResult ProviderBootstrap::bootstrap(
     }
 
     // Set provider type
-    result.provider_type =
+    result.providerType =
         ::LLMEngineAPI::APIClientFactory::stringToProviderType(resolved_provider);
 
     // Resolve API key with priority: env var → param → config
     std::string api_key_from_config =
         provider_config.value(std::string(Constants::JsonKeys::API_KEY), "");
-    result.api_key = resolveApiKey(result.provider_type, api_key, api_key_from_config, logger);
+    result.apiKey = resolveApiKey(result.providerType, api_key, api_key_from_config, logger);
 
     // Set model
     std::string model_from_config =
         provider_config.value(std::string(Constants::JsonKeys::DEFAULT_MODEL), "");
-    result.model = resolveModel(result.provider_type, model, model_from_config, logger);
+    result.model = resolveModel(result.providerType, model, model_from_config, logger);
 
     // Set Ollama URL if using Ollama (or generic Base URL)
     // For now, only Ollama and OpenAI-likes really use BaseURL configuration dynamically
@@ -82,7 +82,7 @@ ProviderBootstrap::BootstrapResult ProviderBootstrap::bootstrap(
         provider_config.value(std::string(Constants::JsonKeys::BASE_URL), "");
 
     // Always resolve base URL (e.g. for OpenAI compatible endpoints or Ollama)
-    result.ollama_url = resolveBaseUrl(result.provider_type, "", base_url_from_config, logger);
+    result.ollamaUrl = resolveBaseUrl(result.providerType, "", base_url_from_config, logger);
 
     return result;
 }

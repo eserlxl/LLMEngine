@@ -77,8 +77,8 @@ void parseOllamaStreamChunk(std::string_view chunk, std::string& buffer, const L
 } // namespace
 
 OllamaClient::OllamaClient(const std::string& base_url, const std::string& model)
-    : base_url_(base_url), model_(model) {
-    default_params_ = {{"temperature", ::LLMEngine::Constants::DefaultValues::TEMPERATURE},
+    : baseUrl_(base_url), model_(model) {
+    defaultParams_ = {{"temperature", ::LLMEngine::Constants::DefaultValues::TEMPERATURE},
                        {"top_p", ::LLMEngine::Constants::DefaultValues::TOP_P},
                        {"top_k", ::LLMEngine::Constants::DefaultValues::TOP_K},
                        {"min_p", ::LLMEngine::Constants::DefaultValues::MIN_P},
@@ -98,7 +98,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             computeRetrySettings(params, config_.get(), /*exponential_default*/ false);
 
         // Merge default params with provided params using update() for efficiency
-        nlohmann::json request_params = default_params_;
+        nlohmann::json request_params = defaultParams_;
         request_params.update(params);
 
         // Shared helpers
@@ -150,16 +150,16 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
         };
 
         auto set_error_from_http = [&](APIResponse& out, const cpr::Response& r) {
-            out.error_message = "HTTP " + std::to_string(r.status_code) + ": " + r.text;
+            out.errorMessage = "HTTP " + std::to_string(r.status_code) + ": " + r.text;
             if (r.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
                 || r.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
-                out.error_code = LLMEngine::LLMEngineErrorCode::Auth;
+                out.errorCode = LLMEngine::LLMEngineErrorCode::Auth;
             } else if (r.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
-                out.error_code = LLMEngine::LLMEngineErrorCode::RateLimited;
+                out.errorCode = LLMEngine::LLMEngineErrorCode::RateLimited;
             } else if (::LLMEngine::HttpStatus::isServerError(static_cast<int>(r.status_code))) {
-                out.error_code = LLMEngine::LLMEngineErrorCode::Server;
+                out.errorCode = LLMEngine::LLMEngineErrorCode::Server;
             } else {
-                out.error_code = LLMEngine::LLMEngineErrorCode::Unknown;
+                out.errorCode = LLMEngine::LLMEngineErrorCode::Unknown;
             }
         };
 
@@ -183,28 +183,28 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
 
             // Timeout selection
             const int timeout_seconds = get_timeout_seconds(params);
-            const std::string url = base_url_ + "/api/generate";
+            const std::string url = baseUrl_ + "/api/generate";
             cpr::Response cpr_response = post_json(url, payload, timeout_seconds);
 
-            response.status_code = static_cast<int>(cpr_response.status_code);
+            response.statusCode = static_cast<int>(cpr_response.status_code);
 
             if (cpr_response.status_code == ::LLMEngine::HttpStatus::OK) {
                 if (cpr_response.text.empty()) {
-                    response.error_message = "Empty response from server";
+                    response.errorMessage = "Empty response from server";
                 } else {
                     try {
-                        response.raw_response = nlohmann::json::parse(cpr_response.text);
+                        response.rawResponse = nlohmann::json::parse(cpr_response.text);
 
-                        if (response.raw_response.contains("response")) {
-                            response.content = response.raw_response["response"].get<std::string>();
+                        if (response.rawResponse.contains("response")) {
+                            response.content = response.rawResponse["response"].get<std::string>();
                             response.success = true;
                         } else {
-                            response.error_message = "No response content in generate API response";
+                            response.errorMessage = "No response content in generate API response";
                         }
                     } catch (const nlohmann::json::parse_error& e) {
-                        response.error_message = "JSON parse error: " + std::string(e.what())
+                        response.errorMessage = "JSON parse error: " + std::string(e.what())
                                                  + " - Response: " + cpr_response.text;
-                        response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
+                        response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                     }
                 }
             } else {
@@ -228,28 +228,28 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             }
 
             const int timeout_seconds = get_timeout_seconds(params);
-            const std::string url = base_url_ + "/api/chat";
+            const std::string url = baseUrl_ + "/api/chat";
             cpr::Response cpr_response = post_json(url, payload, timeout_seconds);
 
-            response.status_code = static_cast<int>(cpr_response.status_code);
+            response.statusCode = static_cast<int>(cpr_response.status_code);
 
             if (cpr_response.status_code == ::LLMEngine::HttpStatus::OK) {
                 if (cpr_response.text.empty()) {
-                    response.error_message = "Empty response from server";
+                    response.errorMessage = "Empty response from server";
                 } else {
                     try {
-                        response.raw_response = nlohmann::json::parse(cpr_response.text);
+                        response.rawResponse = nlohmann::json::parse(cpr_response.text);
 
-                        if (response.raw_response.contains("message")
-                            && response.raw_response["message"].contains("content")) {
+                        if (response.rawResponse.contains("message")
+                            && response.rawResponse["message"].contains("content")) {
                             response.content =
-                                response.raw_response["message"]["content"].get<std::string>();
+                                response.rawResponse["message"]["content"].get<std::string>();
                             response.success = true;
                         } else {
-                            response.error_message = "No content in response";
+                            response.errorMessage = "No content in response";
                         }
                     } catch (const nlohmann::json::parse_error& e) {
-                        response.error_message = "JSON parse error: " + std::string(e.what())
+                        response.errorMessage = "JSON parse error: " + std::string(e.what())
                                                  + " - Response: " + cpr_response.text;
                     }
                 }
@@ -259,8 +259,8 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
         }
 
     } catch (const std::exception& e) {
-        response.error_message = "Exception: " + std::string(e.what());
-        response.error_code = LLMEngine::LLMEngineErrorCode::Network;
+        response.errorMessage = "Exception: " + std::string(e.what());
+        response.errorCode = LLMEngine::LLMEngineErrorCode::Network;
     }
 
     return response;
@@ -272,7 +272,7 @@ void OllamaClient::sendRequestStream(std::string_view prompt,
                                       LLMEngine::StreamCallback callback,
                                       const ::LLMEngine::RequestOptions& options) const {
     // Merge params
-    nlohmann::json request_params = default_params_;
+    nlohmann::json request_params = defaultParams_;
     if (!params.is_null()) {
         request_params.update(params);
     }
@@ -306,14 +306,14 @@ void OllamaClient::sendRequestStream(std::string_view prompt,
     auto buffer = std::make_shared<std::string>();
 
     ChatCompletionRequestHelper::executeStream(
-        default_params_,
+        defaultParams_,
         params,
         // Build payload
         [&](const nlohmann::json&) {
             return payload;
         },
         // Build URL
-        [&]() { return base_url_ + endpoint; },
+        [&]() { return baseUrl_ + endpoint; },
         // Build Headers
         [&]() {
             return std::map<std::string, std::string>{{"Content-Type", "application/json"}};

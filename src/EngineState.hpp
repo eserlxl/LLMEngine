@@ -27,32 +27,32 @@ namespace LLMEngine {
 
 struct LLMEngine::EngineState {
     std::string model_;
-    nlohmann::json model_params_;
-    int log_retention_hours_;
+    nlohmann::json modelParams_;
+    int logRetentionHours_;
     bool debug_;
     std::string tmp_dir_;
-    std::shared_ptr<ITempDirProvider> temp_dir_provider_;
-    bool tmp_dir_verified_ = false;
+    std::shared_ptr<ITempDirProvider> tempDirProvider_;
+    bool tempDirVerified_ = false;
 
-    std::unique_ptr<LLMEngineAPI::APIClient> api_client_;
-    std::shared_ptr<LLMEngineAPI::IConfigManager> config_manager_;
+    std::unique_ptr<LLMEngineAPI::APIClient> apiClient_;
+    std::shared_ptr<LLMEngineAPI::IConfigManager> configManager_;
 
-    std::shared_ptr<IPromptBuilder> terse_prompt_builder_;
-    std::shared_ptr<IPromptBuilder> passthrough_prompt_builder_;
-    std::shared_ptr<IRequestExecutor> request_executor_;
-    std::shared_ptr<IArtifactSink> artifact_sink_;
+    std::shared_ptr<IPromptBuilder> tersePromptBuilder_;
+    std::shared_ptr<IPromptBuilder> passthroughPromptBuilder_;
+    std::shared_ptr<IRequestExecutor> requestExecutor_;
+    std::shared_ptr<IArtifactSink> artifactSink_;
 
-    LLMEngineAPI::ProviderType provider_type_;
-    SecureString api_key_;
-    std::string ollama_url_;
+    LLMEngineAPI::ProviderType providerType_;
+    SecureString apiKey_;
+    std::string ollamaUrl_;
     std::shared_ptr<Logger> logger_;
-    std::shared_ptr<IMetricsCollector> metrics_collector_;
-    std::function<bool()> debug_files_policy_;
-    bool disable_debug_files_env_cached_;
+    std::shared_ptr<IMetricsCollector> metricsCollector_;
+    std::function<bool()> debugFilesPolicy_;
+    bool disableDebugFilesEnvCached_;
     std::vector<std::shared_ptr<IInterceptor>> interceptors_;
     std::mutex state_mutex_; // Protects ensuring secure directories
-    mutable std::shared_mutex config_mutex_; // Protects dynamic configuration (interceptors, settings)
-    RequestOptions default_request_options_; // Default options applied to all requests
+    mutable std::shared_mutex configMutex_; // Protects dynamic configuration (interceptors, settings)
+    RequestOptions defaultRequestOptions_; // Default options applied to all requests
 
     EngineState(const nlohmann::json& params, int cleanup_hours, bool debug);
 

@@ -73,9 +73,9 @@ void parseGeminiStreamChunk(std::string_view chunk, std::string& buffer, const L
 } // namespace
 
 GeminiClient::GeminiClient(const std::string& api_key, const std::string& model)
-    : api_key_(api_key), model_(model),
-      base_url_(std::string(::LLMEngine::Constants::DefaultUrls::GEMINI_BASE)) {
-    default_params_ = {{"temperature", ::LLMEngine::Constants::DefaultValues::TEMPERATURE},
+    : apiKey_(api_key), model_(model),
+      baseUrl_(std::string(::LLMEngine::Constants::DefaultUrls::GEMINI_BASE)) {
+    defaultParams_ = {{"temperature", ::LLMEngine::Constants::DefaultValues::TEMPERATURE},
                        {"max_tokens", ::LLMEngine::Constants::DefaultValues::MAX_TOKENS},
                        {"top_p", ::LLMEngine::Constants::DefaultValues::TOP_P}};
 }
@@ -93,7 +93,7 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
             computeRetrySettings(params, config_.get(), /*exponential_default*/ false);
 
         // Merge default params with provided params using update() for efficiency
-        nlohmann::json request_params = default_params_;
+        nlohmann::json request_params = defaultParams_;
         request_params.update(params);
 
         // Compose user content; prepend optional system_prompt
@@ -139,10 +139,10 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
         }
 
         // SECURITY: Use header-based authentication instead of URL query parameter
-        const std::string url = base_url_ + "/models/" + model_ + ":generateContent";
+        const std::string url = baseUrl_ + "/models/" + model_ + ":generateContent";
 
         std::map<std::string, std::string> hdr{{"Content-Type", "application/json"},
-                                               {"x-goog-api-key", api_key_}};
+                                               {"x-goog-api-key", apiKey_}};
         maybeLogRequest("POST", url, hdr);
         cpr::Response cpr_response = sendWithRetries(
             rs,
@@ -155,19 +155,19 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
             },
             options);
 
-        response.status_code = static_cast<int>(cpr_response.status_code);
+        response.statusCode = static_cast<int>(cpr_response.status_code);
 
         if (cpr_response.status_code == ::LLMEngine::HttpStatus::OK) {
             if (cpr_response.text.empty()) {
-                response.error_message = "Empty response from server";
-                response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
+                response.errorMessage = "Empty response from server";
+                response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
             } else {
                 try {
-                    response.raw_response = nlohmann::json::parse(cpr_response.text);
-                    if (response.raw_response.contains("candidates")
-                        && response.raw_response["candidates"].is_array()
-                        && !response.raw_response["candidates"].empty()) {
-                        const auto& cand = response.raw_response["candidates"][0];
+                    response.rawResponse = nlohmann::json::parse(cpr_response.text);
+                    if (response.rawResponse.contains("candidates")
+                        && response.rawResponse["candidates"].is_array()
+                        && !response.rawResponse["candidates"].empty()) {
+                        const auto& cand = response.rawResponse["candidates"][0];
                         std::string aggregated;
                         if (cand.contains("content") && cand["content"].contains("parts")
                             && cand["content"]["parts"].is_array()) {
@@ -181,31 +181,31 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
                             response.content = aggregated;
                             response.success = true;
                         } else {
-                            response.error_message = "No text content in response";
-                            response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
+                            response.errorMessage = "No text content in response";
+                            response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                         }
                     } else {
-                        response.error_message = "Invalid response format";
-                        response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
+                        response.errorMessage = "Invalid response format";
+                        response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                     }
                 } catch (const nlohmann::json::parse_error& e) {
-                    response.error_message = std::string("JSON parse error: ") + e.what();
-                    response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
+                    response.errorMessage = std::string("JSON parse error: ") + e.what();
+                    response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                 }
             }
         } else {
-            response.error_message =
+            response.errorMessage =
                 "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
             if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
                 || cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
-                response.error_code = LLMEngine::LLMEngineErrorCode::Auth;
+                response.errorCode = LLMEngine::LLMEngineErrorCode::Auth;
             } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
-                response.error_code = LLMEngine::LLMEngineErrorCode::RateLimited;
+                response.errorCode = LLMEngine::LLMEngineErrorCode::RateLimited;
             } else {
-                response.error_code = LLMEngine::LLMEngineErrorCode::Server;
+                response.errorCode = LLMEngine::LLMEngineErrorCode::Server;
             }
             try {
-                response.raw_response = nlohmann::json::parse(cpr_response.text);
+                response.rawResponse = nlohmann::json::parse(cpr_response.text);
             } catch (const std::exception& e) { // NOLINT(bugprone-empty-catch)
                 // Best-effort JSON parsing for error responses.
                 // If parsing fails, keep raw_response as default empty object.
@@ -218,8 +218,8 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
         }
 
     } catch (const std::exception& e) {
-        response.error_message = "Exception: " + std::string(e.what());
-        response.error_code = LLMEngine::LLMEngineErrorCode::Network;
+        response.errorMessage = "Exception: " + std::string(e.what());
+        response.errorCode = LLMEngine::LLMEngineErrorCode::Network;
     }
 
     return response;
@@ -231,7 +231,7 @@ void GeminiClient::sendRequestStream(std::string_view prompt,
                                      LLMEngine::StreamCallback callback,
                                      const ::LLMEngine::RequestOptions& options) const {
     // Merge params
-    nlohmann::json request_params = default_params_;
+    nlohmann::json request_params = defaultParams_;
     if (!params.is_null()) {
         request_params.update(params);
     }
@@ -250,7 +250,7 @@ void GeminiClient::sendRequestStream(std::string_view prompt,
     auto buffer = std::make_shared<std::string>();
 
     ChatCompletionRequestHelper::executeStream(
-        default_params_,
+        defaultParams_,
         params,
         // Build payload
         [&](const nlohmann::json& rp) {
@@ -266,12 +266,12 @@ void GeminiClient::sendRequestStream(std::string_view prompt,
         },
         // Build URL (SSE mode)
         [&]() {
-            return base_url_ + "/models/" + model_ + ":streamGenerateContent?alt=sse";
+            return baseUrl_ + "/models/" + model_ + ":streamGenerateContent?alt=sse";
         },
         // Build Headers
         [&]() {
             return std::map<std::string, std::string>{{"Content-Type", "application/json"},
-                                                      {"x-goog-api-key", api_key_}};
+                                                      {"x-goog-api-key", apiKey_}};
         },
         // Stream processor
         [buffer, callback](std::string_view chunk) {

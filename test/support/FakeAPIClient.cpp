@@ -39,8 +39,8 @@ APIResponse FakeAPIClient::sendRequest(std::string_view prompt,
     r.success = true;
     // Produce a deterministic echo-style response for tests
     r.content = std::string("[FAKE] ") + std::string(prompt);
-    r.status_code = ::LLMEngine::HttpStatus::OK;
-    r.raw_response = {{"fake", true},
+    r.statusCode = ::LLMEngine::HttpStatus::OK;
+    r.rawResponse = {{"fake", true},
                       {"provider", provider_name_},
                       {"prompt_len", static_cast<int>(std::string(prompt).size())},
                       {"has_system", input.contains("system_prompt")}};

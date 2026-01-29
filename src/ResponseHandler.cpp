@@ -84,13 +84,13 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
 
     // Error path
     if (!api_response.success) {
-        const std::string redacted_err = RequestLogger::redactText(api_response.error_message);
+        const std::string redacted_err = RequestLogger::redactText(api_response.errorMessage);
 
         // Build enhanced error message with context
         std::string enhanced_error = redacted_err;
-        if (api_response.status_code > 0) {
+        if (api_response.statusCode > 0) {
             enhanced_error =
-                "HTTP " + std::to_string(api_response.status_code) + ": " + enhanced_error;
+                "HTTP " + std::to_string(api_response.statusCode) + ": " + enhanced_error;
         }
 
         // Use safe logging to ensure secrets are redacted (though enhanced_error is already
@@ -104,14 +104,14 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
         }
         // Classify error code (now using unified LLMEngineErrorCode)
         LLMEngineErrorCode error_code =
-            classifyErrorCode(api_response.error_code, api_response.status_code);
+            classifyErrorCode(api_response.errorCode, api_response.statusCode);
         // Return enhanced error message with context
         AnalysisResult result{.success = false,
                               .think = "",
                               .content = "",
                               .finishReason = "",
                               .errorMessage = enhanced_error,
-                              .statusCode = api_response.status_code,
+                              .statusCode = api_response.statusCode,
                               .usage = api_response.usage,
                               .logprobs = std::nullopt,
                               .errorCode = error_code,
@@ -139,9 +139,9 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
     AnalysisResult result{.success = true,
                           .think = think_section,
                           .content = remaining_section,
-                          .finishReason = api_response.finish_reason,
+                          .finishReason = api_response.finishReason,
                           .errorMessage = "",
-                          .statusCode = api_response.status_code,
+                          .statusCode = api_response.statusCode,
                           .usage = api_response.usage,
                           .logprobs = std::nullopt,
                           .errorCode = LLMEngineErrorCode::None,
@@ -152,7 +152,7 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
     // Note: This relies on provider implementations populating raw_response with standard structure
     // or specific logic. Currently OpenAICompatibleClient does this.
     try {
-        const auto& raw = api_response.raw_response;
+        const auto& raw = api_response.rawResponse;
         if (raw.contains("choices") && raw["choices"].is_array() && !raw["choices"].empty()) {
             const auto& choice = raw["choices"][0];
             if (choice.contains("message") && choice["message"].contains("tool_calls")) {

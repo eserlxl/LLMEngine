@@ -75,9 +75,9 @@ void parseAnthropicStreamChunk(std::string_view chunk, std::string& buffer, cons
 } // namespace
 
 AnthropicClient::AnthropicClient(const std::string& api_key, const std::string& model)
-    : api_key_(api_key), model_(model),
-      base_url_(std::string(::LLMEngine::Constants::DefaultUrls::ANTHROPIC_BASE)) {
-    default_params_ = {{"max_tokens", ::LLMEngine::Constants::DefaultValues::MAX_TOKENS},
+    : apiKey_(api_key), model_(model),
+      baseUrl_(std::string(::LLMEngine::Constants::DefaultUrls::ANTHROPIC_BASE)) {
+    defaultParams_ = {{"max_tokens", ::LLMEngine::Constants::DefaultValues::MAX_TOKENS},
                        {"temperature", ::LLMEngine::Constants::DefaultValues::TEMPERATURE},
                        {"top_p", ::LLMEngine::Constants::DefaultValues::TOP_P}};
 }
@@ -95,7 +95,7 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
             computeRetrySettings(params, config_.get(), /*exponential_default*/ true);
 
         // Merge default params with provided params using update() for efficiency
-        nlohmann::json requestParams = default_params_;
+        nlohmann::json requestParams = defaultParams_;
         requestParams.update(params);
 
         // Prepare messages array
@@ -136,9 +136,9 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
         }
 
         // Send request with retries
-        const std::string url = base_url_ + "/messages";
+        const std::string url = baseUrl_ + "/messages";
         std::map<std::string, std::string> hdr{{"Content-Type", "application/json"},
-                                               {"x-api-key", api_key_},
+                                               {"x-api-key", apiKey_},
                                                {"anthropic-version", "2023-06-01"}};
         maybeLogRequest("POST", url, hdr);
         cpr::Response cprResponse = sendWithRetries(
@@ -152,64 +152,64 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
             },
             options);
 
-        response.status_code = static_cast<int>(cprResponse.status_code);
+        response.statusCode = static_cast<int>(cprResponse.status_code);
 
         if (cprResponse.status_code == ::LLMEngine::HttpStatus::OK) {
             // Parse JSON only after confirming HTTP success
             try {
-                response.raw_response = nlohmann::json::parse(cprResponse.text);
-                if (response.raw_response.contains("content")
-                    && response.raw_response["content"].is_array()
-                    && !response.raw_response["content"].empty()) {
+                response.rawResponse = nlohmann::json::parse(cprResponse.text);
+                if (response.rawResponse.contains("content")
+                    && response.rawResponse["content"].is_array()
+                    && !response.rawResponse["content"].empty()) {
 
-                    auto content = response.raw_response["content"][0];
+                    auto content = response.rawResponse["content"][0];
                     if (content.contains("text")) {
                         response.content = content["text"].get<std::string>();
                         response.success = true;
                     } else {
-                        response.error_message = "No text content in response";
-                        response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
+                        response.errorMessage = "No text content in response";
+                        response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                     }
                 } else {
-                    response.error_message = "Invalid response format";
-                    response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
+                    response.errorMessage = "Invalid response format";
+                    response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                 }
             } catch (const nlohmann::json::parse_error& e) {
-                response.error_message = "JSON parse error: " + std::string(e.what());
-                response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
+                response.errorMessage = "JSON parse error: " + std::string(e.what());
+                response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
             }
         } else {
             // Handle error responses - try to parse JSON for structured error messages
-            response.error_message =
+            response.errorMessage =
                 "HTTP " + std::to_string(cprResponse.status_code) + ": " + cprResponse.text;
             try {
-                response.raw_response = nlohmann::json::parse(cprResponse.text);
+                response.rawResponse = nlohmann::json::parse(cprResponse.text);
             } catch (const nlohmann::json::parse_error&) {
                 // Non-JSON error response (e.g., HTML error page) - keep text error message
-                response.raw_response = nlohmann::json::object();
+                response.rawResponse = nlohmann::json::object();
             }
 
             // Classify error based on HTTP status code
             if (cprResponse.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
                 || cprResponse.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
-                response.error_code = LLMEngine::LLMEngineErrorCode::Auth;
+                response.errorCode = LLMEngine::LLMEngineErrorCode::Auth;
             } else if (cprResponse.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
-                response.error_code = LLMEngine::LLMEngineErrorCode::RateLimited;
+                response.errorCode = LLMEngine::LLMEngineErrorCode::RateLimited;
             } else if (::LLMEngine::HttpStatus::isServerError(
                            static_cast<int>(cprResponse.status_code))) {
-                response.error_code = LLMEngine::LLMEngineErrorCode::Server;
+                response.errorCode = LLMEngine::LLMEngineErrorCode::Server;
             } else {
-                response.error_code = LLMEngine::LLMEngineErrorCode::Unknown;
+                response.errorCode = LLMEngine::LLMEngineErrorCode::Unknown;
             }
         }
 
     } catch (const nlohmann::json::parse_error& e) {
         // This catch block should rarely be reached now, but kept for safety
-        response.error_message = "JSON parse error: " + std::string(e.what());
-        response.error_code = LLMEngine::LLMEngineErrorCode::InvalidResponse;
+        response.errorMessage = "JSON parse error: " + std::string(e.what());
+        response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
     } catch (const std::exception& e) {
-        response.error_message = "Exception: " + std::string(e.what());
-        response.error_code = LLMEngine::LLMEngineErrorCode::Network;
+        response.errorMessage = "Exception: " + std::string(e.what());
+        response.errorCode = LLMEngine::LLMEngineErrorCode::Network;
     }
 
     return response;
@@ -221,7 +221,7 @@ void AnthropicClient::sendRequestStream(std::string_view prompt,
                                           LLMEngine::StreamCallback callback,
                                           const ::LLMEngine::RequestOptions& options) const {
     // Merge params
-    nlohmann::json requestParams = default_params_;
+    nlohmann::json requestParams = defaultParams_;
     if (!params.is_null()) {
         requestParams.update(params);
     }
@@ -232,7 +232,7 @@ void AnthropicClient::sendRequestStream(std::string_view prompt,
     auto buffer = std::make_shared<std::string>();
 
     ChatCompletionRequestHelper::executeStream(
-        default_params_,
+        defaultParams_,
         params,
         // Build payload
         [&](const nlohmann::json& rp) {
@@ -251,12 +251,12 @@ void AnthropicClient::sendRequestStream(std::string_view prompt,
             return payload;
         },
         // Build URL
-        [&]() { return base_url_ + "/messages"; },
+        [&]() { return baseUrl_ + "/messages"; },
         // Build Headers
         [&]() {
             return std::map<std::string, std::string>{
                 {"Content-Type", "application/json"},
-                {"x-api-key", api_key_},
+                {"x-api-key", apiKey_},
                 {"anthropic-version", "2023-06-01"}};
         },
         // Stream processor

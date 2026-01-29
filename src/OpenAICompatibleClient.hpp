@@ -104,7 +104,7 @@ class OpenAICompatibleClient {
      * @brief Get default parameters (for use by wrapper classes).
      */
     const nlohmann::json& getDefaultParams() const {
-        return default_params_;
+        return defaultParams_;
     }
 
     /**
@@ -115,12 +115,12 @@ class OpenAICompatibleClient {
     }
 
   protected:
-    std::string api_key_;
+    std::string apiKey_;
     std::string model_;
-    std::string base_url_;
-    std::string chat_completions_url_;                  // Cached URL
-    std::map<std::string, std::string> cached_headers_; // Cached headers
-    nlohmann::json default_params_;
+    std::string baseUrl_;
+    std::string chatCompletionsUrl_;                  // Cached URL
+    std::map<std::string, std::string> cachedHeaders_; // Cached headers
+    nlohmann::json defaultParams_;
     std::shared_ptr<IConfigManager> config_;
 };
 
