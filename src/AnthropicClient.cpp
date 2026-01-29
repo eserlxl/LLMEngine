@@ -28,7 +28,7 @@ void parseAnthropicStreamChunk(std::string_view chunk, std::string& buffer, cons
             continue;
 
 
-        constexpr size_t kDataPrefixLen = 6;
+        constexpr size_t dataPrefixLen = 6;
 
         if (line.rfind("event: ", 0) == 0) {
             // Check event type
@@ -38,7 +38,7 @@ void parseAnthropicStreamChunk(std::string_view chunk, std::string& buffer, cons
         }
         
         if (line.rfind("data: ", 0) == 0) {
-            std::string data = line.substr(kDataPrefixLen);
+            std::string data = line.substr(dataPrefixLen);
             
             try {
                 auto json = nlohmann::json::parse(data);

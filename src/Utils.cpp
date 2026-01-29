@@ -778,7 +778,7 @@ bool validateUrl(std::string_view url) {
 }
 
 std::string base64Encode(std::span<const uint8_t> data) {
-    static const char kBase64Chars[] =
+    static const char base64Chars[] =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     std::string out;
@@ -791,16 +791,16 @@ std::string base64Encode(std::span<const uint8_t> data) {
         if (i + 2 < data.size())
             val |= data[i + 2];
 
-        out.push_back(kBase64Chars[(val >> 18) & 0x3F]);
-        out.push_back(kBase64Chars[(val >> 12) & 0x3F]);
+        out.push_back(base64Chars[(val >> 18) & 0x3F]);
+        out.push_back(base64Chars[(val >> 12) & 0x3F]);
 
         if (i + 1 < data.size())
-            out.push_back(kBase64Chars[(val >> 6) & 0x3F]);
+            out.push_back(base64Chars[(val >> 6) & 0x3F]);
         else
             out.push_back('=');
 
         if (i + 2 < data.size())
-            out.push_back(kBase64Chars[val & 0x3F]);
+            out.push_back(base64Chars[val & 0x3F]);
         else
             out.push_back('=');
     }

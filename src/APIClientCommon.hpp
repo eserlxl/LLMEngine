@@ -196,14 +196,14 @@ inline void maybeLogRequestWithBody(std::string_view method,
     // Optional capped, redacted body logging when explicitly enabled
     // SECURITY: Body logging is opt-in only and strictly limited to prevent credential leakage
     if (std::getenv("LLMENGINE_LOG_REQUESTS_BODY") != nullptr) {
-        constexpr size_t kMaxBytes = 512;            // Strict cap to prevent excessive logging
-        constexpr size_t kMinSizeForWarning = 10000; // Warn if body is very large
-        const size_t n = std::min(kMaxBytes, body.size());
+        constexpr size_t maxBytes = 512;            // Strict cap to prevent excessive logging
+        constexpr size_t minSizeForWarning = 10000; // Warn if body is very large
+        const size_t n = std::min(maxBytes, body.size());
 
         // Warn if body exceeds safe size (potential for credential leakage)
-        if (body.size() > kMinSizeForWarning) {
+        if (body.size() > minSizeForWarning) {
             std::cerr << "[WARNING] Request body size (" << body.size()
-                      << " bytes) exceeds safe logging threshold. Only first " << kMaxBytes
+                      << " bytes) exceeds safe logging threshold. Only first " << maxBytes
                       << " bytes will be logged.\n";
         }
 

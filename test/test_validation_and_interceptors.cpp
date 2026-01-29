@@ -106,6 +106,16 @@ TEST_F(ValidationTest, AnalyzeStreamCallsInterceptors) {
     EXPECT_TRUE(callbackCalled);
 }
 
+TEST_F(ValidationTest, AnalyzeJsonOverloadThrowsOnInvalidToolChoice) {
+    AnalysisInput input;
+    input.withUserMessage("Use the tool");
+    input.withToolChoice(ToolChoice::function("my_tool")); // Invalid
+    
+    EXPECT_THROW({
+        (void)engine->analyze("prompt", input.toJson(), "test");
+    }, std::invalid_argument);
+}
+
 TEST_F(ValidationTest, ValidToolChoiceDoesNotThrow) {
     AnalysisInput input;
     input.withUserMessage("Use the tool");

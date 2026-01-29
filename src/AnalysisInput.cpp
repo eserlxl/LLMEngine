@@ -8,6 +8,7 @@
 #include "LLMEngine/Utils.hpp"
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <vector>
 
 namespace LLMEngine {

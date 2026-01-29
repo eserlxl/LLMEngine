@@ -28,8 +28,8 @@ void parseGeminiStreamChunk(std::string_view chunk, std::string& buffer, const L
             continue;
 
         if (line.rfind("data: ", 0) == 0) {
-            constexpr size_t kDataPrefixLen = 6;
-            std::string data = line.substr(kDataPrefixLen);
+            constexpr size_t dataPrefixLen = 6;
+            std::string data = line.substr(dataPrefixLen);
             if (data == "[DONE]")
                 continue;
 

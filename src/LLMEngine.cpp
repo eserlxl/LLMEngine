@@ -310,7 +310,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                   const nlohmann::json& input,
                                   std::string_view analysis_type,
                                   const RequestOptions& options) {
-    // validateInput(input); // Validate strictly before processing - REMOVED: JSON overload cannot be validated as AnalysisInput
+    validateInput(AnalysisInput::fromJson(input)); // Validate input structure
     state_->ensureSecureTmpDir();
 
     // Determine mode and instruction from options (if extended later, for now just defaults)
@@ -406,6 +406,8 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
     // Mode/Prepend are semantic args.
     // This is a bit conflicting.
     // Let's keep the original implementation logic here, but using state_.
+    
+    validateInput(AnalysisInput::fromJson(input)); // Validate input structure
 
     state_->ensureSecureTmpDir();
 
