@@ -340,6 +340,7 @@ endmacro()
 # ---- Library ---------------------------------------------------------------
 add_library(${PROJECT_NAME}
     src/LLMEngine.cpp
+    src/EngineState.cpp
     src/Utils.cpp
     src/APIClient.cpp
     src/OpenAICompatibleClient.cpp

@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "LLMEngine/LLMEngine.hpp"
+#include "EngineState.hpp"
 
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/AnalysisInput.hpp"
@@ -39,117 +40,14 @@
 namespace LLM = ::LLMEngine;
 namespace LLMAPI = ::LLMEngineAPI;
 
-// Helper function to parse LLMENGINE_DISABLE_DEBUG_FILES environment variable
-namespace {
-bool parseDisableDebugFilesEnv() {
-    const char* env_value = std::getenv("LLMENGINE_DISABLE_DEBUG_FILES");
-    if (env_value == nullptr) {
-        return false; // Variable not set, enable debug files
-    }
-    if (env_value[0] == '\0') {
-        return false;
-    }
-    std::string value(env_value);
-    std::transform(
-        value.begin(), value.end(), value.begin(), [](unsigned char c) { return std::tolower(c); });
 
-    if (value == "0" || value == "false" || value == "no" || value == "off") {
-        return false;
-    }
-    return true;
-}
-} // namespace
 
 namespace LLMEngine {
 
 
 
 // Internal state structure implementation
-struct LLMEngine::EngineState {
-    std::string model_;
-    nlohmann::json model_params_;
-    int log_retention_hours_;
-    bool debug_;
-    std::string tmp_dir_;
-    std::shared_ptr<ITempDirProvider> temp_dir_provider_;
-    bool tmp_dir_verified_ = false;
 
-    std::unique_ptr<LLMAPI::APIClient> api_client_;
-    std::shared_ptr<LLMAPI::IConfigManager> config_manager_;
-
-    std::shared_ptr<IPromptBuilder> terse_prompt_builder_{std::make_shared<TersePromptBuilder>()};
-    std::shared_ptr<IPromptBuilder> passthrough_prompt_builder_{
-        std::make_shared<PassthroughPromptBuilder>()};
-    std::shared_ptr<IRequestExecutor> request_executor_{std::make_shared<DefaultRequestExecutor>()};
-    std::shared_ptr<IArtifactSink> artifact_sink_{std::make_shared<DefaultArtifactSink>()};
-
-    LLMAPI::ProviderType provider_type_;
-    SecureString api_key_{""};
-    std::string ollama_url_;
-    std::shared_ptr<Logger> logger_;
-    std::shared_ptr<IMetricsCollector> metrics_collector_;
-    std::function<bool()> debug_files_policy_;
-    bool disable_debug_files_env_cached_;
-    std::vector<std::shared_ptr<IInterceptor>> interceptors_;
-    std::mutex state_mutex_; // Protects ensuring secure directories
-    mutable std::shared_mutex config_mutex_; // Protects dynamic configuration (interceptors, settings)
-    RequestOptions default_request_options_; // Default options applied to all requests
-
-    EngineState(const nlohmann::json& params, int cleanup_hours, bool debug)
-        : model_params_(params), log_retention_hours_(cleanup_hours), debug_(debug),
-          disable_debug_files_env_cached_(parseDisableDebugFilesEnv()) {
-        // Initialize defaults
-        logger_ = std::make_shared<DefaultLogger>();
-        temp_dir_provider_ = std::make_shared<DefaultTempDirProvider>();
-        tmp_dir_ = temp_dir_provider_->getTempDir();
-    }
-
-    void initializeAPIClient() {
-        if (provider_type_ != LLMAPI::ProviderType::OLLAMA) {
-            if (api_key_.empty()) {
-                std::string env_var_name = ProviderBootstrap::getApiKeyEnvVarName(provider_type_);
-                std::string error_msg =
-                    "No API key found for provider "
-                    + LLMAPI::APIClientFactory::providerTypeToString(provider_type_) + ". Set the "
-                    + env_var_name + " environment variable or provide it in the constructor.";
-                if (logger_) {
-                    logger_->log(LogLevel::Error, error_msg);
-                }
-                throw std::runtime_error(error_msg);
-            }
-        }
-
-        if (provider_type_ == LLMAPI::ProviderType::OLLAMA) {
-            api_client_ = LLMAPI::APIClientFactory::createClient(
-                provider_type_, "", model_, ollama_url_, config_manager_);
-        } else {
-            api_client_ = LLMAPI::APIClientFactory::createClient(
-                provider_type_, api_key_.view(), model_, "", config_manager_);
-        }
-
-        if (!api_client_) {
-            std::string provider_name =
-                LLMAPI::APIClientFactory::providerTypeToString(provider_type_);
-            throw std::runtime_error("Failed to create API client: " + provider_name);
-        }
-    }
-
-    void ensureSecureTmpDir() {
-        std::lock_guard<std::mutex> lock(state_mutex_);
-        if (tmp_dir_verified_) {
-            if (TempDirectoryService::isDirectoryValid(tmp_dir_, logger_.get())) {
-                return;
-            }
-            tmp_dir_verified_ = false;
-        }
-
-        auto result = TempDirectoryService::ensureSecureDirectory(tmp_dir_, logger_.get());
-        if (!result.success) {
-            throw std::runtime_error(result.error_message);
-        }
-        tmp_dir_verified_ = true;
-    }
-};
 
 // --- Constructors ---
 
