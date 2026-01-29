@@ -259,7 +259,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
                        const nlohmann::json& input,
                        std::string_view analysisType,
                        const RequestOptions& options,
-                       StreamCallback callback);
+                       const StreamCallback& callback);
 
     /**
      * @brief Interceptor interface for request/response modification/inspection.
@@ -399,7 +399,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
   private:
     void initializeAPIClient();
     void ensureSecureTmpDir();
-    void validateInput(const AnalysisInput& input) const;
+    static void validateInput(const AnalysisInput& input);
 
     // Internal state pointer (PIMPL pattern + Shared Ownership for Async)
     std::shared_ptr<EngineState> state_;

@@ -131,7 +131,7 @@ void LLMEngine::setDefaultRequestOptions(const RequestOptions& options) {
     state_->defaultRequestOptions_ = options;
 }
 
-void LLMEngine::validateInput(const AnalysisInput& input) const {
+void LLMEngine::validateInput(const AnalysisInput& input) {
     std::string error;
     if (!input.validate(error)) {
         throw std::invalid_argument("Invalid AnalysisInput: " + error);
@@ -514,7 +514,7 @@ void LLMEngine::analyzeStream(std::string_view prompt,
                                const nlohmann::json& input,
                                std::string_view analysisType,
                                const RequestOptions& options,
-                               StreamCallback callback) {
+                               const StreamCallback& callback) {
     state_->ensureSecureTmpDir();
 
     RequestOptions effectiveOptions;
@@ -744,14 +744,14 @@ bool LLMEngine::isDebugEnabled() const {
     return state_->debug_;
 }
 
-bool LLMEngine::setTempDirectory(const std::string& tmp_dir) {
+bool LLMEngine::setTempDirectory(const std::string& tempDir) {
     const std::string allowedRoot = state_->tempDirProvider_
                                          ? state_->tempDirProvider_->getTempDir()
                                          : DefaultTempDirProvider().getTempDir();
 
     if (TempDirectoryService::validatePathWithinRoot(
-            tmp_dir, allowedRoot, state_->logger_.get())) {
-        state_->tmp_dir_ = tmp_dir;
+            tempDir, allowedRoot, state_->logger_.get())) {
+        state_->tmp_dir_ = tempDir;
         state_->tempDirVerified_ = false;
         return true;
     }
