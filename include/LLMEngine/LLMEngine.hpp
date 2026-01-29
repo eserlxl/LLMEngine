@@ -64,16 +64,16 @@ namespace LLMEngine {
  *
  * ```cpp
  * // Single-threaded usage
- * LLMEngine engine(LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash");
+ * LLMEngine engine(LLMEngineAPI::ProviderType::QWEN, apiKey, "qwen-flash");
  * auto result = engine.analyze("Analyze this code", input, "code_analysis");
  *
  * // Multi-threaded usage (create separate instances)
  * std::thread t1([&]() {
- *     LLMEngine engine1(LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash");
+ *     LLMEngine engine1(LLMEngineAPI::ProviderType::QWEN, apiKey, "qwen-flash");
  *     // use engine1
  * });
  * std::thread t2([&]() {
- *     LLMEngine engine2(LLMEngineAPI::ProviderType::OPENAI, api_key2, "gpt-4");
+ *     LLMEngine engine2(LLMEngineAPI::ProviderType::OPENAI, apiKey2, "gpt-4");
  *     // use engine2
  * });
  * ```
@@ -83,41 +83,41 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
     // Constructor for API-based providers
     /**
      * @brief Construct an engine for an online provider.
-     * @param provider_type Provider enum value.
-     * @param api_key Provider API key.
+     * @param providerType Provider enum value.
+     * @param apiKey Provider API key.
      * @param model Default model name.
-     * @param model_params Default model params.
-     * @param log_retention_hours Hours to keep debug artifacts.
+     * @param modelParams Default model params.
+     * @param logRetentionHours Hours to keep debug artifacts.
      * @param debug Enable response artifact logging.
      */
-    LLMEngine(::LLMEngineAPI::ProviderType provider_type,
-              std::string_view api_key,
+    LLMEngine(::LLMEngineAPI::ProviderType providerType,
+              std::string_view apiKey,
               std::string_view model,
-              const nlohmann::json& model_params = {},
-              int log_retention_hours = Constants::DefaultValues::DEFAULT_LOG_RETENTION_HOURS,
+              const nlohmann::json& modelParams = {},
+              int logRetentionHours = Constants::DefaultValues::DEFAULT_LOG_RETENTION_HOURS,
               bool debug = false);
 
     // Constructor using config file
     /**
      * @brief Construct using provider name resolved via configuration.
-     * @param provider_name Provider key (e.g., "qwen").
-     * @param api_key Provider API key (optional if not required).
+     * @param providerName Provider key (e.g., "qwen").
+     * @param apiKey Provider API key (optional if not required).
      * @param model Model name (optional, uses config default if empty).
-     * @param model_params Default model params.
-     * @param log_retention_hours Hours to keep debug artifacts.
+     * @param modelParams Default model params.
+     * @param logRetentionHours Hours to keep debug artifacts.
      * @param debug Enable response artifact logging.
-     * @param config_manager Optional configuration manager (shared ownership). If nullptr,
+     * @param configManager Optional configuration manager (shared ownership). If nullptr,
      *                       uses APIConfigManager::getInstance() singleton. This parameter
      *                       enables dependency injection for testing and custom configurations.
      */
-    LLMEngine(std::string_view provider_name,
-              std::string_view api_key = "",
+    LLMEngine(std::string_view providerName,
+              std::string_view apiKey = "",
               std::string_view model = "",
-              const nlohmann::json& model_params = {},
-              int log_retention_hours = Constants::DefaultValues::DEFAULT_LOG_RETENTION_HOURS,
+              const nlohmann::json& modelParams = {},
+              int logRetentionHours = Constants::DefaultValues::DEFAULT_LOG_RETENTION_HOURS,
               bool debug = false,
-              const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager = nullptr,
-              std::string_view base_url = "");
+              const std::shared_ptr<::LLMEngineAPI::IConfigManager>& configManager = nullptr,
+              std::string_view baseUrl = "");
 
     // Dependency injection constructor for tests and advanced usage
     /**
@@ -131,26 +131,26 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      * LLMEngine itself is not thread-safe).
      *
      * @param client Custom API client instance (transferred ownership)
-     * @param model_params Default model params
-     * @param log_retention_hours Hours to keep debug artifacts
+     * @param modelParams Default model params
+     * @param logRetentionHours Hours to keep debug artifacts
      * @param debug Enable response artifact logging
-     * @param temp_dir_provider Optional temporary directory provider (shared ownership).
+     * @param tempDirProvider Optional temporary directory provider (shared ownership).
      *                          If nullptr, uses DefaultTempDirProvider. Must be
      *                          thread-safe if shared across multiple LLMEngine instances.
      */
     LLMEngine(std::unique_ptr<::LLMEngineAPI::APIClient> client,
-              const nlohmann::json& model_params = {},
-              int log_retention_hours = 24,
+              const nlohmann::json& modelParams = {},
+              int logRetentionHours = Constants::DefaultValues::DEFAULT_LOG_RETENTION_HOURS,
               bool debug = false,
-              const std::shared_ptr<ITempDirProvider>& temp_dir_provider = nullptr);
+              const std::shared_ptr<ITempDirProvider>& tempDirProvider = nullptr);
 
     /**
      * @brief Run an analysis request.
      * @param prompt User/system instruction.
      * @param input Structured input payload.
-     * @param analysis_type Tag used for routing/processing.
+     * @param analysisType Tag used for routing/processing.
      * @param mode Provider-specific mode (default: "chat").
-     * @param prepend_terse_instruction If true (default), prepends a system instruction asking for
+     * @param prependTerseInstruction If true (default), prepends a system instruction asking for
      * brief, concise responses. Set to false to use the prompt verbatim without modification,
      * useful for evaluation or when precise prompt control is needed for downstream agents.
      * @return AnalysisResult with typed fields.
@@ -160,11 +160,11 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      *        Try to be brief and concise and complete your response in one or two sentences,
      *        mostly one sentence.\n"
      *       To disable this behavior and use your prompt exactly as provided, set
-     *       prepend_terse_instruction to false.
+     *       prependTerseInstruction to false.
      *
      * @example Basic usage:
      * ```cpp
-     * LLMEngine engine(LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash");
+     * LLMEngine engine(LLMEngineAPI::ProviderType::QWEN, apiKey, "qwen-flash");
      * nlohmann::json input = {{"system_prompt", "You are a helpful assistant."}};
      * auto result = engine.analyze("What is 2+2?", input, "math_question");
      * if (result.success) {
@@ -212,7 +212,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      */
     [[nodiscard]] AnalysisResult analyze(std::string_view prompt,
                                          const nlohmann::json& input,
-                                         std::string_view analysis_type,
+                                         std::string_view analysisType,
                                          const RequestOptions& options);
 
     /**
@@ -220,15 +220,15 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      * @copydoc analyze
      */
     [[nodiscard]] AnalysisResult analyze(const AnalysisInput& input,
-                                         std::string_view analysis_type,
+                                         std::string_view analysisType,
                                          const RequestOptions& options = {});
 
     // Overloaded analyze for backward compatibility
     [[nodiscard]] AnalysisResult analyze(std::string_view prompt,
                                          const nlohmann::json& input,
-                                         std::string_view analysis_type,
+                                         std::string_view analysisType,
                                          std::string_view mode = "chat",
-                                         bool prepend_terse_instruction = true);
+                                         bool prependTerseInstruction = true);
 
     /**
      * @brief Run an analysis request asynchronously.
@@ -237,9 +237,9 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      */
     [[nodiscard]] std::future<AnalysisResult> analyzeAsync(std::string_view prompt,
                                                            const nlohmann::json& input,
-                                                           std::string_view analysis_type,
+                                                           std::string_view analysisType,
                                                            std::string_view mode = "chat",
-                                                           bool prepend_terse_instruction = true);
+                                                           bool prependTerseInstruction = true);
 
     /**
      * @brief Run an analysis request asynchronously with options.
@@ -247,7 +247,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      */
     [[nodiscard]] std::future<AnalysisResult> analyzeAsync(std::string_view prompt,
                                                            const nlohmann::json& input,
-                                                           std::string_view analysis_type,
+                                                           std::string_view analysisType,
                                                            const RequestOptions& options);
 
     /**
@@ -257,7 +257,7 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      */
     void analyzeStream(std::string_view prompt,
                        const nlohmann::json& input,
-                       std::string_view analysis_type,
+                       std::string_view analysisType,
                        const RequestOptions& options,
                        StreamCallback callback);
 
@@ -283,12 +283,12 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      * @brief Run a batch of analysis requests in parallel.
      *
      * @param inputs Vector of inputs to process.
-     * @param analysis_type Analysis type tag for all requests.
+     * @param analysisType Analysis type tag for all requests.
      * @param options Request options shared by all requests (unless overridden).
      * @return Vector of results in the same order as inputs.
      */
     [[nodiscard]] std::vector<AnalysisResult> analyzeBatch(const std::vector<AnalysisInput>& inputs,
-                                                           std::string_view analysis_type,
+                                                           std::string_view analysisType,
                                                            const RequestOptions& options = {});
 
     /**
@@ -333,11 +333,11 @@ class LLMENGINE_EXPORT LLMEngine : public IModelContext {
      * **Security:** Only directories within the default root are accepted to prevent
      * accidental deletion of system directories.
      *
-     * @param tmp_dir Temporary directory path (must be within default root)
+     * @param tmpDir Temporary directory path (must be within default root)
      * @return true if the directory was set successfully, false if it was rejected or an error
      * occurred
      */
-    [[nodiscard]] bool setTempDirectory(const std::string& tmp_dir);
+    [[nodiscard]] bool setTempDirectory(const std::string& tmpDir);
 
     /**
      * @brief Set default request options applied to all requests unless overridden.

@@ -32,48 +32,7 @@ constexpr const char* TMP_DIR = "/tmp/llmengine";
  */
 [[nodiscard]] std::vector<std::string> readLines(std::string_view filepath, size_t max_lines = 100);
 
-/**
- * @brief Execute a command and capture stdout/stderr lines.
- *
- * SECURITY: This function uses posix_spawn() which does NOT route through a shell,
- * eliminating shell injection risks. The command string is parsed into an argv array
- * and executed directly, bypassing shell interpretation entirely.
- *
- * Validation rules:
- * - Allowed: alphanumeric, single spaces (no newlines/tabs), hyphens, underscores, dots, forward
- * slashes
- * - Rejected: all control characters (newlines, tabs, carriage returns, etc.)
- * - Rejected: shell metacharacters (|, &, ;, $, `, <, >, parentheses, brackets, wildcards, etc.)
- * - Rejected: multiple consecutive spaces
- *
- * The command string is split on spaces to create the argument vector. Only simple
- * commands with space-separated arguments are supported (no shell features).
- *
- * @param cmd Command string to execute (e.g., "ls -la /tmp") - must be trusted/validated
- * @param logger Optional logger for error messages (nullptr to suppress)
- * @return Vector of output lines (stdout and stderr merged)
- */
-[[nodiscard]] std::vector<std::string> execCommand(std::string_view cmd,
-                                                   ::LLMEngine::Logger* logger = nullptr);
 
-/**
- * @brief Execute a command with pre-parsed arguments (bypasses shell parsing entirely).
- *
- * This overload accepts a vector of arguments directly, completely bypassing shell
- * parsing and validation. Use this for trusted inputs where you have full control
- * over the argument list (e.g., system utilities, tooling scenarios).
- *
- * SECURITY: This function uses posix_spawn() which does NOT route through a shell.
- * No validation is performed on arguments - they are passed directly to execvp().
- * Only use this with trusted, well-formed argument vectors.
- *
- * @param args Vector of arguments (first element is the program, subsequent are arguments)
- *             Example: {"ls", "-la", "/tmp"}
- * @param logger Optional logger for error messages (nullptr to suppress)
- * @return Vector of output lines (stdout and stderr merged)
- */
-[[nodiscard]] std::vector<std::string> execCommand(const std::vector<std::string>& args,
-                                                   ::LLMEngine::Logger* logger = nullptr);
 
 /**
  * @brief Remove Markdown syntax from input string.

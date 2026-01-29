@@ -255,6 +255,7 @@ llmengine_test(test_batch_concurrency test_batch_concurrency.cpp test_support_fa
 llmengine_test(test_builder_refinements test_builder_refinements.cpp)
 llmengine_test(test_async_cancellation test_async_cancellation.cpp test_support_fake)
 llmengine_test(test_validation_and_interceptors test_validation_and_interceptors.cpp test_support_fake)
+llmengine_test(test_command_executor test_command_executor.cpp)
 
 
 

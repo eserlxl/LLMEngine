@@ -10,7 +10,7 @@
 
 #include "LLMEngine/APIClient.hpp"
 #include "LLMEngine/AnalysisInput.hpp"
-#include "LLMEngine/Constants.hpp"
+
 #include "LLMEngine/HttpStatus.hpp"
 #include "LLMEngine/IConfigManager.hpp"
 #include "LLMEngine/IMetricsCollector.hpp"
@@ -21,18 +21,17 @@
 #include "LLMEngine/ParameterMerger.hpp"
 #include "LLMEngine/SecureString.hpp"
 #include "LLMEngine/TempDirectoryService.hpp"
-#include "LLMEngine/Utils/Semaphore.hpp"
+
 #include "LLMEngine/Utils/ThreadPool.hpp"
 
 #include <chrono>
 #include <mutex>
 #include <shared_mutex>
 
-#include <algorithm>
-#include <cctype>
+
 
 #include <cstdlib>
-#include <filesystem>
+
 #include <stdexcept>
 #include <string>
 
@@ -48,78 +47,126 @@ namespace LLMEngine {
 
 // Internal state structure implementation
 
+namespace {
+class EngineStateAdapter : public IModelContext {
+    std::shared_ptr<LLMEngine::EngineState> s;
+
+  public:
+    explicit EngineStateAdapter(std::shared_ptr<LLMEngine::EngineState> st) : s(std::move(st)) {}
+    std::string getTempDirectory() const override {
+        std::shared_lock lock(s->config_mutex_);
+        return s->tmp_dir_;
+    }
+    std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override {
+        std::shared_lock lock(s->config_mutex_);
+        return s->terse_prompt_builder_;
+    }
+    std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override {
+        std::shared_lock lock(s->config_mutex_);
+        return s->passthrough_prompt_builder_;
+    }
+    const nlohmann::json& getModelParams() const override {
+        std::shared_lock lock(s->config_mutex_);
+        return s->modelParams_;
+    }
+    bool areDebugFilesEnabled() const override {
+        std::shared_lock lock(s->config_mutex_);
+        if (!s->debug_)
+            return false;
+        if (s->debug_files_policy_)
+            return s->debug_files_policy_();
+        return !s->disable_debug_files_env_cached_;
+    }
+    std::shared_ptr<IArtifactSink> getArtifactSink() const override {
+        std::shared_lock lock(s->config_mutex_);
+        return s->artifact_sink_;
+    }
+    int getLogRetentionHours() const override {
+        std::shared_lock lock(s->config_mutex_);
+        return s->logRetentionHours_;
+    }
+    std::shared_ptr<Logger> getLogger() const override {
+        std::shared_lock lock(s->config_mutex_);
+        return s->logger_;
+    }
+    void prepareTempDirectory() override {
+        s->ensureSecureTmpDir();
+    }
+};
+} // namespace
+
 
 // --- Constructors ---
 
 LLMEngine::LLMEngine(std::unique_ptr<LLMAPI::APIClient> client,
-                     const nlohmann::json& model_params,
-                     int log_retention_hours,
+                     const nlohmann::json& modelParams,
+                     int logRetentionHours,
                      bool debug,
-                     const std::shared_ptr<ITempDirProvider>& temp_dir_provider) {
-    state_ = std::make_shared<EngineState>(model_params, log_retention_hours, debug);
+                     const std::shared_ptr<ITempDirProvider>& tempDirProvider) {
+    state_ = std::make_shared<EngineState>(modelParams, logRetentionHours, debug);
 
-    if (temp_dir_provider) {
-        state_->temp_dir_provider_ = temp_dir_provider;
-        state_->tmp_dir_ = temp_dir_provider->getTempDir();
+    if (tempDirProvider) {
+        state_->tempDirProvider_ = tempDirProvider;
+        state_->tmp_dir_ = tempDirProvider->getTempDir();
     }
 
     if (!client) {
         throw std::runtime_error("API client must not be null");
     }
     state_->api_client_ = std::move(client);
-    state_->provider_type_ = state_->api_client_->getProviderType();
+    state_->providerType_ = state_->api_client_->getProviderType();
 }
 
-LLMEngine::LLMEngine(LLMAPI::ProviderType provider_type,
-                     std::string_view api_key,
+LLMEngine::LLMEngine(LLMAPI::ProviderType providerType,
+                     std::string_view apiKey,
                      std::string_view model,
-                     const nlohmann::json& model_params,
-                     int log_retention_hours,
+                     const nlohmann::json& modelParams,
+                     int logRetentionHours,
                      bool debug) {
-    state_ = std::make_shared<EngineState>(model_params, log_retention_hours, debug);
-    state_->provider_type_ = provider_type;
+    state_ = std::make_shared<EngineState>(modelParams, logRetentionHours, debug);
+    state_->providerType_ = providerType;
 
     // Resolve API key using ProviderBootstrap (respects environment variables)
-    state_->api_key_ =
-        ProviderBootstrap::resolveApiKey(provider_type, api_key, "", state_->logger_.get());
+    state_->apiKey_ =
+        ProviderBootstrap::resolveApiKey(providerType, apiKey, "", state_->logger_.get());
 
     state_->model_ = std::string(model);
-    state_->config_manager_ = std::shared_ptr<LLMAPI::IConfigManager>(
+    state_->configManager_ = std::shared_ptr<LLMAPI::IConfigManager>(
         &LLMAPI::APIConfigManager::getInstance(), [](LLMAPI::IConfigManager*) {});
 
     state_->initializeAPIClient();
 }
 
-LLMEngine::LLMEngine(std::string_view provider_name,
-                     std::string_view api_key,
+LLMEngine::LLMEngine(std::string_view providerName,
+                     std::string_view apiKey,
                      std::string_view model,
-                     const nlohmann::json& model_params,
-                     int log_retention_hours,
+                     const nlohmann::json& modelParams,
+                     int logRetentionHours,
                      bool debug,
-                     const std::shared_ptr<LLMAPI::IConfigManager>& config_manager,
-                     std::string_view base_url) {
-    state_ = std::make_shared<EngineState>(model_params, log_retention_hours, debug);
+                     const std::shared_ptr<LLMAPI::IConfigManager>& configManager,
+                     std::string_view baseUrl) {
+    state_ = std::make_shared<EngineState>(modelParams, logRetentionHours, debug);
 
     // Manage config manager
-    if (config_manager) {
-        state_->config_manager_ = config_manager;
+    if (configManager) {
+        state_->configManager_ = configManager;
     } else {
-        state_->config_manager_ = std::shared_ptr<LLMAPI::IConfigManager>(
+        state_->configManager_ = std::shared_ptr<LLMAPI::IConfigManager>(
             &LLMAPI::APIConfigManager::getInstance(), [](LLMAPI::IConfigManager*) {});
     }
 
-    auto bootstrap_result = ProviderBootstrap::bootstrap(
-        provider_name, api_key, model, state_->config_manager_, state_->logger_.get());
+    auto bootstrapResult = ProviderBootstrap::bootstrap(
+        providerName, apiKey, model, state_->configManager_, state_->logger_.get());
 
-    state_->provider_type_ = bootstrap_result.provider_type;
-    state_->api_key_ = std::move(bootstrap_result.api_key);
-    state_->model_ = bootstrap_result.model;
+    state_->providerType_ = bootstrapResult.providerType;
+    state_->apiKey_ = std::move(bootstrapResult.apiKey);
+    state_->model_ = bootstrapResult.model;
     
-    // Use bootstrapped URL unless explicit base_url is provided
-    if (!base_url.empty()) {
-        state_->ollama_url_ = std::string(base_url);
+    // Use bootstrapped URL unless explicit baseUrl is provided
+    if (!baseUrl.empty()) {
+        state_->ollama_url_ = std::string(baseUrl);
     } else {
-        state_->ollama_url_ = bootstrap_result.ollama_url;
+        state_->ollama_url_ = bootstrapResult.ollama_url;
     }
 
     state_->initializeAPIClient();
@@ -140,7 +187,7 @@ void LLMEngine::validateInput(const AnalysisInput& input) const {
 }
 
 AnalysisResult LLMEngine::analyze(const AnalysisInput& input,
-                                  std::string_view analysis_type,
+                                  std::string_view analysisType,
                                   const RequestOptions& options) {
     validateInput(input);
     if (state_->metrics_collector_) {
@@ -148,7 +195,7 @@ AnalysisResult LLMEngine::analyze(const AnalysisInput& input,
         auto start = std::chrono::high_resolution_clock::now();
 
         // Execute original analyze
-        nlohmann::json input_json = input.toJson();
+        nlohmann::json inputJson = input.toJson();
         // Extract system prompt if present to optimize/override if needed,
         // but explicit input usually overrides.
         // For now, we perform the direct call.
@@ -160,14 +207,14 @@ AnalysisResult LLMEngine::analyze(const AnalysisInput& input,
             effectiveOptions = RequestOptions::merge(state_->default_request_options_, options);
         }
 
-        auto result = analyze(input.system_prompt, input_json, analysis_type, effectiveOptions);
+        auto result = analyze(input.system_prompt, inputJson, analysisType, effectiveOptions);
 
         auto end = std::chrono::high_resolution_clock::now();
         long latency = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
         std::vector<MetricTag> tags = {{"provider", getProviderName()},
                                        {"model", getModelName()},
-                                       {"type", std::string(analysis_type)},
+                                       {"type", std::string(analysisType)},
                                        {"success", result.success ? "true" : "false"}};
         state_->metrics_collector_->recordLatency("llm_engine.analyze", latency, tags);
 
@@ -189,8 +236,8 @@ AnalysisResult LLMEngine::analyze(const AnalysisInput& input,
     // Should we pass input.user_message as prompt?
     // Yes, usually the first arg is the "prompt" (user message).
 
-    std::string_view effective_prompt = input.user_message;
-    if (effective_prompt.empty() && !input.system_prompt.empty()) {
+    std::string_view effectivePrompt = input.user_message;
+    if (effectivePrompt.empty() && !input.system_prompt.empty()) {
         // Fallback or specific logic?
         // For now, assume user_message is the primary prompt.
     }
@@ -201,27 +248,27 @@ AnalysisResult LLMEngine::analyze(const AnalysisInput& input,
         effectiveOptions = RequestOptions::merge(state_->default_request_options_, options);
     }
 
-    return analyze(effective_prompt, input.toJson(), analysis_type, effectiveOptions);
+    return analyze(effectivePrompt, input.toJson(), analysisType, effectiveOptions);
 }
 
 AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                   const nlohmann::json& input,
-                                  std::string_view analysis_type,
+                                  std::string_view analysisType,
                                   const RequestOptions& options) {
     validateInput(AnalysisInput::fromJson(input)); // Validate input structure
     state_->ensureSecureTmpDir();
 
     // Determine mode and instruction from options (if extended later, for now just defaults)
     std::string mode = "chat";
-    bool prepend_terse_instruction = true;
+    bool prependTerseInstruction = true;
 
     // Build context
     RequestContext ctx = RequestContextBuilder::build(static_cast<IModelContext&>(*this),
                                                       prompt,
                                                       input,
-                                                      analysis_type,
+                                                      analysisType,
                                                       mode,
-                                                      prepend_terse_instruction);
+                                                      prependTerseInstruction);
 
     // Run Interceptors (onRequest)
     {
@@ -244,11 +291,11 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
     // Iteration 1 limitation: DefaultRequestExecutor might not support dynamic timeout override yet.
     // We will just execute.
 
-    LLMAPI::APIResponse api_response;
+    LLMAPI::APIResponse apiResponse;
     AnalysisResult result; // Declare result early for error paths? No, strictly following flow.
 
     if (state_->request_executor_) {
-        api_response = state_->request_executor_->execute(
+        apiResponse = state_->request_executor_->execute(
             state_->api_client_.get(), ctx.fullPrompt, input, ctx.finalParams, options);
     } else {
         if (state_->logger_) {
@@ -274,10 +321,10 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         return result;
     }
 
-    result = ResponseHandler::handle(api_response,
+    result = ResponseHandler::handle(apiResponse,
                                      ctx.debugManager.get(),
                                      ctx.requestTmpDir,
-                                     analysis_type,
+                                     analysisType,
                                      ctx.writeDebugFiles,
                                      state_->logger_.get());
 
@@ -294,9 +341,9 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
 
 AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                   const nlohmann::json& input,
-                                  std::string_view analysis_type,
+                                  std::string_view analysisType,
                                   std::string_view mode,
-                                  bool prepend_terse_instruction) {
+                                  bool prependTerseInstruction) {
     // Forward to options-based overload?
     // Actually, the options overload lacks mode/prepend... arguments in my struct logic.
     // The previous implementation of overload was:
@@ -312,13 +359,13 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
     RequestContext ctx = RequestContextBuilder::build(static_cast<IModelContext&>(*this),
                                                       prompt,
                                                       input,
-                                                      analysis_type,
+                                                      analysisType,
                                                       mode,
-                                                      prepend_terse_instruction);
+                                                      prependTerseInstruction);
 
-    LLMAPI::APIResponse api_response;
+    LLMAPI::APIResponse apiResponse;
     if (state_->request_executor_) {
-        api_response = state_->request_executor_->execute(
+        apiResponse = state_->request_executor_->execute(
             state_->api_client_.get(), ctx.fullPrompt, input, ctx.finalParams);
     } else {
         return AnalysisResult{.success = false,
@@ -333,19 +380,19 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                               .tool_calls = {}};
     }
 
-    return ResponseHandler::handle(api_response,
+    return ResponseHandler::handle(apiResponse,
                                    ctx.debugManager.get(),
                                    ctx.requestTmpDir,
-                                   analysis_type,
+                                   analysisType,
                                    ctx.writeDebugFiles,
                                    state_->logger_.get());
 }
 
 std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                                     const nlohmann::json& input,
-                                                    std::string_view analysis_type,
+                                                    std::string_view analysisType,
                                                     std::string_view mode,
-                                                    bool prepend_terse_instruction) {
+                                                    bool prependTerseInstruction) {
     // Copy shared state pointer. Efficiently captures the PIMPL state,
     // ensuring the engine's internal components remain valid for the duration
     // of the async task, even if the LLMEngine instance itself is destroyed.
@@ -356,62 +403,18 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
         [state /* captured shared state */,
          prompt = std::string(prompt),
          input = input,
-         analysis_type = std::string(analysis_type),
+         analysisType = std::string(analysisType),
          mode = std::string(mode),
-         prepend_terse_instruction]() -> AnalysisResult {
-            struct StateAdapter : public IModelContext {
-                std::shared_ptr<EngineState> s;
-                StateAdapter(std::shared_ptr<EngineState> st) : s(st) {}
-                std::string getTempDirectory() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    return s->tmp_dir_;
-                }
-                std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    return s->terse_prompt_builder_;
-                }
-                std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    return s->passthrough_prompt_builder_;
-                }
-                const nlohmann::json& getModelParams() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    return s->model_params_;
-                }
-                bool areDebugFilesEnabled() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    if (!s->debug_)
-                        return false;
-                    if (s->debug_files_policy_)
-                        return s->debug_files_policy_();
-                    return !s->disable_debug_files_env_cached_;
-                }
-                std::shared_ptr<IArtifactSink> getArtifactSink() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    return s->artifact_sink_;
-                }
-                int getLogRetentionHours() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    return s->log_retention_hours_;
-                }
-                std::shared_ptr<Logger> getLogger() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    return s->logger_;
-                }
-                void prepareTempDirectory() override {
-                    s->ensureSecureTmpDir();
-                }
-            };
-
-            StateAdapter adapter(state);
+         prependTerseInstruction]() -> AnalysisResult {
+            EngineStateAdapter adapter(state);
             state->ensureSecureTmpDir();
 
             RequestContext ctx = RequestContextBuilder::build(
-                adapter, prompt, input, analysis_type, mode, prepend_terse_instruction);
+                adapter, prompt, input, analysisType, mode, prependTerseInstruction);
 
-            LLMAPI::APIResponse api_response;
+            LLMAPI::APIResponse apiResponse;
             if (state->request_executor_) {
-                api_response = state->request_executor_->execute(
+                apiResponse = state->request_executor_->execute(
                     state->api_client_.get(), ctx.fullPrompt, input, ctx.finalParams);
             } else {
                 return AnalysisResult{.success = false,
@@ -426,10 +429,10 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                       .tool_calls = {}};
             }
 
-            return ResponseHandler::handle(api_response,
+            return ResponseHandler::handle(apiResponse,
                                            ctx.debugManager.get(),
                                            ctx.requestTmpDir,
-                                           analysis_type,
+                                           analysisType,
                                            ctx.writeDebugFiles,
                                            state->logger_.get());
         });
@@ -439,7 +442,7 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
 
 std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                                     const nlohmann::json& input,
-                                                    std::string_view analysis_type,
+                                                    std::string_view analysisType,
                                                     const RequestOptions& options) {
     validateInput(AnalysisInput::fromJson(input));
     // Copy shared state pointer. Efficiently captures the PIMPL state,
@@ -456,68 +459,24 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
 
     // Default mode/instruction for options-based overload
     std::string mode = "chat";
-    bool prepend_terse_instruction = true;
+    bool prependTerseInstruction = true;
 
     return std::async(
         std::launch::async,
         [state /* captured shared state */,
          prompt = std::string(prompt),
          input = input,
-         analysis_type = std::string(analysis_type),
+         analysisType = std::string(analysisType),
          mode = std::string(mode),
-         prepend_terse_instruction,
+         prependTerseInstruction,
          options=effectiveOptions]() -> AnalysisResult {
             auto start = std::chrono::high_resolution_clock::now();
 
-            struct StateAdapter : public IModelContext {
-                std::shared_ptr<EngineState> s;
-                StateAdapter(std::shared_ptr<EngineState> st) : s(st) {}
-                std::string getTempDirectory() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    return s->tmp_dir_;
-                }
-                std::shared_ptr<IPromptBuilder> getTersePromptBuilder() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    return s->terse_prompt_builder_;
-                }
-                std::shared_ptr<IPromptBuilder> getPassthroughPromptBuilder() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    return s->passthrough_prompt_builder_;
-                }
-                const nlohmann::json& getModelParams() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    return s->model_params_;
-                }
-                bool areDebugFilesEnabled() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    if (!s->debug_)
-                        return false;
-                    if (s->debug_files_policy_)
-                        return s->debug_files_policy_();
-                    return !s->disable_debug_files_env_cached_;
-                }
-                std::shared_ptr<IArtifactSink> getArtifactSink() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    return s->artifact_sink_;
-                }
-                int getLogRetentionHours() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    return s->log_retention_hours_;
-                }
-                std::shared_ptr<Logger> getLogger() const override {
-                    std::shared_lock lock(s->config_mutex_);
-                    return s->logger_;
-                }
-                void prepareTempDirectory() override {
-                    s->ensureSecureTmpDir();
-                }
-            };
-
-            StateAdapter adapter(state);
+            EngineStateAdapter adapter(state);
             state->ensureSecureTmpDir();
 
             RequestContext ctx = RequestContextBuilder::build(
-                adapter, prompt, input, analysis_type, mode, prepend_terse_instruction);
+                adapter, prompt, input, analysisType, mode, prependTerseInstruction);
 
             // Run Interceptors (onRequest)
             {
@@ -534,9 +493,9 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
             ParameterMerger::mergeRequestOptions(ctx.finalParams, options);
 
 
-            LLMAPI::APIResponse api_response;
+            LLMAPI::APIResponse apiResponse;
             if (state->request_executor_) {
-                api_response = state->request_executor_->execute(
+                apiResponse = state->request_executor_->execute(
                     state->api_client_.get(), ctx.fullPrompt, input, ctx.finalParams, options);
             } else {
                 AnalysisResult errResult{.success = false,
@@ -555,10 +514,10 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                 return errResult;
             }
 
-            auto result = ResponseHandler::handle(api_response,
+            auto result = ResponseHandler::handle(apiResponse,
                                                   ctx.debugManager.get(),
                                                   ctx.requestTmpDir,
-                                                  analysis_type,
+                                                  analysisType,
                                                   ctx.writeDebugFiles,
                                                   state->logger_.get());
 
@@ -579,7 +538,7 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                     state->api_client_ ? state->api_client_->getProviderName() : "Ollama (Legacy)";
                 std::vector<MetricTag> tags = {{"provider", provider},
                                                {"model", state->model_},
-                                               {"type", analysis_type},
+                                               {"type", analysisType},
                                                {"success", result.success ? "true" : "false"},
                                                {"mode", "async"}};
 
@@ -601,7 +560,7 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
 
 void LLMEngine::analyzeStream(std::string_view prompt,
                                const nlohmann::json& input,
-                               std::string_view analysis_type,
+                               std::string_view analysisType,
                                const RequestOptions& options,
                                StreamCallback callback) {
     state_->ensureSecureTmpDir();
@@ -615,14 +574,14 @@ void LLMEngine::analyzeStream(std::string_view prompt,
     validateInput(AnalysisInput::fromJson(input));
 
     std::string mode = "chat";
-    bool prepend_terse_instruction = true;
+    bool prependTerseInstruction = true;
 
     RequestContext ctx = RequestContextBuilder::build(static_cast<IModelContext&>(*this),
                                                       prompt,
                                                       input,
-                                                      analysis_type,
+                                                      analysisType,
                                                       mode,
-                                                      prepend_terse_instruction);
+                                                      prependTerseInstruction);
 
     // Run Interceptors (onRequest)
     {
@@ -640,15 +599,15 @@ void LLMEngine::analyzeStream(std::string_view prompt,
     ParameterMerger::mergeRequestOptions(ctx.finalParams, effectiveOptions);
 
 
-    auto start_time = std::chrono::high_resolution_clock::now();
+    auto startTime = std::chrono::high_resolution_clock::now();
     
     // Use shared pointer to accumulate usage across chunks
-    auto usage_accum = std::make_shared<std::optional<AnalysisResult::UsageStats>>();
+    auto usageAccum = std::make_shared<std::optional<AnalysisResult::UsageStats>>();
 
-    auto wrapped_callback = [callback, this, start_time, analysis_type, usage_accum](const StreamChunk& chunk) {
+    auto wrappedCallback = [callback, this, startTime, analysisType, usageAccum](const StreamChunk& chunk) {
         // Accumulate usage if present in this chunk
         if (chunk.usage.has_value()) {
-            *usage_accum = chunk.usage;
+            *usageAccum = chunk.usage;
         }
         
         callback(chunk);
@@ -656,17 +615,17 @@ void LLMEngine::analyzeStream(std::string_view prompt,
         if (chunk.is_done && state_->metrics_collector_) {
             auto end = std::chrono::high_resolution_clock::now();
             long latency =
-                std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count();
+                std::chrono::duration_cast<std::chrono::milliseconds>(end - startTime).count();
             std::vector<MetricTag> tags = {
                 {"provider", getProviderName()},
                 {"model", getModelName()},
-                {"type", std::string(analysis_type)},
+                {"type", std::string(analysisType)},
                 {"success", chunk.error_code == LLMEngineErrorCode::None ? "true" : "false"},
                 {"mode", "stream"}};
             state_->metrics_collector_->recordLatency("llm_engine.analyze", latency, tags);
 
-            if (usage_accum->has_value()) {
-                const auto& usage = **usage_accum;
+            if (usageAccum->has_value()) {
+                const auto& usage = **usageAccum;
                 state_->metrics_collector_->recordCounter(
                     "llm_engine.tokens_input", usage.promptTokens, tags);
                 state_->metrics_collector_->recordCounter(
@@ -685,7 +644,7 @@ void LLMEngine::analyzeStream(std::string_view prompt,
                                                  ctx.fullPrompt,
                                                  input,
                                                  ctx.finalParams,
-                                                 wrapped_callback,
+                                                 wrappedCallback,
                                                  effectiveOptions);
     } else if (state_->api_client_) {
         if (state_->logger_) {
@@ -693,7 +652,7 @@ void LLMEngine::analyzeStream(std::string_view prompt,
                                  "Request executor not set, falling back to direct client usage.");
         }
         state_->api_client_->sendRequestStream(
-            ctx.fullPrompt, input, ctx.finalParams, wrapped_callback, effectiveOptions);
+            ctx.fullPrompt, input, ctx.finalParams, wrappedCallback, effectiveOptions);
     } else {
         if (state_->logger_) {
             state_->logger_->log(LogLevel::Error, "API client not initialized for streaming.");
@@ -703,19 +662,19 @@ void LLMEngine::analyzeStream(std::string_view prompt,
         errChunk.error_code = LLMEngineErrorCode::Unknown;
         errChunk.error_message = "API client/Executor not initialized";
         errChunk.error_message = "API client/Executor not initialized";
-        wrapped_callback(errChunk);
+        wrappedCallback(errChunk);
     }
 
     // Run Interceptors (onResponse) - approximated for stream
     // Note: Streaming makes full onResponse difficult as result is built incrementally.
     // We can trigger it if we accumulated a full result or just skip for now?
-    // Given usage_accum logic, we could potentially construct a partial result?
+    // Given usageAccum logic, we could potentially construct a partial result?
     // For now, skipping full onResponse for stream to avoid complexity,
     // as IInterceptor::onResponse takes AnalysisResult&.
 }
 
 std::vector<AnalysisResult> LLMEngine::analyzeBatch(const std::vector<AnalysisInput>& inputs,
-                                                    std::string_view analysis_type,
+                                                    std::string_view analysisType,
                                                     const RequestOptions& options) {
     if (inputs.empty()) {
         return {};
@@ -749,8 +708,8 @@ std::vector<AnalysisResult> LLMEngine::analyzeBatch(const std::vector<AnalysisIn
 
     for (const auto& input : inputs) {
         futures.push_back(
-            pool.enqueue([this, input, analysis_type, effectiveOptions]() {
-                return this->analyze(input, analysis_type, effectiveOptions);
+            pool.enqueue([this, input, analysisType, effectiveOptions]() {
+                return this->analyze(input, analysisType, effectiveOptions);
             }));
     }
 
@@ -786,15 +745,15 @@ std::string LLMEngine::getModelName() const {
     return state_->model_;
 }
 LLMAPI::ProviderType LLMEngine::getProviderType() const {
-    return state_->provider_type_;
+    return state_->providerType_;
 }
 
 std::string LLMEngine::getBackendType() const {
-    return LLMAPI::APIClientFactory::providerTypeToString(state_->provider_type_);
+    return LLMAPI::APIClientFactory::providerTypeToString(state_->providerType_);
 }
 
 bool LLMEngine::isOnlineProvider() const {
-    return state_->provider_type_ != LLMAPI::ProviderType::OLLAMA;
+    return state_->providerType_ != LLMAPI::ProviderType::OLLAMA;
 }
 
 std::string LLMEngine::getTempDirectory() const {
@@ -807,7 +766,7 @@ std::shared_ptr<IPromptBuilder> LLMEngine::getPassthroughPromptBuilder() const {
     return state_->passthrough_prompt_builder_;
 }
 const nlohmann::json& LLMEngine::getModelParams() const {
-    return state_->model_params_;
+    return state_->modelParams_;
 }
 bool LLMEngine::areDebugFilesEnabled() const {
     if (!state_->debug_)
@@ -820,7 +779,7 @@ std::shared_ptr<IArtifactSink> LLMEngine::getArtifactSink() const {
     return state_->artifact_sink_;
 }
 int LLMEngine::getLogRetentionHours() const {
-    return state_->log_retention_hours_;
+    return state_->logRetentionHours_;
 }
 std::shared_ptr<Logger> LLMEngine::getLogger() const {
     return state_->logger_;
@@ -834,12 +793,12 @@ bool LLMEngine::isDebugEnabled() const {
 }
 
 bool LLMEngine::setTempDirectory(const std::string& tmp_dir) {
-    const std::string allowed_root = state_->temp_dir_provider_
-                                         ? state_->temp_dir_provider_->getTempDir()
+    const std::string allowedRoot = state_->tempDirProvider_
+                                         ? state_->tempDirProvider_->getTempDir()
                                          : DefaultTempDirProvider().getTempDir();
 
     if (TempDirectoryService::validatePathWithinRoot(
-            tmp_dir, allowed_root, state_->logger_.get())) {
+            tmp_dir, allowedRoot, state_->logger_.get())) {
         state_->tmp_dir_ = tmp_dir;
         state_->tmp_dir_verified_ = false;
         return true;

@@ -367,6 +367,7 @@ add_library(${PROJECT_NAME}
     src/LLMEngineBuilder.cpp
     src/ToolBuilder.cpp
     src/Utils/ThreadPool.cpp
+    src/Utils/CommandExecutor.cpp
 )
 
 # Versioning for shared libraries
