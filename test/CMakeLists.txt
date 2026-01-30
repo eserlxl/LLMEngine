@@ -188,21 +188,21 @@ target_link_libraries(test_support_fake PUBLIC LLMEngine nlohmann_json::nlohmann
 apply_test_sanitizer_flags(test_support_fake)
 
 # ---- Test Executables --------------------------------------------------------
-llmengine_test(test_llmengine core/test.cpp cpr::cpr OpenSSL::SSL OpenSSL::Crypto)
+llmengine_test(test_llmengine core/general/test.cpp cpr::cpr OpenSSL::SSL OpenSSL::Crypto)
 set_target_properties(test_llmengine PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build")
 
 llmengine_test(test_api http/test_api.cpp cpr::cpr OpenSSL::SSL OpenSSL::Crypto)
 set_target_properties(test_api PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build")
 
-llmengine_test(test_api_config_manager core/test_api_config_manager.cpp)
-llmengine_test(test_api_config_manager_thread_safety core/test_api_config_manager_thread_safety.cpp)
-llmengine_test(test_request_context_builder_thread_safety core/test_request_context_builder_thread_safety.cpp)
+llmengine_test(test_api_config_manager core/config/test_api_config_manager.cpp)
+llmengine_test(test_api_config_manager_thread_safety core/config/test_api_config_manager_thread_safety.cpp)
+llmengine_test(test_request_context_builder_thread_safety core/builder/test_request_context_builder_thread_safety.cpp)
 llmengine_test(test_api_client_factory providers/test_api_client_factory.cpp)
 llmengine_test(test_provider_type_mapping providers/test_provider_type_mapping.cpp)
-llmengine_test(test_llmengine_construction core/test_llmengine_construction.cpp test_support_fake)
+llmengine_test(test_llmengine_construction core/general/test_llmengine_construction.cpp test_support_fake)
 llmengine_test(test_integration integration/test_integration.cpp test_support_fake)
 
-llmengine_test(test_api_config_parsing core/test_api_config_parsing.cpp)
+llmengine_test(test_api_config_parsing core/config/test_api_config_parsing.cpp)
 if (BUILD_TESTING)
   set_tests_properties(test_api_config_parsing PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 endif()
@@ -214,7 +214,7 @@ llmengine_test(test_request_logger http/test_request_logger.cpp)
 llmengine_test(test_retry_policy http/test_retry_policy.cpp cpr::cpr)
 target_include_directories(test_retry_policy PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 
-llmengine_test(test_parameter_merger core/test_parameter_merger.cpp)
+llmengine_test(test_parameter_merger core/parameters/test_parameter_merger.cpp)
 llmengine_test(test_response_parser http/test_response_parser.cpp)
 
 llmengine_test(test_chat_completion_helper http/test_chat_completion_helper.cpp cpr::cpr)
@@ -222,14 +222,14 @@ target_include_directories(test_chat_completion_helper PRIVATE ${CMAKE_CURRENT_S
 
 llmengine_test(test_secret_redaction diagnostics/test_secret_redaction.cpp)
 
-llmengine_test(test_error_paths core/test_error_paths.cpp cpr::cpr)
+llmengine_test(test_error_paths core/validation/test_error_paths.cpp cpr::cpr)
 target_include_directories(test_error_paths PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 
-llmengine_test(test_async_stream core/test_async_stream.cpp test_support_fake)
-llmengine_test(test_async_lifetime core/test_async_lifetime.cpp)
-llmengine_test(test_result_extensions core/test_result_extensions.cpp)
+llmengine_test(test_async_stream core/async/test_async_stream.cpp test_support_fake)
+llmengine_test(test_async_lifetime core/async/test_async_lifetime.cpp)
+llmengine_test(test_result_extensions core/result/test_result_extensions.cpp)
 llmengine_test(test_new_features_iter1 integration/test_new_features_iter1.cpp test_support_fake)
-llmengine_test(test_async_streaming_iter2 core/test_async_streaming_iter2.cpp test_support_fake)
+llmengine_test(test_async_streaming_iter2 core/async/test_async_streaming_iter2.cpp test_support_fake)
 llmengine_test(test_features_iter2 integration/test_features_iter2.cpp cpr::cpr test_support_fake)
 target_include_directories(test_features_iter2 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 llmengine_test(test_streaming_providers providers/test_streaming_providers.cpp cpr::cpr)
@@ -239,25 +239,25 @@ llmengine_test(test_timeout http/test_timeout.cpp test_support_fake)
 
 # Iteration 1 New Test
 llmengine_test(test_request_options_builder http/test_request_options_builder.cpp)
-llmengine_test(test_tool_builder core/test_tool_builder.cpp)
-llmengine_test(test_parameter_propagation core/test_parameter_propagation.cpp)
-llmengine_test(test_tool_builder_extended core/test_tool_builder_extended.cpp)
-llmengine_test(test_streaming_metrics_fix core/test_streaming_metrics_fix.cpp test_support_fake)
+llmengine_test(test_tool_builder core/builder/test_tool_builder.cpp)
+llmengine_test(test_parameter_propagation core/parameters/test_parameter_propagation.cpp)
+llmengine_test(test_tool_builder_extended core/builder/test_tool_builder_extended.cpp)
+llmengine_test(test_streaming_metrics_fix core/async/test_streaming_metrics_fix.cpp test_support_fake)
 llmengine_test(test_thread_pool utils/test_thread_pool.cpp)
-llmengine_test(test_analysis_result_extensions core/test_analysis_result_extensions.cpp)
-llmengine_test(test_parameter_merger_extended core/test_parameter_merger_extended.cpp)
-llmengine_test(test_llmengine_thread_safety core/test_llmengine_thread_safety.cpp test_support_fake)
+llmengine_test(test_analysis_result_extensions core/result/test_analysis_result_extensions.cpp)
+llmengine_test(test_parameter_merger_extended core/parameters/test_parameter_merger_extended.cpp)
+llmengine_test(test_llmengine_thread_safety core/general/test_llmengine_thread_safety.cpp test_support_fake)
 
 # Iteration 1 Extensions
-llmengine_test(test_llmengine_builder core/test_llmengine_builder.cpp)
-llmengine_test(test_batch_concurrency core/test_batch_concurrency.cpp test_support_fake)
+llmengine_test(test_llmengine_builder core/builder/test_llmengine_builder.cpp)
+llmengine_test(test_batch_concurrency core/general/test_batch_concurrency.cpp test_support_fake)
 
 # Iteration 2 Refinements
-llmengine_test(test_builder_refinements core/test_builder_refinements.cpp)
-llmengine_test(test_async_cancellation core/test_async_cancellation.cpp test_support_fake)
-llmengine_test(test_validation_and_interceptors core/test_validation_and_interceptors.cpp test_support_fake)
+llmengine_test(test_builder_refinements core/builder/test_builder_refinements.cpp)
+llmengine_test(test_async_cancellation core/async/test_async_cancellation.cpp test_support_fake)
+llmengine_test(test_validation_and_interceptors core/validation/test_validation_and_interceptors.cpp test_support_fake)
 llmengine_test(test_command_executor utils/test_command_executor.cpp)
-llmengine_test(test_validation_extended core/test_validation_extended.cpp)
+llmengine_test(test_validation_extended core/validation/test_validation_extended.cpp)
 
 
 
