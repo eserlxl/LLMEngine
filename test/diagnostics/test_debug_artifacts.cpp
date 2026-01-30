@@ -4,7 +4,7 @@
 #include "diagnostics/DebugArtifacts.hpp"
 #include "LLMEngine/providers/APIClient.hpp"
 #include "LLMEngine/diagnostics/DebugArtifactManager.hpp"
-#include "LLMEngine/utils/Utils.hpp"
+#include "LLMEngine/core/Constants.hpp"
 
 #include <cassert>
 #include <chrono>
@@ -24,7 +24,7 @@ static std::string readAll(const std::string& path) {
 int main() {
     namespace fs = std::filesystem;
     const std::string baseDir =
-        std::string(LLMEngine::Utils::TMP_DIR) + std::string("/llmengine_test_debug");
+        std::string(LLMEngine::Constants::FilePaths::TMP_DIR) + std::string("/llmengine_test_debug");
     std::error_code ec;
     fs::create_directories(baseDir, ec);
 

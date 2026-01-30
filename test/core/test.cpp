@@ -8,6 +8,7 @@
 #include "LLMEngine/core/LLMEngine.hpp"
 #include "LLMEngine/http/ResponseParser.hpp"
 #include "LLMEngine/utils/Utils.hpp"
+#include "LLMEngine/core/Constants.hpp"
 
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -127,7 +128,7 @@ int main() {
         std::cout << "Stripped: " << stripped << std::endl;
 
         // Test TMP_DIR
-        std::cout << "Temporary directory: " << ::LLMEngine::Utils::TMP_DIR << std::endl;
+        std::cout << "Temporary directory: " << ::LLMEngine::Constants::FilePaths::TMP_DIR << std::endl;
 
         std::cout << "\n=== All tests completed successfully! ===" << std::endl;
 

@@ -19,13 +19,7 @@ struct Logger;
 
 namespace LLMEngine {
 namespace Utils {
-/**
- * @brief Default directory for temporary artifacts.
- *
- * @deprecated Use LLMEngine::ITempDirProvider for thread-safe temporary directory management.
- * This constant is provided for backwards compatibility only.
- */
-constexpr const char* TMP_DIR = "/tmp/llmengine";
+
 
 /**
  * @brief Read up to max_lines from a file.
