@@ -9,14 +9,14 @@ void testResponseFormatBuilder() {
     auto text = ResponseFormatBuilder::text();
     assert(text["type"] == "text");
 
-    auto jsonObj = ResponseFormatBuilder::json_object();
+    auto jsonObj = ResponseFormatBuilder::jsonObject();
     assert(jsonObj["type"] == "json_object");
 
     nlohmann::json schema = {
         {"type", "object"},
         {"properties", {{"foo", {{"type", "string"}}}}}};
     
-    auto jsonSchema = ResponseFormatBuilder::json_schema("test_schema", schema, true);
+    auto jsonSchema = ResponseFormatBuilder::jsonSchema("test_schema", schema, true);
     assert(jsonSchema["type"] == "json_schema");
     assert(jsonSchema["json_schema"]["name"] == "test_schema");
     assert(jsonSchema["json_schema"]["strict"] == true);

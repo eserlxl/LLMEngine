@@ -102,8 +102,8 @@ struct LLMENGINE_EXPORT AnalysisInput {
         return *this;
     }
 
-    AnalysisInput& withImage(std::string_view image_data) {
-        images.emplace_back(image_data);
+    AnalysisInput& withImage(std::string_view imageData) {
+        images.emplace_back(imageData);
         return *this;
     }
 
@@ -114,8 +114,8 @@ struct LLMENGINE_EXPORT AnalysisInput {
      */
     AnalysisInput& withImageFromFile(const std::string& path);
 
-    AnalysisInput& withTools(const nlohmann::json& tools_json) {
-        tools = tools_json;
+    AnalysisInput& withTools(const nlohmann::json& toolsJson) {
+        tools = toolsJson;
         return *this;
     }
 
@@ -179,7 +179,7 @@ struct LLMENGINE_EXPORT AnalysisInput {
     /**
      * @brief Add a tool output message to the conversation history.
      */
-    AnalysisInput& addToolOutput(std::string_view tool_call_id, std::string_view content);
+    AnalysisInput& addToolOutput(std::string_view toolCallId, std::string_view content);
 
     /**
      * @brief Convert to legacy JSON format for API compliance.
@@ -199,7 +199,7 @@ struct LLMENGINE_EXPORT AnalysisInput {
      * @param error_message Output parameter for error details.
      * @return true if valid, false otherwise.
      */
-    [[nodiscard]] bool validate(std::string& error_message) const;
+    [[nodiscard]] bool validate(std::string& errorMessage) const;
     
     /**
      * @brief Create AnalysisInput from JSON payload.
@@ -215,11 +215,11 @@ class LLMENGINE_EXPORT ResponseFormatBuilder {
         return {{"type", "text"}};
     }
 
-    static nlohmann::json json_object() {
+    static nlohmann::json jsonObject() {
         return {{"type", "json_object"}};
     }
 
-    static nlohmann::json json_schema(std::string_view name,
+    static nlohmann::json jsonSchema(std::string_view name,
                                       const nlohmann::json& schema,
                                       bool strict = true) {
         nlohmann::json j;
@@ -232,10 +232,10 @@ class LLMENGINE_EXPORT ResponseFormatBuilder {
         return j;
     }
 
-    static nlohmann::json json_schema(std::string_view name,
+    static nlohmann::json jsonSchema(std::string_view name,
                                       const ToolBuilder& schemaBuilder,
                                       bool strict = true) {
-        return json_schema(name, schemaBuilder.build(), strict);
+        return jsonSchema(name, schemaBuilder.build(), strict);
     }
 };
 

@@ -10,8 +10,12 @@
 
 namespace LLMEngine {
 
-// A tiny Expected-like result type for non-exception error propagation.
-// Header-only; does not impose ABI changes on consumers.
+/**
+ * @brief A lightweight Expected-like result type for non-exception error propagation.
+ *
+ * Provides a Rust-like Result<T, E> type that holds either a value or an error.
+ * Designed to be header-only and zero-overhead where possible.
+ */
 template <typename T, typename E> class Result {
   public:
     [[nodiscard]] static Result ok(T value) {

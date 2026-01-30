@@ -207,7 +207,9 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                   const nlohmann::json& input,
                                   std::string_view analysisType,
                                   const RequestOptions& options) {
-    validateInput(AnalysisInput::fromJson(input)); // Validate input structure
+    AnalysisInput ai = AnalysisInput::fromJson(input);
+    if (!prompt.empty()) ai.withUserMessage(prompt);
+    validateInput(ai); // Validate input structure with prompt context
     state_->ensureSecureTmpDir();
 
     // Determine mode and instruction from options (if extended later, for now just defaults)
@@ -304,7 +306,9 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
     // This is a bit conflicting.
     // Let's keep the original implementation logic here, but using state_.
     
-    validateInput(AnalysisInput::fromJson(input)); // Validate input structure
+    AnalysisInput ai = AnalysisInput::fromJson(input);
+    if (!prompt.empty()) ai.withUserMessage(prompt);
+    validateInput(ai); // Validate input structure
 
     state_->ensureSecureTmpDir();
 
@@ -396,7 +400,9 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                                     const nlohmann::json& input,
                                                     std::string_view analysisType,
                                                     const RequestOptions& options) {
-    validateInput(AnalysisInput::fromJson(input));
+    AnalysisInput ai = AnalysisInput::fromJson(input);
+    if (!prompt.empty()) ai.withUserMessage(prompt);
+    validateInput(ai);
     // Copy shared state pointer. Efficiently captures the PIMPL state,
     // ensuring the engine's internal components remain valid for the duration
     // of the async task, even if the LLMEngine instance itself is destroyed.
@@ -523,7 +529,9 @@ void LLMEngine::analyzeStream(std::string_view prompt,
         effectiveOptions = RequestOptions::merge(state_->defaultRequestOptions_, options);
     }
 
-    validateInput(AnalysisInput::fromJson(input));
+    AnalysisInput ai = AnalysisInput::fromJson(input);
+    if (!prompt.empty()) ai.withUserMessage(prompt);
+    validateInput(ai);
 
     std::string mode = "chat";
     bool prependTerseInstruction = true;

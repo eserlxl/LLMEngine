@@ -257,6 +257,7 @@ llmengine_test(test_builder_refinements core/test_builder_refinements.cpp)
 llmengine_test(test_async_cancellation core/test_async_cancellation.cpp test_support_fake)
 llmengine_test(test_validation_and_interceptors core/test_validation_and_interceptors.cpp test_support_fake)
 llmengine_test(test_command_executor utils/test_command_executor.cpp)
+llmengine_test(test_validation_extended core/test_validation_extended.cpp)
 
 
 

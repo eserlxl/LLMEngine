@@ -20,11 +20,11 @@ AnalysisInput& AnalysisInput::addTool(const ToolBuilder& tool) {
     return *this;
 }
 
-AnalysisInput& AnalysisInput::addToolOutput(std::string_view tool_call_id, std::string_view content) {
+AnalysisInput& AnalysisInput::addToolOutput(std::string_view toolCallId, std::string_view content) {
     ChatMessage msg;
     msg.role = "tool";
     msg.parts = {ContentPart::createText(content)};
-    msg.tool_call_id = std::string(tool_call_id);
+    msg.tool_call_id = std::string(toolCallId);
     messages.push_back(msg);
     return *this;
 }
@@ -156,21 +156,21 @@ nlohmann::json AnalysisInput::toJson() const {
     return j;
 }
 
-bool AnalysisInput::validate(std::string& error_message) const {
+bool AnalysisInput::validate(std::string& errorMessage) const {
     // Validate response_format if present
     if (!response_format.is_null()) {
         if (response_format.contains("type") && response_format["type"] == "json_schema") {
             if (!response_format.contains("json_schema")) {
-                error_message = "response_format type is json_schema but 'json_schema' field is missing";
+                errorMessage = "response_format type is json_schema but 'json_schema' field is missing";
                 return false;
             }
             const auto& schema = response_format["json_schema"];
             if (!schema.contains("name") || !schema["name"].is_string()) {
-                error_message = "json_schema must contain a 'name' string field";
+                errorMessage = "json_schema must contain a 'name' string field";
                 return false;
             }
             if (!schema.contains("schema") || !schema["schema"].is_object()) {
-                error_message = "json_schema must contain a 'schema' object field";
+                errorMessage = "json_schema must contain a 'schema' object field";
                 return false;
             }
         }
@@ -182,12 +182,12 @@ bool AnalysisInput::validate(std::string& error_message) const {
             // "auto" / "none" are valid string modes.
         } else if (tool_choice.is_object()) {
             if (!tool_choice.contains("function") || !tool_choice["function"].is_object()) {
-                error_message = "tool_choice object must contain a 'function' object";
+                errorMessage = "tool_choice object must contain a 'function' object";
                 return false;
             }
             const auto& fn = tool_choice["function"];
             if (!fn.contains("name") || !fn["name"].is_string()) {
-                error_message = "tool_choice function must have a 'name' string field";
+                errorMessage = "tool_choice function must have a 'name' string field";
                 return false;
             }
             std::string target = fn["name"];
@@ -204,11 +204,11 @@ bool AnalysisInput::validate(std::string& error_message) const {
             }
 
             if (!found) {
-                error_message = "tool_choice refers to unknown tool: " + target;
+                errorMessage = "tool_choice refers to unknown tool: " + target;
                 return false;
             }
         } else {
-            error_message = "tool_choice must be a string or object";
+            errorMessage = "tool_choice must be a string or object";
             return false;
         }
     }
@@ -217,28 +217,37 @@ bool AnalysisInput::validate(std::string& error_message) const {
     // Validate tools if present
     if (!tools.is_null()) {
         if (!tools.is_array()) {
-            error_message = "tools must be an array";
+            errorMessage = "tools must be an array";
             return false;
         }
         for (const auto& tool : tools) {
             if (!tool.is_object()) {
-                error_message = "tool item must be an object";
+                errorMessage = "tool item must be an object";
                 return false;
             }
             if (!tool.contains("type") || tool["type"] != "function") {
-                error_message = "tool type must be 'function'";
+                errorMessage = "tool type must be 'function'";
                 return false;
             }
             if (!tool.contains("function") || !tool["function"].is_object()) {
-                error_message = "tool must contain 'function' object";
+                errorMessage = "tool must contain 'function' object";
                 return false;
             }
             const auto& fn = tool["function"];
             if (!fn.contains("name") || !fn["name"].is_string()) {
-                error_message = "tool function must have a name";
+                errorMessage = "tool function must have a name";
                 return false;
             }
         }
+    }
+
+    // Validate that at least some content is provided
+    bool hasContent = !system_prompt.empty() || !user_message.empty() || !messages.empty();
+    if (!hasContent) {
+        // One exception: if tools are provided, maybe tool usage is the intent?
+        // But usually even with tools, a prompt or message is required to trigger them.
+        errorMessage = "AnalysisInput must contain at least one message (system_prompt, user_message, or messages)";
+        return false;
     }
 
     return true;
