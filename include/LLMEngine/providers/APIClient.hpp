@@ -167,6 +167,12 @@ class LLMENGINE_EXPORT QwenClient : public APIClient {
         return ProviderType::QWEN;
     }
     void setConfig(std::shared_ptr<IConfigManager> cfg) override;
+    
+  protected:
+    // Exposed for testing
+    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& request_params) const;
+    std::string buildUrl() const;
+    std::map<std::string, std::string> buildHeaders() const;
 
   private:
     class Impl;
@@ -203,6 +209,12 @@ class LLMENGINE_EXPORT OpenAIClient : public APIClient {
     }
     void setConfig(std::shared_ptr<IConfigManager> cfg) override;
 
+  protected:
+    // Exposed for testing
+    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& request_params) const;
+    std::string buildUrl() const;
+    std::map<std::string, std::string> buildHeaders() const;
+
   private:
     class Impl;
     std::unique_ptr<Impl> impl_;
@@ -236,6 +248,12 @@ class LLMENGINE_EXPORT AnthropicClient : public APIClient {
     void setConfig(std::shared_ptr<IConfigManager> cfg) override {
         config_ = std::move(cfg);
     }
+
+  protected:
+    // Exposed for testing
+    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& request_params) const;
+    std::string buildUrl() const;
+    std::map<std::string, std::string> buildHeaders() const;
 
   private:
     std::string apiKey_;
@@ -275,6 +293,12 @@ class LLMENGINE_EXPORT OllamaClient : public APIClient {
         config_ = std::move(cfg);
     }
 
+  protected:
+    // Exposed for testing
+    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& request_params, bool stream) const;
+    std::string buildUrl(bool use_generate) const;
+    std::map<std::string, std::string> buildHeaders() const;
+
   private:
     std::string baseUrl_;
     std::string model_;
@@ -310,6 +334,12 @@ class LLMENGINE_EXPORT GeminiClient : public APIClient {
     void setConfig(std::shared_ptr<IConfigManager> cfg) override {
         config_ = std::move(cfg);
     }
+
+  protected:
+    // Exposed for testing
+    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& request_params) const;
+    std::string buildUrl(bool stream) const;
+    std::map<std::string, std::string> buildHeaders() const;
 
   private:
     std::string apiKey_;

@@ -245,6 +245,7 @@ llmengine_test(test_tool_builder_extended core/builder/test_tool_builder_extende
 llmengine_test(test_streaming_metrics_fix core/async/test_streaming_metrics_fix.cpp test_support_fake)
 llmengine_test(test_thread_pool utils/test_thread_pool.cpp)
 llmengine_test(test_analysis_result_extensions core/result/test_analysis_result_extensions.cpp)
+llmengine_test(test_provider_payloads providers/test_provider_payloads.cpp)
 llmengine_test(test_parameter_merger_extended core/parameters/test_parameter_merger_extended.cpp)
 llmengine_test(test_llmengine_thread_safety core/general/test_llmengine_thread_safety.cpp test_support_fake)
 

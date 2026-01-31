@@ -85,6 +85,44 @@ OllamaClient::OllamaClient(const std::string& base_url, const std::string& model
                        {"context_window", ::LLMEngine::Constants::DefaultValues::CONTEXT_WINDOW}};
 }
 
+nlohmann::json OllamaClient::buildPayload(std::string_view prompt,
+                                          const nlohmann::json& input,
+                                          const nlohmann::json& request_params,
+                                          bool stream) const {
+    bool use_generate = false;
+    if (request_params.contains(std::string(::LLMEngine::Constants::JsonKeys::MODE))
+        && request_params[std::string(::LLMEngine::Constants::JsonKeys::MODE)] == "generate") {
+        use_generate = true;
+    }
+
+    nlohmann::json payload;
+    if (use_generate) {
+        payload = {{"model", model_}, {"prompt", prompt}, {"stream", stream}};
+    } else {
+        nlohmann::json messages = ChatMessageBuilder::buildMessages(prompt, input);
+        payload = {{"model", model_}, {"messages", messages}, {"stream", stream}};
+    }
+
+    // Add extra params
+    for (auto& [key, value] : request_params.items()) {
+        if (key != "context_window" && !payload.contains(key)) {
+            payload[key] = value;
+        }
+    }
+    return payload;
+}
+
+std::string OllamaClient::buildUrl(bool use_generate) const {
+    if (use_generate) {
+        return baseUrl_ + "/api/generate";
+    }
+    return baseUrl_ + "/api/chat";
+}
+
+std::map<std::string, std::string> OllamaClient::buildHeaders() const {
+    return {{"Content-Type", "application/json"}};
+}
+
 APIResponse OllamaClient::sendRequest(std::string_view prompt,
                                       const nlohmann::json& input,
                                       const nlohmann::json& params,
@@ -135,7 +173,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
         auto post_json = [&, verify_ssl](const std::string& url,
                                          const nlohmann::json& payload,
                                          int timeout_seconds) -> cpr::Response {
-            std::map<std::string, std::string> hdr{{"Content-Type", "application/json"}};
+            auto hdr = buildHeaders();
             maybeLogRequest("POST", url, hdr);
             return sendWithRetries(
                 rs,
@@ -163,83 +201,36 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             }
         };
 
-        // Check if we should use generate mode instead of chat mode
+        // Check mode
         bool use_generate = false;
         if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::MODE))
             && params[std::string(::LLMEngine::Constants::JsonKeys::MODE)] == "generate") {
             use_generate = true;
         }
 
-        if (use_generate) {
-            // Use generate API for text completion
-            nlohmann::json payload = {{"model", model_}, {"prompt", prompt}, {"stream", false}};
+        nlohmann::json payload = buildPayload(prompt, input, request_params, /*stream=*/false);
+        const int timeout_seconds = get_timeout_seconds(params);
+        const std::string url = buildUrl(use_generate);
+        
+        cpr::Response cpr_response = post_json(url, payload, timeout_seconds);
 
-            // Add parameters (filter out Ollama-specific ones)
-            for (auto& [key, value] : request_params.items()) {
-                if (key != "context_window") {
-                    payload[key] = value;
-                }
-            }
+        response.statusCode = static_cast<int>(cpr_response.status_code);
 
-            // Timeout selection
-            const int timeout_seconds = get_timeout_seconds(params);
-            const std::string url = baseUrl_ + "/api/generate";
-            cpr::Response cpr_response = post_json(url, payload, timeout_seconds);
+        if (cpr_response.status_code == ::LLMEngine::HttpStatus::OK) {
+            if (cpr_response.text.empty()) {
+                response.errorMessage = "Empty response from server";
+            } else {
+                try {
+                    response.rawResponse = nlohmann::json::parse(cpr_response.text);
 
-            response.statusCode = static_cast<int>(cpr_response.status_code);
-
-            if (cpr_response.status_code == ::LLMEngine::HttpStatus::OK) {
-                if (cpr_response.text.empty()) {
-                    response.errorMessage = "Empty response from server";
-                } else {
-                    try {
-                        response.rawResponse = nlohmann::json::parse(cpr_response.text);
-
+                    if (use_generate) {
                         if (response.rawResponse.contains("response")) {
                             response.content = response.rawResponse["response"].get<std::string>();
                             response.success = true;
                         } else {
                             response.errorMessage = "No response content in generate API response";
                         }
-                    } catch (const nlohmann::json::parse_error& e) {
-                        response.errorMessage = "JSON parse error: " + std::string(e.what())
-                                                 + " - Response: " + cpr_response.text;
-                        response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
-                    }
-                }
-            } else {
-                set_error_from_http(response, cpr_response);
-            }
-        } else {
-            // Use chat API for conversational mode (default)
-            // Use chat API for conversational mode (default)
-            // Use shared builder to construct messages from input (handles system prompt, history, images)
-            // Note: prompt arg is usually redundant if input has messages, but builder handles it.
-            nlohmann::json messages = ChatMessageBuilder::buildMessages(prompt, input);
-
-            // Prepare request payload for chat API
-            nlohmann::json payload = {{"model", model_}, {"messages", messages}, {"stream", false}};
-
-            // Add parameters (filter out Ollama-specific ones)
-            for (auto& [key, value] : request_params.items()) {
-                if (key != "context_window") {
-                    payload[key] = value;
-                }
-            }
-
-            const int timeout_seconds = get_timeout_seconds(params);
-            const std::string url = baseUrl_ + "/api/chat";
-            cpr::Response cpr_response = post_json(url, payload, timeout_seconds);
-
-            response.statusCode = static_cast<int>(cpr_response.status_code);
-
-            if (cpr_response.status_code == ::LLMEngine::HttpStatus::OK) {
-                if (cpr_response.text.empty()) {
-                    response.errorMessage = "Empty response from server";
-                } else {
-                    try {
-                        response.rawResponse = nlohmann::json::parse(cpr_response.text);
-
+                    } else {
                         if (response.rawResponse.contains("message")
                             && response.rawResponse["message"].contains("content")) {
                             response.content =
@@ -248,14 +239,15 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                         } else {
                             response.errorMessage = "No content in response";
                         }
-                    } catch (const nlohmann::json::parse_error& e) {
-                        response.errorMessage = "JSON parse error: " + std::string(e.what())
-                                                 + " - Response: " + cpr_response.text;
                     }
+                } catch (const nlohmann::json::parse_error& e) {
+                    response.errorMessage = "JSON parse error: " + std::string(e.what())
+                                             + " - Response: " + cpr_response.text;
+                    response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
                 }
-            } else {
-                set_error_from_http(response, cpr_response);
             }
+        } else {
+            set_error_from_http(response, cpr_response);
         }
 
     } catch (const std::exception& e) {
@@ -283,40 +275,20 @@ void OllamaClient::sendRequestStream(std::string_view prompt,
         use_generate = true;
     }
 
-    // Prepare payload
-    nlohmann::json payload;
-    std::string endpoint;
-
-    if (use_generate) {
-        payload = {{"model", model_}, {"prompt", prompt}, {"stream", true}};
-        endpoint = "/api/generate";
-    } else {
-        nlohmann::json messages = ChatMessageBuilder::buildMessages(prompt, input);
-        payload = {{"model", model_}, {"messages", messages}, {"stream", true}};
-        endpoint = "/api/chat";
-    }
-
-    // Add extra params
-    for (auto& [key, value] : request_params.items()) {
-        if (key != "context_window" && !payload.contains(key)) {
-            payload[key] = value;
-        }
-    }
-
     auto buffer = std::make_shared<std::string>();
 
     ChatCompletionRequestHelper::executeStream(
         defaultParams_,
         params,
         // Build payload
-        [&](const nlohmann::json&) {
-            return payload;
+        [&](const nlohmann::json& rp) {
+            return buildPayload(prompt, input, rp, /*stream=*/true);
         },
         // Build URL
-        [&]() { return baseUrl_ + endpoint; },
+        [&]() { return buildUrl(use_generate); },
         // Build Headers
         [&]() {
-            return std::map<std::string, std::string>{{"Content-Type", "application/json"}};
+            return buildHeaders();
         },
         // Stream processor
         [buffer, callback](std::string_view chunk) {

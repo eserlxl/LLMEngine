@@ -80,6 +80,43 @@ GeminiClient::GeminiClient(const std::string& api_key, const std::string& model)
                        {"top_p", ::LLMEngine::Constants::DefaultValues::TOP_P}};
 }
 
+nlohmann::json GeminiClient::buildPayload(std::string_view prompt,
+                                          const nlohmann::json& input,
+                                          const nlohmann::json& request_params) const {
+    // Compose user content; prepend optional system_prompt
+    std::string user_text;
+    if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))
+        && input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)].is_string()) {
+        user_text += input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
+                         .get<std::string>();
+        if (!user_text.empty() && user_text.back() != '\n')
+            user_text += "\n";
+    }
+    user_text += std::string(prompt);
+
+    // Prepare request payload for Gemini generateContent
+    return {
+        {"contents",
+         nlohmann::json::array({nlohmann::json{
+             {"role", "user"},
+             {"parts", nlohmann::json::array({nlohmann::json{{"text", user_text}}})}}})},
+        {"generationConfig",
+         nlohmann::json{{"temperature", request_params["temperature"]},
+                        {"maxOutputTokens", request_params["max_tokens"]},
+                        {"topP", request_params["top_p"]}}}};
+}
+
+std::string GeminiClient::buildUrl(bool stream) const {
+    if (stream) {
+        return baseUrl_ + "/models/" + model_ + ":streamGenerateContent?alt=sse";
+    }
+    return baseUrl_ + "/models/" + model_ + ":generateContent";
+}
+
+std::map<std::string, std::string> GeminiClient::buildHeaders() const {
+    return {{"Content-Type", "application/json"}, {"x-goog-api-key", apiKey_}};
+}
+
 APIResponse GeminiClient::sendRequest(std::string_view prompt,
                                       const nlohmann::json& input,
                                       const nlohmann::json& params,
@@ -96,27 +133,7 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
         nlohmann::json request_params = defaultParams_;
         request_params.update(params);
 
-        // Compose user content; prepend optional system_prompt
-        std::string user_text;
-        if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))
-            && input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)].is_string()) {
-            user_text += input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
-                             .get<std::string>();
-            if (!user_text.empty() && user_text.back() != '\n')
-                user_text += "\n";
-        }
-        user_text += std::string(prompt);
-
-        // Prepare request payload for Gemini generateContent
-        nlohmann::json payload = {
-            {"contents",
-             nlohmann::json::array({nlohmann::json{
-                 {"role", "user"},
-                 {"parts", nlohmann::json::array({nlohmann::json{{"text", user_text}}})}}})},
-            {"generationConfig",
-             nlohmann::json{{"temperature", request_params["temperature"]},
-                            {"maxOutputTokens", request_params["max_tokens"]},
-                            {"topP", request_params["top_p"]}}}};
+        nlohmann::json payload = buildPayload(prompt, input, request_params);
 
         // Get timeout from params or use config default
         int timeout_seconds = 0;
@@ -139,10 +156,9 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
         }
 
         // SECURITY: Use header-based authentication instead of URL query parameter
-        const std::string url = baseUrl_ + "/models/" + model_ + ":generateContent";
-
-        std::map<std::string, std::string> hdr{{"Content-Type", "application/json"},
-                                               {"x-goog-api-key", apiKey_}};
+        const std::string url = buildUrl(/*stream=*/false);
+        auto hdr = buildHeaders();
+        
         maybeLogRequest("POST", url, hdr);
         cpr::Response cpr_response = sendWithRetries(
             rs,
@@ -207,12 +223,6 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
             try {
                 response.rawResponse = nlohmann::json::parse(cpr_response.text);
             } catch (const std::exception& e) { // NOLINT(bugprone-empty-catch)
-                // Best-effort JSON parsing for error responses.
-                // If parsing fails, keep raw_response as default empty object.
-                // This is expected behavior: error responses may not always be valid JSON.
-                // The error message already contains the raw response text, so no information is
-                // lost. Logging is not available in this context, but the error is handled
-                // gracefully.
                 (void)e; // Suppress unused variable warning
             }
         }
@@ -230,23 +240,6 @@ void GeminiClient::sendRequestStream(std::string_view prompt,
                                      const nlohmann::json& params,
                                      LLMEngine::StreamCallback callback,
                                      const ::LLMEngine::RequestOptions& options) const {
-    // Merge params
-    nlohmann::json request_params = defaultParams_;
-    if (!params.is_null()) {
-        request_params.update(params);
-    }
-
-    // Build user text
-    std::string user_text;
-    if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))
-        && input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)].is_string()) {
-        user_text += input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
-                         .get<std::string>();
-        if (!user_text.empty() && user_text.back() != '\n')
-            user_text += "\n";
-    }
-    user_text += std::string(prompt);
-
     auto buffer = std::make_shared<std::string>();
 
     ChatCompletionRequestHelper::executeStream(
@@ -254,24 +247,15 @@ void GeminiClient::sendRequestStream(std::string_view prompt,
         params,
         // Build payload
         [&](const nlohmann::json& rp) {
-            return nlohmann::json{
-                {"contents",
-                 nlohmann::json::array({nlohmann::json{
-                     {"role", "user"},
-                     {"parts", nlohmann::json::array({nlohmann::json{{"text", user_text}}})}}})},
-                {"generationConfig",
-                 nlohmann::json{{"temperature", rp["temperature"]},
-                                {"maxOutputTokens", rp["max_tokens"]},
-                                {"topP", rp["top_p"]}}}};
+            return buildPayload(prompt, input, rp);
         },
         // Build URL (SSE mode)
         [&]() {
-            return baseUrl_ + "/models/" + model_ + ":streamGenerateContent?alt=sse";
+            return buildUrl(/*stream=*/true);
         },
         // Build Headers
         [&]() {
-            return std::map<std::string, std::string>{{"Content-Type", "application/json"},
-                                                      {"x-goog-api-key", apiKey_}};
+            return buildHeaders();
         },
         // Stream processor
         [buffer, callback](std::string_view chunk) {

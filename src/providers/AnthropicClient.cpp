@@ -81,6 +81,38 @@ AnthropicClient::AnthropicClient(const std::string& api_key, const std::string& 
                        {"top_p", ::LLMEngine::Constants::DefaultValues::TOP_P}};
 }
 
+nlohmann::json AnthropicClient::buildPayload(std::string_view prompt,
+                                             const nlohmann::json& input,
+                                             const nlohmann::json& requestParams) const {
+    // Prepare messages array
+    nlohmann::json messages = nlohmann::json::array();
+    messages.push_back({{"role", "user"}, {"content", prompt}});
+
+    // Prepare request payload
+    nlohmann::json payload = {{"model", model_},
+                              {"max_tokens", requestParams["max_tokens"]},
+                              {"temperature", requestParams["temperature"]},
+                              {"top_p", requestParams["top_p"]},
+                              {"messages", messages}};
+
+    // Add system prompt if provided
+    if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))) {
+        payload["system"] = input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
+                                .get<std::string>();
+    }
+    return payload;
+}
+
+std::string AnthropicClient::buildUrl() const {
+    return baseUrl_ + "/messages";
+}
+
+std::map<std::string, std::string> AnthropicClient::buildHeaders() const {
+    return {{"Content-Type", "application/json"},
+            {"x-api-key", apiKey_},
+            {"anthropic-version", "2023-06-01"}};
+}
+
 APIResponse AnthropicClient::sendRequest(std::string_view prompt,
                                          const nlohmann::json& input,
                                          const nlohmann::json& params,
@@ -97,22 +129,7 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
         nlohmann::json requestParams = defaultParams_;
         requestParams.update(params);
 
-        // Prepare messages array
-        nlohmann::json messages = nlohmann::json::array();
-        messages.push_back({{"role", "user"}, {"content", prompt}});
-
-        // Prepare request payload
-        nlohmann::json payload = {{"model", model_},
-                                  {"max_tokens", requestParams["max_tokens"]},
-                                  {"temperature", requestParams["temperature"]},
-                                  {"top_p", requestParams["top_p"]},
-                                  {"messages", messages}};
-
-        // Add system prompt if provided
-        if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))) {
-            payload["system"] = input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
-                                    .get<std::string>();
-        }
+        nlohmann::json payload = buildPayload(prompt, input, requestParams);
 
         // Get timeout from params or use config default
         int timeoutSeconds = 0;
@@ -135,10 +152,9 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
         }
 
         // Send request with retries
-        const std::string url = baseUrl_ + "/messages";
-        std::map<std::string, std::string> hdr{{"Content-Type", "application/json"},
-                                               {"x-api-key", apiKey_},
-                                               {"anthropic-version", "2023-06-01"}};
+        const std::string url = buildUrl();
+        auto hdr = buildHeaders();
+
         maybeLogRequest("POST", url, hdr);
         cpr::Response cprResponse = sendWithRetries(
             rs,
@@ -219,15 +235,6 @@ void AnthropicClient::sendRequestStream(std::string_view prompt,
                                           const nlohmann::json& params,
                                           LLMEngine::StreamCallback callback,
                                           const ::LLMEngine::RequestOptions& options) const {
-    // Merge params
-    nlohmann::json requestParams = defaultParams_;
-    if (!params.is_null()) {
-        requestParams.update(params);
-    }
-
-    nlohmann::json messages = nlohmann::json::array();
-    messages.push_back({{"role", "user"}, {"content", prompt}});
-
     auto buffer = std::make_shared<std::string>();
 
     ChatCompletionRequestHelper::executeStream(
@@ -235,29 +242,14 @@ void AnthropicClient::sendRequestStream(std::string_view prompt,
         params,
         // Build payload
         [&](const nlohmann::json& rp) {
-            nlohmann::json payload = {
-                {"model", model_},
-                {"max_tokens", rp["max_tokens"]},
-                {"temperature", rp["temperature"]},
-                {"top_p", rp["top_p"]},
-                {"messages", messages},
-                {"stream", true}
-            };
-            if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))) {
-                payload["system"] = input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
-                                        .get<std::string>();
-            }
+            nlohmann::json payload = buildPayload(prompt, input, rp);
+            payload["stream"] = true;
             return payload;
         },
         // Build URL
-        [&]() { return baseUrl_ + "/messages"; },
+        [&]() { return buildUrl(); },
         // Build Headers
-        [&]() {
-            return std::map<std::string, std::string>{
-                {"Content-Type", "application/json"},
-                {"x-api-key", apiKey_},
-                {"anthropic-version", "2023-06-01"}};
-        },
+        [&]() { return buildHeaders(); },
         // Stream processor
         [buffer, callback](std::string_view chunk) {
             parseAnthropicStreamChunk(chunk, *buffer, callback);
