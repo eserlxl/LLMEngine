@@ -4,7 +4,15 @@
 #include <nlohmann/json.hpp>
 
 using namespace LLMEngineAPI;
-using json = nlohmann::json;
+using Json = nlohmann::json;
+
+namespace {
+constexpr double kExpectedTemp = 0.5;
+constexpr double kExpectedTempHigh = 0.7;
+constexpr int kExpectedMaxTokens = 100;
+constexpr int kExpectedMaxTokensLarge = 1024;
+constexpr double kExpectedTopP = 1.0;
+}
 
 // Testable subclasses to expose protected methods
 class TestableGeminiClient : public GeminiClient {
@@ -49,8 +57,8 @@ public:
 
 TEST(GeminiClientTest, PayloadConstruction) {
     TestableGeminiClient client("test_key", "gemini-pro");
-    json input;
-    json params = {{"temperature", 0.5}, {"max_tokens", 100}, {"top_p", 1.0}};
+    Json input;
+    Json params = {{"temperature", kExpectedTemp}, {"max_tokens", kExpectedMaxTokens}, {"top_p", kExpectedTopP}};
     
     // Test Build URL
     std::string url = client.buildUrl(true);
@@ -62,16 +70,16 @@ TEST(GeminiClientTest, PayloadConstruction) {
     EXPECT_EQ(headers["Content-Type"], "application/json");
 
     // Test Payload
-    json payload = client.buildPayload("Hello", input, params);
+    Json payload = client.buildPayload("Hello", input, params);
     EXPECT_TRUE(payload.contains("contents"));
     EXPECT_EQ(payload["contents"][0]["parts"][0]["text"], "Hello");
-    EXPECT_EQ(payload["generationConfig"]["temperature"], 0.5);
+    EXPECT_EQ(payload["generationConfig"]["temperature"], kExpectedTemp);
 }
 
 TEST(AnthropicClientTest, PayloadConstruction) {
     TestableAnthropicClient client("test_key", "claude-3-opus-20240229");
-    json input = {{"system_prompt", "You are a helper."}};
-    json params = {{"max_tokens", 1024}, {"temperature", 0.7}, {"top_p", 1.0}};
+    Json input = {{"system_prompt", "You are a helper."}};
+    Json params = {{"max_tokens", kExpectedMaxTokensLarge}, {"temperature", kExpectedTempHigh}, {"top_p", kExpectedTopP}};
 
     // Test Build URL
     EXPECT_EQ(client.buildUrl(), "https://api.anthropic.com/v1/messages");
@@ -82,32 +90,21 @@ TEST(AnthropicClientTest, PayloadConstruction) {
     EXPECT_EQ(headers["anthropic-version"], "2023-06-01");
 
     // Test Build Payload
-    json payload = client.buildPayload("Hello", input, params);
+    Json payload = client.buildPayload("Hello", input, params);
     EXPECT_EQ(payload["model"], "claude-3-opus-20240229");
     EXPECT_EQ(payload["messages"][0]["role"], "user");
     EXPECT_EQ(payload["messages"][0]["content"], "Hello");
-    EXPECT_EQ(payload["max_tokens"], 1024);
+    EXPECT_EQ(payload["max_tokens"], kExpectedMaxTokensLarge);
     EXPECT_EQ(payload["system"], "You are a helper.");
 }
 
 TEST(OllamaClientTest, PayloadConstruction) {
     TestableOllamaClient client("http://localhost:11434", "llama3");
-    json input;
-    json params = {{"temperature", 0.7}};
-
-    // Test Build URL (Chat mode by default for buildPayload helpers if not unified? 
-    // Wait, OllamaClient logic distinguishes generate vs chat in sendRequest.
-    // But exposed buildPayload might default to one or support input flag?
-    // Let's check OllamaClient implementation. It seems I unified it or it handles both?
-    // In sendRequest it mimics conditional logic.
-    // But buildPayload needs to know which one? 
-    // Actually looking at my changes to OllamaClient, buildPayload implementation:
-    // It checks `request_params.value("use_generate", false)` inside?
-    // If not, I need to check how I implemented it.
-    // Assuming standard chat payload for now.
+    Json input;
+    Json params = {{"temperature", kExpectedTempHigh}};
     
     // Test Payload
-    json payload = client.buildPayload("Hello", input, params, false);
+    Json payload = client.buildPayload("Hello", input, params, false);
     EXPECT_EQ(payload["model"], "llama3");
     // Ollama chat format
     if (payload.contains("messages")) {
@@ -120,10 +117,10 @@ TEST(OllamaClientTest, PayloadConstruction) {
 
 TEST(OpenAIClientTest, PayloadConstruction) {
     TestableOpenAIClient client("test_key", "gpt-4");
-    json input;
-    json params = {{"temperature", 0.7}, 
-                   {"max_tokens", 1024}, 
-                   {"top_p", 1.0},
+    Json input;
+    Json params = {{"temperature", kExpectedTempHigh}, 
+                   {"max_tokens", kExpectedMaxTokensLarge}, 
+                   {"top_p", kExpectedTopP},
                    {"frequency_penalty", 0.0},
                    {"presence_penalty", 0.0}};
 
@@ -135,21 +132,21 @@ TEST(OpenAIClientTest, PayloadConstruction) {
     EXPECT_EQ(headers["Authorization"], "Bearer test_key");
 
     // Test Build Payload
-    json payload = client.buildPayload("Hello", input, params);
+    Json payload = client.buildPayload("Hello", input, params);
     EXPECT_EQ(payload["model"], "gpt-4");
     EXPECT_EQ(payload["messages"][0]["role"], "user");
     EXPECT_EQ(payload["messages"][0]["content"], "Hello");
-    EXPECT_EQ(payload["temperature"], 0.7);
-    EXPECT_EQ(payload["max_tokens"], 1024);
-    EXPECT_EQ(payload["top_p"], 1.0);
+    EXPECT_EQ(payload["temperature"], kExpectedTempHigh);
+    EXPECT_EQ(payload["max_tokens"], kExpectedMaxTokensLarge);
+    EXPECT_EQ(payload["top_p"], kExpectedTopP);
 }
 
 TEST(QwenClientTest, PayloadConstruction) {
     TestableQwenClient client("qwen-key", "qwen-turbo");
-    json input;
-    json params = {{"temperature", 0.7}, 
-                   {"max_tokens", 1024}, 
-                   {"top_p", 1.0},
+    Json input;
+    Json params = {{"temperature", kExpectedTempHigh}, 
+                   {"max_tokens", kExpectedMaxTokensLarge}, 
+                   {"top_p", kExpectedTopP},
                    {"frequency_penalty", 0.0},
                    {"presence_penalty", 0.0}};
 
@@ -160,6 +157,6 @@ TEST(QwenClientTest, PayloadConstruction) {
     auto headers = client.buildHeaders();
     EXPECT_EQ(headers["Authorization"], "Bearer qwen-key");
 
-    json payload = client.buildPayload("Hello", input, params);
+    Json payload = client.buildPayload("Hello", input, params);
     EXPECT_EQ(payload["model"], "qwen-turbo");
 }
