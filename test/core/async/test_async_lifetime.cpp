@@ -50,8 +50,5 @@ int main() {
     } catch (const std::exception& e) {
         std::cerr << "Test failed with exception: " << e.what() << std::endl;
         return 1;
-    } catch (...) {
-        std::cerr << "Test failed with unknown exception." << std::endl;
-        return 1;
     }
 }

@@ -27,7 +27,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         (void)remaining.size();
         (void)think.empty();
         (void)remaining.empty();
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore all exceptions - parseResponse should not throw
     }
 
@@ -38,7 +38,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         auto [think1, remaining1] = LLMEngine::ResponseParser::parseResponse(with_think);
         (void)think1.size();
         (void)remaining1.size();
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore exceptions
     }
 
@@ -48,7 +48,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         auto [think2, remaining2] = LLMEngine::ResponseParser::parseResponse(nested);
         (void)think2.size();
         (void)remaining2.size();
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore exceptions
     }
 
@@ -58,7 +58,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         auto [think3, remaining3] = LLMEngine::ResponseParser::parseResponse(multiple);
         (void)think3.size();
         (void)remaining3.size();
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore exceptions
     }
 
@@ -68,7 +68,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         auto [think4, remaining4] = LLMEngine::ResponseParser::parseResponse(unclosed);
         (void)think4.size();
         (void)remaining4.size();
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore exceptions
     }
 
@@ -78,7 +78,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         auto [think5, remaining5] = LLMEngine::ResponseParser::parseResponse(mismatched);
         (void)think5.size();
         (void)remaining5.size();
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore exceptions
     }
 

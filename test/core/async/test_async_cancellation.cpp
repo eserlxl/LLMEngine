@@ -53,7 +53,7 @@ int main() {
                     }
                 }
             );
-        } catch (...) {
+        } catch (const std::exception&) {
             // Ignore cancel exceptions if any
         }
     });

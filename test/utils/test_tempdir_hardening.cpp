@@ -299,8 +299,5 @@ int main() {
     } catch (const std::exception& e) {
         std::cerr << "\n✗ Test failed with exception: " << e.what() << std::endl;
         return 1;
-    } catch (...) {
-        std::cerr << "\n✗ Test failed with unknown exception\n";
-        return 1;
     }
 }

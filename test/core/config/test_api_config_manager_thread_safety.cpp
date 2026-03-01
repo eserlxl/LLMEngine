@@ -58,7 +58,7 @@ void testConcurrentReads() {
                         ++errors;
                 }
                 ++completed;
-            } catch (...) {
+            } catch (const std::exception&) {
                 ++errors;
                 ++completed;
             }
@@ -111,7 +111,7 @@ void testConcurrentReadsAndWrites() {
                     std::this_thread::sleep_for(std::chrono::microseconds(1));
                 }
                 ++readers_completed;
-            } catch (...) {
+            } catch (const std::exception&) {
                 ++read_errors;
                 ++readers_completed;
             }
@@ -135,7 +135,7 @@ void testConcurrentReadsAndWrites() {
                     std::this_thread::sleep_for(std::chrono::microseconds(1));
                 }
                 ++writers_completed;
-            } catch (...) {
+            } catch (const std::exception&) {
                 ++write_errors;
                 ++writers_completed;
             }

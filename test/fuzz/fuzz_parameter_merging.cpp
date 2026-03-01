@@ -43,7 +43,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             // Verify result is valid JSON
             (void)result.is_object();
             (void)result.contains("temperature");
-        } catch (...) {
+        } catch (const std::exception&) {
             // Ignore exceptions from merge
         }
 
@@ -52,7 +52,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             std::string mode = input.substr(0, std::min(size, size_t(100)));
             auto result = LLMEngine::ParameterMerger::merge(base_params, input_json, mode);
             (void)result.is_object();
-        } catch (...) {
+        } catch (const std::exception&) {
             // Ignore exceptions
         }
 
@@ -62,11 +62,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             bool changed = LLMEngine::ParameterMerger::mergeInto(base_params, input_json, "", out);
             (void)changed;
             (void)out.is_object();
-        } catch (...) {
+        } catch (const std::exception&) {
             // Ignore exceptions
         }
 
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore all exceptions
     }
 
@@ -88,7 +88,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             auto result = LLMEngine::ParameterMerger::merge(base_params, test_input, "");
             (void)result.is_object();
         }
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore exceptions
     }
 
@@ -102,7 +102,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         auto result = LLMEngine::ParameterMerger::merge(base_params, invalid_input, "");
         // Should still be valid, invalid types should be ignored
         (void)result.is_object();
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore exceptions
     }
 
@@ -116,7 +116,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             auto result = LLMEngine::ParameterMerger::merge(base_params, unallowed_input, "");
             (void)result.is_object();
         }
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore exceptions
     }
 

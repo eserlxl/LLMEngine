@@ -30,7 +30,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         (void)json.is_null();
     } catch (const nlohmann::json::exception&) {
         // Expected for malformed JSON - this is fine
-    } catch (...) {
+    } catch (const std::exception&) {
         // Other exceptions should not occur, but we catch them to prevent crashes
     }
 
@@ -51,7 +51,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         } catch (const nlohmann::json::exception&) {
             // Malformed JSON is expected
         }
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore all exceptions
     }
 
@@ -66,7 +66,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         }
     } catch (const nlohmann::json::exception&) {
         // Expected for malformed JSON
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore other exceptions
     }
 
@@ -88,7 +88,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         }
     } catch (const nlohmann::json::exception&) {
         // Expected for malformed JSON
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore other exceptions
     }
 

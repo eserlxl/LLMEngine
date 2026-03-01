@@ -110,10 +110,6 @@ void testConcurrentDirectoryGeneration() {
                     std::cerr << "ERROR in thread " << i << ": " << e.what() << "\n";
                     ++errors;
                     ++completed;
-                } catch (...) {
-                    std::cerr << "ERROR in thread " << i << ": Unknown exception\n";
-                    ++errors;
-                    ++completed;
                 }
             });
     }
@@ -168,7 +164,7 @@ void testRapidConcurrentInitialization() {
                     }
                 }
                 ++completed;
-            } catch (...) {
+            } catch (const std::exception&) {
                 ++errors;
                 ++completed;
             }
@@ -201,9 +197,6 @@ int main() {
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "Test failed with exception: " << e.what() << "\n";
-        return 1;
-    } catch (...) {
-        std::cerr << "Test failed with unknown exception\n";
         return 1;
     }
 }

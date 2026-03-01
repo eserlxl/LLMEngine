@@ -24,14 +24,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     // Test 1: redactUrl with fuzzed input
     try {
         LLMEngine::RequestLogger::redactUrl(input);
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore exceptions from malformed input
     }
 
     // Test 2: redactText with fuzzed input
     try {
         LLMEngine::RequestLogger::redactText(input);
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore exceptions from malformed input
     }
 
@@ -61,7 +61,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         if (!headers.empty()) {
             LLMEngine::RequestLogger::redactHeaders(headers);
         }
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore exceptions from malformed input
     }
 
@@ -70,7 +70,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         if (size < 200) { // Only test reasonable header names
             LLMEngine::RequestLogger::isSensitiveHeader(input);
         }
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore exceptions
     }
 
@@ -108,7 +108,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                 LLMEngine::RequestLogger::formatRequest(method, url, headers);
             }
         }
-    } catch (...) {
+    } catch (const std::exception&) {
         // Ignore exceptions
     }
 
