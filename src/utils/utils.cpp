@@ -7,11 +7,8 @@
 
 #include "llmengine/utils/utils.hpp"
 
-#include "llmengine/utils/logger.hpp"
-
 #include <algorithm>
 #include <cctype> // for iscntrl
-#include <filesystem>
 #include <fstream>
 #include <regex>
 #include <string>
@@ -20,7 +17,7 @@
 
 
 namespace LLMEngine::Utils {
-namespace fs = std::filesystem;
+
 
 // Constants
 // Validation constants
@@ -42,12 +39,12 @@ static const std::regex markdownHeaderRegex(R"(#+\s*)");
 // Platform-specific close helper
 
 
-std::vector<std::string> readLines(std::string_view filepath, size_t max_lines) {
+std::vector<std::string> readLines(std::string_view filepath, size_t maxLines) {
     std::vector<std::string> lines;
-    lines.reserve(max_lines);
+    lines.reserve(maxLines);
     std::ifstream file{std::string(filepath)};
     std::string line;
-    while (std::getline(file, line) && lines.size() < max_lines) {
+    while (std::getline(file, line) && lines.size() < maxLines) {
         lines.push_back(line);
     }
     return lines;
@@ -62,18 +59,18 @@ std::string stripMarkdown(std::string_view input) {
     return output;
 }
 
-bool validateApiKey(std::string_view api_key) {
-    if (api_key.empty()) {
+bool validateApiKey(std::string_view apiKey) {
+    if (apiKey.empty()) {
         return false;
     }
 
     // Check length (reasonable bounds)
-    if (api_key.size() < minApiKeyLength || api_key.size() > maxApiKeyLength) {
+    if (apiKey.size() < minApiKeyLength || apiKey.size() > maxApiKeyLength) {
         return false;
     }
 
     // Check for control characters
-    if (!std::ranges::all_of(api_key,
+    if (!std::ranges::all_of(apiKey,
                              [](char c) { return !std::iscntrl(static_cast<unsigned char>(c)); })) {
         return false;
     }
@@ -81,19 +78,19 @@ bool validateApiKey(std::string_view api_key) {
     return true;
 }
 
-bool validateModelName(std::string_view model_name) {
-    if (model_name.empty()) {
+bool validateModelName(std::string_view modelName) {
+    if (modelName.empty()) {
         return false;
     }
 
     // Check length
-    if (model_name.size() > maxModelNameLength) {
+    if (modelName.size() > maxModelNameLength) {
         return false;
     }
 
     // Check for allowed characters: alphanumeric, hyphens, underscores, dots,
     // slashes
-    if (!std::ranges::all_of(model_name, [](char c) {
+    if (!std::ranges::all_of(modelName, [](char c) {
             return std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_' || c == '.'
                    || c == '/';
         })) {
@@ -139,23 +136,30 @@ std::string base64Encode(std::span<const uint8_t> data) {
     std::string out;
     out.reserve(((data.size() + 2) / 3) * 4);
 
+    constexpr uint32_t byteShift1 = 16;
+    constexpr uint32_t byteShift2 = 8;
+    constexpr uint32_t charShift1 = 18;
+    constexpr uint32_t charShift2 = 12;
+    constexpr uint32_t charShift3 = 6;
+    constexpr uint32_t charMask = 0x3F;
+
     for (size_t i = 0; i < data.size(); i += 3) {
-        uint32_t val = data[i] << 16;
+        uint32_t val = static_cast<uint32_t>(data[i]) << byteShift1;
         if (i + 1 < data.size())
-            val |= data[i + 1] << 8;
+            val |= static_cast<uint32_t>(data[i + 1]) << byteShift2;
         if (i + 2 < data.size())
-            val |= data[i + 2];
+            val |= static_cast<uint32_t>(data[i + 2]);
 
-        out.push_back(base64Chars[(val >> 18) & 0x3F]);
-        out.push_back(base64Chars[(val >> 12) & 0x3F]);
+        out.push_back(base64Chars[(val >> charShift1) & charMask]);
+        out.push_back(base64Chars[(val >> charShift2) & charMask]);
 
         if (i + 1 < data.size())
-            out.push_back(base64Chars[(val >> 6) & 0x3F]);
+            out.push_back(base64Chars[(val >> charShift3) & charMask]);
         else
             out.push_back('=');
 
         if (i + 2 < data.size())
-            out.push_back(base64Chars[val & 0x3F]);
+            out.push_back(base64Chars[val & charMask]);
         else
             out.push_back('=');
     }

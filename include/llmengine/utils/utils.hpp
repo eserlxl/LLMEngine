@@ -21,10 +21,12 @@ namespace LLMEngine {
 namespace Utils {
 
 
+constexpr size_t defaultMaxLines = 100;
+
 /**
- * @brief Read up to max_lines from a file.
+ * @brief Read up to maxLines from a file.
  */
-[[nodiscard]] std::vector<std::string> readLines(std::string_view filepath, size_t max_lines = 100);
+[[nodiscard]] std::vector<std::string> readLines(std::string_view filepath, size_t maxLines = defaultMaxLines);
 
 
 
@@ -41,17 +43,17 @@ namespace Utils {
  * - Reasonable length (at least 10 characters, at most 512 characters)
  * - No control characters
  *
- * @param api_key API key to validate
+ * @param apiKey API key to validate
  * @return true if API key appears valid, false otherwise
  *
  * @example
  * ```cpp
- * if (!Utils::validateApiKey(api_key)) {
+ * if (!Utils::validateApiKey(apiKey)) {
  *     throw std::invalid_argument("Invalid API key format");
  * }
  * ```
  */
-[[nodiscard]] bool validateApiKey(std::string_view api_key);
+[[nodiscard]] bool validateApiKey(std::string_view apiKey);
 
 /**
  * @brief Validate model name format.
@@ -62,7 +64,7 @@ namespace Utils {
  * - Only alphanumeric, hyphens, underscores, dots, and slashes
  * - No control characters
  *
- * @param model_name Model name to validate
+ * @param modelName Model name to validate
  * @return true if model name appears valid, false otherwise
  *
  * @example
@@ -72,7 +74,7 @@ namespace Utils {
  * }
  * ```
  */
-[[nodiscard]] bool validateModelName(std::string_view model_name);
+[[nodiscard]] bool validateModelName(std::string_view modelName);
 
 /**
  * @brief Validate URL format (basic checks).
