@@ -164,11 +164,6 @@ bool DebugArtifactManager::writeAnalysisArtifacts(std::string_view analysis_type
                          std::string("Exception in writeAnalysisArtifacts: ") + e.what());
         }
         return false;
-    } catch (const std::exception& e) {
-        if (logger_) {
-            logger_->log(LogLevel::Error, "Exception in writeAnalysisArtifacts: " + std::string(e.what()));
-        }
-        return false;
     }
 }
 

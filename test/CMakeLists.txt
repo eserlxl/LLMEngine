@@ -248,6 +248,7 @@ llmengine_test(test_analysis_result_extensions core/result/test_analysis_result_
 llmengine_test(test_provider_payloads providers/test_provider_payloads.cpp)
 llmengine_test(test_parameter_merger_extended core/parameters/test_parameter_merger_extended.cpp)
 llmengine_test(test_llmengine_thread_safety core/general/test_llmengine_thread_safety.cpp test_support_fake)
+llmengine_test(test_provider_bootstrap_edge providers/test_provider_bootstrap_edge.cpp test_support_fake)
 
 # Iteration 1 Extensions
 llmengine_test(test_llmengine_builder core/builder/test_llmengine_builder.cpp)
@@ -300,6 +301,7 @@ if (BUILD_TESTING)
       test_streaming_metrics_fix
       test_parameter_merger_extended
       test_llmengine_thread_safety
+      test_provider_bootstrap_edge
     COMMENT "Building all test executables"
 
 

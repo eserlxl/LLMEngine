@@ -32,7 +32,7 @@ std::optional<nlohmann::json> AnalysisResult::getJson() const {
             std::string potential_json = clean_content.substr(first_brace, last_brace - first_brace + 1);
             try {
                 return nlohmann::json::parse(potential_json);
-            } catch (const std::exception& e) {
+            } catch (const std::exception& inner_e) {
                 return std::nullopt;
             }
         }

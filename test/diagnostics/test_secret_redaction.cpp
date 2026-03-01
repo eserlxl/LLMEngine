@@ -17,12 +17,12 @@
 class TestLogger : public LLMEngine::Logger {
   public:
     void log(LLMEngine::LogLevel level, std::string_view message) override {
-        last_message_ = std::string(message);
-        last_level_ = level;
+        lastMessage = std::string(message);
+        lastLevel = level;
     }
 
-    std::string last_message_;
-    LLMEngine::LogLevel last_level_;
+    std::string lastMessage;
+    LLMEngine::LogLevel lastLevel;
 };
 
 void testRedactTextBasic() {
@@ -93,9 +93,9 @@ void testLogSafe() {
 
     LLMEngine::RequestLogger::logSafe(&logger, LLMEngine::LogLevel::Error, message);
 
-    assert(logger.last_level_ == LLMEngine::LogLevel::Error);
-    assert(logger.last_message_.find("sk_abcdefghijklmnopqrstuvwxyz012345") == std::string::npos);
-    assert(logger.last_message_.find("<REDACTED>") != std::string::npos);
+    assert(logger.lastLevel == LLMEngine::LogLevel::Error);
+    assert(logger.lastMessage.find("sk_abcdefghijklmnopqrstuvwxyz012345") == std::string::npos);
+    assert(logger.lastMessage.find("<REDACTED>") != std::string::npos);
 
     std::cout << "✓ Safe logging test passed\n";
 }

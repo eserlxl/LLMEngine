@@ -21,41 +21,41 @@ ProviderBootstrap::BootstrapResult ProviderBootstrap::bootstrap(
     std::string_view providerName,
     std::string_view apiKey,
     std::string_view model,
-    const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager,
+    const std::shared_ptr<::LLMEngineAPI::IConfigManager>& configManager,
     Logger* logger) {
 
     BootstrapResult result;
 
     // Use injected config manager or fall back to singleton
-    std::shared_ptr<::LLMEngineAPI::IConfigManager> config_mgr = config_manager;
-    if (!config_mgr) {
+    std::shared_ptr<::LLMEngineAPI::IConfigManager> configMgr = configManager;
+    if (!configMgr) {
         // Wrap singleton in shared_ptr with no-op deleter for compatibility
-        config_mgr = std::shared_ptr<::LLMEngineAPI::IConfigManager>(
+        configMgr = std::shared_ptr<::LLMEngineAPI::IConfigManager>(
             &::LLMEngineAPI::APIConfigManager::getInstance(),
             [](::LLMEngineAPI::IConfigManager*) {});
     }
 
     // Load config
-    if (!config_mgr->loadConfig()) {
+    if (!configMgr->loadConfig()) {
         if (logger) {
             logger->log(LogLevel::Warn, "Could not load API config, using defaults");
         }
     }
 
     // Determine provider name (use default if empty)
-    std::string resolved_provider(providerName);
-    if (resolved_provider.empty()) {
-        resolved_provider = config_mgr->getDefaultProvider();
-        if (resolved_provider.empty()) {
-            resolved_provider = "ollama";
+    std::string resolvedProvider(providerName);
+    if (resolvedProvider.empty()) {
+        resolvedProvider = configMgr->getDefaultProvider();
+        if (resolvedProvider.empty()) {
+            resolvedProvider = "ollama";
         }
     }
 
     // Get provider configuration
-    auto providerConfig = config_mgr->getProviderConfig(resolved_provider);
+    auto providerConfig = configMgr->getProviderConfig(resolvedProvider);
     if (providerConfig.empty()) {
         std::string errorMsg =
-            std::string("Provider ") + resolved_provider + " not found in config";
+            std::string("Provider ") + resolvedProvider + " not found in config";
         if (logger) {
             logger->log(LogLevel::Error, errorMsg);
         }
@@ -64,7 +64,7 @@ ProviderBootstrap::BootstrapResult ProviderBootstrap::bootstrap(
 
     // Set provider type
     result.providerType =
-        ::LLMEngineAPI::APIClientFactory::stringToProviderType(resolved_provider);
+        ::LLMEngineAPI::APIClientFactory::stringToProviderType(resolvedProvider);
 
     // Resolve API key with priority: env var → param → config
     std::string apiKeyFromConfig =
@@ -87,26 +87,26 @@ ProviderBootstrap::BootstrapResult ProviderBootstrap::bootstrap(
     return result;
 }
 
-SecureString ProviderBootstrap::resolveApiKey(::LLMEngineAPI::ProviderType provider_type,
-                                              std::string_view api_key_from_param,
+SecureString ProviderBootstrap::resolveApiKey(::LLMEngineAPI::ProviderType providerType,
+                                              std::string_view apiKeyFromParam,
                                               std::string_view apiKeyFromConfig,
                                               Logger* logger) {
 
-    std::string envVarName = getApiKeyEnvVarName(provider_type);
+    std::string envVarName = getApiKeyEnvVarName(providerType);
 
     // SECURITY: Prefer environment variables for API keys over config file or constructor parameter
     // Only use provided apiKey if environment variable is not set
-    const char* env_api_key = nullptr;
+    const char* envApiKey = nullptr;
     if (!envVarName.empty()) {
-        env_api_key = std::getenv(envVarName.c_str());
+        envApiKey = std::getenv(envVarName.c_str());
     }
 
-    if (env_api_key && strlen(env_api_key) > 0) {
-        return SecureString(env_api_key);
+    if (envApiKey && strlen(envApiKey) > 0) {
+        return SecureString(envApiKey);
     }
-    if (!std::string(api_key_from_param).empty()) {
+    if (!std::string(apiKeyFromParam).empty()) {
         // Use provided API key if environment variable is not set
-        return SecureString(api_key_from_param);
+        return SecureString(apiKeyFromParam);
     }
     // Fall back to config file (last resort - not recommended for production)
     std::string apiKey = std::string(apiKeyFromConfig);
@@ -119,23 +119,23 @@ SecureString ProviderBootstrap::resolveApiKey(::LLMEngineAPI::ProviderType provi
     return SecureString(std::move(apiKey));
 }
 
-std::string ProviderBootstrap::resolveBaseUrl(::LLMEngineAPI::ProviderType provider_type,
-                                              std::string_view base_url_from_param,
+std::string ProviderBootstrap::resolveBaseUrl(::LLMEngineAPI::ProviderType providerType,
+                                              std::string_view baseUrlFromParam,
                                               std::string_view baseUrlFromConfig,
                                               Logger* /*logger*/) {
-    std::string envVarName = getBaseUrlEnvVarName(provider_type);
-    const char* env_val = nullptr;
+    std::string envVarName = getBaseUrlEnvVarName(providerType);
+    const char* envVal = nullptr;
     if (!envVarName.empty()) {
-        env_val = std::getenv(envVarName.c_str());
+        envVal = std::getenv(envVarName.c_str());
     }
 
     // 1. Env Var
-    if (env_val && strlen(env_val) > 0) {
-        return std::string(env_val);
+    if (envVal && strlen(envVal) > 0) {
+        return std::string(envVal);
     }
     // 2. Param
-    if (!base_url_from_param.empty()) {
-        return std::string(base_url_from_param);
+    if (!baseUrlFromParam.empty()) {
+        return std::string(baseUrlFromParam);
     }
     // 3. Config
     if (!baseUrlFromConfig.empty()) {
@@ -143,7 +143,7 @@ std::string ProviderBootstrap::resolveBaseUrl(::LLMEngineAPI::ProviderType provi
     }
 
     // 4. Default
-    switch (provider_type) {
+    switch (providerType) {
         case ::LLMEngineAPI::ProviderType::OLLAMA:
             return std::string(Constants::DefaultUrls::OLLAMA_BASE);
         case ::LLMEngineAPI::ProviderType::QWEN:
@@ -159,31 +159,31 @@ std::string ProviderBootstrap::resolveBaseUrl(::LLMEngineAPI::ProviderType provi
     }
 }
 
-std::string ProviderBootstrap::resolveModel(::LLMEngineAPI::ProviderType provider_type,
-                                            std::string_view model_from_param,
+std::string ProviderBootstrap::resolveModel(::LLMEngineAPI::ProviderType providerType,
+                                            std::string_view modelFromParam,
                                             std::string_view modelFromConfig,
                                             Logger* /*logger*/) {
-    std::string envVarName = getModelEnvVarName(provider_type);
-    const char* env_val = nullptr;
+    std::string envVarName = getModelEnvVarName(providerType);
+    const char* envVal = nullptr;
     if (!envVarName.empty()) {
-        env_val = std::getenv(envVarName.c_str());
+        envVal = std::getenv(envVarName.c_str());
     }
 
     // 1. Provider-specific Env Var
-    if (env_val && strlen(env_val) > 0) {
-        return std::string(env_val);
+    if (envVal && strlen(envVal) > 0) {
+        return std::string(envVal);
     }
 
     // 1b. Global Default Env Var (DEFAULT_MODEL)
-    const std::string env_var = std::string(Constants::EnvVars::DEFAULT_MODEL);
-    const char* global_env = std::getenv(env_var.c_str());
-    if (global_env && strlen(global_env) > 0) {
-        return std::string(global_env);
+    const std::string envVar = std::string(Constants::EnvVars::DEFAULT_MODEL);
+    const char* globalEnv = std::getenv(envVar.c_str());
+    if (globalEnv && strlen(globalEnv) > 0) {
+        return std::string(globalEnv);
     }
 
     // 2. Param
-    if (!model_from_param.empty()) {
-        return std::string(model_from_param);
+    if (!modelFromParam.empty()) {
+        return std::string(modelFromParam);
     }
     // 3. Config
     if (!modelFromConfig.empty()) {
@@ -191,7 +191,7 @@ std::string ProviderBootstrap::resolveModel(::LLMEngineAPI::ProviderType provide
     }
 
     // 4. Default
-    switch (provider_type) {
+    switch (providerType) {
         case ::LLMEngineAPI::ProviderType::QWEN:
             return std::string(Constants::DefaultModels::QWEN);
         case ::LLMEngineAPI::ProviderType::OPENAI:
@@ -207,8 +207,8 @@ std::string ProviderBootstrap::resolveModel(::LLMEngineAPI::ProviderType provide
     }
 }
 
-std::string ProviderBootstrap::getApiKeyEnvVarName(::LLMEngineAPI::ProviderType provider_type) {
-    switch (provider_type) {
+std::string ProviderBootstrap::getApiKeyEnvVarName(::LLMEngineAPI::ProviderType providerType) {
+    switch (providerType) {
         case ::LLMEngineAPI::ProviderType::QWEN:
             return std::string(Constants::EnvVars::QWEN_API_KEY);
         case ::LLMEngineAPI::ProviderType::OPENAI:
@@ -222,8 +222,8 @@ std::string ProviderBootstrap::getApiKeyEnvVarName(::LLMEngineAPI::ProviderType 
     }
 }
 
-std::string ProviderBootstrap::getBaseUrlEnvVarName(::LLMEngineAPI::ProviderType provider_type) {
-    switch (provider_type) {
+std::string ProviderBootstrap::getBaseUrlEnvVarName(::LLMEngineAPI::ProviderType providerType) {
+    switch (providerType) {
         case ::LLMEngineAPI::ProviderType::OLLAMA:
             return std::string(Constants::EnvVars::OLLAMA_HOST);
         case ::LLMEngineAPI::ProviderType::OPENAI:
@@ -239,8 +239,8 @@ std::string ProviderBootstrap::getBaseUrlEnvVarName(::LLMEngineAPI::ProviderType
     }
 }
 
-std::string ProviderBootstrap::getModelEnvVarName(::LLMEngineAPI::ProviderType provider_type) {
-    switch (provider_type) {
+std::string ProviderBootstrap::getModelEnvVarName(::LLMEngineAPI::ProviderType providerType) {
+    switch (providerType) {
         case ::LLMEngineAPI::ProviderType::OLLAMA:
             return std::string(Constants::EnvVars::OLLAMA_MODEL);
         case ::LLMEngineAPI::ProviderType::OPENAI:
