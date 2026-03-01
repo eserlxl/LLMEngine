@@ -168,7 +168,7 @@ ProviderType APIClientFactory::stringToProviderType(std::string_view provider_na
                               "unintended provider selection.";
 
     // Log loudly before throwing (use stderr since getLogger() is private)
-    std::cerr << "LLMEngine ERROR: " << error_msg << std::endl;
+    std::cerr << "LLMEngine ERROR: " << error_msg << "\n";
 
     throw std::runtime_error(error_msg);
 }

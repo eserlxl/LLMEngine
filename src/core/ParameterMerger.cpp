@@ -67,8 +67,6 @@ bool ParameterMerger::mergeInto(const nlohmann::json& base_params,
         changed = true;
     }
 
-    // DEBUG only
-    // std::cout << "DEBUG: mergeInto mode='" << mode << "' changed=" << changed << std::endl;
     if (!changed) {
         for (const auto& [key, _] : allowed_keys) {
             auto it = input.find(key);
