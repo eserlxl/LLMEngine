@@ -1,7 +1,7 @@
 // Copyright © 2026 Eser KUBALI <lxldev.contact@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "LLMEngine/http/RequestOptions.hpp"
+#include "llmengine/http/request_options.hpp"
 #include <cassert>
 #include <iostream>
 

@@ -5,10 +5,10 @@
 // and is licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/providers/APIClient.hpp"
-#include "LLMEngine/core/IConfigManager.hpp"
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "support/FakeAPIClient.hpp"
+#include "llmengine/providers/api_client.hpp"
+#include "llmengine/core/i_config_manager.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "support/fake_api_client.hpp"
 
 #include <cassert>
 #include <cstdlib>
@@ -25,9 +25,9 @@ struct EnvBackup {
     std::string anthropic_key;
 
     EnvBackup() {
-        const char* qwen = std::getenv("QWEN_API_KEY");
-        const char* openai = std::getenv("OPENAI_API_KEY");
-        const char* anthropic = std::getenv("ANTHROPIC_API_KEY");
+        const char* qwen = std::getenv("qwenApiKey");
+        const char* openai = std::getenv("openaiApiKey");
+        const char* anthropic = std::getenv("anthropicApiKey");
         if (qwen)
             qwen_key = qwen;
         if (openai)
@@ -38,19 +38,19 @@ struct EnvBackup {
 
     void restore() {
         if (!qwen_key.empty()) {
-            setenv("QWEN_API_KEY", qwen_key.c_str(), 1);
+            setenv("qwenApiKey", qwen_key.c_str(), 1);
         } else {
-            unsetenv("QWEN_API_KEY");
+            unsetenv("qwenApiKey");
         }
         if (!openai_key.empty()) {
-            setenv("OPENAI_API_KEY", openai_key.c_str(), 1);
+            setenv("openaiApiKey", openai_key.c_str(), 1);
         } else {
-            unsetenv("OPENAI_API_KEY");
+            unsetenv("openaiApiKey");
         }
         if (!anthropic_key.empty()) {
-            setenv("ANTHROPIC_API_KEY", anthropic_key.c_str(), 1);
+            setenv("anthropicApiKey", anthropic_key.c_str(), 1);
         } else {
-            unsetenv("ANTHROPIC_API_KEY");
+            unsetenv("anthropicApiKey");
         }
     }
 };
@@ -117,7 +117,7 @@ void testCredentialResolution() {
         std::cout << "\n1. Testing environment variable priority..." << std::endl;
 
         // Set environment variable
-        setenv("QWEN_API_KEY", "env_key_12345", 1);
+        setenv("qwenApiKey", "env_key_12345", 1);
 
         // Create config with different API key
         nlohmann::json config;
@@ -139,7 +139,7 @@ void testCredentialResolution() {
 
         // Test 2: Config file fallback when env var not set
         std::cout << "\n2. Testing config file fallback..." << std::endl;
-        unsetenv("QWEN_API_KEY");
+        unsetenv("qwenApiKey");
 
         auto client2 = APIClientFactory::createClientFromConfig("qwen", config, nullptr);
         if (client2) {
@@ -195,7 +195,7 @@ class FailingAPIClient : public APIClient {
         return "FailingTest";
     }
     ProviderType getProviderType() const override {
-        return ProviderType::QWEN;
+        return ProviderType::qwen;
     }
 };
 
@@ -255,7 +255,7 @@ void testAnalyzeErrorPaths() {
         // Create a fake client that returns errors
         class ErrorAPIClient : public FakeAPIClient {
           public:
-            ErrorAPIClient() : FakeAPIClient(ProviderType::QWEN, "ErrorClient") {}
+            ErrorAPIClient() : FakeAPIClient(ProviderType::qwen, "ErrorClient") {}
 
             APIResponse sendRequest(std::string_view,
                                     const nlohmann::json&,
@@ -289,7 +289,7 @@ void testAnalyzeErrorPaths() {
 
         class TimeoutAPIClient : public FakeAPIClient {
           public:
-            TimeoutAPIClient() : FakeAPIClient(ProviderType::QWEN, "TimeoutClient") {}
+            TimeoutAPIClient() : FakeAPIClient(ProviderType::qwen, "TimeoutClient") {}
 
             APIResponse sendRequest(std::string_view,
                                     const nlohmann::json&,
@@ -319,7 +319,7 @@ void testAnalyzeErrorPaths() {
 
         class AuthErrorAPIClient : public FakeAPIClient {
           public:
-            AuthErrorAPIClient() : FakeAPIClient(ProviderType::QWEN, "AuthErrorClient") {}
+            AuthErrorAPIClient() : FakeAPIClient(ProviderType::qwen, "AuthErrorClient") {}
 
             APIResponse sendRequest(std::string_view,
                                     const nlohmann::json&,

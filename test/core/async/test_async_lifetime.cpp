@@ -1,7 +1,7 @@
 // Copyright © 2026 Eser KUBALI <lxldev.contact@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "LLMEngine/core/LLMEngine.hpp"
+#include "llmengine/core/llm_engine.hpp"
 #include <cassert>
 #include <chrono>
 #include <iostream>
@@ -20,7 +20,7 @@ int main() {
             std::cout << "Creating engine..." << std::endl;
             // Explicit namespace qualification
             auto engine = std::make_unique<LLMEngine::LLMEngine>(
-                LLMEngineAPI::ProviderType::OLLAMA, "", "llama3", nlohmann::json{}, 24, false);
+                LLMEngineAPI::ProviderType::ollama, "", "llama3", nlohmann::json{}, 24, false);
 
             std::cout << "Starting async analysis..." << std::endl;
             future_result = engine->analyzeAsync("Can you see me?", nlohmann::json{}, "test_type");

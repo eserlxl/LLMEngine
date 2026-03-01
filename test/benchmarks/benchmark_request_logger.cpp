@@ -5,7 +5,7 @@
 // licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/http/RequestLogger.hpp"
+#include "llmengine/http/request_logger.hpp"
 
 #include <benchmark/benchmark.h>
 #include <map>
@@ -56,7 +56,7 @@ static void BM_RequestLogger_RedactHeaders(benchmark::State& state) {
         {"Authorization", "Bearer sk_abcdefghijklmnopqrstuvwxyz012345"},
         {"Content-Type", "application/json"},
         {"X-API-Key", "test_key_12345"},
-        {"User-Agent", "LLMEngine/1.0"}};
+        {"User-Agent", "llmengine/1.0"}};
 
     for (auto _ : state) {
         benchmark::DoNotOptimize(LLMEngine::RequestLogger::redactHeaders(headers));

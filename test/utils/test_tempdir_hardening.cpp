@@ -5,9 +5,9 @@
 // the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/utils/ITempDirProvider.hpp"
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "LLMEngine/utils/Logger.hpp"
+#include "llmengine/utils/i_temp_dir_provider.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "llmengine/utils/logger.hpp"
 
 #include <cassert>
 #include <filesystem>
@@ -79,7 +79,7 @@ void testSymlinkRejection() {
     fs::create_symlink(test_dir, symlink_path);
 
     // Create LLMEngine instance and try to set the symlink path
-    ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
+    ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::ollama, "", "test-model");
 
     // Try to set temp directory to symlink - should be rejected by symlink detection
     // Note: setTempDirectory may accept it (path validation passes), but prepareTempDirectory
@@ -121,7 +121,7 @@ void testSymlinkRejection() {
         fs::create_symlink("/tmp", symlink_path2);
 
         // Try to prepare a directory that is a symlink
-        ::LLMEngine::LLMEngine engine2(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
+        ::LLMEngine::LLMEngine engine2(::LLMEngineAPI::ProviderType::ollama, "", "test-model");
         bool set_result_symlink = engine2.setTempDirectory(symlink_path2);
         if (set_result_symlink) {
             try {
@@ -156,7 +156,7 @@ void testDirectoryPermissions() {
     const std::string default_root = DefaultTempDirProvider().getTempDir();
     const std::string test_dir = default_root + "/test_secure_dir";
 
-    ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
+    ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::ollama, "", "test-model");
     bool set_result = engine.setTempDirectory(test_dir);
     assert(set_result && "Path within default root should be accepted");
     (void)set_result; // Suppress unused variable warning - value checked in assert
@@ -193,7 +193,7 @@ void testDirectoryCreation() {
     const std::string default_root = DefaultTempDirProvider().getTempDir();
     const std::string test_dir = default_root + "/nested/deep/directory";
 
-    ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
+    ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::ollama, "", "test-model");
     bool set_result = engine.setTempDirectory(test_dir);
     assert(set_result && "Path within default root should be accepted");
     (void)set_result; // Suppress unused variable warning - value checked in assert
@@ -219,7 +219,7 @@ void testPathValidation() {
     // Create a custom temp dir provider
     auto custom_provider = std::make_shared<DefaultTempDirProvider>(allowed_root);
 
-    ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
+    ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::ollama, "", "test-model");
     // Note: We can't directly inject the provider after construction,
     // but we can test the path validation in setTempDirectory
 
@@ -256,7 +256,7 @@ void testMultipleCalls() {
     const std::string default_root = DefaultTempDirProvider().getTempDir();
     const std::string test_dir = default_root + "/multi_call";
 
-    ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA, "", "test-model");
+    ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::ollama, "", "test-model");
     bool set_result = engine.setTempDirectory(test_dir);
     if (!set_result) {
         std::cerr << "Error: Failed to set temp directory to " << test_dir << std::endl;

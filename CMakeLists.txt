@@ -339,34 +339,34 @@ endmacro()
 
 # ---- Library ---------------------------------------------------------------
 add_library(${PROJECT_NAME}
-    src/core/LLMEngine.cpp
-    src/core/EngineState.cpp
-    src/utils/Utils.cpp
-    src/providers/APIClient.cpp
-    src/providers/OpenAICompatibleClient.cpp
-    src/providers/QwenClient.cpp
-    src/providers/OpenAIClient.cpp
-    src/providers/AnthropicClient.cpp
-    src/providers/OllamaClient.cpp
-    src/providers/GeminiClient.cpp
-    src/diagnostics/DebugArtifacts.cpp
-    src/diagnostics/DebugArtifactManager.cpp
-    src/http/RequestLogger.cpp
-    src/http/ResponseParser.cpp
-    src/core/ParameterMerger.cpp
-    src/core/RequestContextBuilder.cpp
-    src/http/ResponseHandler.cpp
-    src/providers/ProviderBootstrap.cpp
-    src/utils/TempDirectoryService.cpp
-    src/diagnostics/ArtifactSink.cpp
-    src/http/RequestExecutor.cpp
-    src/http/RetryableRequestExecutor.cpp
-    src/core/AnalysisInput.cpp
-    src/core/AnalysisResult.cpp
-    src/core/LLMEngineBuilder.cpp
-    src/core/ToolBuilder.cpp
-    src/utils/ThreadPool.cpp
-    src/utils/CommandExecutor.cpp
+    src/core/llm_engine.cpp
+    src/core/engine_state.cpp
+    src/utils/utils.cpp
+    src/providers/api_client.cpp
+    src/providers/open_ai_compatible_client.cpp
+    src/providers/qwen_client.cpp
+    src/providers/open_ai_client.cpp
+    src/providers/anthropic_client.cpp
+    src/providers/ollama_client.cpp
+    src/providers/gemini_client.cpp
+    src/diagnostics/debug_artifacts.cpp
+    src/diagnostics/debug_artifact_manager.cpp
+    src/http/request_logger.cpp
+    src/http/response_parser.cpp
+    src/core/parameter_merger.cpp
+    src/core/request_context_builder.cpp
+    src/http/response_handler.cpp
+    src/providers/provider_bootstrap.cpp
+    src/utils/temp_directory_service.cpp
+    src/diagnostics/artifact_sink.cpp
+    src/http/request_executor.cpp
+    src/http/retryable_request_executor.cpp
+    src/core/analysis_input.cpp
+    src/core/analysis_result.cpp
+    src/core/llm_engine_builder.cpp
+    src/core/tool_builder.cpp
+    src/utils/thread_pool.cpp
+    src/utils/command_executor.cpp
 )
 
 # Versioning for shared libraries
@@ -500,7 +500,7 @@ file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine")
 # ---- Export header (visibility) ----------------------------------------------
 include(GenerateExportHeader)
 generate_export_header(${PROJECT_NAME}
-  EXPORT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/generated_include/LLMEngine/LLMEngineExport.hpp")
+  EXPORT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/generated_include/llmengine/LLMEngineExport.hpp")
 
 # Note: Warnings and hardening flags are already applied via ${PROJECT_NAME}_compile_options interface target
 # This avoids duplication and ensures a single source of truth for compile options
@@ -561,8 +561,8 @@ install(TARGETS ${_targets_to_install}
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Install public headers
-# Namespaced headers go to include/LLMEngine/
-install(DIRECTORY include/LLMEngine/
+# Namespaced headers go to include/llmengine/
+install(DIRECTORY include/llmengine/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
     FILES_MATCHING PATTERN "*.hpp")
 

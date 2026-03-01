@@ -5,7 +5,7 @@
 // licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/providers/APIClient.hpp"
+#include "llmengine/providers/api_client.hpp"
 
 #include <cassert>
 #include <iostream>
@@ -14,17 +14,17 @@ using namespace LLMEngineAPI;
 
 int main() {
     // stringToProviderType
-    assert(APIClientFactory::stringToProviderType("qwen") == ProviderType::QWEN);
-    assert(APIClientFactory::stringToProviderType("openai") == ProviderType::OPENAI);
-    assert(APIClientFactory::stringToProviderType("anthropic") == ProviderType::ANTHROPIC);
-    assert(APIClientFactory::stringToProviderType("ollama") == ProviderType::OLLAMA);
+    assert(APIClientFactory::stringToProviderType("qwen") == ProviderType::qwen);
+    assert(APIClientFactory::stringToProviderType("openai") == ProviderType::openai);
+    assert(APIClientFactory::stringToProviderType("anthropic") == ProviderType::anthropic);
+    assert(APIClientFactory::stringToProviderType("ollama") == ProviderType::ollama);
 
     // providerTypeToString
-    assert(APIClientFactory::providerTypeToString(ProviderType::QWEN) == std::string("qwen"));
-    assert(APIClientFactory::providerTypeToString(ProviderType::OPENAI) == std::string("openai"));
-    assert(APIClientFactory::providerTypeToString(ProviderType::ANTHROPIC)
+    assert(APIClientFactory::providerTypeToString(ProviderType::qwen) == std::string("qwen"));
+    assert(APIClientFactory::providerTypeToString(ProviderType::openai) == std::string("openai"));
+    assert(APIClientFactory::providerTypeToString(ProviderType::anthropic)
            == std::string("anthropic"));
-    assert(APIClientFactory::providerTypeToString(ProviderType::OLLAMA) == std::string("ollama"));
+    assert(APIClientFactory::providerTypeToString(ProviderType::ollama) == std::string("ollama"));
 
     // Test that createClientFromConfig throws when no credentials are provided for non-Ollama
     // providers This is the new security behavior - fail fast instead of proceeding silently
@@ -50,7 +50,7 @@ int main() {
                                         {"default_model", "llama2"}};
         auto ollama_client = APIClientFactory::createClientFromConfig("ollama", ollama_config);
         assert(ollama_client != nullptr);
-        assert(ollama_client->getProviderType() == ProviderType::OLLAMA);
+        assert(ollama_client->getProviderType() == ProviderType::ollama);
     }
 
     std::cout << "test_api_client_factory: OK\n";

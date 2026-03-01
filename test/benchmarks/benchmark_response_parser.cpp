@@ -5,7 +5,7 @@
 // licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/http/ResponseParser.hpp"
+#include "llmengine/http/response_parser.hpp"
 
 #include <benchmark/benchmark.h>
 #include <string>

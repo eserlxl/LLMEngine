@@ -1,8 +1,8 @@
 // Copyright © 2026 Eser KUBALI <lxldev.contact@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "support/FakeAPIClient.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "support/fake_api_client.hpp"
 #include <future>
 #include <iostream>
 #include <memory>

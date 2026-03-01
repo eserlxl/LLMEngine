@@ -1,6 +1,6 @@
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "LLMEngine/diagnostics/IMetricsCollector.hpp"
-#include "support/FakeAPIClient.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "llmengine/diagnostics/i_metrics_collector.hpp"
+#include "support/fake_api_client.hpp"
 #include <iostream>
 #include <memory>
 #include <vector>

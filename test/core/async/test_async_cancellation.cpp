@@ -9,8 +9,8 @@
 #include <chrono>
 #include <vector>
 #include <atomic>
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "support/FakeAPIClient.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "support/fake_api_client.hpp"
 
 using namespace LLMEngine;
 

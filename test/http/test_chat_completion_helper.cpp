@@ -5,8 +5,8 @@
 // licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "providers/ChatCompletionRequestHelper.hpp"
-#include "LLMEngine/core/Constants.hpp"
+#include "providers/chat_completion_request_helper.hpp"
+#include "llmengine/core/constants.hpp"
 
 #include <cassert>
 #include <iostream>
@@ -29,7 +29,7 @@ void testChatMessageBuilderBasic() {
 }
 
 void testChatMessageBuilderWithSystemPrompt() {
-    nlohmann::json input = {{std::string(LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT),
+    nlohmann::json input = {{std::string(LLMEngine::Constants::JsonKeys::systemPrompt),
                              "You are a helpful assistant."}};
     std::string prompt = "What is 2+2?";
 
@@ -46,7 +46,7 @@ void testChatMessageBuilderWithSystemPrompt() {
 }
 
 void testChatMessageBuilderWithNumericSystemPrompt() {
-    nlohmann::json input = {{std::string(LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT), 42}};
+    nlohmann::json input = {{std::string(LLMEngine::Constants::JsonKeys::systemPrompt), 42}};
     std::string prompt = "Test";
 
     auto messages = ChatMessageBuilder::buildMessages(prompt, input);
@@ -61,7 +61,7 @@ void testChatMessageBuilderWithNumericSystemPrompt() {
 }
 
 void testChatMessageBuilderWithBooleanSystemPrompt() {
-    nlohmann::json input = {{std::string(LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT), true}};
+    nlohmann::json input = {{std::string(LLMEngine::Constants::JsonKeys::systemPrompt), true}};
     std::string prompt = "Test";
 
     auto messages = ChatMessageBuilder::buildMessages(prompt, input);
@@ -78,7 +78,7 @@ void testChatMessageBuilderWithBooleanSystemPrompt() {
 void testChatMessageBuilderWithObjectSystemPrompt() {
     // Object system prompts should be ignored (non-string, non-scalar)
     nlohmann::json input = {
-        {std::string(LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT), {{"key", "value"}}}};
+        {std::string(LLMEngine::Constants::JsonKeys::systemPrompt), {{"key", "value"}}}};
     std::string prompt = "Test";
 
     auto messages = ChatMessageBuilder::buildMessages(prompt, input);
@@ -93,7 +93,7 @@ void testChatMessageBuilderWithObjectSystemPrompt() {
 void testChatMessageBuilderWithArraySystemPrompt() {
     // Array system prompts should be ignored (non-string, non-scalar)
     nlohmann::json input = {
-        {std::string(LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT), nlohmann::json::array()}};
+        {std::string(LLMEngine::Constants::JsonKeys::systemPrompt), nlohmann::json::array()}};
     std::string prompt = "Test";
 
     auto messages = ChatMessageBuilder::buildMessages(prompt, input);

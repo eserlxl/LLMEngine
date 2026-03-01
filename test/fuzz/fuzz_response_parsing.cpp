@@ -5,7 +5,7 @@
 // Build with: clang++ -fsanitize=fuzzer,address,undefined -O1 fuzz_response_parsing.cpp -o
 // fuzz_response_parsing Or use CMake with ENABLE_FUZZ=ON (see test/CMakeLists.txt)
 
-#include "LLMEngine/http/ResponseParser.hpp"
+#include "llmengine/http/response_parser.hpp"
 
 #include <cstddef>
 #include <cstdint>

@@ -5,7 +5,7 @@
 // licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/providers/APIClient.hpp"
+#include "llmengine/providers/api_client.hpp"
 
 #include <cassert>
 #include <iostream>
@@ -21,11 +21,11 @@ static void round_trip(ProviderType t) {
 }
 
 int main() {
-    round_trip(ProviderType::QWEN);
-    round_trip(ProviderType::OPENAI);
-    round_trip(ProviderType::ANTHROPIC);
-    round_trip(ProviderType::OLLAMA);
-    round_trip(ProviderType::GEMINI);
+    round_trip(ProviderType::qwen);
+    round_trip(ProviderType::openai);
+    round_trip(ProviderType::anthropic);
+    round_trip(ProviderType::ollama);
+    round_trip(ProviderType::gemini);
     std::cout << "test_provider_type_mapping: OK\n";
     return 0;
 }

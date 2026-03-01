@@ -1,8 +1,8 @@
 // Copyright © 2026 Eser KUBALI <lxldev.contact@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "LLMEngine/providers/APIClient.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "llmengine/providers/api_client.hpp"
 #include <iostream>
 #include <memory>
 #include <vector>

@@ -5,8 +5,8 @@
 // licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/utils/Logger.hpp"
-#include "LLMEngine/http/RequestLogger.hpp"
+#include "llmengine/utils/logger.hpp"
+#include "llmengine/http/request_logger.hpp"
 
 #include <cassert>
 #include <iostream>

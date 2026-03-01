@@ -1,4 +1,4 @@
-#include "LLMEngine/providers/APIClient.hpp"
+#include "llmengine/providers/api_client.hpp"
 
 #include <cassert>
 #include <iostream>
@@ -8,16 +8,16 @@ int main() {
     using namespace LLMEngineAPI;
 
     // Exact matches
-    assert(APIClientFactory::stringToProviderType("qwen") == ProviderType::QWEN);
-    assert(APIClientFactory::stringToProviderType("openai") == ProviderType::OPENAI);
-    assert(APIClientFactory::stringToProviderType("anthropic") == ProviderType::ANTHROPIC);
-    assert(APIClientFactory::stringToProviderType("ollama") == ProviderType::OLLAMA);
-    assert(APIClientFactory::stringToProviderType("gemini") == ProviderType::GEMINI);
+    assert(APIClientFactory::stringToProviderType("qwen") == ProviderType::qwen);
+    assert(APIClientFactory::stringToProviderType("openai") == ProviderType::openai);
+    assert(APIClientFactory::stringToProviderType("anthropic") == ProviderType::anthropic);
+    assert(APIClientFactory::stringToProviderType("ollama") == ProviderType::ollama);
+    assert(APIClientFactory::stringToProviderType("gemini") == ProviderType::gemini);
 
     // Case-insensitive
-    assert(APIClientFactory::stringToProviderType("QWEN") == ProviderType::QWEN);
-    assert(APIClientFactory::stringToProviderType("OpenAI") == ProviderType::OPENAI);
-    assert(APIClientFactory::stringToProviderType("GEMINI") == ProviderType::GEMINI);
+    assert(APIClientFactory::stringToProviderType("qwen") == ProviderType::qwen);
+    assert(APIClientFactory::stringToProviderType("OpenAI") == ProviderType::openai);
+    assert(APIClientFactory::stringToProviderType("gemini") == ProviderType::gemini);
 
     // Test that unknown providers throw an exception (current behavior)
     bool exception_thrown = false;

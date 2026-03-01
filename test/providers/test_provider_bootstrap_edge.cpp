@@ -5,9 +5,9 @@
 // licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/providers/ProviderBootstrap.hpp"
-#include "LLMEngine/providers/APIClient.hpp"
-#include "LLMEngine/utils/Logger.hpp"
+#include "llmengine/providers/provider_bootstrap.hpp"
+#include "llmengine/providers/api_client.hpp"
+#include "llmengine/utils/logger.hpp"
 
 #include <cassert>
 #include <iostream>
@@ -32,10 +32,10 @@ void testResolveApiKeyEdgeCases() {
     
     // Both param and config are empty. Should return empty string for OpenAI because no env var is set.
     // Unset environment variable first just in case
-    unsetenv("OPENAI_API_KEY");
+    unsetenv("openaiApiKey");
     
     auto apiKey = LLMEngine::ProviderBootstrap::resolveApiKey(
-        LLMEngineAPI::ProviderType::OPENAI,
+        LLMEngineAPI::ProviderType::openai,
         "",
         "",
         &logger
@@ -44,7 +44,7 @@ void testResolveApiKeyEdgeCases() {
     
     // Now with param empty, but config has value
     apiKey = LLMEngine::ProviderBootstrap::resolveApiKey(
-        LLMEngineAPI::ProviderType::OPENAI,
+        LLMEngineAPI::ProviderType::openai,
         "",
         "config_key",
         &logger
@@ -60,16 +60,16 @@ void testResolveBaseUrlEdgeCases() {
     TestLogger logger;
     
     // Unset environment variables
-    unsetenv("OPENAI_BASE_URL");
+    unsetenv("openaiBaseUrl");
     
     // All empty -> Fallback to default
     std::string baseUrl = LLMEngine::ProviderBootstrap::resolveBaseUrl(
-        LLMEngineAPI::ProviderType::OPENAI,
+        LLMEngineAPI::ProviderType::openai,
         "",
         "",
         &logger
     );
-    assert(baseUrl == "https://api.openai.com/v1"); // Constants::DefaultUrls::OPENAI_BASE
+    assert(baseUrl == "https://api.openai.com/v1"); // Constants::DefaultUrls::openaiBase
     
     std::cout << "✓ Base URL resolution edge cases passed\n";
 }

@@ -1,7 +1,7 @@
 // Copyright © 2026 Eser KUBALI
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "LLMEngine/core/AnalysisInput.hpp"
+#include "llmengine/core/analysis_input.hpp"
 #include <gtest/gtest.h>
 
 using namespace LLMEngine;

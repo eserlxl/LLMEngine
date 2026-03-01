@@ -5,10 +5,10 @@
 // and is licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/core/IModelContext.hpp"
-#include "LLMEngine/utils/Logger.hpp"
-#include "LLMEngine/core/RequestContextBuilder.hpp"
-#include "LLMEngine/utils/TempDirectoryService.hpp"
+#include "llmengine/core/i_model_context.hpp"
+#include "llmengine/utils/logger.hpp"
+#include "llmengine/core/request_context_builder.hpp"
+#include "llmengine/utils/temp_directory_service.hpp"
 
 #include <atomic>
 #include <cassert>

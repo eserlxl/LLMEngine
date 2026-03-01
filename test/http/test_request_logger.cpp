@@ -3,7 +3,7 @@
 //
 // Tests for RequestLogger redaction functions with edge cases
 
-#include "LLMEngine/http/RequestLogger.hpp"
+#include "llmengine/http/request_logger.hpp"
 
 #include <cassert>
 #include <chrono>
@@ -101,9 +101,9 @@ void testUrlRedactionEdgeCases() {
            && "Should handle complex values");
 
     // Test 4: Case-insensitive sensitive parameter matching
-    std::string url4 = "https://api.example.com/endpoint?API_KEY=secret&Token=abc123";
+    std::string url4 = "https://api.example.com/endpoint?apiKey=secret&Token=abc123";
     std::string result4 = RequestLogger::redactUrl(url4);
-    assert(result4.find("API_KEY=<REDACTED>") != std::string::npos
+    assert(result4.find("apiKey=<REDACTED>") != std::string::npos
            && "Should match case-insensitively");
     assert(result4.find("Token=<REDACTED>") != std::string::npos
            && "Should match token case-insensitively");
@@ -126,7 +126,7 @@ void testHeaderRedaction() {
     // Test 2: Case-insensitive matching for allowlist
     std::map<std::string, std::string> headers2 = {{"CONTENT-TYPE", "application/json"},
                                                    {"accept", "application/json"},
-                                                   {"User-Agent", "LLMEngine/1.0"}};
+                                                   {"User-Agent", "llmengine/1.0"}};
     auto result2 = RequestLogger::redactHeaders(headers2);
     assert(result2.find("CONTENT-TYPE") != result2.end() && "Case-insensitive allowlist matching");
     assert(result2.find("accept") != result2.end() && "Lowercase header should match");
@@ -135,11 +135,11 @@ void testHeaderRedaction() {
     // Test 3: Allowed headers pass through
     std::map<std::string, std::string> headers3 = {{"Content-Type", "application/json"},
                                                    {"Accept", "application/json"},
-                                                   {"User-Agent", "LLMEngine/1.0"}};
+                                                   {"User-Agent", "llmengine/1.0"}};
     auto result3 = RequestLogger::redactHeaders(headers3);
     assert(result3["Content-Type"] == "application/json" && "Allowed header should pass through");
     assert(result3["Accept"] == "application/json" && "Allowed header should pass through");
-    assert(result3["User-Agent"] == "LLMEngine/1.0" && "Allowed header should pass through");
+    assert(result3["User-Agent"] == "llmengine/1.0" && "Allowed header should pass through");
 
     // Test 4: Mixed allowed and non-allowed
     std::map<std::string, std::string> headers4 = {{"Content-Type", "application/json"},
@@ -162,11 +162,11 @@ void testHeaderRedaction() {
     // Test 6: Headers with special characters in values
     std::map<std::string, std::string> headers6 = {
         {"Content-Type", "application/json; charset=utf-8"},
-        {"User-Agent", "LLMEngine/1.0 (Linux)"}};
+        {"User-Agent", "llmengine/1.0 (Linux)"}};
     auto result6 = RequestLogger::redactHeaders(headers6);
     assert(result6["Content-Type"] == "application/json; charset=utf-8"
            && "Should preserve special chars in values");
-    assert(result6["User-Agent"] == "LLMEngine/1.0 (Linux)" && "Should preserve special chars");
+    assert(result6["User-Agent"] == "llmengine/1.0 (Linux)" && "Should preserve special chars");
 
     // Test 7: Multiple headers with same allowlist status
     std::map<std::string, std::string> headers7 = {{"Content-Type", "application/json"},

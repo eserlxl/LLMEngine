@@ -1,5 +1,5 @@
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "LLMEngine/core/ParameterMerger.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "llmengine/core/parameter_merger.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <vector>

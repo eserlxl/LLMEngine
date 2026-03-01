@@ -5,10 +5,10 @@
 // the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "LLMEngine/http/ResponseParser.hpp"
-#include "LLMEngine/utils/Utils.hpp"
-#include "LLMEngine/core/Constants.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "llmengine/http/response_parser.hpp"
+#include "llmengine/utils/utils.hpp"
+#include "llmengine/core/constants.hpp"
 
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -39,7 +39,7 @@ int main() {
                                        {"top_k", 40},
                                        {"min_p", 0.05}};
 
-        ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::OLLAMA,
+        ::LLMEngine::LLMEngine engine(::LLMEngineAPI::ProviderType::ollama,
                                       "",
                                       model,
                                       model_params,
@@ -52,7 +52,7 @@ int main() {
 
         // Create engine with empty payload to test default behavior
         nlohmann::json empty_params = {};
-        ::LLMEngine::LLMEngine engine_empty(::LLMEngineAPI::ProviderType::OLLAMA,
+        ::LLMEngine::LLMEngine engine_empty(::LLMEngineAPI::ProviderType::ollama,
                                             "",
                                             model,
                                             empty_params,
@@ -66,7 +66,7 @@ int main() {
 
         // Create engine with only some parameters
         nlohmann::json partial_params = {{"temperature", 0.5}, {"top_p", 0.8}};
-        ::LLMEngine::LLMEngine engine_partial(::LLMEngineAPI::ProviderType::OLLAMA,
+        ::LLMEngine::LLMEngine engine_partial(::LLMEngineAPI::ProviderType::ollama,
                                               "",
                                               model,
                                               partial_params,
@@ -127,8 +127,8 @@ int main() {
         std::cout << "Original: " << markdown_text << std::endl;
         std::cout << "Stripped: " << stripped << std::endl;
 
-        // Test TMP_DIR
-        std::cout << "Temporary directory: " << ::LLMEngine::Constants::FilePaths::TMP_DIR << std::endl;
+        // Test tmpDir
+        std::cout << "Temporary directory: " << ::LLMEngine::Constants::FilePaths::tmpDir << std::endl;
 
         std::cout << "\n=== All tests completed successfully! ===" << std::endl;
 

@@ -1,8 +1,8 @@
 // Copyright © 2026 Eser KUBALI
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "LLMEngine/utils/Logger.hpp"
-#include "LLMEngine/utils/StreamUtils.hpp"
+#include "llmengine/utils/logger.hpp"
+#include "llmengine/utils/stream_utils.hpp"
 #include <cassert>
 #include <sstream>
 #include <string>

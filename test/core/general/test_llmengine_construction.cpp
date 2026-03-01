@@ -5,8 +5,8 @@
 // and is licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "support/FakeAPIClient.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "support/fake_api_client.hpp"
 
 #include <cassert>
 #include <iostream>
@@ -16,7 +16,7 @@ using namespace LLMEngine;
 
 int main() {
     // Construct with DI client
-    auto fake = std::make_unique<FakeAPIClient>(ProviderType::OPENAI, "FakeOpenAI");
+    auto fake = std::make_unique<FakeAPIClient>(ProviderType::openai, "FakeOpenAI");
     ::LLMEngine::LLMEngine engine(std::move(fake),
                                   /*model_params*/ {},
                                   /*log_retention_hours*/ 1,
@@ -29,7 +29,7 @@ int main() {
     assert(out.content.find("[FAKE]") != std::string::npos);
 
     // Test Ollama provider via ProviderType constructor
-    ::LLMEngine::LLMEngine ollama_engine(ProviderType::OLLAMA, "", "llama2");
+    ::LLMEngine::LLMEngine ollama_engine(ProviderType::ollama, "", "llama2");
     (void)ollama_engine;
 
     std::cout << "test_llmengine_construction: OK\n";

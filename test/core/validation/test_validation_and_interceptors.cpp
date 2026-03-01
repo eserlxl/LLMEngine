@@ -1,5 +1,5 @@
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "LLMEngine/core/ToolBuilder.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "llmengine/core/tool_builder.hpp"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -50,7 +50,7 @@ public:
     
     // Missing pure virtuals
     std::string getProviderName() const override { return "fake"; }
-    LLMEngineAPI::ProviderType getProviderType() const override { return LLMEngineAPI::ProviderType::OPENAI; }
+    LLMEngineAPI::ProviderType getProviderType() const override { return LLMEngineAPI::ProviderType::openai; }
 };
 
 class ValidationTest : public Test {

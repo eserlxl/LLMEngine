@@ -5,7 +5,7 @@
 // licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine.hpp"
+#include "llm_engine.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -1122,19 +1122,19 @@ int main(int argc, char* argv[]) {
     }
 
     // Get API key from environment for online providers
-    const char* api_key = std::getenv("QWEN_API_KEY");
+    const char* api_key = std::getenv("qwenApiKey");
     if (!api_key) {
-        api_key = std::getenv("OPENAI_API_KEY");
+        api_key = std::getenv("openaiApiKey");
     }
     if (!api_key) {
-        api_key = std::getenv("ANTHROPIC_API_KEY");
+        api_key = std::getenv("anthropicApiKey");
     }
 
     if (!api_key) {
         std::cerr << "❌ No API key found! Please set one of:" << std::endl;
-        std::cerr << "   export QWEN_API_KEY=\"your-key\"" << std::endl;
-        std::cerr << "   export OPENAI_API_KEY=\"your-key\"" << std::endl;
-        std::cerr << "   export ANTHROPIC_API_KEY=\"your-key\"" << std::endl;
+        std::cerr << "   export qwenApiKey=\"your-key\"" << std::endl;
+        std::cerr << "   export openaiApiKey=\"your-key\"" << std::endl;
+        std::cerr << "   export anthropicApiKey=\"your-key\"" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Or use Ollama (local) by running:" << std::endl;
         std::cerr << "   ./image_generator ollama" << std::endl;

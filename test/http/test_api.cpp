@@ -5,9 +5,9 @@
 // the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "LLMEngine/providers/APIClient.hpp"
-#include "LLMEngine/utils/Utils.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "llmengine/providers/api_client.hpp"
+#include "llmengine/utils/utils.hpp"
 
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -56,9 +56,9 @@ void testQwenClient() {
     printSeparator("Testing Qwen Client");
 
     std::cout << "NOTE: This test requires a valid Qwen API key" << std::endl;
-    std::cout << "Set the QWEN_API_KEY environment variable to test" << std::endl;
+    std::cout << "Set the qwenApiKey environment variable to test" << std::endl;
 
-    const char* api_key_env = std::getenv("QWEN_API_KEY");
+    const char* api_key_env = std::getenv("qwenApiKey");
     if (!api_key_env) {
         std::cout << "⊘ Skipping Qwen client test (no API key)" << std::endl;
         return;
@@ -95,7 +95,7 @@ void testQwenClient() {
 void testLLMEngineWithQwen() {
     printSeparator("Testing LLMEngine with Qwen");
 
-    const char* api_key_env = std::getenv("QWEN_API_KEY");
+    const char* api_key_env = std::getenv("qwenApiKey");
     if (!api_key_env) {
         std::cout << "⊘ Skipping LLMEngine Qwen test (no API key)" << std::endl;
         return;
@@ -110,7 +110,7 @@ void testLLMEngineWithQwen() {
         nlohmann::json model_params = {{"temperature", 0.7}};
 
         ::LLMEngine::LLMEngine engine(
-            ::LLMEngineAPI::ProviderType::QWEN, api_key, "qwen-flash", model_params, 24, true);
+            ::LLMEngineAPI::ProviderType::qwen, api_key, "qwen-flash", model_params, 24, true);
         std::cout << "✓ LLMEngine initialized with Qwen" << std::endl;
         std::cout << "  Provider: " << engine.getProviderName() << std::endl;
         std::cout << "  Is online: " << (engine.isOnlineProvider() ? "Yes" : "No") << std::endl;
@@ -159,7 +159,7 @@ void testLLMEngineOllamaProvider() {
         nlohmann::json model_params = {{"temperature", 0.7}, {"top_p", 0.9}};
 
         ::LLMEngine::LLMEngine engine(
-            ::LLMEngineAPI::ProviderType::OLLAMA, "", model, model_params, 24, true);
+            ::LLMEngineAPI::ProviderType::ollama, "", model, model_params, 24, true);
         std::cout << "✓ LLMEngine initialized with Ollama provider" << std::endl;
         std::cout << "  Provider: " << engine.getProviderName() << std::endl;
         std::cout << "  Is online: " << (engine.isOnlineProvider() ? "Yes" : "No") << std::endl;
@@ -181,21 +181,21 @@ void testAPIClientFactory() {
 
     try {
         std::cout << "1. Testing provider type to string conversion..." << std::endl;
-        std::cout << "  QWEN -> "
+        std::cout << "  qwen -> "
                   << ::LLMEngineAPI::APIClientFactory::providerTypeToString(
-                         ::LLMEngineAPI::ProviderType::QWEN)
+                         ::LLMEngineAPI::ProviderType::qwen)
                   << std::endl;
-        std::cout << "  OPENAI -> "
+        std::cout << "  openai -> "
                   << ::LLMEngineAPI::APIClientFactory::providerTypeToString(
-                         ::LLMEngineAPI::ProviderType::OPENAI)
+                         ::LLMEngineAPI::ProviderType::openai)
                   << std::endl;
-        std::cout << "  ANTHROPIC -> "
+        std::cout << "  anthropic -> "
                   << ::LLMEngineAPI::APIClientFactory::providerTypeToString(
-                         ::LLMEngineAPI::ProviderType::ANTHROPIC)
+                         ::LLMEngineAPI::ProviderType::anthropic)
                   << std::endl;
-        std::cout << "  OLLAMA -> "
+        std::cout << "  ollama -> "
                   << ::LLMEngineAPI::APIClientFactory::providerTypeToString(
-                         ::LLMEngineAPI::ProviderType::OLLAMA)
+                         ::LLMEngineAPI::ProviderType::ollama)
                   << std::endl;
 
         std::cout << "\n2. Testing string to provider type conversion..." << std::endl;
@@ -207,7 +207,7 @@ void testAPIClientFactory() {
 
         // Test Ollama client (no API key needed)
         auto ollama_client = ::LLMEngineAPI::APIClientFactory::createClient(
-            ::LLMEngineAPI::ProviderType::OLLAMA, "", "llama2", "http://localhost:11434");
+            ::LLMEngineAPI::ProviderType::ollama, "", "llama2", "http://localhost:11434");
         if (ollama_client) {
             std::cout << "✓ Ollama client created: " << ollama_client->getProviderName()
                       << std::endl;
@@ -244,15 +244,15 @@ int main() {
         std::cout << "\nTest Summary:" << std::endl;
         std::cout << "  - API Config Manager: ✓" << std::endl;
         std::cout << "  - API Client Factory: ✓" << std::endl;
-        std::cout << "  - Qwen Client: " << (std::getenv("QWEN_API_KEY") ? "✓" : "⊘ (skipped)")
+        std::cout << "  - Qwen Client: " << (std::getenv("qwenApiKey") ? "✓" : "⊘ (skipped)")
                   << std::endl;
         std::cout << "  - LLMEngine with Qwen: "
-                  << (std::getenv("QWEN_API_KEY") ? "✓" : "⊘ (skipped)") << std::endl;
+                  << (std::getenv("qwenApiKey") ? "✓" : "⊘ (skipped)") << std::endl;
         std::cout << "  - Ollama Provider: ✓" << std::endl;
 
-        std::cout << "\nTo test Qwen integration, set QWEN_API_KEY environment variable:"
+        std::cout << "\nTo test Qwen integration, set qwenApiKey environment variable:"
                   << std::endl;
-        std::cout << "  export QWEN_API_KEY='your-api-key-here'" << std::endl;
+        std::cout << "  export qwenApiKey='your-api-key-here'" << std::endl;
         std::cout << "  ./test_api" << std::endl;
 
     } catch (const std::exception& e) {

@@ -1,10 +1,10 @@
 // Copyright © 2026 Eser KUBALI
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "LLMEngine/core/AnalysisInput.hpp"
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "LLMEngine/core/ToolBuilder.hpp"
-#include "support/FakeAPIClient.hpp"
+#include "llmengine/core/analysis_input.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "llmengine/core/tool_builder.hpp"
+#include "support/fake_api_client.hpp"
 #include <cassert>
 #include <iostream>
 #include <stdexcept>

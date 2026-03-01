@@ -1,5 +1,5 @@
-#include "LLMEngine/core/AnalysisInput.hpp"
-#include "LLMEngine/http/RequestOptions.hpp"
+#include "llmengine/core/analysis_input.hpp"
+#include "llmengine/http/request_options.hpp"
 #include <cassert>
 #include <iostream>
 

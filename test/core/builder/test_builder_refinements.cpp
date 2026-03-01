@@ -5,9 +5,9 @@
 #undef NDEBUG
 #include <cassert>
 #include <iostream>
-#include "LLMEngine/core/LLMEngineBuilder.hpp"
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "LLMEngine/core/IConfigManager.hpp"
+#include "llmengine/core/llm_engine_builder.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "llmengine/core/i_config_manager.hpp"
 #include <memory>
 
 // Stub Config Manager to avoid filesystem dependency

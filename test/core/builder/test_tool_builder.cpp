@@ -1,7 +1,7 @@
 // Copyright © 2026 Eser KUBALI
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "LLMEngine/core/ToolBuilder.hpp"
+#include "llmengine/core/tool_builder.hpp"
 #include <cassert>
 #include <iostream>
 

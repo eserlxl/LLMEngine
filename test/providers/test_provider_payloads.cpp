@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "LLMEngine/providers/APIClient.hpp"
+#include "llmengine/providers/api_client.hpp"
 #include <nlohmann/json.hpp>
 
 using namespace LLMEngineAPI;

@@ -5,7 +5,7 @@
 // Build with: clang++ -fsanitize=fuzzer,address,undefined -O1 fuzz_redactor.cpp -o fuzz_redactor
 // Or use CMake with ENABLE_FUZZ=ON (see test/CMakeLists.txt)
 
-#include "LLMEngine/http/RequestLogger.hpp"
+#include "llmengine/http/request_logger.hpp"
 
 #include <cstddef>
 #include <cstdint>

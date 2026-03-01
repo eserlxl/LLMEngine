@@ -182,7 +182,7 @@ function(llmengine_test name source)
 endfunction()
 
 # ---- Support Libraries -------------------------------------------------------
-add_library(test_support_fake STATIC support/FakeAPIClient.cpp)
+add_library(test_support_fake STATIC support/fake_api_client.cpp)
 target_include_directories(test_support_fake PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(test_support_fake PUBLIC LLMEngine nlohmann_json::nlohmann_json)
 apply_test_sanitizer_flags(test_support_fake)

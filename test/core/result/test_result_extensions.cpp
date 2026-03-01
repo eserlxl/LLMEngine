@@ -1,7 +1,7 @@
 // Copyright © 2026 Eser KUBALI <lxldev.contact@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "LLMEngine/core/Result.hpp"
+#include "llmengine/core/result.hpp"
 #include <cassert>
 #include <iostream>
 #include <string>

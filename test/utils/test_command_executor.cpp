@@ -1,7 +1,7 @@
 // Copyright © 2026 Eser KUBALI <lxldev.contact@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "LLMEngine/utils/CommandExecutor.hpp"
+#include "llmengine/utils/command_executor.hpp"
 #include <iostream>
 #include <vector>
 #include <string>

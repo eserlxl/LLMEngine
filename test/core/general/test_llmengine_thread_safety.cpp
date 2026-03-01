@@ -1,5 +1,5 @@
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "support/FakeAPIClient.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "support/fake_api_client.hpp"
 #include <cassert>
 #include <future>
 #include <iostream>

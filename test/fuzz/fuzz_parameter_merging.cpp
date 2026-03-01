@@ -5,7 +5,7 @@
 // Build with: clang++ -fsanitize=fuzzer,address,undefined -O1 fuzz_parameter_merging.cpp -o
 // fuzz_parameter_merging Or use CMake with ENABLE_FUZZ=ON (see test/CMakeLists.txt)
 
-#include "LLMEngine/core/ParameterMerger.hpp"
+#include "llmengine/core/parameter_merger.hpp"
 
 #include <cstddef>
 #include <cstdint>

@@ -5,16 +5,16 @@
 // licensed under the GNU General Public License v3.0 or later.
 // See the LICENSE file in the project root for details.
 
-#include "LLMEngine/providers/APIClient.hpp"
-#include "LLMEngine/core/AnalysisResult.hpp"
-#include "LLMEngine/diagnostics/DebugArtifactManager.hpp"
-#include "LLMEngine/core/ErrorCodes.hpp"
-#include "LLMEngine/http/HttpStatus.hpp"
-#include "LLMEngine/utils/Logger.hpp"
-#include "LLMEngine/http/ResponseHandler.hpp"
-#include "LLMEngine/http/ResponseParser.hpp"
-#include "LLMEngine/utils/Utils.hpp"
-#include "providers/OpenAICompatibleClient.hpp"
+#include "llmengine/providers/api_client.hpp"
+#include "llmengine/core/analysis_result.hpp"
+#include "llmengine/diagnostics/debug_artifact_manager.hpp"
+#include "llmengine/core/error_codes.hpp"
+#include "llmengine/http/http_status.hpp"
+#include "llmengine/utils/logger.hpp"
+#include "llmengine/http/response_handler.hpp"
+#include "llmengine/http/response_parser.hpp"
+#include "llmengine/utils/utils.hpp"
+#include "providers/open_ai_compatible_client.hpp"
 
 #include <cassert>
 #include <filesystem>

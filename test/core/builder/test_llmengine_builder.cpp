@@ -5,9 +5,9 @@
 #undef NDEBUG
 #include <cassert>
 #include <iostream>
-#include "LLMEngine/core/LLMEngineBuilder.hpp"
-#include "LLMEngine/core/LLMEngine.hpp"
-#include "LLMEngine/core/IConfigManager.hpp"
+#include "llmengine/core/llm_engine_builder.hpp"
+#include "llmengine/core/llm_engine.hpp"
+#include "llmengine/core/i_config_manager.hpp"
 
 class StubConfigManager : public LLMEngineAPI::IConfigManager {
 public:
@@ -54,7 +54,7 @@ int main() {
             .build();
             
         assert(engine != nullptr);
-        assert(engine->getProviderType() == LLMEngineAPI::ProviderType::OPENAI);
+        assert(engine->getProviderType() == LLMEngineAPI::ProviderType::openai);
         assert(engine->getModelName() == "gpt-4");
         
         std::cout << "  Basic build: PASS" << std::endl;
@@ -69,7 +69,7 @@ int main() {
             .withProvider("qwen")
             .withApiKey("sk-qwen-test") 
             .build();
-        assert(engine->getProviderType() == LLMEngineAPI::ProviderType::QWEN);
+        assert(engine->getProviderType() == LLMEngineAPI::ProviderType::qwen);
         std::cout << "  Qwen build: PASS" << std::endl;
     } catch (const std::exception& e) {
          std::cerr << "  Qwen build failed: " << e.what() << std::endl;
