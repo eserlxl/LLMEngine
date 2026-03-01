@@ -31,22 +31,14 @@
 #include <shared_mutex>
 
 
-
 #include <cstdlib>
-
 #include <stdexcept>
 #include <string>
 
-// Namespace aliases to reduce verbosity
 namespace LLM = ::LLMEngine;
 namespace LLMAPI = ::LLMEngineAPI;
 
-
-
 namespace LLMEngine {
-
-
-
 
 
 // --- Constructors ---
@@ -183,17 +175,8 @@ AnalysisResult LLMEngine::analyze(const AnalysisInput& input,
         return result;
     }
 
-    // No metrics, direct pass-through
-    // Note: AnalysisInput might separate system_prompt.
-    // The legacy analyze() takes prompt argument as the main prompt.
-    // Should we pass input.user_message as prompt?
-    // Yes, usually the first arg is the "prompt" (user message).
-
+    // No metrics collector configured, direct pass-through
     std::string_view effectivePrompt = input.user_message;
-    if (effectivePrompt.empty() && !input.system_prompt.empty()) {
-        // Fallback or specific logic?
-        // For now, assume user_message is the primary prompt.
-    }
 
     RequestOptions effectiveOptions;
     {
@@ -233,21 +216,11 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
         }
     }
 
-
-
-    // Merge RequestOptions into finalParams
     // Merge RequestOptions into finalParams
     ParameterMerger::mergeRequestOptions(ctx.finalParams, options);
 
-
-    // Apply options overrides like timeout/headers would go here if IRequestExecutor supported them
-    // For now, we just pass parameters.
-    // Ideally, IRequestExecutor interface needs expansion to support Per-Request Options.
-    // Iteration 1 limitation: DefaultRequestExecutor might not support dynamic timeout override yet.
-    // We will just execute.
-
     LLMAPI::APIResponse apiResponse;
-    AnalysisResult result; // Declare result early for error paths? No, strictly following flow.
+    AnalysisResult result;
 
     if (state_->requestExecutor_) {
         apiResponse = state_->requestExecutor_->execute(
@@ -299,14 +272,6 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                   std::string_view analysisType,
                                   std::string_view mode,
                                   bool prependTerseInstruction) {
-    // Forward to options-based overload?
-    // Actually, the options overload lacks mode/prepend... arguments in my struct logic.
-    // The previous implementation of overload was:
-    // RequestOptions has timeout/retries.
-    // Mode/Prepend are semantic args.
-    // This is a bit conflicting.
-    // Let's keep the original implementation logic here, but using state_.
-    
     AnalysisInput ai = AnalysisInput::fromJson(input);
     if (!prompt.empty()) ai.withUserMessage(prompt);
     validateInput(ai); // Validate input structure
@@ -395,8 +360,6 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
         });
 }
 
-
-
 std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                                     const nlohmann::json& input,
                                                     std::string_view analysisType,
@@ -445,9 +408,6 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                 }
             }
 
-
-
-            // Merge RequestOptions into finalParams
             // Merge RequestOptions into finalParams
             ParameterMerger::mergeRequestOptions(ctx.finalParams, options);
 
@@ -554,11 +514,7 @@ void LLMEngine::analyzeStream(std::string_view prompt,
 
 
     // Merge RequestOptions into finalParams
-    // Merge RequestOptions into finalParams
-    // Merge RequestOptions into finalParams
-    // Merge RequestOptions into finalParams
     ParameterMerger::mergeRequestOptions(ctx.finalParams, effectiveOptions);
-
 
     auto startTime = std::chrono::high_resolution_clock::now();
     
@@ -592,13 +548,11 @@ void LLMEngine::analyzeStream(std::string_view prompt,
                 state_->metricsCollector_->recordCounter(
                     "llm_engine.tokens_output", usage.completionTokens, tags);
             }
-            // Error counting? If chunk.errorCode is set.
             if (chunk.errorCode != LLMEngineErrorCode::None) {
                 state_->metricsCollector_->recordCounter("llm_engine.errors", 1, tags);
             }
         }
     };
-
 
     if (state_->requestExecutor_) {
         state_->requestExecutor_->executeStream(state_->apiClient_.get(),
@@ -625,12 +579,6 @@ void LLMEngine::analyzeStream(std::string_view prompt,
         wrappedCallback(errChunk);
     }
 
-    // Run Interceptors (onResponse) - approximated for stream
-    // Note: Streaming makes full onResponse difficult as result is built incrementally.
-    // We can trigger it if we accumulated a full result or just skip for now?
-    // Given usageAccum logic, we could potentially construct a partial result?
-    // For now, skipping full onResponse for stream to avoid complexity,
-    // as IInterceptor::onResponse takes AnalysisResult&.
 }
 
 std::vector<AnalysisResult> LLMEngine::analyzeBatch(const std::vector<AnalysisInput>& inputs,
@@ -639,8 +587,6 @@ std::vector<AnalysisResult> LLMEngine::analyzeBatch(const std::vector<AnalysisIn
     if (inputs.empty()) {
         return {};
     }
-
-
 
     // Validate all inputs first
     for (const auto& input : inputs) {
