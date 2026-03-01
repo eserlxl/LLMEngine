@@ -146,10 +146,10 @@ class LLMENGINE_EXPORT APIClient {
 class LLMENGINE_EXPORT QwenClient : public APIClient {
   public:
     /**
-     * @param api_key Qwen API key (environment-retrieved recommended).
+     * @param apiKey Qwen API key (environment-retrieved recommended).
      * @param model Default model, e.g. "qwen-flash".
      */
-    QwenClient(const std::string& api_key, const std::string& model = "qwen-flash");
+    QwenClient(const std::string& apiKey, const std::string& model = "qwen-flash");
     ~QwenClient();
     APIResponse sendRequest(std::string_view prompt,
                             const nlohmann::json& input,
@@ -170,7 +170,7 @@ class LLMENGINE_EXPORT QwenClient : public APIClient {
     
   protected:
     // Exposed for testing
-    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& request_params) const;
+    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& requestParams) const;
     std::string buildUrl() const;
     std::map<std::string, std::string> buildHeaders() const;
 
@@ -187,10 +187,10 @@ class LLMENGINE_EXPORT QwenClient : public APIClient {
 class LLMENGINE_EXPORT OpenAIClient : public APIClient {
   public:
     /**
-     * @param api_key OpenAI API key.
+     * @param apiKey OpenAI API key.
      * @param model Default model, e.g. "gpt-3.5-turbo".
      */
-    OpenAIClient(const std::string& api_key, const std::string& model = "gpt-3.5-turbo");
+    OpenAIClient(const std::string& apiKey, const std::string& model = "gpt-3.5-turbo");
     ~OpenAIClient();
     APIResponse sendRequest(std::string_view prompt,
                             const nlohmann::json& input,
@@ -211,7 +211,7 @@ class LLMENGINE_EXPORT OpenAIClient : public APIClient {
 
   protected:
     // Exposed for testing
-    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& request_params) const;
+    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& requestParams) const;
     std::string buildUrl() const;
     std::map<std::string, std::string> buildHeaders() const;
 
@@ -226,10 +226,10 @@ class LLMENGINE_EXPORT OpenAIClient : public APIClient {
 class LLMENGINE_EXPORT AnthropicClient : public APIClient {
   public:
     /**
-     * @param api_key Anthropic API key.
+     * @param apiKey Anthropic API key.
      * @param model Default model, e.g. "claude-3-sonnet".
      */
-    AnthropicClient(const std::string& api_key, const std::string& model = "claude-3-sonnet");
+    AnthropicClient(const std::string& apiKey, const std::string& model = "claude-3-sonnet");
     APIResponse sendRequest(std::string_view prompt,
                             const nlohmann::json& input,
                             const nlohmann::json& params,
@@ -251,7 +251,7 @@ class LLMENGINE_EXPORT AnthropicClient : public APIClient {
 
   protected:
     // Exposed for testing
-    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& request_params) const;
+    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& requestParams) const;
     std::string buildUrl() const;
     std::map<std::string, std::string> buildHeaders() const;
 
@@ -269,10 +269,10 @@ class LLMENGINE_EXPORT AnthropicClient : public APIClient {
 class LLMENGINE_EXPORT OllamaClient : public APIClient {
   public:
     /**
-     * @param base_url Ollama server URL.
+     * @param baseUrl Ollama server URL.
      * @param model Default local model name.
      */
-    OllamaClient(const std::string& base_url = "http://localhost:11434",
+    OllamaClient(const std::string& baseUrl = "http://localhost:11434",
                  const std::string& model = "llama2");
     APIResponse sendRequest(std::string_view prompt,
                             const nlohmann::json& input,
@@ -295,8 +295,8 @@ class LLMENGINE_EXPORT OllamaClient : public APIClient {
 
   protected:
     // Exposed for testing
-    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& request_params, bool stream) const;
-    std::string buildUrl(bool use_generate) const;
+    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& requestParams, bool stream) const;
+    std::string buildUrl(bool useGenerate) const;
     std::map<std::string, std::string> buildHeaders() const;
 
   private:
@@ -312,10 +312,10 @@ class LLMENGINE_EXPORT OllamaClient : public APIClient {
 class LLMENGINE_EXPORT GeminiClient : public APIClient {
   public:
     /**
-     * @param api_key Google AI Studio API key.
+     * @param apiKey Google AI Studio API key.
      * @param model Default model, e.g. "gemini-1.5-flash".
      */
-    GeminiClient(const std::string& api_key, const std::string& model = "gemini-1.5-flash");
+    GeminiClient(const std::string& apiKey, const std::string& model = "gemini-1.5-flash");
     APIResponse sendRequest(std::string_view prompt,
                             const nlohmann::json& input,
                             const nlohmann::json& params,
@@ -337,7 +337,7 @@ class LLMENGINE_EXPORT GeminiClient : public APIClient {
 
   protected:
     // Exposed for testing
-    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& request_params) const;
+    nlohmann::json buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& requestParams) const;
     std::string buildUrl(bool stream) const;
     std::map<std::string, std::string> buildHeaders() const;
 
@@ -376,19 +376,19 @@ class LLMENGINE_EXPORT APIClientFactory {
      */
     static std::unique_ptr<APIClient> createClient(
         ProviderType type,
-        std::string_view api_key = "",
+        std::string_view apiKey = "",
         std::string_view model = "",
-        std::string_view base_url = "",
+        std::string_view baseUrl = "",
         const std::shared_ptr<IConfigManager>& cfg = nullptr);
 
     /**
      * @brief Create client by provider name from JSON config.
-     * @param provider_name Provider name (e.g., "qwen", "openai")
+     * @param providerName Provider name (e.g., "qwen", "openai")
      * @param config Provider configuration JSON
      * @param logger Optional logger for warnings and errors (nullptr to suppress)
      */
     static std::unique_ptr<APIClient> createClientFromConfig(
-        std::string_view provider_name,
+        std::string_view providerName,
         const nlohmann::json& config,
         ::LLMEngine::Logger* logger = nullptr,
         const std::shared_ptr<IConfigManager>& cfg = nullptr);
@@ -396,7 +396,7 @@ class LLMENGINE_EXPORT APIClientFactory {
     /**
      * @brief Convert provider string to enum.
      */
-    static ProviderType stringToProviderType(std::string_view provider_name);
+    static ProviderType stringToProviderType(std::string_view providerName);
     /**
      * @brief Convert enum to provider string.
      */
@@ -434,7 +434,7 @@ class LLMENGINE_EXPORT APIClientFactory {
  * // Singleton usage (backward compatible)
  * auto& config = APIConfigManager::getInstance();
  * config.loadConfig();  // Load from default path
- * auto provider_config = config.getProviderConfig("qwen");
+ * auto providerConfig = config.getProviderConfig("qwen");
  *
  * // Dependency injection usage (new)
  * std::shared_ptr<IConfigManager> config = std::make_shared<APIConfigManager>();
@@ -448,21 +448,21 @@ class LLMENGINE_EXPORT APIConfigManager : public IConfigManager {
 
     /**
      * @brief Set the default configuration file path.
-     * @param config_path The path to use as default when loadConfig() is called without arguments.
+     * @param configPath The path to use as default when loadConfig() is called without arguments.
      */
-    void setDefaultConfigPath(std::string_view config_path) override;
+    void setDefaultConfigPath(std::string_view configPath) override;
     /**
      * @brief Get the current default configuration file path.
      * @return The current default config path.
      */
     [[nodiscard]] std::string getDefaultConfigPath() const override;
     void setLogger(std::shared_ptr<::LLMEngine::Logger> logger) override;
-    bool loadConfig(std::string_view config_path = "") override;
-    [[nodiscard]] nlohmann::json getProviderConfig(std::string_view provider_name) const override;
+    bool loadConfig(std::string_view configPath = "") override;
+    [[nodiscard]] nlohmann::json getProviderConfig(std::string_view providerName) const override;
     [[nodiscard]] std::vector<std::string> getAvailableProviders() const override;
     [[nodiscard]] std::string getDefaultProvider() const override;
     [[nodiscard]] int getTimeoutSeconds() const override;
-    [[nodiscard]] int getTimeoutSeconds(std::string_view provider_name) const override;
+    [[nodiscard]] int getTimeoutSeconds(std::string_view providerName) const override;
     [[nodiscard]] int getRetryAttempts() const override;
     [[nodiscard]] int getRetryDelayMs() const override;
 
@@ -470,8 +470,8 @@ class LLMENGINE_EXPORT APIConfigManager : public IConfigManager {
     APIConfigManager();
     mutable std::shared_mutex mutex_; // For read-write lock
     nlohmann::json config_;
-    bool config_loaded_ = false;
-    std::string default_config_path_; // Default config file path
+    bool configLoaded_ = false;
+    std::string defaultConfigPath_; // Default config file path
     std::weak_ptr<::LLMEngine::Logger>
         logger_; // Optional logger (weak ownership to avoid dangling pointers)
 

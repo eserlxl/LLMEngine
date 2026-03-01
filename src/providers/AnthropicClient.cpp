@@ -73,8 +73,8 @@ void parseAnthropicStreamChunk(std::string_view chunk, std::string& buffer, cons
 }
 } // namespace
 
-AnthropicClient::AnthropicClient(const std::string& api_key, const std::string& model)
-    : apiKey_(api_key), model_(model),
+AnthropicClient::AnthropicClient(const std::string& apiKey, const std::string& model)
+    : apiKey_(apiKey), model_(model),
       baseUrl_(std::string(::LLMEngine::Constants::DefaultUrls::ANTHROPIC_BASE)) {
     defaultParams_ = {{"max_tokens", ::LLMEngine::Constants::DefaultValues::MAX_TOKENS},
                        {"temperature", ::LLMEngine::Constants::DefaultValues::TEMPERATURE},

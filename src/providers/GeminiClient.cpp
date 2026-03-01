@@ -72,8 +72,8 @@ void parseGeminiStreamChunk(std::string_view chunk, std::string& buffer, const L
 }
 } // namespace
 
-GeminiClient::GeminiClient(const std::string& api_key, const std::string& model)
-    : apiKey_(api_key), model_(model),
+GeminiClient::GeminiClient(const std::string& apiKey, const std::string& model)
+    : apiKey_(apiKey), model_(model),
       baseUrl_(std::string(::LLMEngine::Constants::DefaultUrls::GEMINI_BASE)) {
     defaultParams_ = {{"temperature", ::LLMEngine::Constants::DefaultValues::TEMPERATURE},
                        {"max_tokens", ::LLMEngine::Constants::DefaultValues::MAX_TOKENS},
@@ -82,28 +82,28 @@ GeminiClient::GeminiClient(const std::string& api_key, const std::string& model)
 
 nlohmann::json GeminiClient::buildPayload(std::string_view prompt,
                                           const nlohmann::json& input,
-                                          const nlohmann::json& request_params) const {
+                                          const nlohmann::json& requestParams) const {
     // Compose user content; prepend optional system_prompt
-    std::string user_text;
+    std::string userText;
     if (input.contains(std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT))
         && input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)].is_string()) {
-        user_text += input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
+        userText += input[std::string(::LLMEngine::Constants::JsonKeys::SYSTEM_PROMPT)]
                          .get<std::string>();
-        if (!user_text.empty() && user_text.back() != '\n')
-            user_text += "\n";
+        if (!userText.empty() && userText.back() != '\n')
+            userText += "\n";
     }
-    user_text += std::string(prompt);
+    userText += std::string(prompt);
 
     // Prepare request payload for Gemini generateContent
     return {
         {"contents",
          nlohmann::json::array({nlohmann::json{
              {"role", "user"},
-             {"parts", nlohmann::json::array({nlohmann::json{{"text", user_text}}})}}})},
+             {"parts", nlohmann::json::array({nlohmann::json{{"text", userText}}})}}})},
         {"generationConfig",
-         nlohmann::json{{"temperature", request_params["temperature"]},
-                        {"maxOutputTokens", request_params["max_tokens"]},
-                        {"topP", request_params["top_p"]}}}};
+         nlohmann::json{{"temperature", requestParams["temperature"]},
+                        {"maxOutputTokens", requestParams["max_tokens"]},
+                        {"topP", requestParams["top_p"]}}}};
 }
 
 std::string GeminiClient::buildUrl(bool stream) const {
@@ -130,10 +130,10 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
             computeRetrySettings(params, config_.get(), /*exponential_default*/ false);
 
         // Merge default params with provided params using update() for efficiency
-        nlohmann::json request_params = defaultParams_;
-        request_params.update(params);
+        nlohmann::json requestParams = defaultParams_;
+        requestParams.update(params);
 
-        nlohmann::json payload = buildPayload(prompt, input, request_params);
+        nlohmann::json payload = buildPayload(prompt, input, requestParams);
 
         // Get timeout from params or use config default
         int timeout_seconds = 0;

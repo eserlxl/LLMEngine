@@ -16,10 +16,10 @@ constexpr size_t CHAT_COMPLETIONS_PATH_LENGTH = 18; // "/chat/completions" = 18 
 constexpr size_t BEARER_PREFIX_LENGTH = 7;          // "Bearer " = 7 chars
 } // namespace
 
-OpenAICompatibleClient::OpenAICompatibleClient(const std::string& api_key,
+OpenAICompatibleClient::OpenAICompatibleClient(const std::string& apiKey,
                                                const std::string& model,
-                                               const std::string& base_url)
-    : apiKey_(api_key), model_(model), baseUrl_(base_url) {
+                                               const std::string& baseUrl)
+    : apiKey_(apiKey), model_(model), baseUrl_(baseUrl) {
     // Initialize default parameters
     defaultParams_ = {{"temperature", ::LLMEngine::Constants::DefaultValues::TEMPERATURE},
                        {"max_tokens", ::LLMEngine::Constants::DefaultValues::MAX_TOKENS},
@@ -33,13 +33,13 @@ OpenAICompatibleClient::OpenAICompatibleClient(const std::string& api_key,
     chatCompletionsUrl_ += "/chat/completions";
 
     // Cache headers to avoid rebuilding on every request
-    std::string auth_header;
-    auth_header.reserve(apiKey_.size() + BEARER_PREFIX_LENGTH);
-    auth_header = "Bearer ";
-    auth_header += apiKey_;
+    std::string authHeader;
+    authHeader.reserve(apiKey_.size() + BEARER_PREFIX_LENGTH);
+    authHeader = "Bearer ";
+    authHeader += apiKey_;
 
     cachedHeaders_ = {{"Content-Type", "application/json"},
-                       {"Authorization", std::move(auth_header)}};
+                       {"Authorization", std::move(authHeader)}};
 }
 
 const std::map<std::string, std::string>& OpenAICompatibleClient::getHeaders() const {
@@ -51,46 +51,46 @@ std::string OpenAICompatibleClient::buildUrl() const {
 }
 
 nlohmann::json OpenAICompatibleClient::buildPayload(const nlohmann::json& messages,
-                                                    const nlohmann::json& request_params) const {
+                                                    const nlohmann::json& requestParams) const {
     nlohmann::json payload = {{"model", model_},
                               {"messages", messages},
-                              {"temperature", request_params["temperature"]},
-                              {"max_tokens", request_params["max_tokens"]},
-                              {"top_p", request_params["top_p"]},
-                              {"frequency_penalty", request_params["frequency_penalty"]},
-                              {"presence_penalty", request_params["presence_penalty"]}};
+                              {"temperature", requestParams["temperature"]},
+                              {"max_tokens", requestParams["max_tokens"]},
+                              {"top_p", requestParams["top_p"]},
+                              {"frequency_penalty", requestParams["frequency_penalty"]},
+                              {"presence_penalty", requestParams["presence_penalty"]}};
 
     // Optional params
-    if (request_params.contains("seed")) {
-        payload["seed"] = request_params["seed"];
+    if (requestParams.contains("seed")) {
+        payload["seed"] = requestParams["seed"];
     }
-    if (request_params.contains("parallel_tool_calls")) {
-        payload["parallel_tool_calls"] = request_params["parallel_tool_calls"];
+    if (requestParams.contains("parallel_tool_calls")) {
+        payload["parallel_tool_calls"] = requestParams["parallel_tool_calls"];
     }
-    if (request_params.contains("service_tier")) {
-        payload["service_tier"] = request_params["service_tier"];
+    if (requestParams.contains("service_tier")) {
+        payload["service_tier"] = requestParams["service_tier"];
     }
-    if (request_params.contains("stream_options")) {
-        payload["stream_options"] = request_params["stream_options"];
+    if (requestParams.contains("stream_options")) {
+        payload["stream_options"] = requestParams["stream_options"];
     }
 
     // Include response_format if present (Structured Outputs)
-    if (request_params.contains("response_format")) {
-        payload["response_format"] = request_params["response_format"];
+    if (requestParams.contains("response_format")) {
+        payload["response_format"] = requestParams["response_format"];
     }
-    if (request_params.contains("reasoning_effort")) {
-        payload["reasoning_effort"] = request_params["reasoning_effort"];
+    if (requestParams.contains("reasoning_effort")) {
+        payload["reasoning_effort"] = requestParams["reasoning_effort"];
     }
-    if (request_params.contains("max_completion_tokens")) {
-        payload["max_completion_tokens"] = request_params["max_completion_tokens"];
+    if (requestParams.contains("max_completion_tokens")) {
+        payload["max_completion_tokens"] = requestParams["max_completion_tokens"];
     }
 
     // Include tool definitions if present
-    if (request_params.contains("tools")) {
-        payload["tools"] = request_params["tools"];
+    if (requestParams.contains("tools")) {
+        payload["tools"] = requestParams["tools"];
     }
-    if (request_params.contains("tool_choice")) {
-        payload["tool_choice"] = request_params["tool_choice"];
+    if (requestParams.contains("tool_choice")) {
+        payload["tool_choice"] = requestParams["tool_choice"];
     }
 
     // Include extra fields passed via AnalysisInput::withExtraField
@@ -112,8 +112,8 @@ void OpenAICompatibleClient::parseOpenAIResponse(APIResponse& response,
             response.content = choice["message"]["content"].get<std::string>();
             response.success = true;
 
-            if (choice.contains("finish_reason") && !choice["finish_reason"].is_null()) {
-                response.finishReason = choice["finish_reason"].get<std::string>();
+            if (choice.contains("finishReason") && !choice["finishReason"].is_null()) {
+                response.finishReason = choice["finishReason"].get<std::string>();
             }
 
             // Parse token usage if available
@@ -179,32 +179,32 @@ void LLMEngineAPI::OpenAICompatibleClient::parseOpenAIStreamChunk(
                         result.content = content;
                         result.is_done = false;
                         if (choice.contains("logprobs") && !choice["logprobs"].is_null()) {
-                             const auto& logprobs_obj = choice["logprobs"];
-                             if (logprobs_obj.contains("content") && logprobs_obj["content"].is_array()) {
-                                 std::vector<LLMEngine::AnalysisResult::TokenLogProb> chunk_logprobs;
-                                 for (const auto& item : logprobs_obj["content"]) {
+                             const auto& logprobsObj = choice["logprobs"];
+                             if (logprobsObj.contains("content") && logprobsObj["content"].is_array()) {
+                                 std::vector<LLMEngine::AnalysisResult::TokenLogProb> chunkLogprobs;
+                                 for (const auto& item : logprobsObj["content"]) {
                                      LLMEngine::AnalysisResult::TokenLogProb lp;
                                      if (item.contains("token")) lp.token = item["token"].get<std::string>();
                                      if (item.contains("logprob")) lp.logprob = item["logprob"].get<double>();
                                      if (item.contains("bytes") && item["bytes"].is_array()) {
                                          lp.bytes = item["bytes"].get<std::vector<uint8_t>>();
                                      }
-                                     chunk_logprobs.push_back(std::move(lp));
+                                     chunkLogprobs.push_back(std::move(lp));
                                  }
-                                 if (!chunk_logprobs.empty()) {
-                                     result.logprobs = std::move(chunk_logprobs);
+                                 if (!chunkLogprobs.empty()) {
+                                     result.logprobs = std::move(chunkLogprobs);
                                  }
                              }
                         }
                         callback(result);
                     }
-                    if (choice.contains("finish_reason") && !choice["finish_reason"].is_null()) {
-                        std::string finish_reason = choice["finish_reason"].get<std::string>();
-                        if (!finish_reason.empty()) {
+                    if (choice.contains("finishReason") && !choice["finishReason"].is_null()) {
+                        std::string finishReason = choice["finishReason"].get<std::string>();
+                        if (!finishReason.empty()) {
                              LLMEngine::StreamChunk result;
                              result.is_done = false; // Will trigger done on [DONE] or next event
-                             result.finish_reason = finish_reason;
-                             // Some providers send empty delta with finish_reason
+                             result.finishReason = finishReason;
+                             // Some providers send empty delta with finishReason
                              callback(result);
                         }
                     }
@@ -241,8 +241,8 @@ void LLMEngineAPI::OpenAICompatibleClient::sendRequestStream(
         defaultParams_,
         params,
         // Build payload
-        [&](const nlohmann::json& request_params) {
-            nlohmann::json payload = buildPayload(messages, request_params);
+        [&](const nlohmann::json& requestParams) {
+            nlohmann::json payload = buildPayload(messages, requestParams);
             payload["stream"] = true; // Force streaming
                                       // Default to include usage for OpenAI compatible
             if (!payload.contains("stream_options")) {

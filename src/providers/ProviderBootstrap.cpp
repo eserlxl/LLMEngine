@@ -18,8 +18,8 @@
 namespace LLMEngine {
 
 ProviderBootstrap::BootstrapResult ProviderBootstrap::bootstrap(
-    std::string_view provider_name,
-    std::string_view api_key,
+    std::string_view providerName,
+    std::string_view apiKey,
     std::string_view model,
     const std::shared_ptr<::LLMEngineAPI::IConfigManager>& config_manager,
     Logger* logger) {
@@ -43,7 +43,7 @@ ProviderBootstrap::BootstrapResult ProviderBootstrap::bootstrap(
     }
 
     // Determine provider name (use default if empty)
-    std::string resolved_provider(provider_name);
+    std::string resolved_provider(providerName);
     if (resolved_provider.empty()) {
         resolved_provider = config_mgr->getDefaultProvider();
         if (resolved_provider.empty()) {
@@ -52,12 +52,12 @@ ProviderBootstrap::BootstrapResult ProviderBootstrap::bootstrap(
     }
 
     // Get provider configuration
-    auto provider_config = config_mgr->getProviderConfig(resolved_provider);
-    if (provider_config.empty()) {
-        std::string error_msg =
+    auto providerConfig = config_mgr->getProviderConfig(resolved_provider);
+    if (providerConfig.empty()) {
+        std::string errorMsg =
             std::string("Provider ") + resolved_provider + " not found in config";
         if (logger) {
-            logger->log(LogLevel::Error, error_msg);
+            logger->log(LogLevel::Error, errorMsg);
         }
         throw std::runtime_error("Invalid provider name");
     }
@@ -67,38 +67,38 @@ ProviderBootstrap::BootstrapResult ProviderBootstrap::bootstrap(
         ::LLMEngineAPI::APIClientFactory::stringToProviderType(resolved_provider);
 
     // Resolve API key with priority: env var → param → config
-    std::string api_key_from_config =
-        provider_config.value(std::string(Constants::JsonKeys::API_KEY), "");
-    result.apiKey = resolveApiKey(result.providerType, api_key, api_key_from_config, logger);
+    std::string apiKeyFromConfig =
+        providerConfig.value(std::string(Constants::JsonKeys::API_KEY), "");
+    result.apiKey = resolveApiKey(result.providerType, apiKey, apiKeyFromConfig, logger);
 
     // Set model
-    std::string model_from_config =
-        provider_config.value(std::string(Constants::JsonKeys::DEFAULT_MODEL), "");
-    result.model = resolveModel(result.providerType, model, model_from_config, logger);
+    std::string modelFromConfig =
+        providerConfig.value(std::string(Constants::JsonKeys::DEFAULT_MODEL), "");
+    result.model = resolveModel(result.providerType, model, modelFromConfig, logger);
 
     // Set Ollama URL if using Ollama (or generic Base URL)
     // For now, only Ollama and OpenAI-likes really use BaseURL configuration dynamically
-    std::string base_url_from_config =
-        provider_config.value(std::string(Constants::JsonKeys::BASE_URL), "");
+    std::string baseUrlFromConfig =
+        providerConfig.value(std::string(Constants::JsonKeys::BASE_URL), "");
 
     // Always resolve base URL (e.g. for OpenAI compatible endpoints or Ollama)
-    result.ollamaUrl = resolveBaseUrl(result.providerType, "", base_url_from_config, logger);
+    result.ollamaUrl = resolveBaseUrl(result.providerType, "", baseUrlFromConfig, logger);
 
     return result;
 }
 
 SecureString ProviderBootstrap::resolveApiKey(::LLMEngineAPI::ProviderType provider_type,
                                               std::string_view api_key_from_param,
-                                              std::string_view api_key_from_config,
+                                              std::string_view apiKeyFromConfig,
                                               Logger* logger) {
 
-    std::string env_var_name = getApiKeyEnvVarName(provider_type);
+    std::string envVarName = getApiKeyEnvVarName(provider_type);
 
     // SECURITY: Prefer environment variables for API keys over config file or constructor parameter
-    // Only use provided api_key if environment variable is not set
+    // Only use provided apiKey if environment variable is not set
     const char* env_api_key = nullptr;
-    if (!env_var_name.empty()) {
-        env_api_key = std::getenv(env_var_name.c_str());
+    if (!envVarName.empty()) {
+        env_api_key = std::getenv(envVarName.c_str());
     }
 
     if (env_api_key && strlen(env_api_key) > 0) {
@@ -109,24 +109,24 @@ SecureString ProviderBootstrap::resolveApiKey(::LLMEngineAPI::ProviderType provi
         return SecureString(api_key_from_param);
     }
     // Fall back to config file (last resort - not recommended for production)
-    std::string api_key = std::string(api_key_from_config);
-    if (!api_key.empty() && logger) {
+    std::string apiKey = std::string(apiKeyFromConfig);
+    if (!apiKey.empty() && logger) {
         logger->log(LogLevel::Warn,
                     std::string("Using API key from config file. For production use, ") + "set the "
-                        + env_var_name + " environment variable instead. "
+                        + envVarName + " environment variable instead. "
                         + "Storing credentials in config files is a security risk.");
     }
-    return SecureString(std::move(api_key));
+    return SecureString(std::move(apiKey));
 }
 
 std::string ProviderBootstrap::resolveBaseUrl(::LLMEngineAPI::ProviderType provider_type,
                                               std::string_view base_url_from_param,
-                                              std::string_view base_url_from_config,
+                                              std::string_view baseUrlFromConfig,
                                               Logger* /*logger*/) {
-    std::string env_var_name = getBaseUrlEnvVarName(provider_type);
+    std::string envVarName = getBaseUrlEnvVarName(provider_type);
     const char* env_val = nullptr;
-    if (!env_var_name.empty()) {
-        env_val = std::getenv(env_var_name.c_str());
+    if (!envVarName.empty()) {
+        env_val = std::getenv(envVarName.c_str());
     }
 
     // 1. Env Var
@@ -138,8 +138,8 @@ std::string ProviderBootstrap::resolveBaseUrl(::LLMEngineAPI::ProviderType provi
         return std::string(base_url_from_param);
     }
     // 3. Config
-    if (!base_url_from_config.empty()) {
-        return std::string(base_url_from_config);
+    if (!baseUrlFromConfig.empty()) {
+        return std::string(baseUrlFromConfig);
     }
 
     // 4. Default
@@ -161,12 +161,12 @@ std::string ProviderBootstrap::resolveBaseUrl(::LLMEngineAPI::ProviderType provi
 
 std::string ProviderBootstrap::resolveModel(::LLMEngineAPI::ProviderType provider_type,
                                             std::string_view model_from_param,
-                                            std::string_view model_from_config,
+                                            std::string_view modelFromConfig,
                                             Logger* /*logger*/) {
-    std::string env_var_name = getModelEnvVarName(provider_type);
+    std::string envVarName = getModelEnvVarName(provider_type);
     const char* env_val = nullptr;
-    if (!env_var_name.empty()) {
-        env_val = std::getenv(env_var_name.c_str());
+    if (!envVarName.empty()) {
+        env_val = std::getenv(envVarName.c_str());
     }
 
     // 1. Provider-specific Env Var
@@ -186,8 +186,8 @@ std::string ProviderBootstrap::resolveModel(::LLMEngineAPI::ProviderType provide
         return std::string(model_from_param);
     }
     // 3. Config
-    if (!model_from_config.empty()) {
-        return std::string(model_from_config);
+    if (!modelFromConfig.empty()) {
+        return std::string(modelFromConfig);
     }
 
     // 4. Default

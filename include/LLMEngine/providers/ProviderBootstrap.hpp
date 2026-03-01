@@ -45,7 +45,7 @@ namespace LLMEngine {
  * ```cpp
  * auto result = ProviderBootstrap::bootstrap(
  *     "qwen",
- *     "",  // api_key (optional)
+ *     "",  // apiKey (optional)
  *     "",  // model (optional)
  *     config_manager,
  *     logger.get()
@@ -53,7 +53,7 @@ namespace LLMEngine {
  *
  * auto client = APIClientFactory::createClient(
  *     result.provider_type,
- *     result.api_key.view(),
+ *     result.apiKey.view(),
  *     result.model,
  *     result.ollama_url,
  *     config_manager
@@ -78,8 +78,8 @@ class LLMENGINE_EXPORT ProviderBootstrap {
      * Resolves provider name, loads configuration, and resolves credentials
      * according to priority: environment variables → constructor param → config file.
      *
-     * @param provider_name Provider key (e.g., "qwen"). If empty, uses default provider.
-     * @param api_key Optional API key from constructor (lowest priority).
+     * @param providerName Provider key (e.g., "qwen"). If empty, uses default provider.
+     * @param apiKey Optional API key from constructor (lowest priority).
      * @param model Optional model name. If empty, uses config default.
      * @param config_manager Configuration manager (shared ownership). If nullptr,
      *                       uses APIConfigManager::getInstance() singleton.
@@ -104,7 +104,7 @@ class LLMENGINE_EXPORT ProviderBootstrap {
      *
      * @param provider_type Provider type to determine environment variable name.
      * @param api_key_from_param API key from constructor parameter.
-     * @param api_key_from_config API key from configuration file.
+     * @param apiKeyFromConfig API key from configuration file.
      * @param logger Optional logger for warnings.
      * @return Resolved API key (may be empty for Ollama).
      */
@@ -118,7 +118,7 @@ class LLMENGINE_EXPORT ProviderBootstrap {
      *
      * @param provider_type Provider type to determine environment variable name.
      * @param api_key_from_param API key from constructor parameter.
-     * @param api_key_from_config API key from configuration file.
+     * @param apiKeyFromConfig API key from configuration file.
      * @param logger Optional logger for warnings.
      * @return Resolved API key (may be empty for Ollama).
      */

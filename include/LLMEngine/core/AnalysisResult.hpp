@@ -128,7 +128,7 @@ struct StreamChunk {
      * @brief Reason why the generation finished (e.g. "stop", "length", "content_filter").
      * Populated in the final chunk or when is_done is true.
      */
-    std::string finish_reason;
+    std::string finishReason;
     /**
      * @brief Log probabilities for the token, if requested.
      */

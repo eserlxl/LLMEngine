@@ -179,10 +179,10 @@ struct ChatCompletionRequestHelper {
                 effective_params_ptr = &final_params_storage;
             }
 
-            const nlohmann::json& request_params = *effective_params_ptr;
+            const nlohmann::json& requestParams = *effective_params_ptr;
 
             // Build provider-specific payload once and cache serialized body for retries
-            nlohmann::json payload = buildPayload(request_params);
+            nlohmann::json payload = buildPayload(requestParams);
             const std::string serialized_body = payload.dump();
 
             // Get timeout from params or use config default
@@ -301,7 +301,7 @@ struct ChatCompletionRequestHelper {
             } else {
                 // For error responses, attempt to parse JSON but don't fail if it's not JSON
                 // Build enhanced error message with context
-                std::string error_msg = "HTTP " + std::to_string(cpr_response.status_code);
+                std::string errorMsg = "HTTP " + std::to_string(cpr_response.status_code);
                 if (!cpr_response.text.empty()) {
                     // Try to extract structured error message from JSON response
                     try {
@@ -312,16 +312,16 @@ struct ChatCompletionRequestHelper {
                         if (error_json.contains("error")) {
                             const auto& error_obj = error_json["error"];
                             if (error_obj.is_object() && error_obj.contains("message")) {
-                                error_msg += ": " + error_obj["message"].get<std::string>();
+                                errorMsg += ": " + error_obj["message"].get<std::string>();
                             } else if (error_obj.is_string()) {
-                                error_msg += ": " + error_obj.get<std::string>();
+                                errorMsg += ": " + error_obj.get<std::string>();
                             } else {
-                                error_msg += ": " + cpr_response.text;
+                                errorMsg += ": " + cpr_response.text;
                             }
                         } else if (error_json.contains("message")) {
-                            error_msg += ": " + error_json["message"].get<std::string>();
+                            errorMsg += ": " + error_json["message"].get<std::string>();
                         } else {
-                            error_msg += ": " + cpr_response.text;
+                            errorMsg += ": " + cpr_response.text;
                         }
                     } catch (const nlohmann::json::parse_error& e) { // NOLINT(bugprone-empty-catch)
                         // Non-JSON error response - use raw text
@@ -329,14 +329,14 @@ struct ChatCompletionRequestHelper {
                         // We intentionally swallow the parse error and use the raw response text
                         // instead. Logging is not available in this context, but the error is
                         // handled by including the raw response text in the error message.
-                        error_msg += ": " + cpr_response.text;
+                        errorMsg += ": " + cpr_response.text;
                         response.rawResponse = nlohmann::json::object();
                     }
                 } else {
-                    error_msg += ": Empty response body";
+                    errorMsg += ": Empty response body";
                 }
 
-                response.errorMessage = error_msg;
+                response.errorMessage = errorMsg;
 
                 // Classify error based on HTTP status code
                 if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
@@ -397,9 +397,9 @@ struct ChatCompletionRequestHelper {
             request_params_merged.update(params);
             request_params_ptr = &request_params_merged;
         }
-        const nlohmann::json& request_params = *request_params_ptr;
+        const nlohmann::json& requestParams = *request_params_ptr;
 
-        nlohmann::json payload = buildPayload(request_params);
+        nlohmann::json payload = buildPayload(requestParams);
         // Force stream=true if not already set (caller usually handles this, but safety check?)
         // Better to rely on caller.
 

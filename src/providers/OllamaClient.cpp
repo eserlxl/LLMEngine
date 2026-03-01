@@ -76,8 +76,8 @@ void parseOllamaStreamChunk(std::string_view chunk, std::string& buffer, const L
 }
 } // namespace
 
-OllamaClient::OllamaClient(const std::string& base_url, const std::string& model)
-    : baseUrl_(base_url), model_(model) {
+OllamaClient::OllamaClient(const std::string& baseUrl, const std::string& model)
+    : baseUrl_(baseUrl), model_(model) {
     defaultParams_ = {{"temperature", ::LLMEngine::Constants::DefaultValues::TEMPERATURE},
                        {"top_p", ::LLMEngine::Constants::DefaultValues::TOP_P},
                        {"top_k", ::LLMEngine::Constants::DefaultValues::TOP_K},
@@ -87,16 +87,16 @@ OllamaClient::OllamaClient(const std::string& base_url, const std::string& model
 
 nlohmann::json OllamaClient::buildPayload(std::string_view prompt,
                                           const nlohmann::json& input,
-                                          const nlohmann::json& request_params,
+                                          const nlohmann::json& requestParams,
                                           bool stream) const {
-    bool use_generate = false;
-    if (request_params.contains(std::string(::LLMEngine::Constants::JsonKeys::MODE))
-        && request_params[std::string(::LLMEngine::Constants::JsonKeys::MODE)] == "generate") {
-        use_generate = true;
+    bool useGenerate = false;
+    if (requestParams.contains(std::string(::LLMEngine::Constants::JsonKeys::MODE))
+        && requestParams[std::string(::LLMEngine::Constants::JsonKeys::MODE)] == "generate") {
+        useGenerate = true;
     }
 
     nlohmann::json payload;
-    if (use_generate) {
+    if (useGenerate) {
         payload = {{"model", model_}, {"prompt", prompt}, {"stream", stream}};
     } else {
         nlohmann::json messages = ChatMessageBuilder::buildMessages(prompt, input);
@@ -104,7 +104,7 @@ nlohmann::json OllamaClient::buildPayload(std::string_view prompt,
     }
 
     // Add extra params
-    for (auto& [key, value] : request_params.items()) {
+    for (auto& [key, value] : requestParams.items()) {
         if (key != "context_window" && !payload.contains(key)) {
             payload[key] = value;
         }
@@ -112,8 +112,8 @@ nlohmann::json OllamaClient::buildPayload(std::string_view prompt,
     return payload;
 }
 
-std::string OllamaClient::buildUrl(bool use_generate) const {
-    if (use_generate) {
+std::string OllamaClient::buildUrl(bool useGenerate) const {
+    if (useGenerate) {
         return baseUrl_ + "/api/generate";
     }
     return baseUrl_ + "/api/chat";
@@ -136,8 +136,8 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
             computeRetrySettings(params, config_.get(), /*exponential_default*/ false);
 
         // Merge default params with provided params using update() for efficiency
-        nlohmann::json request_params = defaultParams_;
-        request_params.update(params);
+        nlohmann::json requestParams = defaultParams_;
+        requestParams.update(params);
 
         // Shared helpers
         auto get_timeout_seconds = [&](const nlohmann::json& p) -> int {
@@ -202,15 +202,15 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
         };
 
         // Check mode
-        bool use_generate = false;
+        bool useGenerate = false;
         if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::MODE))
             && params[std::string(::LLMEngine::Constants::JsonKeys::MODE)] == "generate") {
-            use_generate = true;
+            useGenerate = true;
         }
 
-        nlohmann::json payload = buildPayload(prompt, input, request_params, /*stream=*/false);
+        nlohmann::json payload = buildPayload(prompt, input, requestParams, /*stream=*/false);
         const int timeout_seconds = get_timeout_seconds(params);
-        const std::string url = buildUrl(use_generate);
+        const std::string url = buildUrl(useGenerate);
         
         cpr::Response cpr_response = post_json(url, payload, timeout_seconds);
 
@@ -223,7 +223,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
                 try {
                     response.rawResponse = nlohmann::json::parse(cpr_response.text);
 
-                    if (use_generate) {
+                    if (useGenerate) {
                         if (response.rawResponse.contains("response")) {
                             response.content = response.rawResponse["response"].get<std::string>();
                             response.success = true;
@@ -264,15 +264,15 @@ void OllamaClient::sendRequestStream(std::string_view prompt,
                                       LLMEngine::StreamCallback callback,
                                       const ::LLMEngine::RequestOptions& options) const {
     // Merge params
-    nlohmann::json request_params = defaultParams_;
+    nlohmann::json requestParams = defaultParams_;
     if (!params.is_null()) {
-        request_params.update(params);
+        requestParams.update(params);
     }
 
-    bool use_generate = false;
+    bool useGenerate = false;
     if (params.contains(std::string(::LLMEngine::Constants::JsonKeys::MODE))
         && params[std::string(::LLMEngine::Constants::JsonKeys::MODE)] == "generate") {
-        use_generate = true;
+        useGenerate = true;
     }
 
     auto buffer = std::make_shared<std::string>();
@@ -285,7 +285,7 @@ void OllamaClient::sendRequestStream(std::string_view prompt,
             return buildPayload(prompt, input, rp, /*stream=*/true);
         },
         // Build URL
-        [&]() { return buildUrl(use_generate); },
+        [&]() { return buildUrl(useGenerate); },
         // Build Headers
         [&]() {
             return buildHeaders();

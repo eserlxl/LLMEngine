@@ -17,17 +17,17 @@ namespace LLMEngineAPI {
 // PIMPL implementation - OpenAICompatibleClient is not an APIClient, just a helper
 class QwenClient::Impl : public OpenAICompatibleClient {
   public:
-    Impl(const std::string& api_key, const std::string& model)
+    Impl(const std::string& apiKey, const std::string& model)
         : OpenAICompatibleClient(
-              api_key, model, std::string(::LLMEngine::Constants::DefaultUrls::QWEN_BASE)) {}
+              apiKey, model, std::string(::LLMEngine::Constants::DefaultUrls::QWEN_BASE)) {}
 };
 
-QwenClient::QwenClient(const std::string& api_key, const std::string& model)
-    : impl_(std::make_unique<Impl>(api_key, model)) {}
+QwenClient::QwenClient(const std::string& apiKey, const std::string& model)
+    : impl_(std::make_unique<Impl>(apiKey, model)) {}
 
 QwenClient::~QwenClient() = default;
 
-nlohmann::json QwenClient::buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& request_params) const {
+nlohmann::json QwenClient::buildPayload(std::string_view prompt, const nlohmann::json& input, const nlohmann::json& requestParams) const {
     nlohmann::json messages = nlohmann::json::array();
     if (input.contains("messages") && input["messages"].is_array()) {
         messages = input["messages"];
@@ -35,7 +35,7 @@ nlohmann::json QwenClient::buildPayload(std::string_view prompt, const nlohmann:
     if (!prompt.empty()) {
         messages.push_back({{"role", "user"}, {"content", prompt}});
     }
-    return impl_->buildPayload(messages, request_params);
+    return impl_->buildPayload(messages, requestParams);
 }
 
 std::string QwenClient::buildUrl() const {

@@ -40,13 +40,13 @@ class OpenAICompatibleClient {
   protected:
     /**
      * @brief Construct an OpenAI-compatible client.
-     * @param api_key API key for authentication
+     * @param apiKey API key for authentication
      * @param model Default model name
-     * @param base_url Base URL for the API endpoint
+     * @param baseUrl Base URL for the API endpoint
      */
-    OpenAICompatibleClient(const std::string& api_key,
+    OpenAICompatibleClient(const std::string& apiKey,
                            const std::string& model,
-                           const std::string& base_url);
+                           const std::string& baseUrl);
 
   public:
     void setConfig(std::shared_ptr<IConfigManager> cfg) {
@@ -68,11 +68,11 @@ class OpenAICompatibleClient {
     /**
      * @brief Build the request payload.
      * @param messages Messages array (from ChatMessageBuilder)
-     * @param request_params Merged request parameters
+     * @param requestParams Merged request parameters
      * @return JSON payload object
      */
     nlohmann::json buildPayload(const nlohmann::json& messages,
-                                const nlohmann::json& request_params) const;
+                                const nlohmann::json& requestParams) const;
 
     /**
      * @brief Parse OpenAI-compatible response format.
