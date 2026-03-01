@@ -7,11 +7,11 @@ using namespace LLMEngineAPI;
 using Json = nlohmann::json;
 
 namespace {
-constexpr double kExpectedTemp = 0.5;
-constexpr double kExpectedTempHigh = 0.7;
-constexpr int kExpectedMaxTokens = 100;
-constexpr int kExpectedMaxTokensLarge = 1024;
-constexpr double kExpectedTopP = 1.0;
+constexpr double expectedTemp = 0.5;
+constexpr double expectedTempHigh = 0.7;
+constexpr int expectedMaxTokens = 100;
+constexpr int expectedMaxTokensLarge = 1024;
+constexpr double expectedTopP = 1.0;
 }
 
 // Testable subclasses to expose protected methods
@@ -58,7 +58,7 @@ public:
 TEST(GeminiClientTest, PayloadConstruction) {
     TestableGeminiClient client("test_key", "gemini-pro");
     Json input;
-    Json params = {{"temperature", kExpectedTemp}, {"max_tokens", kExpectedMaxTokens}, {"top_p", kExpectedTopP}};
+    Json params = {{"temperature", expectedTemp}, {"max_tokens", expectedMaxTokens}, {"top_p", expectedTopP}};
     
     // Test Build URL
     std::string url = client.buildUrl(true);
@@ -73,13 +73,13 @@ TEST(GeminiClientTest, PayloadConstruction) {
     Json payload = client.buildPayload("Hello", input, params);
     EXPECT_TRUE(payload.contains("contents"));
     EXPECT_EQ(payload["contents"][0]["parts"][0]["text"], "Hello");
-    EXPECT_EQ(payload["generationConfig"]["temperature"], kExpectedTemp);
+    EXPECT_EQ(payload["generationConfig"]["temperature"], expectedTemp);
 }
 
 TEST(AnthropicClientTest, PayloadConstruction) {
     TestableAnthropicClient client("test_key", "claude-3-opus-20240229");
     Json input = {{"system_prompt", "You are a helper."}};
-    Json params = {{"max_tokens", kExpectedMaxTokensLarge}, {"temperature", kExpectedTempHigh}, {"top_p", kExpectedTopP}};
+    Json params = {{"max_tokens", expectedMaxTokensLarge}, {"temperature", expectedTempHigh}, {"top_p", expectedTopP}};
 
     // Test Build URL
     EXPECT_EQ(client.buildUrl(), "https://api.anthropic.com/v1/messages");
@@ -94,14 +94,14 @@ TEST(AnthropicClientTest, PayloadConstruction) {
     EXPECT_EQ(payload["model"], "claude-3-opus-20240229");
     EXPECT_EQ(payload["messages"][0]["role"], "user");
     EXPECT_EQ(payload["messages"][0]["content"], "Hello");
-    EXPECT_EQ(payload["max_tokens"], kExpectedMaxTokensLarge);
+    EXPECT_EQ(payload["max_tokens"], expectedMaxTokensLarge);
     EXPECT_EQ(payload["system"], "You are a helper.");
 }
 
 TEST(OllamaClientTest, PayloadConstruction) {
     TestableOllamaClient client("http://localhost:11434", "llama3");
     Json input;
-    Json params = {{"temperature", kExpectedTempHigh}};
+    Json params = {{"temperature", expectedTempHigh}};
     
     // Test Payload
     Json payload = client.buildPayload("Hello", input, params, false);
@@ -118,9 +118,9 @@ TEST(OllamaClientTest, PayloadConstruction) {
 TEST(OpenAIClientTest, PayloadConstruction) {
     TestableOpenAIClient client("test_key", "gpt-4");
     Json input;
-    Json params = {{"temperature", kExpectedTempHigh}, 
-                   {"max_tokens", kExpectedMaxTokensLarge}, 
-                   {"top_p", kExpectedTopP},
+    Json params = {{"temperature", expectedTempHigh}, 
+                   {"max_tokens", expectedMaxTokensLarge}, 
+                   {"top_p", expectedTopP},
                    {"frequency_penalty", 0.0},
                    {"presence_penalty", 0.0}};
 
@@ -136,17 +136,17 @@ TEST(OpenAIClientTest, PayloadConstruction) {
     EXPECT_EQ(payload["model"], "gpt-4");
     EXPECT_EQ(payload["messages"][0]["role"], "user");
     EXPECT_EQ(payload["messages"][0]["content"], "Hello");
-    EXPECT_EQ(payload["temperature"], kExpectedTempHigh);
-    EXPECT_EQ(payload["max_tokens"], kExpectedMaxTokensLarge);
-    EXPECT_EQ(payload["top_p"], kExpectedTopP);
+    EXPECT_EQ(payload["temperature"], expectedTempHigh);
+    EXPECT_EQ(payload["max_tokens"], expectedMaxTokensLarge);
+    EXPECT_EQ(payload["top_p"], expectedTopP);
 }
 
 TEST(QwenClientTest, PayloadConstruction) {
     TestableQwenClient client("qwen-key", "qwen-turbo");
     Json input;
-    Json params = {{"temperature", kExpectedTempHigh}, 
-                   {"max_tokens", kExpectedMaxTokensLarge}, 
-                   {"top_p", kExpectedTopP},
+    Json params = {{"temperature", expectedTempHigh}, 
+                   {"max_tokens", expectedMaxTokensLarge}, 
+                   {"top_p", expectedTopP},
                    {"frequency_penalty", 0.0},
                    {"presence_penalty", 0.0}};
 

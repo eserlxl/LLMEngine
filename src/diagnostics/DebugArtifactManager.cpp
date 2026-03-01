@@ -7,7 +7,7 @@
 
 #include "LLMEngine/diagnostics/DebugArtifactManager.hpp"
 
-#include "../diagnostics/DebugArtifacts.hpp"
+#include "LLMEngine/diagnostics/DebugArtifacts.hpp"
 #include "LLMEngine/providers/APIClient.hpp"
 #include "LLMEngine/core/Constants.hpp"
 #include "LLMEngine/utils/Logger.hpp"
@@ -44,10 +44,10 @@ bool DebugArtifactManager::ensureRequestDirectory() {
         }
         directory_created_ = true;
         return true;
-    } catch (...) {
+    } catch (const std::exception& e) {
         if (logger_) {
             logger_->log(LogLevel::Error,
-                         "Exception creating request directory: " + request_tmp_dir_);
+                         "Exception creating request directory: " + request_tmp_dir_ + ": " + std::string(e.what()));
         }
         return false;
     }
@@ -164,9 +164,9 @@ bool DebugArtifactManager::writeAnalysisArtifacts(std::string_view analysis_type
                          std::string("Exception in writeAnalysisArtifacts: ") + e.what());
         }
         return false;
-    } catch (...) {
+    } catch (const std::exception& e) {
         if (logger_) {
-            logger_->log(LogLevel::Error, "Unknown exception in writeAnalysisArtifacts");
+            logger_->log(LogLevel::Error, "Exception in writeAnalysisArtifacts: " + std::string(e.what()));
         }
         return false;
     }

@@ -69,7 +69,7 @@ void parseOllamaStreamChunk(std::string_view chunk, std::string& buffer, const L
                 // However, let's let the stream end naturally.
             }
 
-        } catch (...) {
+        } catch (const std::exception& e) {
             // Ignore
         }
     }

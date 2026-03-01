@@ -362,9 +362,6 @@ struct ChatCompletionRequestHelper {
         } catch (const std::exception& e) {
             response.errorMessage = "Network error: " + std::string(e.what());
             response.errorCode = LLMEngine::LLMEngineErrorCode::Network;
-        } catch (...) {
-            response.errorMessage = "Unknown error occurred during request execution";
-            response.errorCode = LLMEngine::LLMEngineErrorCode::Unknown;
         }
 
         return response;

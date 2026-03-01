@@ -98,11 +98,11 @@ bool TempDirectoryService::validatePathWithinRoot(const std::string& requested_p
         }
 
         return is_within;
-    } catch (...) {
+    } catch (const std::exception& e) {
         if (logger) {
             logger->log(LogLevel::Error,
                         std::string("Failed to validate temp directory due to path error: ")
-                            + requested_path);
+                            + requested_path + " - " + e.what());
         }
         return false;
     }

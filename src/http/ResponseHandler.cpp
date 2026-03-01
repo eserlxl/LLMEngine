@@ -76,9 +76,6 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
                 logger,
                 LogLevel::Warn,
                 std::string("Failed to write API response artifact: ") + e.what());
-        } catch (...) {
-            RequestLogger::logSafe(
-                logger, LogLevel::Warn, "Failed to write API response artifact: unknown error");
         }
     }
 
@@ -129,9 +126,6 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
                 logger,
                 LogLevel::Warn,
                 std::string("Failed to write full response artifact: ") + e.what());
-        } catch (...) {
-            RequestLogger::logSafe(
-                logger, LogLevel::Warn, "Failed to write full response artifact: unknown error");
         }
     }
 
@@ -174,10 +168,10 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
                 }
             }
         }
-    } catch (...) {
+    } catch (const std::exception& e) {
         // Ignore parsing errors for optional tool calls
         RequestLogger::logSafe(
-            logger, LogLevel::Warn, "Failed to parse tool calls from raw response");
+            logger, LogLevel::Warn, std::string("Failed to parse tool calls from raw response: ") + e.what());
     }
 
     return result;

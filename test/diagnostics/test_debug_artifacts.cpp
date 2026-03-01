@@ -164,6 +164,33 @@ int main() {
         std::cout << "✓ DebugArtifactManager empty analysis type test passed\n";
     }
 
+    // Test DebugArtifactManager error handling (invalid path causing exceptions)
+    {
+        // Use a path that is guaranteed to fail creation or writing
+        const std::string invalidRequestDir = "/sys/class/invalid_dir_that_cannot_be_created_12345/req";
+        LLMEngine::DebugArtifactManager mgrErr(invalidRequestDir, "/sys/class/invalid_dir_that_cannot_be_created_12345", 24, nullptr);
+        
+        // This will attempt to create directories and fail, returning false
+        bool dirResult = mgrErr.ensureRequestDirectory();
+        assert(!dirResult);
+
+        // Writing artifacts should fail gracefully and catch any exception/error
+        LLMEngineAPI::APIResponse fake_response;
+        fake_response.success = true;
+        fake_response.content = "Test";
+        
+        bool writeResult = mgrErr.writeApiResponse(fake_response, false);
+        assert(!writeResult);
+
+        bool fullResult = mgrErr.writeFullResponse("Test");
+        assert(!fullResult);
+
+        bool analysisResult = mgrErr.writeAnalysisArtifacts("type", "think", "content");
+        assert(!analysisResult);
+        
+        std::cout << "✓ DebugArtifactManager error handling test passed\n";
+    }
+
     std::cout << "test_debug_artifacts: OK\n";
     return 0;
 }

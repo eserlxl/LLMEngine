@@ -23,7 +23,7 @@ std::optional<nlohmann::json> AnalysisResult::getJson() const {
     // Try to parse
     try {
         return nlohmann::json::parse(clean_content);
-    } catch (...) {
+    } catch (const std::exception& e) {
         // If parsing fails, try to find the first { and last } to handle preamble/postscript without code blocks
         size_t first_brace = clean_content.find('{');
         size_t last_brace = clean_content.rfind('}');
@@ -32,7 +32,7 @@ std::optional<nlohmann::json> AnalysisResult::getJson() const {
             std::string potential_json = clean_content.substr(first_brace, last_brace - first_brace + 1);
             try {
                 return nlohmann::json::parse(potential_json);
-            } catch (...) {
+            } catch (const std::exception& e) {
                 return std::nullopt;
             }
         }

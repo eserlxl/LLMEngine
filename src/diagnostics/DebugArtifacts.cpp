@@ -1,7 +1,7 @@
 // Copyright © 2026 Eser KUBALI
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "../diagnostics/DebugArtifacts.hpp"
+#include "LLMEngine/diagnostics/DebugArtifacts.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -58,7 +58,7 @@ static bool atomic_write(const std::string& path, const std::string& data) {
                 return false;
         }
         return true;
-    } catch (...) {
+    } catch (const std::exception& e) {
         return false;
     }
 }
@@ -90,7 +90,7 @@ bool DebugArtifacts::writeJson(const std::string& path,
         }
         nlohmann::json payload = redactSecrets ? redactJson(json) : json;
         return atomic_write(path, payload.dump(2));
-    } catch (...) {
+    } catch (const std::exception& e) {
         return false;
     }
 }
@@ -123,7 +123,7 @@ bool DebugArtifacts::writeText(const std::string& path, std::string_view text, b
             return atomic_write(path, masked);
         }
         return atomic_write(path, std::string(text));
-    } catch (...) {
+    } catch (const std::exception& e) {
         return false;
     }
 }
@@ -169,9 +169,6 @@ void DebugArtifacts::cleanupOld(const std::string& dir, int hours) {
         // this static context, but cleanup failures are acceptable since this is a maintenance
         // operation.
         (void)e;    // Suppress unused variable warning
-    } catch (...) { // NOLINT(bugprone-empty-catch): best-effort, swallow all exceptions
-        // Catch-all for any other exceptions during cleanup.
-        // Same rationale as above: best-effort operation that should not fail the application.
     }
 }
 

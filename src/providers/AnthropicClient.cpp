@@ -65,7 +65,7 @@ void parseAnthropicStreamChunk(std::string_view chunk, std::string& buffer, cons
                          callback(result);
                     }
                 }
-            } catch (...) {
+            } catch (const std::exception& e) {
                 // Ignore
             }
         }
