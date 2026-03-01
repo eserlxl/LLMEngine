@@ -50,7 +50,7 @@ void parseAnthropicStreamChunk(std::string_view chunk, std::string& buffer, cons
                         std::string text = json["delta"]["text"].get<std::string>();
                         LLMEngine::StreamChunk result;
                         result.content = text;
-                        result.is_done = false;
+                        result.isDone = false;
                         callback(result);
                     }
                 } else if (type == "message_stop") {
@@ -58,7 +58,7 @@ void parseAnthropicStreamChunk(std::string_view chunk, std::string& buffer, cons
                 } else if (type == "message_delta") {
                     if (json.contains("usage")) {
                          LLMEngine::StreamChunk result;
-                         result.is_done = false;
+                         result.isDone = false;
                          result.usage = LLMEngine::AnalysisResult::UsageStats{
                             .completionTokens = json["usage"].value("output_tokens", 0)
                          };
@@ -259,7 +259,7 @@ void AnthropicClient::sendRequestStream(std::string_view prompt,
         config_.get());
 
     LLMEngine::StreamChunk result;
-    result.is_done = true;
+    result.isDone = true;
     callback(result);
 }
 

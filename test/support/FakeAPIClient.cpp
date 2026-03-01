@@ -79,7 +79,7 @@ void FakeAPIClient::sendRequestStream(std::string_view prompt,
 
             LLMEngine::StreamChunk stream_chunk;
             stream_chunk.content = chunk;
-            stream_chunk.is_done = false;
+            stream_chunk.isDone = false;
             callback(stream_chunk);
         }
         // Send done signal
@@ -87,7 +87,7 @@ void FakeAPIClient::sendRequestStream(std::string_view prompt,
             return;
         }
         LLMEngine::StreamChunk done_chunk;
-        done_chunk.is_done = true;
+        done_chunk.isDone = true;
         callback(done_chunk);
         return;
     }
@@ -104,11 +104,11 @@ void FakeAPIClient::sendRequestStream(std::string_view prompt,
     std::string content = "[FAKE STREAM] " + std::string(prompt);
     LLMEngine::StreamChunk stream_chunk;
     stream_chunk.content = content;
-    stream_chunk.is_done = false;
+    stream_chunk.isDone = false;
     callback(stream_chunk);
     
     LLMEngine::StreamChunk done_chunk;
-    done_chunk.is_done = true;
+    done_chunk.isDone = true;
     callback(done_chunk);
 }
 

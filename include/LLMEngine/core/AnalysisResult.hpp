@@ -52,8 +52,8 @@ struct LLMENGINE_EXPORT AnalysisResult {
         int completionTokens = 0;
         int totalTokens = 0;
         // Extended usage stats
-        int reasoning_tokens = 0;
-        int cached_tokens = 0;
+        int reasoningTokens = 0;
+        int cachedTokens = 0;
     } usage;
 
     struct TokenLogProb {
@@ -102,15 +102,15 @@ struct LLMENGINE_EXPORT AnalysisResult {
             try {
                 if (arguments.empty()) return nlohmann::json::object();
                 return nlohmann::json::parse(arguments);
-            } catch (...) {
+            } catch (const std::exception&) {
                 return std::nullopt;
             }
         }
     };
-    std::vector<ToolCall> tool_calls;
+    std::vector<ToolCall> toolCalls;
 
     [[nodiscard]] bool hasToolCalls() const {
-        return !tool_calls.empty();
+        return !toolCalls.empty();
     }
 };
 
@@ -119,14 +119,14 @@ struct LLMENGINE_EXPORT AnalysisResult {
  */
 struct StreamChunk {
     std::string_view content;
-    bool is_done;
-    LLMEngineErrorCode error_code = LLMEngineErrorCode::None;
-    std::string error_message;
+    bool isDone;
+    LLMEngineErrorCode errorCode = LLMEngineErrorCode::None;
+    std::string errorMessage;
     std::optional<AnalysisResult::UsageStats> usage;
 
     /**
      * @brief Reason why the generation finished (e.g. "stop", "length", "content_filter").
-     * Populated in the final chunk or when is_done is true.
+     * Populated in the final chunk or when isDone is true.
      */
     std::string finishReason;
     /**

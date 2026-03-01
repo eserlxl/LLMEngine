@@ -45,7 +45,7 @@ void parseGeminiStreamChunk(std::string_view chunk, std::string& buffer, const L
                                 if (!text.empty()) {
                                     LLMEngine::StreamChunk result;
                                     result.content = text;
-                                    result.is_done = false;
+                                    result.isDone = false;
                                     callback(result);
                                 }
                             }
@@ -55,7 +55,7 @@ void parseGeminiStreamChunk(std::string_view chunk, std::string& buffer, const L
 
                 if (json.contains("usageMetadata")) {
                     LLMEngine::StreamChunk result;
-                    result.is_done = false;
+                    result.isDone = false;
                     result.usage = LLMEngine::AnalysisResult::UsageStats{
                         .promptTokens = json["usageMetadata"].value("promptTokenCount", 0),
                         .completionTokens = json["usageMetadata"].value("candidatesTokenCount", 0),
@@ -267,7 +267,7 @@ void GeminiClient::sendRequestStream(std::string_view prompt,
     
     // Send final done signal
     LLMEngine::StreamChunk result;
-    result.is_done = true;
+    result.isDone = true;
     callback(result);
 }
 

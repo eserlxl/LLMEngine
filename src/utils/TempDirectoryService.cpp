@@ -26,10 +26,10 @@ TempDirectoryService::DirectoryResult TempDirectoryService::ensureSecureDirector
     if (std::filesystem::exists(directory_path, ec)) {
         std::error_code ec_symlink;
         if (std::filesystem::is_symlink(directory_path, ec_symlink)) {
-            result.error_message =
+            result.errorMessage =
                 "Temporary directory cannot be a symlink for security reasons: " + directory_path;
             if (logger) {
-                logger->log(LogLevel::Error, result.error_message);
+                logger->log(LogLevel::Error, result.errorMessage);
             }
             return result;
         }
@@ -38,10 +38,10 @@ TempDirectoryService::DirectoryResult TempDirectoryService::ensureSecureDirector
     // Create directory
     std::filesystem::create_directories(directory_path, ec);
     if (ec) {
-        result.error_message =
+        result.errorMessage =
             "Failed to create temporary directory: " + directory_path + ": " + ec.message();
         if (logger) {
-            logger->log(LogLevel::Error, result.error_message);
+            logger->log(LogLevel::Error, result.errorMessage);
         }
         return result;
     }

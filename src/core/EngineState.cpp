@@ -101,7 +101,7 @@ void LLMEngine::EngineState::ensureSecureTmpDir() {
 
     auto result = TempDirectoryService::ensureSecureDirectory(tmp_dir_, logger_.get());
     if (!result.success) {
-        throw std::runtime_error(result.error_message);
+        throw std::runtime_error(result.errorMessage);
     }
     tempDirVerified_ = true;
 }

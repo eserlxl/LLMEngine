@@ -107,7 +107,7 @@ int main() {
         // Test writeApiResponse (error)
         LLMEngineAPI::APIResponse error_response;
         error_response.success = false;
-        error_response.error_message = "Test error";
+        error_response.errorMessage = "Test error";
         error_response.status_code = 500;
         error_response.raw_response = {{"error", "Internal server error"}};
         assert(mgr.writeApiResponse(error_response, true));

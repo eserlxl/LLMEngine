@@ -112,7 +112,7 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
                               .usage = api_response.usage,
                               .logprobs = std::nullopt,
                               .errorCode = error_code,
-                              .tool_calls = {}};
+                              .toolCalls = {}};
         return result;
     }
 
@@ -139,7 +139,7 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
                           .usage = api_response.usage,
                           .logprobs = std::nullopt,
                           .errorCode = LLMEngineErrorCode::None,
-                          .tool_calls = {}};
+                          .toolCalls = {}};
 
     // Extract tool calls if present in raw_response
     // Logic: Look for "choices"[0]["message"]["tool_calls"]
@@ -163,7 +163,7 @@ AnalysisResult ResponseHandler::handle(const LLMEngineAPI::APIResponse& api_resp
                             if (fn.contains("arguments"))
                                 tc.arguments = fn["arguments"].get<std::string>();
                         }
-                        result.tool_calls.push_back(tc);
+                        result.toolCalls.push_back(tc);
                     }
                 }
             }

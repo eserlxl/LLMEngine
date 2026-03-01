@@ -64,7 +64,7 @@ class LLMENGINE_EXPORT TempDirectoryService {
      */
     struct DirectoryResult {
         bool success;
-        std::string error_message;
+        std::string errorMessage;
     };
 
     /**

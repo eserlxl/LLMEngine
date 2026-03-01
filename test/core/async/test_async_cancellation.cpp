@@ -45,7 +45,7 @@ int main() {
         try {
             engine.analyzeStream("Stream me", input.toJson(), "test", options, 
                 [&](const StreamChunk& chunk) {
-                    if (!chunk.is_done) {
+                    if (!chunk.isDone) {
                         chunksReceived++;
                         std::cout << "  Received: " << chunk.content << std::endl;
                     } else {

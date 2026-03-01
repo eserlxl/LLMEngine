@@ -133,7 +133,7 @@ void ParameterMerger::mergeRequestOptions(nlohmann::json& params, const RequestO
     if (gen.presence_penalty) params["presence_penalty"] = *gen.presence_penalty;
     if (gen.seed) params["seed"] = *gen.seed;
     if (gen.user) params["user"] = *gen.user;
-    if (gen.parallel_tool_calls) params["parallel_tool_calls"] = *gen.parallel_tool_calls;
+    if (gen.parallelToolCalls) params["parallel_tool_calls"] = *gen.parallelToolCalls;
     if (gen.service_tier) params["service_tier"] = *gen.service_tier;
     if (gen.reasoning_effort) params["reasoning_effort"] = *gen.reasoning_effort;
     if (gen.max_completion_tokens) params["max_completion_tokens"] = *gen.max_completion_tokens;

@@ -91,7 +91,7 @@ void QwenClient::sendRequestStream(std::string_view prompt,
 
     // Send final done signal
     LLMEngine::StreamChunk result;
-    result.is_done = true;
+    result.isDone = true;
     callback(result);
 }
 

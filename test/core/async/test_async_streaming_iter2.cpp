@@ -60,7 +60,7 @@ void testStreaming() {
                 received.push_back(std::string(chunk.content));
                 std::cout << "Rx: " << chunk.content << std::endl;
             }
-            if (chunk.is_done)
+            if (chunk.isDone)
                 std::cout << "Stream done signal." << std::endl;
         });
 

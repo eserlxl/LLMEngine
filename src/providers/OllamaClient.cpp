@@ -39,7 +39,7 @@ void parseOllamaStreamChunk(std::string_view chunk, std::string& buffer, const L
                 if (!text.empty()) {
                     LLMEngine::StreamChunk result;
                     result.content = text;
-                    result.is_done = false;
+                    result.isDone = false;
                     callback(result);
                 }
             } else if (json.contains("response")) {
@@ -48,7 +48,7 @@ void parseOllamaStreamChunk(std::string_view chunk, std::string& buffer, const L
                 if (!text.empty()) {
                     LLMEngine::StreamChunk result;
                     result.content = text;
-                    result.is_done = false;
+                    result.isDone = false;
                     callback(result);
                 }
             }
@@ -57,7 +57,7 @@ void parseOllamaStreamChunk(std::string_view chunk, std::string& buffer, const L
                 // Extract metrics if available
                 if (json.contains("eval_count")) {
                     LLMEngine::StreamChunk result;
-                    result.is_done = false;
+                    result.isDone = false;
                     result.usage = LLMEngine::AnalysisResult::UsageStats{
                         .promptTokens = json.value("prompt_eval_count", 0),
                         .completionTokens = json.value("eval_count", 0)
@@ -299,7 +299,7 @@ void OllamaClient::sendRequestStream(std::string_view prompt,
         config_.get());
 
     LLMEngine::StreamChunk result;
-    result.is_done = true;
+    result.isDone = true;
     callback(result);
 }
 

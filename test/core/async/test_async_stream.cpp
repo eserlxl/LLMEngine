@@ -63,7 +63,7 @@ void testAnalyzeStreamCallsCallback() {
     ::LLMEngine::RequestOptions options;
     engine.analyzeStream(
         "test stream", input, "test_stream", options, [&](const LLMEngine::StreamChunk& chunk) {
-            if (!chunk.is_done) {
+            if (!chunk.isDone) {
                 received_chunks.emplace_back(chunk.content);
             } else {
                 received_done = true;
@@ -95,7 +95,7 @@ void testAnalyzeStreamDefaultsWithoutChunks() {
                          "test_stream_default",
                          options,
                          [&](const LLMEngine::StreamChunk& chunk) {
-                             if (!chunk.is_done) {
+                             if (!chunk.isDone) {
                                  received_chunks.emplace_back(chunk.content);
                              } else {
                                  received_done = true;

@@ -264,7 +264,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                                 .usage = {},
                                 .logprobs = std::nullopt,
                                 .errorCode = LLMEngineErrorCode::Unknown,
-                                .tool_calls = {}};
+                                .toolCalls = {}};
         // Should we run onResponse for errors? Yes, usually.
         {
             std::shared_lock lock(state_->configMutex_);
@@ -333,7 +333,7 @@ AnalysisResult LLMEngine::analyze(std::string_view prompt,
                               .usage = {},
                               .logprobs = std::nullopt,
                               .errorCode = LLMEngineErrorCode::Unknown,
-                              .tool_calls = {}};
+                              .toolCalls = {}};
     }
 
     return ResponseHandler::handle(apiResponse,
@@ -382,7 +382,7 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                       .usage = {},
                                       .logprobs = std::nullopt,
                                       .errorCode = LLMEngineErrorCode::Unknown,
-                                      .tool_calls = {}};
+                                      .toolCalls = {}};
             }
 
             return ResponseHandler::handle(apiResponse,
@@ -465,7 +465,7 @@ std::future<AnalysisResult> LLMEngine::analyzeAsync(std::string_view prompt,
                                          .usage = {},
                                          .logprobs = std::nullopt,
                                          .errorCode = LLMEngineErrorCode::Unknown,
-                                         .tool_calls = {}};
+                                         .toolCalls = {}};
                 for (const auto& interceptor : state->interceptors_) {
                     interceptor->onResponse(errResult);
                 }
@@ -572,7 +572,7 @@ void LLMEngine::analyzeStream(std::string_view prompt,
         
         callback(chunk);
 
-        if (chunk.is_done && state_->metricsCollector_) {
+        if (chunk.isDone && state_->metricsCollector_) {
             auto end = std::chrono::high_resolution_clock::now();
             long latency =
                 std::chrono::duration_cast<std::chrono::milliseconds>(end - startTime).count();
@@ -580,7 +580,7 @@ void LLMEngine::analyzeStream(std::string_view prompt,
                 {"provider", getProviderName()},
                 {"model", getModelName()},
                 {"type", std::string(analysisType)},
-                {"success", chunk.error_code == LLMEngineErrorCode::None ? "true" : "false"},
+                {"success", chunk.errorCode == LLMEngineErrorCode::None ? "true" : "false"},
                 {"mode", "stream"}};
             state_->metricsCollector_->recordLatency("llm_engine.analyze", latency, tags);
 
@@ -591,8 +591,8 @@ void LLMEngine::analyzeStream(std::string_view prompt,
                 state_->metricsCollector_->recordCounter(
                     "llm_engine.tokens_output", usage.completionTokens, tags);
             }
-            // Error counting? If chunk.error_code is set.
-            if (chunk.error_code != LLMEngineErrorCode::None) {
+            // Error counting? If chunk.errorCode is set.
+            if (chunk.errorCode != LLMEngineErrorCode::None) {
                 state_->metricsCollector_->recordCounter("llm_engine.errors", 1, tags);
             }
         }
@@ -618,9 +618,9 @@ void LLMEngine::analyzeStream(std::string_view prompt,
             state_->logger_->log(LogLevel::Error, "API client not initialized for streaming.");
         }
         StreamChunk errChunk;
-        errChunk.is_done = true;
-        errChunk.error_code = LLMEngineErrorCode::Unknown;
-        errChunk.error_message = "API client/Executor not initialized";
+        errChunk.isDone = true;
+        errChunk.errorCode = LLMEngineErrorCode::Unknown;
+        errChunk.errorMessage = "API client/Executor not initialized";
         wrappedCallback(errChunk);
     }
 

@@ -40,11 +40,11 @@ public:
                            const LLMEngine::RequestOptions&) const override {
         LLMEngine::StreamChunk chunk;
         chunk.content = "stream response";
-        chunk.is_done = false;
+        chunk.isDone = false;
         callback(chunk);
         
         chunk.content = "";
-        chunk.is_done = true;
+        chunk.isDone = true;
         callback(chunk);
     }
     

@@ -163,7 +163,7 @@ void LLMEngineAPI::OpenAICompatibleClient::parseOpenAIStreamChunk(
             if (data == "[DONE]") {
                 LLMEngine::StreamChunk result;
                 result.content = "";
-                result.is_done = true;
+                result.isDone = true;
                 callback(result);
                 continue;
             }
@@ -177,7 +177,7 @@ void LLMEngineAPI::OpenAICompatibleClient::parseOpenAIStreamChunk(
                         std::string content = choice["delta"]["content"].get<std::string>();
                         LLMEngine::StreamChunk result;
                         result.content = content;
-                        result.is_done = false;
+                        result.isDone = false;
                         if (choice.contains("logprobs") && !choice["logprobs"].is_null()) {
                              const auto& logprobsObj = choice["logprobs"];
                              if (logprobsObj.contains("content") && logprobsObj["content"].is_array()) {
@@ -202,7 +202,7 @@ void LLMEngineAPI::OpenAICompatibleClient::parseOpenAIStreamChunk(
                         std::string finishReason = choice["finishReason"].get<std::string>();
                         if (!finishReason.empty()) {
                              LLMEngine::StreamChunk result;
-                             result.is_done = false; // Will trigger done on [DONE] or next event
+                             result.isDone = false; // Will trigger done on [DONE] or next event
                              result.finishReason = finishReason;
                              // Some providers send empty delta with finishReason
                              callback(result);
@@ -212,7 +212,7 @@ void LLMEngineAPI::OpenAICompatibleClient::parseOpenAIStreamChunk(
 
                 if (json.contains("usage") && !json["usage"].is_null()) {
                     LLMEngine::StreamChunk result;
-                    result.is_done = false; // Usage might come before DONE or with DONE
+                    result.isDone = false; // Usage might come before DONE or with DONE
                     result.usage = LLMEngine::AnalysisResult::UsageStats{
                         .promptTokens = json["usage"].value("prompt_tokens", 0),
                         .completionTokens = json["usage"].value("completion_tokens", 0),

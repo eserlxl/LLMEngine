@@ -59,7 +59,7 @@ struct RequestOptions {
         std::optional<int> top_k;
         std::optional<double> min_p;
         std::optional<std::string> user;
-        std::optional<bool> parallel_tool_calls;
+        std::optional<bool> parallelToolCalls;
         std::optional<std::string> service_tier;
         std::optional<std::string> reasoning_effort;
         std::optional<int> max_completion_tokens;
@@ -111,7 +111,7 @@ struct RequestOptions {
         if (overrides.generation.top_k) result.generation.top_k = overrides.generation.top_k;
         if (overrides.generation.min_p) result.generation.min_p = overrides.generation.min_p;
         if (overrides.generation.user) result.generation.user = overrides.generation.user;
-        if (overrides.generation.parallel_tool_calls) result.generation.parallel_tool_calls = overrides.generation.parallel_tool_calls;
+        if (overrides.generation.parallelToolCalls) result.generation.parallelToolCalls = overrides.generation.parallelToolCalls;
         if (overrides.generation.service_tier) result.generation.service_tier = overrides.generation.service_tier;
         if (overrides.generation.reasoning_effort) result.generation.reasoning_effort = overrides.generation.reasoning_effort;
         if (overrides.generation.max_completion_tokens) result.generation.max_completion_tokens = overrides.generation.max_completion_tokens;
@@ -218,7 +218,7 @@ public:
     }
 
     RequestOptionsBuilder& setParallelToolCalls(bool enable) {
-        m_options.generation.parallel_tool_calls = enable;
+        m_options.generation.parallelToolCalls = enable;
         return *this;
     }
 
