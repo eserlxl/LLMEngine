@@ -450,7 +450,7 @@ struct ChatCompletionRequestHelper {
             // But strict error handling for stream is tricky.
             // For now, logging error is enough.
             std::cerr << "Stream request failed with status " << response.status_code << ": "
-                      << response.text << std::endl;
+                      << response.text << '\n';
             throw std::runtime_error("Stream request failed with status "
                                      + std::to_string(response.status_code));
         }
