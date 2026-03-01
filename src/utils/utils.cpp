@@ -35,9 +35,9 @@ constexpr size_t httpPrefixLength = 7;  // "http://"
 constexpr size_t httpsPrefixLength = 8; // "https://"
 
 // Precompiled regex patterns
-static const std::regex SAFE_CHARS_REGEX(R"([a-zA-Z0-9_./ -]+)");
-static const std::regex MARKDOWN_BOLD_REGEX(R"(\*\*)");
-static const std::regex MARKDOWN_HEADER_REGEX(R"(#+\s*)");
+static const std::regex safeCharsRegex(R"([a-zA-Z0-9_./ -]+)");
+static const std::regex markdownBoldRegex(R"(\*\*)");
+static const std::regex markdownHeaderRegex(R"(#+\s*)");
 
 // Platform-specific close helper
 
@@ -57,8 +57,8 @@ std::vector<std::string> readLines(std::string_view filepath, size_t max_lines) 
 
 std::string stripMarkdown(std::string_view input) {
     std::string output = std::string(input);
-    output = std::regex_replace(output, MARKDOWN_BOLD_REGEX, "");
-    output = std::regex_replace(output, MARKDOWN_HEADER_REGEX, "");
+    output = std::regex_replace(output, markdownBoldRegex, "");
+    output = std::regex_replace(output, markdownHeaderRegex, "");
     return output;
 }
 
