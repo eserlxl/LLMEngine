@@ -36,7 +36,7 @@ public:
 
     void sendRequestStream(std::string_view, const nlohmann::json&,
                            const nlohmann::json&,
-                           LLMEngine::StreamCallback callback,
+                           const LLMEngine::StreamCallback& callback,
                            const LLMEngine::RequestOptions&) const override {
         LLMEngine::StreamChunk chunk;
         chunk.content = "stream response";

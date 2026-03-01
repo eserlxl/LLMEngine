@@ -56,7 +56,7 @@ void FakeAPIClient::setNextStreamChunks(const std::vector<std::string>& chunks) 
 void FakeAPIClient::sendRequestStream(std::string_view prompt,
                                       const nlohmann::json& input,
                                       const nlohmann::json& params,
-                                      LLMEngine::StreamCallback callback,
+                                      const LLMEngine::StreamCallback& callback,
                                       const ::LLMEngine::RequestOptions& options) const {
     std::lock_guard<std::mutex> lock(m_mutex);
     last_options_ = options;

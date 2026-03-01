@@ -9,10 +9,8 @@
 #include <map>
 #include <memory>
 #include <nlohmann/json.hpp>
-#include <shared_mutex>
 #include <string>
 #include <string_view>
-#include <vector>
 
 // Ensure export macros are available
 #include "llmengine/core/analysis_result.hpp"
@@ -22,7 +20,6 @@
 #include "llmengine/utils/logger.hpp"
 #include "llmengine/http/request_options.hpp"
 
-#include <functional>
 
 namespace LLMEngineAPI {
 
@@ -31,7 +28,7 @@ namespace LLMEngineAPI {
  *
  * **Thread Safety:** This enum is thread-safe (enum values are immutable).
  */
-enum class ProviderType { qwen, openai, anthropic, ollama, gemini };
+enum class ProviderType : std::uint8_t { qwen, openai, anthropic, ollama, gemini };
 
 /**
  * @brief Normalized API response returned by all providers.
@@ -117,7 +114,7 @@ class LLMENGINE_EXPORT APIClient {
     virtual void sendRequestStream(std::string_view prompt,
                                    const nlohmann::json& input,
                                    const nlohmann::json& params,
-                                   LLMEngine::StreamCallback callback,
+                                   const LLMEngine::StreamCallback& callback,
                                    const ::LLMEngine::RequestOptions& options = {}) const {
         (void)prompt;
         (void)input;
@@ -158,7 +155,7 @@ class LLMENGINE_EXPORT QwenClient : public APIClient {
     void sendRequestStream(std::string_view prompt,
                            const nlohmann::json& input,
                            const nlohmann::json& params,
-                           LLMEngine::StreamCallback callback,
+                           const LLMEngine::StreamCallback& callback,
                            const ::LLMEngine::RequestOptions& options = {}) const override;
     std::string getProviderName() const override {
         return "Qwen";
@@ -199,7 +196,7 @@ class LLMENGINE_EXPORT OpenAIClient : public APIClient {
     void sendRequestStream(std::string_view prompt,
                            const nlohmann::json& input,
                            const nlohmann::json& params,
-                           LLMEngine::StreamCallback callback,
+                           const LLMEngine::StreamCallback& callback,
                            const ::LLMEngine::RequestOptions& options = {}) const override;
     std::string getProviderName() const override {
         return "OpenAI";
@@ -243,7 +240,7 @@ class LLMENGINE_EXPORT AnthropicClient : public APIClient {
     void sendRequestStream(std::string_view prompt,
                            const nlohmann::json& input,
                            const nlohmann::json& params,
-                           LLMEngine::StreamCallback callback,
+                           const LLMEngine::StreamCallback& callback,
                            const ::LLMEngine::RequestOptions& options = {}) const override;
     void setConfig(std::shared_ptr<IConfigManager> cfg) override {
         config_ = std::move(cfg);
@@ -287,7 +284,7 @@ class LLMENGINE_EXPORT OllamaClient : public APIClient {
     void sendRequestStream(std::string_view prompt,
                            const nlohmann::json& input,
                            const nlohmann::json& params,
-                           LLMEngine::StreamCallback callback,
+                           const LLMEngine::StreamCallback& callback,
                            const ::LLMEngine::RequestOptions& options = {}) const override;
     void setConfig(std::shared_ptr<IConfigManager> cfg) override {
         config_ = std::move(cfg);
@@ -329,7 +326,7 @@ class LLMENGINE_EXPORT GeminiClient : public APIClient {
     void sendRequestStream(std::string_view prompt,
                            const nlohmann::json& input,
                            const nlohmann::json& params,
-                           LLMEngine::StreamCallback callback,
+                           const LLMEngine::StreamCallback& callback,
                            const ::LLMEngine::RequestOptions& options = {}) const override;
     void setConfig(std::shared_ptr<IConfigManager> cfg) override {
         config_ = std::move(cfg);

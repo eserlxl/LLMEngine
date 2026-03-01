@@ -146,7 +146,7 @@ void OpenAICompatibleClient::parseOpenAIResponse(APIResponse& response,
 
 // Note: LLMEngine::StreamCallback is used here
 void LLMEngineAPI::OpenAICompatibleClient::parseOpenAIStreamChunk(
-    std::string_view chunk, std::string& buffer, LLMEngine::StreamCallback callback) {
+    std::string_view chunk, std::string& buffer, const LLMEngine::StreamCallback& callback) {
     buffer.append(chunk);
 
     size_t pos = 0;
@@ -231,7 +231,7 @@ void LLMEngineAPI::OpenAICompatibleClient::sendRequestStream(
     std::string_view prompt,
     const nlohmann::json& input,
     const nlohmann::json& params,
-    LLMEngine::StreamCallback callback,
+    const LLMEngine::StreamCallback& callback,
     const ::LLMEngine::RequestOptions& options) {
     // Build messages array using shared helper
     const nlohmann::json messages = ChatMessageBuilder::buildMessages(prompt, input);

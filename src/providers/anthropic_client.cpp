@@ -234,7 +234,7 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
 void AnthropicClient::sendRequestStream(std::string_view prompt,
                                           const nlohmann::json& input,
                                           const nlohmann::json& params,
-                                          LLMEngine::StreamCallback callback,
+                                          const LLMEngine::StreamCallback& callback,
                                           const ::LLMEngine::RequestOptions& options) const {
     auto buffer = std::make_shared<std::string>();
 

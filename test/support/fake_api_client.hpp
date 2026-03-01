@@ -41,7 +41,7 @@ class FakeAPIClient : public APIClient {
     void sendRequestStream(std::string_view prompt,
                            const nlohmann::json& input,
                            const nlohmann::json& params,
-                           LLMEngine::StreamCallback callback,
+                           const LLMEngine::StreamCallback& callback,
                            const ::LLMEngine::RequestOptions& options = {}) const override;
 
     const ::LLMEngine::RequestOptions& getLastOptions() const { return last_options_; }

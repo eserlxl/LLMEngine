@@ -60,12 +60,12 @@ std::shared_ptr<::LLMEngine::Logger> APIConfigManager::getLogger() const {
 
 namespace {
 // Configuration validation constants
-constexpr int MIN_TIMEOUT_SECONDS = 1;
+constexpr int minTimeoutSeconds = 1;
 constexpr int maxTimeoutSeconds = 3600;
-constexpr int MIN_RETRY_ATTEMPTS = 0;
-constexpr int MAX_RETRY_ATTEMPTS = 10;
-constexpr int MIN_RETRY_DELAY_MS = 0;
-constexpr int MAX_RETRY_DELAY_MS = 60000;
+constexpr int minRetryAttempts = 0;
+constexpr int maxRetryAttempts = 10;
+constexpr int minRetryDelayMs = 0;
+constexpr int maxRetryDelayMs = 60000;
 
 // Helper function to validate configuration structure
 bool validateConfig(const nlohmann::json& config, ::LLMEngine::Logger* logger) {
@@ -147,12 +147,12 @@ bool validateConfig(const nlohmann::json& config, ::LLMEngine::Logger* logger) {
             config[std::string(::LLMEngine::Constants::JsonKeys::timeoutSeconds)];
         if (timeout.is_number_integer()) {
             int timeoutVal = timeout.get<int>();
-            if (timeoutVal < MIN_TIMEOUT_SECONDS || timeoutVal > maxTimeoutSeconds) {
+            if (timeoutVal < minTimeoutSeconds || timeoutVal > maxTimeoutSeconds) {
                 if (logger) {
                     logger->log(
                         ::LLMEngine::LogLevel::Warn,
                         std::string("Config validation warning: timeout_seconds should be between ")
-                            + std::to_string(MIN_TIMEOUT_SECONDS) + " and "
+                            + std::to_string(minTimeoutSeconds) + " and "
                             + std::to_string(maxTimeoutSeconds)
                             + ", got: " + std::to_string(timeoutVal));
                 }
@@ -165,13 +165,13 @@ bool validateConfig(const nlohmann::json& config, ::LLMEngine::Logger* logger) {
         const auto& retries = config[std::string(::LLMEngine::Constants::JsonKeys::retryAttempts)];
         if (retries.is_number_integer()) {
             int retriesVal = retries.get<int>();
-            if (retriesVal < MIN_RETRY_ATTEMPTS || retriesVal > MAX_RETRY_ATTEMPTS) {
+            if (retriesVal < minRetryAttempts || retriesVal > maxRetryAttempts) {
                 if (logger) {
                     logger->log(
                         ::LLMEngine::LogLevel::Warn,
                         std::string("Config validation warning: retry_attempts should be between ")
-                            + std::to_string(MIN_RETRY_ATTEMPTS) + " and "
-                            + std::to_string(MAX_RETRY_ATTEMPTS)
+                            + std::to_string(minRetryAttempts) + " and "
+                            + std::to_string(maxRetryAttempts)
                             + ", got: " + std::to_string(retriesVal));
                 }
             }
@@ -183,13 +183,13 @@ bool validateConfig(const nlohmann::json& config, ::LLMEngine::Logger* logger) {
         const auto& delay = config[std::string(::LLMEngine::Constants::JsonKeys::retryDelayMs)];
         if (delay.is_number_integer()) {
             int delayVal = delay.get<int>();
-            if (delayVal < MIN_RETRY_DELAY_MS || delayVal > MAX_RETRY_DELAY_MS) {
+            if (delayVal < minRetryDelayMs || delayVal > maxRetryDelayMs) {
                 if (logger) {
                     logger->log(
                         ::LLMEngine::LogLevel::Warn,
                         std::string("Config validation warning: retry_delay_ms should be between ")
-                            + std::to_string(MIN_RETRY_DELAY_MS) + " and "
-                            + std::to_string(MAX_RETRY_DELAY_MS)
+                            + std::to_string(minRetryDelayMs) + " and "
+                            + std::to_string(maxRetryDelayMs)
                             + ", got: " + std::to_string(delayVal));
                 }
             }

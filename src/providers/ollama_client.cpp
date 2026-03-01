@@ -262,7 +262,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
 void OllamaClient::sendRequestStream(std::string_view prompt,
                                       const nlohmann::json& input,
                                       const nlohmann::json& params,
-                                      LLMEngine::StreamCallback callback,
+                                      const LLMEngine::StreamCallback& callback,
                                       const ::LLMEngine::RequestOptions& options) const {
     // Merge params
     nlohmann::json requestParams = defaultParams_;

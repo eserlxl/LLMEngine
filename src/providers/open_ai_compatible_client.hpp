@@ -89,7 +89,7 @@ class OpenAICompatibleClient {
      */
     static void parseOpenAIStreamChunk(std::string_view chunk,
                                        std::string& buffer,
-                                       LLMEngine::StreamCallback callback);
+                                       const LLMEngine::StreamCallback& callback);
 
     /**
      * @brief Send a streaming request (helper for wrapper classes).
@@ -97,7 +97,7 @@ class OpenAICompatibleClient {
     void sendRequestStream(std::string_view prompt,
                            const nlohmann::json& input,
                            const nlohmann::json& params,
-                           LLMEngine::StreamCallback callback,
+                           const LLMEngine::StreamCallback& callback,
                            const ::LLMEngine::RequestOptions& options = {});
 
     /**
