@@ -35,7 +35,7 @@ RetryableRequestExecutor::RetryableRequestExecutor(std::shared_ptr<IRetryStrateg
         ::LLMEngineAPI::APIResponse error_response;
         error_response.success = false;
         error_response.errorMessage = "API client not initialized";
-        error_response.statusCode = HttpStatus::INTERNAL_SERVER_ERROR;
+        error_response.statusCode = HttpStatus::internalServerError;
         error_response.errorCode = LLMEngine::LLMEngineErrorCode::Unknown;
         return error_response;
     }

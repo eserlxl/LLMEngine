@@ -174,7 +174,7 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
 
         response.statusCode = static_cast<int>(cpr_response.status_code);
 
-        if (cpr_response.status_code == ::LLMEngine::HttpStatus::OK) {
+        if (cpr_response.status_code == ::LLMEngine::HttpStatus::ok) {
             if (cpr_response.text.empty()) {
                 response.errorMessage = "Empty response from server";
                 response.errorCode = LLMEngine::LLMEngineErrorCode::InvalidResponse;
@@ -213,10 +213,10 @@ APIResponse GeminiClient::sendRequest(std::string_view prompt,
         } else {
             response.errorMessage =
                 "HTTP " + std::to_string(cpr_response.status_code) + ": " + cpr_response.text;
-            if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
-                || cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
+            if (cpr_response.status_code == ::LLMEngine::HttpStatus::unauthorized
+                || cpr_response.status_code == ::LLMEngine::HttpStatus::forbidden) {
                 response.errorCode = LLMEngine::LLMEngineErrorCode::Auth;
-            } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
+            } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::tooManyRequests) {
                 response.errorCode = LLMEngine::LLMEngineErrorCode::RateLimited;
             } else {
                 response.errorCode = LLMEngine::LLMEngineErrorCode::Server;

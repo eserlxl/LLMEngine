@@ -26,13 +26,13 @@ namespace fs = std::filesystem;
 // Validation constants
 
 // Validation constants
-constexpr size_t MIN_API_KEY_LENGTH = 10;
-constexpr size_t MAX_API_KEY_LENGTH = 512;
-constexpr size_t MAX_MODEL_NAME_LENGTH = 256;
-constexpr size_t MAX_URL_LENGTH = 2048;
-constexpr size_t MIN_URL_LENGTH = 7;      // Minimum "http://"
-constexpr size_t HTTP_PREFIX_LENGTH = 7;  // "http://"
-constexpr size_t HTTPS_PREFIX_LENGTH = 8; // "https://"
+constexpr size_t minApiKeyLength = 10;
+constexpr size_t maxApiKeyLength = 512;
+constexpr size_t maxModelNameLength = 256;
+constexpr size_t maxUrlLength = 2048;
+constexpr size_t minUrlLength = 7;      // Minimum "http://"
+constexpr size_t httpPrefixLength = 7;  // "http://"
+constexpr size_t httpsPrefixLength = 8; // "https://"
 
 // Precompiled regex patterns
 static const std::regex SAFE_CHARS_REGEX(R"([a-zA-Z0-9_./ -]+)");
@@ -68,7 +68,7 @@ bool validateApiKey(std::string_view api_key) {
     }
 
     // Check length (reasonable bounds)
-    if (api_key.size() < MIN_API_KEY_LENGTH || api_key.size() > MAX_API_KEY_LENGTH) {
+    if (api_key.size() < minApiKeyLength || api_key.size() > maxApiKeyLength) {
         return false;
     }
 
@@ -87,7 +87,7 @@ bool validateModelName(std::string_view model_name) {
     }
 
     // Check length
-    if (model_name.size() > MAX_MODEL_NAME_LENGTH) {
+    if (model_name.size() > maxModelNameLength) {
         return false;
     }
 
@@ -109,17 +109,17 @@ bool validateUrl(std::string_view url) {
     }
 
     // Check length
-    if (url.size() > MAX_URL_LENGTH) {
+    if (url.size() > maxUrlLength) {
         return false;
     }
 
     // Must start with http:// or https://
-    if (url.size() < MIN_URL_LENGTH) {
+    if (url.size() < minUrlLength) {
         return false;
     }
 
-    if (url.substr(0, HTTP_PREFIX_LENGTH) != "http://"
-        && url.substr(0, HTTPS_PREFIX_LENGTH) != "https://") {
+    if (url.substr(0, httpPrefixLength) != "http://"
+        && url.substr(0, httpsPrefixLength) != "https://") {
         return false;
     }
 

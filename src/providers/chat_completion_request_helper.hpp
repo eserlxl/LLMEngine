@@ -340,10 +340,10 @@ struct ChatCompletionRequestHelper {
                 response.errorMessage = errorMsg;
 
                 // Classify error based on HTTP status code
-                if (cpr_response.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
-                    || cpr_response.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
+                if (cpr_response.status_code == ::LLMEngine::HttpStatus::unauthorized
+                    || cpr_response.status_code == ::LLMEngine::HttpStatus::forbidden) {
                     response.errorCode = LLMEngine::LLMEngineErrorCode::Auth;
-                } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
+                } else if (cpr_response.status_code == ::LLMEngine::HttpStatus::tooManyRequests) {
                     response.errorCode = LLMEngine::LLMEngineErrorCode::RateLimited;
                 } else if (::LLMEngine::HttpStatus::isServerError(
                                static_cast<int>(cpr_response.status_code))) {

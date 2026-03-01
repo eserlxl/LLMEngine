@@ -190,10 +190,10 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
 
         auto set_error_from_http = [&](APIResponse& out, const cpr::Response& r) {
             out.errorMessage = "HTTP " + std::to_string(r.status_code) + ": " + r.text;
-            if (r.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
-                || r.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
+            if (r.status_code == ::LLMEngine::HttpStatus::unauthorized
+                || r.status_code == ::LLMEngine::HttpStatus::forbidden) {
                 out.errorCode = LLMEngine::LLMEngineErrorCode::Auth;
-            } else if (r.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
+            } else if (r.status_code == ::LLMEngine::HttpStatus::tooManyRequests) {
                 out.errorCode = LLMEngine::LLMEngineErrorCode::RateLimited;
             } else if (::LLMEngine::HttpStatus::isServerError(static_cast<int>(r.status_code))) {
                 out.errorCode = LLMEngine::LLMEngineErrorCode::Server;
@@ -217,7 +217,7 @@ APIResponse OllamaClient::sendRequest(std::string_view prompt,
 
         response.statusCode = static_cast<int>(cpr_response.status_code);
 
-        if (cpr_response.status_code == ::LLMEngine::HttpStatus::OK) {
+        if (cpr_response.status_code == ::LLMEngine::HttpStatus::ok) {
             if (cpr_response.text.empty()) {
                 response.errorMessage = "Empty response from server";
             } else {

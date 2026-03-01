@@ -11,8 +11,8 @@
 #include <vector>
 
 namespace {
-constexpr size_t REDACTED_TAG_LENGTH = 10;            // "<REDACTED>"
-constexpr size_t MIN_TOKEN_LENGTH_FOR_REDACTION = 32; // Minimum length for token redaction
+constexpr size_t redactedTagLength = 10;            // "<REDACTED>"
+constexpr size_t minTokenLengthForRedaction = 32; // Minimum length for token redaction
 } // namespace
 
 static bool atomic_write(const std::string& path, const std::string& data) {
@@ -218,7 +218,7 @@ nlohmann::json DebugArtifacts::redactJson(const nlohmann::json& j) {
 std::string DebugArtifacts::redactText(std::string_view text) {
     // Conservative masking: mask bearer tokens that look like long base64/hex strings
     std::string s(text);
-    // Heuristic: any contiguous token chars of length >= MIN_TOKEN_LENGTH_FOR_REDACTION become
+    // Heuristic: any contiguous token chars of length >= minTokenLengthForRedaction become
     // <REDACTED>
     size_t i = 0;
     while (i < s.size()) {
@@ -229,9 +229,9 @@ std::string DebugArtifacts::redactText(std::string_view text) {
                 && (std::isalnum(static_cast<unsigned char>(s[j])) || s[j] == '_' || s[j] == '-')) {
                 ++j;
             }
-            if (j - i >= MIN_TOKEN_LENGTH_FOR_REDACTION) {
+            if (j - i >= minTokenLengthForRedaction) {
                 s.replace(i, j - i, "<REDACTED>");
-                i += REDACTED_TAG_LENGTH;
+                i += redactedTagLength;
                 continue;
             }
             i = j;

@@ -18,47 +18,47 @@ namespace LLMEngine {
  */
 namespace HttpStatus {
 // Success codes (2xx)
-constexpr int OK = 200;
-constexpr int CREATED = 201;
-constexpr int NO_CONTENT = 204;
-constexpr int SUCCESS_MIN = 200;
-constexpr int SUCCESS_MAX = 299;
+constexpr int ok = 200;
+constexpr int created = 201;
+constexpr int noContent = 204;
+constexpr int successMin = 200;
+constexpr int successMax = 299;
 
 // Client error codes (4xx)
-constexpr int BAD_REQUEST = 400;
-constexpr int UNAUTHORIZED = 401;
-constexpr int FORBIDDEN = 403;
-constexpr int NOT_FOUND = 404;
-constexpr int TOO_MANY_REQUESTS = 429;
-constexpr int CLIENT_ERROR_MIN = 400;
-constexpr int CLIENT_ERROR_MAX = 499;
+constexpr int badRequest = 400;
+constexpr int unauthorized = 401;
+constexpr int forbidden = 403;
+constexpr int notFound = 404;
+constexpr int tooManyRequests = 429;
+constexpr int clientErrorMin = 400;
+constexpr int clientErrorMax = 499;
 
 // Server error codes (5xx)
-constexpr int INTERNAL_SERVER_ERROR = 500;
-constexpr int BAD_GATEWAY = 502;
-constexpr int SERVICE_UNAVAILABLE = 503;
-constexpr int SERVER_ERROR_MIN = 500;
-constexpr int SERVER_ERROR_MAX = 599;
+constexpr int internalServerError = 500;
+constexpr int badGateway = 502;
+constexpr int serviceUnavailable = 503;
+constexpr int serverErrorMin = 500;
+constexpr int serverErrorMax = 599;
 
 /**
  * @brief Check if a status code indicates success (2xx).
  */
 constexpr bool isSuccess(int status_code) {
-    return status_code >= SUCCESS_MIN && status_code < SUCCESS_MAX + 1;
+    return status_code >= successMin && status_code < successMax + 1;
 }
 
 /**
  * @brief Check if a status code indicates a client error (4xx).
  */
 constexpr bool isClientError(int status_code) {
-    return status_code >= CLIENT_ERROR_MIN && status_code < CLIENT_ERROR_MAX + 1;
+    return status_code >= clientErrorMin && status_code < clientErrorMax + 1;
 }
 
 /**
  * @brief Check if a status code indicates a server error (5xx).
  */
 constexpr bool isServerError(int status_code) {
-    return status_code >= SERVER_ERROR_MIN && status_code < SERVER_ERROR_MAX + 1;
+    return status_code >= serverErrorMin && status_code < serverErrorMax + 1;
 }
 
 /**
@@ -72,7 +72,7 @@ constexpr bool isServerError(int status_code) {
  * - 4xx (except 429) - client errors, should not retry
  */
 constexpr bool isRetriable(int status_code) {
-    return status_code == TOO_MANY_REQUESTS || isServerError(status_code);
+    return status_code == tooManyRequests || isServerError(status_code);
 }
 } // namespace HttpStatus
 

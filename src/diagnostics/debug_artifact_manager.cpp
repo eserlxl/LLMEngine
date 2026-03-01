@@ -122,11 +122,11 @@ bool DebugArtifactManager::writeAnalysisArtifacts(std::string_view analysis_type
             }
             if (name.empty())
                 name = "analysis";
-            constexpr size_t MAX_FILENAME_LENGTH = 64;
+            constexpr size_t maxFilenameLength = 64;
             // Truncate by byte length to handle UTF-8 correctly
             // This ensures we stay within the 64-byte limit even with multi-byte characters
-            if (name.size() > MAX_FILENAME_LENGTH) {
-                name.resize(MAX_FILENAME_LENGTH);
+            if (name.size() > maxFilenameLength) {
+                name.resize(maxFilenameLength);
             }
             return name;
         };

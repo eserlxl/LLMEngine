@@ -170,7 +170,7 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
 
         response.statusCode = static_cast<int>(cprResponse.status_code);
 
-        if (cprResponse.status_code == ::LLMEngine::HttpStatus::OK) {
+        if (cprResponse.status_code == ::LLMEngine::HttpStatus::ok) {
             // Parse JSON only after confirming HTTP success
             try {
                 response.rawResponse = nlohmann::json::parse(cprResponse.text);
@@ -206,10 +206,10 @@ APIResponse AnthropicClient::sendRequest(std::string_view prompt,
             }
 
             // Classify error based on HTTP status code
-            if (cprResponse.status_code == ::LLMEngine::HttpStatus::UNAUTHORIZED
-                || cprResponse.status_code == ::LLMEngine::HttpStatus::FORBIDDEN) {
+            if (cprResponse.status_code == ::LLMEngine::HttpStatus::unauthorized
+                || cprResponse.status_code == ::LLMEngine::HttpStatus::forbidden) {
                 response.errorCode = LLMEngine::LLMEngineErrorCode::Auth;
-            } else if (cprResponse.status_code == ::LLMEngine::HttpStatus::TOO_MANY_REQUESTS) {
+            } else if (cprResponse.status_code == ::LLMEngine::HttpStatus::tooManyRequests) {
                 response.errorCode = LLMEngine::LLMEngineErrorCode::RateLimited;
             } else if (::LLMEngine::HttpStatus::isServerError(
                            static_cast<int>(cprResponse.status_code))) {

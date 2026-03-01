@@ -29,7 +29,7 @@ static LLMEngineErrorCode classifyErrorCode(LLMEngineErrorCode api_error, int st
         case LLMEngineErrorCode::Unknown:
         default:
             // Classify based on status code if error code is Unknown
-            if (status_code == HttpStatus::TOO_MANY_REQUESTS) {
+            if (status_code == HttpStatus::tooManyRequests) {
                 return LLMEngineErrorCode::RateLimited;
             } else if (HttpStatus::isClientError(status_code)) {
                 return LLMEngineErrorCode::Client;
@@ -40,11 +40,11 @@ static LLMEngineErrorCode classifyErrorCode(LLMEngineErrorCode api_error, int st
     }
 
     // If error code is None but success is false, classify by status code
-    if (status_code == HttpStatus::TOO_MANY_REQUESTS) {
+    if (status_code == HttpStatus::tooManyRequests) {
         return LLMEngineErrorCode::RateLimited;
     }
     if (HttpStatus::isClientError(status_code)) {
-        if (status_code == HttpStatus::UNAUTHORIZED || status_code == HttpStatus::FORBIDDEN) {
+        if (status_code == HttpStatus::unauthorized || status_code == HttpStatus::forbidden) {
             return LLMEngineErrorCode::Auth;
         }
         return LLMEngineErrorCode::Client;

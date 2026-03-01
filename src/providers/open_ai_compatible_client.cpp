@@ -12,8 +12,8 @@
 namespace LLMEngineAPI {
 
 namespace {
-constexpr size_t CHAT_COMPLETIONS_PATH_LENGTH = 18; // "/chat/completions" = 18 chars
-constexpr size_t BEARER_PREFIX_LENGTH = 7;          // "Bearer " = 7 chars
+constexpr size_t chatCompletionsPathLength = 18; // "/chat/completions" = 18 chars
+constexpr size_t bearerPrefixLength = 7;          // "Bearer " = 7 chars
 } // namespace
 
 OpenAICompatibleClient::OpenAICompatibleClient(const std::string& apiKey,
@@ -28,13 +28,13 @@ OpenAICompatibleClient::OpenAICompatibleClient(const std::string& apiKey,
                        {"presence_penalty", 0.0}};
 
     // Cache the chat completions URL to avoid string concatenation on every request
-    chatCompletionsUrl_.reserve(baseUrl_.size() + CHAT_COMPLETIONS_PATH_LENGTH);
+    chatCompletionsUrl_.reserve(baseUrl_.size() + chatCompletionsPathLength);
     chatCompletionsUrl_ = baseUrl_;
     chatCompletionsUrl_ += "/chat/completions";
 
     // Cache headers to avoid rebuilding on every request
     std::string authHeader;
-    authHeader.reserve(apiKey_.size() + BEARER_PREFIX_LENGTH);
+    authHeader.reserve(apiKey_.size() + bearerPrefixLength);
     authHeader = "Bearer ";
     authHeader += apiKey_;
 
