@@ -238,6 +238,8 @@ target_include_directories(test_streaming_providers PRIVATE ${CMAKE_CURRENT_SOUR
 llmengine_test(test_timeout http/test_timeout.cpp test_support_fake)
 
 # Iteration 1 New Test
+llmengine_test(test_request_executor http/test_request_executor.cpp test_support_fake)
+llmengine_test(test_response_handler http/test_response_handler.cpp)
 llmengine_test(test_request_options_builder http/test_request_options_builder.cpp)
 llmengine_test(test_tool_builder core/builder/test_tool_builder.cpp)
 llmengine_test(test_parameter_propagation core/parameters/test_parameter_propagation.cpp)
@@ -295,6 +297,8 @@ if (BUILD_TESTING)
       test_features_iter2
       test_streaming_providers
       test_timeout
+      test_request_executor
+      test_response_handler
       test_request_options_builder
       test_parameter_propagation
       test_tool_builder_extended
