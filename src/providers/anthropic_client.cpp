@@ -8,6 +8,7 @@
 #include "api_client_common.hpp"
 #include "chat_completion_request_helper.hpp"
 #include "llmengine/providers/api_client.hpp"
+#include "llmengine/providers/api_config_manager.hpp"
 #include "llmengine/core/constants.hpp"
 #include "llmengine/http/http_status.hpp"
 

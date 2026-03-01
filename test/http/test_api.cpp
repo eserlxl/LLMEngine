@@ -7,6 +7,7 @@
 
 #include "llmengine/core/llm_engine.hpp"
 #include "llmengine/providers/api_client.hpp"
+#include "llmengine/providers/api_config_manager.hpp"
 #include "llmengine/utils/utils.hpp"
 
 #include <iostream>

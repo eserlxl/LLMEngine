@@ -8,6 +8,7 @@
 #pragma once
 #include "../utils/backoff.hpp"
 #include "llmengine/providers/api_client.hpp"
+#include "llmengine/providers/api_config_manager.hpp"
 #include "llmengine/core/constants.hpp"
 #include "llmengine/http/http_status.hpp"
 #include "llmengine/http/request_logger.hpp"

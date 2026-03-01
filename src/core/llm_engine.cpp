@@ -10,6 +10,7 @@
 #include "engine_state_adapter.hpp"
 
 #include "llmengine/providers/api_client.hpp"
+#include "llmengine/providers/api_config_manager.hpp"
 #include "llmengine/core/analysis_input.hpp"
 
 #include "llmengine/http/http_status.hpp"

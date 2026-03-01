@@ -6,6 +6,7 @@
 // See the LICENSE file in the project root for details.
 
 #include "llmengine/providers/api_client.hpp"
+#include "llmengine/providers/api_config_manager.hpp"
 #include "llmengine/core/i_config_manager.hpp"
 #include "llmengine/core/llm_engine.hpp"
 #include "support/fake_api_client.hpp"

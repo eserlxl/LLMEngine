@@ -343,6 +343,7 @@ add_library(${PROJECT_NAME}
     src/core/engine_state.cpp
     src/utils/utils.cpp
     src/providers/api_client.cpp
+    src/providers/api_config_manager.cpp
     src/providers/open_ai_compatible_client.cpp
     src/providers/qwen_client.cpp
     src/providers/open_ai_client.cpp

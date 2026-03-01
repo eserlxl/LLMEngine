@@ -8,6 +8,7 @@
 #include "llmengine/providers/provider_bootstrap.hpp"
 
 #include "llmengine/providers/api_client.hpp"
+#include "llmengine/providers/api_config_manager.hpp"
 #include "llmengine/core/constants.hpp"
 #include "llmengine/core/i_config_manager.hpp"
 

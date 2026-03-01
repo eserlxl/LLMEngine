@@ -1,4 +1,5 @@
 #include "llmengine/providers/api_client.hpp"
+#include "llmengine/providers/api_config_manager.hpp"
 
 #include <cassert>
 #include <iostream>
